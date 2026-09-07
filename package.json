@@ -1,0 +1,36 @@
+{
+  "name": "next-supabase-saas-kit-turbo-lite",
+  "version": "1.0.0",
+  "private": true,
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "author": {
+    "name": "MakerKit",
+    "url": "https://makerkit.dev"
+  },
+  "scripts": {
+    "preinstall": "pnpm run --filter scripts requirements",
+    "build": "turbo build --cache-dir=.turbo",
+    "dev": "cross-env FORCE_COLOR=1 turbo dev --parallel",
+    "typecheck": "turbo typecheck --cache-dir=.turbo",
+    "test": "turbo test --cache-dir=.turbo",
+    "lint": "oxlint",
+    "format:check": "oxfmt --check",
+    "format": "pnpm run format:check",
+    "format:fix": "oxfmt",
+    "healthcheck": "pnpm run format:check && pnpm run lint && pnpm run typecheck"
+  },
+  "devDependencies": {
+    "@manypkg/cli": "catalog:",
+    "@turbo/gen": "catalog:",
+    "cross-env": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "supabase": "2.111.0",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@11.18.0"
+}

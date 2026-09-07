@@ -25,7 +25,7 @@
 
 ## 应用实现
 
-M0～M6均NOT_STARTED，SP-*及V-*均NOT_RUN，没有G0～G6通过报告。不会因计划文件齐全而将应用模块标DONE。
+M0为IN_PROGRESS：T01、T02已完成，T03～T07尚未执行；M1～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分及本地`V-BASE-01/02`已通过；`SP-SQL`、`SP-AUTH`、`SP-UPLOAD`、`SP-TXN`、托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
 
 当前任务状态：T01环境与固定上游导入清单核验已完成，证据见[evidence/T01.md](evidence/T01.md)；T02固定版本导入与Admin-only骨架已满足本地前置条件。T02～T18仍按依赖推进，Local、Staging和正式产物发布的验收分别记录。
 
@@ -35,3 +35,10 @@ M0～M6均NOT_STARTED，SP-*及V-*均NOT_RUN，没有G0～G6通过报告。不�
 - 范围：工具实际路径/版本、Docker、固定上游 commit、许可证、lock/workspace、安装脚本、Starter 数据库与权限边界、目录导入清单。
 - 结论：T01 验收通过；未执行 `pnpm install`、build、Supabase 迁移、业务测试或应用导入，这些保持 `NOT_RUN` 并交由后续任务。
 - 已知工具缺口：Supabase CLI、Deno 未在 PATH 或已检查目录发现；已记录 D 盘安装方案，不因缺失伪造版本或通过结果。
+
+## T02 任务交接
+
+- 分支：`task/T02-admin-foundation`
+- 结果：固定上游基础文件已导入；Admin 与 template-preview 为独立最小 Next 应用；旧 Starter migration、seed、业务账户界面和生产 deploy 入口未导入。
+- 验收：固定 pnpm 11.18.0 frozen install、项目级 Supabase CLI 2.111.0、两应用 typecheck、根 typecheck、两应用及根 build 均通过。
+- 限制：Next 16.3.0 在当前 Windows/Turbopack 布局下的默认构建存在内部模块解析错误，两个应用固定使用 `next build --webpack`；这不是依赖升级，后续升级前需重新验证。
