@@ -21,6 +21,7 @@
     "test:e2e": "node tooling/scripts/src/not-enabled.mjs 'browser E2E tests' T16",
     "runtime:probe": "pnpm run --filter scripts runtime:probe",
     "docs:check": "pnpm run --filter scripts docs:check",
+    "contracts:check": "node tooling/scripts/src/openapi-check.mjs",
     "db:start": "pnpm run --filter scripts supabase start",
     "db:stop": "pnpm run --filter scripts supabase stop",
     "db:reset": "pnpm run --filter scripts supabase db-reset",

@@ -26,3 +26,24 @@ export interface Principal {
 export type { DomainError, DomainErrorCode, DomainResult } from './errors.ts';
 export { failure, invalidRequest, success } from './errors.ts';
 export { isUuid, requireNonEmpty, requireUuid } from './validation.ts';
+export type {
+  AccountPrincipalDto,
+  AccountSqlContext,
+  ApiError,
+  ApiErrorCode,
+  ApiErrorResponse,
+  ApiResponse,
+  ConfigFileDto,
+  DeleteRequestDto,
+  ETag,
+  EntitlementDto,
+  JobSqlContext,
+  AdminSqlContext,
+  NoStoreHeaders,
+  Page,
+  PlanDto,
+  PreferencesDto,
+  ProfileDto,
+  UploadIntentDto,
+} from './api.ts';
+export { API_ERROR_CODES } from './api.ts';

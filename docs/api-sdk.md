@@ -1,6 +1,6 @@
 # HTTP、SDK 和模板合同 v1.2
 
-本文件从属于 [架构基线](architecture.md)。下表是V1唯一接口清单；实现时生成并提交OpenAPI 3.1及共享类型，SDK由其生成或进行一致性校验，禁止各BFF自定权益规则。
+本文件从属于 [架构基线](architecture.md)。下表是V1唯一接口清单；T11冻结的OpenAPI 3.1合同位于[`docs/contracts/account.openapi.json`](contracts/account.openapi.json)和[`docs/contracts/admin.openapi.json`](contracts/admin.openapi.json)，共享类型位于`packages/domain/src/contracts`。SDK由其生成或进行一致性校验，禁止各BFF自定权益规则。
 
 ## 1. 调用和权限矩阵
 

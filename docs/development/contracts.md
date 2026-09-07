@@ -14,8 +14,8 @@
 | supabase/functions/maintenance | M4/M6 | job鉴权、租约与任务分派，不开放用户入口 |
 | supabase/functions/_shared | M0/M1 | 通用日志、SQL、时钟、错误、受控Storage adapter |
 | supabase/migrations | 每模块添加，集成人串行排定顺序 | 不多人改同一已提交migration |
-| docs/contracts/account.openapi.yaml | M2 | 用户/平台API；M3/M4追加对应资源 |
-| docs/contracts/admin.openapi.yaml | M2起按模块扩展 | 不生成任意CRUD代理 |
+| docs/contracts/account.openapi.json | M2 | 用户/平台API；M3/M4追加对应资源 |
+| docs/contracts/admin.openapi.json | M2起按模块扩展 | 不生成任意CRUD代理 |
 | registry、apps/template-preview | M5，M2建立最小消费者 | UI复制，业务规则不复制 |
 
 packages/domain纯TS源码通过显式相对ESM导入供Edge使用；不依赖Node专属API、路径别名或未发布workspace解析。M0做Node/Edge双运行时import探针；若固定工具链不支持，由ADR选择可重现构建产物映射，不复制源文件来规避。
@@ -78,6 +78,12 @@ Admin路径固定为/admin/api/v1，具体动作：
 - audit：只读筛选分页；deletion-jobs：只读状态、Admin start/retry；不提供任意checkpoint编辑。
 
 Admin列表按平台/目标资源过滤；所有敏感动作使用同一授权包装和Audit。读列表也须Admin身份，不能因不修改数据跳过鉴权。
+
+## 6. T11冻结产物
+
+T11将Account与Admin的OpenAPI 3.1合同冻结在`docs/contracts/account.openapi.json`和`docs/contracts/admin.openapi.json`。Account合同固定17个方法/路径组合；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计和删除任务资源。所有尚未实现的操作显式标为`contract-only`，不得返回假成功。
+
+共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证仍依赖T04服务端session-bound proof，未以合同冻结替代实现。
 
 ## 5. 时间、事务和失败边界
 

@@ -58,3 +58,6 @@ jobs:
 
       - name: Documentation check
         run: pnpm run docs:check
+
+      - name: OpenAPI contract check
+        run: pnpm run contracts:check

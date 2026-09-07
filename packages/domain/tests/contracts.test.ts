@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  API_ERROR_CODES,
   failure,
   invalidRequest,
   isUuid,
@@ -8,6 +9,7 @@ import {
   requireUuid,
   success,
 } from '../src/index.ts';
+import type { EntitlementDto } from '../src/index.ts';
 
 describe('domain contract boundary', () => {
   it('keeps results serializable and distinguishes success from business failure', () => {
@@ -35,5 +37,28 @@ describe('domain contract boundary', () => {
       field: 'request_id',
     });
     expect(requireNonEmpty('request-1', 'request_id')).toBeUndefined();
+  });
+
+  it('keeps the stable API error vocabulary and entitlement null semantics', () => {
+    expect(API_ERROR_CODES).toContain('RECENT_MFA_REQUIRED');
+    expect(API_ERROR_CODES).toContain('ENTITLEMENT_PERPETUAL');
+    expect(API_ERROR_CODES).toContain('STORAGE_UNAVAILABLE');
+
+    const none: EntitlementDto = {
+      effective_status: 'none',
+      entitlement_kind: 'none',
+      plan: null,
+      features: {},
+      started_at: null,
+      current_period_end: null,
+      evaluated_at: '2026-01-01T00:00:00Z',
+      next_transition_at: null,
+    };
+    expect(
+      JSON.parse(JSON.stringify({ data: none, request_id: 'request-1' })),
+    ).toEqual({
+      data: none,
+      request_id: 'request-1',
+    });
   });
 });
