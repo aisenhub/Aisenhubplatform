@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；M1为IN_PROGRESS（T08、T09已完成，T10已具备依赖）；M2～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`、`SP-UPLOAD Local`和`SP-TXN Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
+M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；M1为IN_PROGRESS（T08、T09、T10已完成，T11已具备依赖）；M2～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`、`SP-UPLOAD Local`和`SP-TXN Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
 
-当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针、T06 Local 上传边界探针、T07 Local 事务探针、T08核心平台与账户迁移、T09安全辅助表与内部helper均已完成；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T08与T09的 Local reset/pgTAP/行为验证分别见[evidence/T08.md](evidence/T08.md)和[evidence/T09.md](evidence/T09.md)。
+当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针、T06 Local 上传边界探针、T07 Local 事务探针、T08核心平台与账户迁移、T09安全辅助表与内部helper、T10数据库负向与事务验收均已完成；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T08～T10的 Local reset/pgTAP/行为验证分别见[evidence/T08.md](evidence/T08.md)、[evidence/T09.md](evidence/T09.md)和[evidence/T10.md](evidence/T10.md)。
 
 ## T01 任务交接
 
@@ -91,3 +91,10 @@ M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；
 - 结果：交付 M1 辅助表、非登录运行角色、受控 session/identity helper、幂等 claim/finalize、审计 append-only、固定窗口限流和 job lease fencing；未向 HTTP executor 授予基础表 DML 或拆分 helper 权限。
 - 验收：T08 回归与 T09 pgTAP 共 54/54；幂等、审计、lease、限流和 Local Auth identity deletion gate 行为探针通过；public schema 类型已重新生成，包含 `audit_logs`。
 - 限制：T04 的真实近期 proof 协议仍 BLOCKED；`admin_step_up` 仅交付 session/factor/5分钟边界和权限存储，不能据此宣称 V-AUTH-03 全部通过。下一项满足依赖的任务是 T10。
+
+## T10 任务交接
+
+- 分支：`task/T10-db-acceptance`
+- 结果：交付三平台三用户 Local Auth fixture、真实角色负向/权限快照、跨租户复合 FK、Admin global/platform scope、Profile 乐观版本竞争、事务故障回滚和过期 lease fencing 验收。
+- 验收：T08/T09/T10 三份 pgTAP 共 59/59；T10 行为探针报告 fixture、跨租户拒绝、版本竞争、回滚、过期 fence 和 account/admin/job 角色负向均 PASS。
+- 限制：T10 不覆盖托管环境、真实 OAuth/SMTP、完整 Admin proof 生命周期或 M3 事件表；T11 可继续冻结 API/错误合同。
