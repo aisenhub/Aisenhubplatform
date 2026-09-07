@@ -26,7 +26,7 @@ select ok(
   'runtime role groups are non-login and non-bypass'
 );
 select ok(
-  (select count(*) = 10 from pg_class c
+  (select count(*) = 11 from pg_class c
    join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'private' and c.relkind = 'r' and c.relrowsecurity),
   'all private auxiliary tables have RLS'
