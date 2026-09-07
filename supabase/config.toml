@@ -20,6 +20,11 @@ port = 54322
 # server_version;` on the remote database to check.
 major_version = 15
 
+[db.pooler]
+enabled = true
+port = 54329
+pool_mode = "transaction"
+
 [studio]
 # Port to use for Supabase Studio.
 port = 54323

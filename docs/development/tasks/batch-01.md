@@ -12,9 +12,9 @@
 | T02 | 固定版本导入与Admin-only骨架 | T01 | DONE |
 | T03 | 双运行时公共边界、脚本与CI | T02 | DONE |
 | T04 | Auth/SSR/MFA与近期认证探针 | T03 | BLOCKED |
-| T05 | 私有SQL/pooler/角色探针 | T03 | READY |
+| T05 | 私有SQL/pooler/角色探针 | T03 | DONE |
 | T06 | 受控上传与真实字节边界探针 | T03 | READY |
-| T07 | 双连接事务、幂等与回滚探针 | T05 | WAITING |
+| T07 | 双连接事务、幂等与回滚探针 | T05 | READY |
 | T08 | 核心平台与账户迁移 | T05,T07 | WAITING |
 | T09 | 安全辅助表、角色和内部helper | T08,T04 | WAITING |
 | T10 | 数据库负向与事务设施验收 | T09,T07 | WAITING |
