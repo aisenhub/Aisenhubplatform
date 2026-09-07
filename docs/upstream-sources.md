@@ -26,7 +26,7 @@
 
 | 项目 | 用途 | 当前状态 |
 |---|---|---|
-| Makerkit Lite | Admin工程基座 | 待固定准确仓库、commit、license并确认实际依赖 |
+| Makerkit Lite | Admin工程基座 | 已只读确认makerkit/nextjs-saas-starter-kit-lite，候选commit c5cba64391a80620309c4178163dc2df42568d1b、MIT；尚未导入或完成安装验证 |
 | Kiranism/next-shadcn-dashboard-starter | Admin表格、布局、筛选交互 | 仅参考UI，不迁Auth/组织/Billing |
 | Cinderblock | RLS与hostile fixture模式 | 名称存在歧义，移植前先固定准确仓库 |
 | quteam/license-manager | 兑换码生成、掩码和交付模式 | 仅参考，不继承未核验安全声明 |
@@ -34,5 +34,7 @@
 | JDIZM/supabase-express-api | Admin查询、分页语义 | 不迁Express/工作区/RBAC架构 |
 
 每次实际移植必须登记：Module、Repository URL、Commit、License、Copied Files、Adapted Files、Removed Dependencies、Reason、Last Reviewed。提交THIRD_PARTY_NOTICES并保留要求的版权声明；禁止整仓拼接或用未知来源片段实现安全核心。
+
+本轮开发规划补充了[固定commit与工具核对](development/decision-register.md)；下一步按T01/T02完成脚本审查、导入清单与clean install。候选版本不代表已通过兼容性或供应链审查。
 
 依赖优先级：官方SDK/文档 → 已核验OSS模式 → Starter胶水 → 项目自有Domain。Auth不自造；Platform、Principal、Tenant Integrity、Grant规则、单管理员和严格文件预算属于本项目领域，不让Starter替代。

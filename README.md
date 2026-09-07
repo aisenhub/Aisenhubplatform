@@ -7,6 +7,7 @@
 ## 阅读入口
 
 - [架构基线](docs/architecture.md)：范围、边界和实现顺序。
+- [开发规划](docs/development/README.md)：总计划、模块规格、首批任务与实际进度。
 - [审核问题闭环](docs/review-v1.2.md)：审核意见与设计修订对照。
 - [上游来源](docs/upstream-sources.md)：官方依据及待核验依赖。
 - [Agent工作规则](AGENTS.md)：任务边界、安装路径、验证及提交约定。
