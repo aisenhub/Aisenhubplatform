@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已完成可独立部分，真实Auth/近期证明仍阻塞），M3～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`、`SP-UPLOAD Local`和`SP-TXN Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
+M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，真实Auth/近期证明仍阻塞），M3～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`、`SP-UPLOAD Local`和`SP-TXN Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
 
-当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针、T06 Local 上传边界探针、T07 Local 事务探针、T08核心平台与账户迁移、T09安全辅助表与内部helper、T10数据库负向与事务验收、T11 OpenAPI/Context/错误合同冻结、T13 Platform Key/Principal/Admin平台基础、T14账户生命周期均已完成；T12已交付可独立认证边界但整体受T04阻塞；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T08～T14的验证分别见[evidence/T08.md](evidence/T08.md)、[evidence/T09.md](evidence/T09.md)、[evidence/T10.md](evidence/T10.md)、[evidence/T11.md](evidence/T11.md)、[evidence/T12.md](evidence/T12.md)、[evidence/T13.md](evidence/T13.md)和[evidence/T14.md](evidence/T14.md)。
+当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针、T06 Local 上传边界探针、T07 Local 事务探针、T08核心平台与账户迁移、T09安全辅助表与内部helper、T10数据库负向与事务验收、T11 OpenAPI/Context/错误合同冻结、T13 Platform Key/Principal/Admin平台基础、T14账户生命周期、T15 Profile/Preferences/公开Plan均已完成；T12已交付可独立认证边界但整体受T04阻塞；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T08～T15的验证分别见[evidence/T08.md](evidence/T08.md)、[evidence/T09.md](evidence/T09.md)、[evidence/T10.md](evidence/T10.md)、[evidence/T11.md](evidence/T11.md)、[evidence/T12.md](evidence/T12.md)、[evidence/T13.md](evidence/T13.md)、[evidence/T14.md](evidence/T14.md)和[evidence/T15.md](evidence/T15.md)。
 
 ## T01 任务交接
 
