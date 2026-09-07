@@ -11,6 +11,9 @@ import type {
   PreferencesDto,
   ProfileDto,
 } from '@kit/domain/contracts';
+import { generateRedemptionCodes as generateDomainRedemptionCodes } from '@kit/domain';
+import type { RedemptionCodeMaterial } from '@kit/domain';
+export { REDEMPTION_CODE_ALPHABET } from '@kit/domain';
 import { createHmac, randomBytes } from 'node:crypto';
 
 export type { ApiErrorCode } from '@kit/domain/contracts';
@@ -126,7 +129,7 @@ export function generatePlatformKeyMaterial(input: {
   const raw = randomBytes(32).toString('base64url');
   const presentedKey = `phk_v${input.version}_${keyId}_${raw}`;
   const keyHmac = createHmac('sha256', input.hmacSecret)
-    .update(`${input.version}:platform:${input.platformId}:${presentedKey}`)
+    .update(`${input.version}:platform-key:${keyId}:${presentedKey}`)
     .digest('hex');
   return {
     keyId,
@@ -138,68 +141,14 @@ export function generatePlatformKeyMaterial(input: {
   };
 }
 
-export const REDEMPTION_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ023456789';
-
-export interface RedemptionCodeMaterial {
-  readonly code: string;
-  readonly codeHmac: string;
-  readonly hmacKeyVersion: number;
-  readonly codePrefix: string;
-  readonly codeSuffix: string;
-}
-
-function randomRedemptionCode(length: number): string {
-  const result: string[] = [];
-  const alphabetLength = REDEMPTION_CODE_ALPHABET.length;
-  const rejectionLimit = 256 - (256 % alphabetLength);
-  while (result.length < length) {
-    const bytes = randomBytes(length - result.length + 8);
-    for (const byte of bytes) {
-      if (byte >= rejectionLimit) continue;
-      result.push(REDEMPTION_CODE_ALPHABET[byte % alphabetLength]!);
-      if (result.length === length) break;
-    }
-  }
-  return result.join('');
-}
-
-export function generateRedemptionCodes(input: {
+export async function generateRedemptionCodes(input: {
   readonly platformId: string;
   readonly hmacSecret: string;
   readonly hmacKeyVersion: number;
   readonly quantity: number;
   readonly length?: number;
-}): readonly RedemptionCodeMaterial[] {
-  const length = input.length ?? 31;
-  if (
-    !input.platformId ||
-    input.hmacSecret.length < 16 ||
-    !Number.isInteger(input.hmacKeyVersion) ||
-    input.hmacKeyVersion < 1 ||
-    !Number.isInteger(input.quantity) ||
-    input.quantity < 1 ||
-    input.quantity > 1000 ||
-    !Number.isInteger(length) ||
-    length < 16 ||
-    length > 128
-  )
-    throw new Error('INVALID_REDEMPTION_CODE_INPUT');
-
-  return Array.from({ length: input.quantity }, () => {
-    const code = randomRedemptionCode(length);
-    const codeHmac = createHmac('sha256', input.hmacSecret)
-      .update(
-        `redeem:v1:platform:${input.platformId}:key:${input.hmacKeyVersion}:code:${code}`,
-      )
-      .digest('hex');
-    return {
-      code,
-      codeHmac,
-      hmacKeyVersion: input.hmacKeyVersion,
-      codePrefix: code.slice(0, 4),
-      codeSuffix: code.slice(-4),
-    };
-  });
+}): Promise<readonly RedemptionCodeMaterial[]> {
+  return generateDomainRedemptionCodes(input);
 }
 
 export function normalizeOrigin(value: string): string {

@@ -228,7 +228,7 @@
       "get": {
         "operationId": "adminListPlans",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "responses": { "200": { "$ref": "#/components/responses/Page" } }
@@ -236,7 +236,7 @@
       "post": {
         "operationId": "adminCreatePlan",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
@@ -250,14 +250,14 @@
       "get": {
         "operationId": "adminListRedemptionBatches",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "responses": { "200": { "$ref": "#/components/responses/Page" } }
       },
       "post": {
         "operationId": "adminCreateRedemptionBatch",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
@@ -270,7 +270,7 @@
       "post": {
         "operationId": "adminConfirmRedemptionDelivery",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
@@ -285,7 +285,7 @@
       "post": {
         "operationId": "adminDisableRedemptionBatch",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
@@ -300,7 +300,7 @@
       "get": {
         "operationId": "adminGetSubscription",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/AccountId" }],
         "responses": {
@@ -313,7 +313,7 @@
       "post": {
         "operationId": "adminApplySubscriptionCommand",
         "x-module": "M3",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/AccountId" }],

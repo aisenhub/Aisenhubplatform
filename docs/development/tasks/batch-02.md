@@ -20,4 +20,4 @@
 
 - 依赖：T04 的近期证明失效协议、T16 中央 HTTP/Auth adapter 和真实登录链路。
 - 交付：Admin plans/batches/subscriptions 动作路由与最小页面；Consumer subscription/redeem 页面；真实 Auth、CSRF、step-up、no-store 与审计全链路。
-- 状态：BLOCKED。仓库当前没有 `supabase/functions/account-api` 中央 HTTP adapter；T16 已明确记录该缺口，T04 的近期证明 logout 边界仍未解决。不得用本地桩或直接表访问冒充完成。
+- 状态：DONE（Local）。中央 `account-api`、Admin/Consumer BFF 与页面、Password Auth 会话 Cookie、CSRF、AAL2/近期证明门槛和真实本地 API 探针已交付；托管环境部署、生产 Auth provider、logout 后已签发 JWT 的即时失效仍为 NOT_RUN/BLOCKED，不以 Local 结果冒充生产完成。

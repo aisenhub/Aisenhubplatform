@@ -103,9 +103,9 @@ describe('server authorization guards', () => {
     ).toThrow('ORIGIN_MISMATCH');
   });
 
-  it('generates one-time redemption material with uniform alphabet sampling', () => {
+  it('generates one-time redemption material with uniform alphabet sampling', async () => {
     expect(REDEMPTION_CODE_ALPHABET).toHaveLength(31);
-    const codes = generateRedemptionCodes({
+    const codes = await generateRedemptionCodes({
       platformId: '00000000-0000-4000-8000-000000000001',
       hmacSecret: 'm3-test-hmac-secret-that-is-not-real',
       hmacKeyVersion: 3,
@@ -122,14 +122,14 @@ describe('server authorization guards', () => {
     }
   });
 
-  it('rejects unsafe redemption generator parameters', () => {
-    expect(() =>
+  it('rejects unsafe redemption generator parameters', async () => {
+    await expect(
       generateRedemptionCodes({
         platformId: 'platform',
         hmacSecret: 'short',
         hmacKeyVersion: 0,
         quantity: 0,
       }),
-    ).toThrow('INVALID_REDEMPTION_CODE_INPUT');
+    ).rejects.toThrow('INVALID_REDEMPTION_CODE_INPUT');
   });
 });

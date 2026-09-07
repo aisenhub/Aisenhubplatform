@@ -10,7 +10,7 @@
 | packages/account-auth | M2 | 框架无关Auth adapter接口，不含平台Key |
 | packages/account-auth-nextjs | M2/M5 | SSR/Cookie/回调与同源BFF胶水，不能直写业务表 |
 | packages/account-server | M2起按领域扩展，M5发布 | server-only，遵守HTTP合同与预算 |
-| supabase/functions/account-api | M2 | HTTP路由/用户与平台认证，不持有另一套业务算法 |
+| supabase/functions/account-api | M2/M3 | HTTP路由/用户与平台认证，不持有另一套业务算法；M3当前完成Local adapter，托管部署仍需单独验收 |
 | supabase/functions/maintenance | M4/M6 | job鉴权、租约与任务分派，不开放用户入口 |
 | supabase/functions/_shared | M0/M1 | 通用日志、SQL、时钟、错误、受控Storage adapter |
 | supabase/migrations | 每模块添加，集成人串行排定顺序 | 不多人改同一已提交migration |
@@ -49,6 +49,9 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.redeem_subscription_code | M3/account | ctx+规范化码HMAC+版本+idem → 原子结果 |
 | private.admin_entitlement_command | M3/admin | Admin ctx+目标+grant/revoke/pause/resume/correct+operation_id → 统一领域结果 |
 | private.admin_plan_upsert | M3/admin | Admin ctx+平台+计划字段+默认Free动作 → 计划生命周期与默认计划原子更新 |
+| private.platform_key_verify_presented | M3/account | key id+HMAC+版本 → active platform/key metadata；只授予account_executor，不开放Key表读取 |
+| private.admin_plan_list / admin_batch_list / admin_subscription_read | M3/admin | Admin ctx+目标范围 → 只读计划、兑换批次、订阅投影；不授予基础表读取 |
+| private.admin_step_up_valid | M3/admin | user+session+proof → 5分钟内有效性；敏感写操作必须通过统一包装 |
 | private.admin_batch_create / confirm / disable | M3/admin | 生成的hash列表/receipt hash与状态，禁止接收明文持久字段 |
 | private.file_intent_create | M4/account | ctx+metadata+size+replaceId+idem → file_id/预约 |
 | private.file_receive_claim / prepare_store / finalize | M4/account | ctx+fileId+fence+大小/hash/结果 → 状态；各短事务 |

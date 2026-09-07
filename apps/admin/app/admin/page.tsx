@@ -2,14 +2,16 @@ export default function AdminHomePage() {
   return (
     <main className="shell">
       <p className="eyebrow">Aisenhub Admin</p>
-      <h1>Admin-only foundation</h1>
+      <h1>Admin control center</h1>
       <p className="muted">
-        Authentication, MFA and platform operations are reserved for later M0/M2
-        tasks.
+        M3 的计划、权益和兑换批次通过中央 Account API 进入受控数据库领域函数。
       </p>
       <div className="panel">
-        <strong>Protected shell placeholder</strong>
-        <span>Authorization is not implemented in T02.</span>
+        <strong>继续到权益控制台</strong>
+        <span>需要有效管理员会话、AAL2 和敏感操作的近期认证证明。</span>
+        <a className="link" href="/admin/entitlements">
+          打开 M3 Entitlements
+        </a>
       </div>
     </main>
   );

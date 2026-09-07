@@ -19,6 +19,9 @@ body {
   margin: 0 auto;
   padding: 8rem 1.5rem;
 }
+.wide-shell {
+  max-width: 70rem;
+}
 .eyebrow {
   color: #5267d8;
   font-size: 0.8rem;
@@ -63,4 +66,49 @@ button {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+.inline-form,
+.grid-two {
+  display: grid;
+  gap: 0.75rem;
+}
+.inline-form {
+  grid-template-columns: 1fr auto;
+}
+.grid-two {
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+.stack-form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e7ebf4;
+}
+h2,
+h3 {
+  margin: 0;
+}
+.data-list {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.data-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  background: #f5f7fb;
+}
+.data-list span {
+  color: #62708a;
+  text-align: right;
+}
+.link {
+  color: #5267d8;
+  font-weight: 700;
 }

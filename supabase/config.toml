@@ -105,3 +105,6 @@ verify_enabled = true
 
 [analytics]
 enabled = false
+
+[functions.account-api]
+verify_jwt = true

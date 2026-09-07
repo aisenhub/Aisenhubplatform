@@ -43,3 +43,35 @@ h1 {
   flex-wrap: wrap;
   gap: 1rem;
 }
+.panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border: 1px solid #d9e3e5;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgb(15 118 110 / 8%);
+}
+label {
+  font-weight: 700;
+}
+input {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid #c7d6d8;
+  border-radius: 0.5rem;
+  font: inherit;
+}
+button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #0f766e;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.redeem-form {
+  margin-top: 1rem;
+}
