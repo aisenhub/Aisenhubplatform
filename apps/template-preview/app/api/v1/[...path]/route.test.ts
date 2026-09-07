@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GET, PATCH } from './route';
+import { GET, PATCH, POST } from './route';
 
 const originalFetch = globalThis.fetch;
 const originalEnv = {
@@ -100,5 +100,45 @@ describe('template consumer BFF', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('etag')).toBe('W/"7"');
     expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('requires idempotency and same-origin CSRF for redemption', async () => {
+    process.env.ACCOUNT_API_URL = 'https://account.example.test';
+    process.env.PLATFORM_KEY = 'phk_server_only_fixture';
+    process.env.CONSUMER_ORIGIN = 'https://consumer-a.example.test';
+    const fetchMock = vi.fn(async (_input: string, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        'Idempotency-Key': 'redeem-1',
+        Authorization: 'Bearer session-1',
+      });
+      return new Response(
+        JSON.stringify({
+          data: { entitlement_kind: 'term', effective_status: 'active' },
+          request_id: 'account-3',
+        }),
+        { status: 200 },
+      );
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const response = await POST(
+      request('subscription/redeem', {
+        method: 'POST',
+        headers: {
+          origin: 'https://consumer-a.example.test',
+          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          'x-csrf-token': 'csrf-1',
+          'idempotency-key': 'redeem-1',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ code: 'CODE-ONCE' }),
+      }),
+      { params: Promise.resolve({ path: ['subscription', 'redeem'] }) },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      data: { entitlement_kind: 'term' },
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });

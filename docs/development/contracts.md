@@ -48,6 +48,7 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.entitlement_apply | M3/domain内部 | 已授权操作+source/operationId → Grant/Event/Projection；不授予executor直接调用 |
 | private.redeem_subscription_code | M3/account | ctx+规范化码HMAC+版本+idem → 原子结果 |
 | private.admin_entitlement_command | M3/admin | Admin ctx+目标+grant/revoke/pause/resume/correct+operation_id → 统一领域结果 |
+| private.admin_plan_upsert | M3/admin | Admin ctx+平台+计划字段+默认Free动作 → 计划生命周期与默认计划原子更新 |
 | private.admin_batch_create / confirm / disable | M3/admin | 生成的hash列表/receipt hash与状态，禁止接收明文持久字段 |
 | private.file_intent_create | M4/account | ctx+metadata+size+replaceId+idem → file_id/预约 |
 | private.file_receive_claim / prepare_store / finalize | M4/account | ctx+fileId+fence+大小/hash/结果 → 状态；各短事务 |

@@ -186,6 +186,28 @@ async function dispatch(
         etag(data.row_version),
       );
     }
+    if (route === 'subscription' && method === 'GET') {
+      return jsonResponse(
+        { data: await api.getSubscription(token), request_id: id },
+        200,
+        id,
+      );
+    }
+    if (route === 'subscription/redeem' && method === 'POST') {
+      const idempotencyKey = request.headers.get('idempotency-key');
+      if (!idempotencyKey) throw new BffError(400, 'INVALID_INPUT');
+      const body = await jsonObject(request);
+      if (typeof body.code !== 'string' || body.code.length < 1)
+        throw new BffError(400, 'INVALID_INPUT');
+      return jsonResponse(
+        {
+          data: await api.redeemSubscription(token, body.code, idempotencyKey),
+          request_id: id,
+        },
+        200,
+        id,
+      );
+    }
     throw new BffError(404, 'RESOURCE_NOT_FOUND');
   } catch (error) {
     const bffError =

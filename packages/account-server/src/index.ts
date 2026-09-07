@@ -6,6 +6,7 @@ import type {
 import type {
   ApiErrorCode,
   ApiResponse,
+  EntitlementDto,
   PlanDto,
   PreferencesDto,
   ProfileDto,
@@ -137,6 +138,70 @@ export function generatePlatformKeyMaterial(input: {
   };
 }
 
+export const REDEMPTION_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ023456789';
+
+export interface RedemptionCodeMaterial {
+  readonly code: string;
+  readonly codeHmac: string;
+  readonly hmacKeyVersion: number;
+  readonly codePrefix: string;
+  readonly codeSuffix: string;
+}
+
+function randomRedemptionCode(length: number): string {
+  const result: string[] = [];
+  const alphabetLength = REDEMPTION_CODE_ALPHABET.length;
+  const rejectionLimit = 256 - (256 % alphabetLength);
+  while (result.length < length) {
+    const bytes = randomBytes(length - result.length + 8);
+    for (const byte of bytes) {
+      if (byte >= rejectionLimit) continue;
+      result.push(REDEMPTION_CODE_ALPHABET[byte % alphabetLength]!);
+      if (result.length === length) break;
+    }
+  }
+  return result.join('');
+}
+
+export function generateRedemptionCodes(input: {
+  readonly platformId: string;
+  readonly hmacSecret: string;
+  readonly hmacKeyVersion: number;
+  readonly quantity: number;
+  readonly length?: number;
+}): readonly RedemptionCodeMaterial[] {
+  const length = input.length ?? 31;
+  if (
+    !input.platformId ||
+    input.hmacSecret.length < 16 ||
+    !Number.isInteger(input.hmacKeyVersion) ||
+    input.hmacKeyVersion < 1 ||
+    !Number.isInteger(input.quantity) ||
+    input.quantity < 1 ||
+    input.quantity > 1000 ||
+    !Number.isInteger(length) ||
+    length < 16 ||
+    length > 128
+  )
+    throw new Error('INVALID_REDEMPTION_CODE_INPUT');
+
+  return Array.from({ length: input.quantity }, () => {
+    const code = randomRedemptionCode(length);
+    const codeHmac = createHmac('sha256', input.hmacSecret)
+      .update(
+        `redeem:v1:platform:${input.platformId}:key:${input.hmacKeyVersion}:code:${code}`,
+      )
+      .digest('hex');
+    return {
+      code,
+      codeHmac,
+      hmacKeyVersion: input.hmacKeyVersion,
+      codePrefix: code.slice(0, 4),
+      codeSuffix: code.slice(-4),
+    };
+  });
+}
+
 export function normalizeOrigin(value: string): string {
   const url = new URL(value);
   if (
@@ -178,6 +243,12 @@ export interface AccountApiClient {
     ifMatch: string,
     patch: Readonly<Record<string, unknown>>,
   ) => Promise<PreferencesDto>;
+  readonly getSubscription: (accessToken: string) => Promise<EntitlementDto>;
+  readonly redeemSubscription: (
+    accessToken: string,
+    code: string,
+    idempotencyKey: string,
+  ) => Promise<EntitlementDto>;
 }
 
 export interface AccountApiFetchResponse {
@@ -227,6 +298,7 @@ export function createAccountApiClient(input: {
     readonly path: string;
     readonly accessToken?: string;
     readonly ifMatch?: string;
+    readonly idempotencyKey?: string;
     readonly body?: Readonly<Record<string, unknown>>;
   }): Promise<T> {
     const headers: Record<string, string> = {
@@ -237,6 +309,8 @@ export function createAccountApiClient(input: {
     if (options.accessToken)
       headers.Authorization = `Bearer ${options.accessToken}`;
     if (options.ifMatch) headers['If-Match'] = options.ifMatch;
+    if (options.idempotencyKey)
+      headers['Idempotency-Key'] = options.idempotencyKey;
     if (options.body) {
       headers['Content-Type'] = 'application/json';
     }
@@ -290,6 +364,20 @@ export function createAccountApiClient(input: {
         accessToken,
         ifMatch,
         body: patch,
+      }),
+    getSubscription: (accessToken) =>
+      request<EntitlementDto>({
+        method: 'GET',
+        path: '/v1/subscription',
+        accessToken,
+      }),
+    redeemSubscription: (accessToken, code, idempotencyKey) =>
+      request<EntitlementDto>({
+        method: 'POST',
+        path: '/v1/subscription/redeem',
+        accessToken,
+        idempotencyKey,
+        body: { code },
       }),
   };
 }

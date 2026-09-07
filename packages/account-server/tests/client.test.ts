@@ -54,4 +54,56 @@ describe('account API server client', () => {
       message: 'AUTHORIZATION_UNAVAILABLE',
     });
   });
+
+  it('forwards subscription reads and redemption idempotency without exposing the key', async () => {
+    const requests: Array<{
+      url: string;
+      init: {
+        method: string;
+        headers: Readonly<Record<string, string>>;
+        body?: string;
+      };
+    }> = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              effective_status: 'active',
+              entitlement_kind: 'free',
+              plan: null,
+              features: {},
+              started_at: null,
+              current_period_end: null,
+              evaluated_at: '2026-09-07T12:00:00.000Z',
+              next_transition_at: null,
+            },
+            request_id: 'req-1',
+          }),
+        };
+      },
+    });
+
+    await client.getSubscription('access-token-1');
+    await client.redeemSubscription('access-token-1', 'CODE-ONCE', 'idem-1');
+    expect(requests[0]!.url).toBe(
+      'https://account.example.invalid/v1/subscription',
+    );
+    expect(requests[1]!).toMatchObject({
+      url: 'https://account.example.invalid/v1/subscription/redeem',
+      init: {
+        method: 'POST',
+        headers: {
+          'Idempotency-Key': 'idem-1',
+          Authorization: 'Bearer access-token-1',
+        },
+        body: JSON.stringify({ code: 'CODE-ONCE' }),
+      },
+    });
+  });
 });

@@ -4,7 +4,9 @@ import {
   authorizeAccountRequest,
   authorizeAdminRequest,
   generatePlatformKeyMaterial,
+  generateRedemptionCodes,
   normalizeOrigin,
+  REDEMPTION_CODE_ALPHABET,
   validateCallbackUrl,
 } from '../src/index.ts';
 import { createSessionVerifier } from '@kit/account-auth';
@@ -99,5 +101,35 @@ describe('server authorization guards', () => {
         'https://app.example.test',
       ),
     ).toThrow('ORIGIN_MISMATCH');
+  });
+
+  it('generates one-time redemption material with uniform alphabet sampling', () => {
+    expect(REDEMPTION_CODE_ALPHABET).toHaveLength(31);
+    const codes = generateRedemptionCodes({
+      platformId: '00000000-0000-4000-8000-000000000001',
+      hmacSecret: 'm3-test-hmac-secret-that-is-not-real',
+      hmacKeyVersion: 3,
+      quantity: 24,
+    });
+    expect(codes).toHaveLength(24);
+    expect(new Set(codes.map((item) => item.code)).size).toBe(24);
+    for (const item of codes) {
+      expect(item.code).toHaveLength(31);
+      expect(item.code).toMatch(new RegExp(`^[${REDEMPTION_CODE_ALPHABET}]+$`));
+      expect(item.codePrefix).toBe(item.code.slice(0, 4));
+      expect(item.codeSuffix).toBe(item.code.slice(-4));
+      expect(item.codeHmac).toMatch(/^[0-9a-f]{64}$/u);
+    }
+  });
+
+  it('rejects unsafe redemption generator parameters', () => {
+    expect(() =>
+      generateRedemptionCodes({
+        platformId: 'platform',
+        hmacSecret: 'short',
+        hmacKeyVersion: 0,
+        quantity: 0,
+      }),
+    ).toThrow('INVALID_REDEMPTION_CODE_INPUT');
   });
 });
