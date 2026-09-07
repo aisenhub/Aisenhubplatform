@@ -1,0 +1,30 @@
+# Credentials and local environment
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies and build output
+node_modules/
+.next/
+.turbo/
+dist/
+build/
+coverage/
+.pnpm-store/
+
+# Local services, reports and temporary output
+supabase/.temp/
+supabase/.branches/
+test-results/
+playwright-report/
+*.log
+*.dump
+*.backup
+__pycache__/
+.DS_Store
+Thumbs.db
