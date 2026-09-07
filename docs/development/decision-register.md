@@ -27,7 +27,7 @@
 
 引用：[固定commit](https://github.com/makerkit/nextjs-saas-starter-kit-lite/tree/c5cba64391a80620309c4178163dc2df42568d1b)、[依赖catalog](https://github.com/makerkit/nextjs-saas-starter-kit-lite/blob/c5cba64391a80620309c4178163dc2df42568d1b/pnpm-workspace.yaml)。
 
-导入使用上述固定commit及其lockfile；先审查安装脚本和依赖可获得性，再clean install。pnpm按上游11.18.0固定，不能因本机存在11.24.0就静默改锁文件。Node使用本机已存在的24.19.0并记录CI一致版本。Supabase CLI和Deno由T01核实已有路径、兼容版本与官方分发后精确锁定到toolchain记录；不虚构尚未验证的版本号。
+导入使用上述固定commit及其lockfile；先审查安装脚本和依赖可获得性，再clean install。pnpm按上游11.18.0固定，不能因本机存在11.24.0就静默改锁文件。Node使用本机已存在的24.19.0并记录CI一致版本。Supabase CLI与Deno不在当前PATH；T01又检查了`D:\APP\Codex`、`D:\APP\Base`、常见用户程序目录及npm bin目录，仍未发现对应可执行文件。这只记录已检查范围，不声称全盘未安装。Supabase CLI优先采用项目内由lock固定的`2.111.0`并通过`pnpm exec supabase`运行；Deno尚无可验证版本，T03前按D盘安装规则补齐并记录，不虚构版本号。
 
 项目测试优先现有Vitest/Playwright/pgTAP；不另引入第二套测试框架。上游脚本中的git clean、自动fix、生产deploy快捷命令先禁用/改为受控操作，不能在导入时直接执行。
 

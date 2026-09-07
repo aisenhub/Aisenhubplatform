@@ -27,4 +27,11 @@
 
 M0～M6均NOT_STARTED，SP-*及V-*均NOT_RUN，没有G0～G6通过报告。不会因计划文件齐全而将应用模块标DONE。
 
-当前下一项可派发工作：[T01环境与固定上游导入清单核验](tasks/batch-01.md)。仅T01为READY，T02～T18按依赖WAITING。Local、Staging和正式产物发布的验收分别记录，未提供的外部配置不影响T01。
+当前任务状态：T01环境与固定上游导入清单核验已完成，证据见[evidence/T01.md](evidence/T01.md)；T02固定版本导入与Admin-only骨架已满足本地前置条件。T02～T18仍按依赖推进，Local、Staging和正式产物发布的验收分别记录。
+
+## T01 任务交接
+
+- 分支：`task/T01-source-inventory`
+- 范围：工具实际路径/版本、Docker、固定上游 commit、许可证、lock/workspace、安装脚本、Starter 数据库与权限边界、目录导入清单。
+- 结论：T01 验收通过；未执行 `pnpm install`、build、Supabase 迁移、业务测试或应用导入，这些保持 `NOT_RUN` 并交由后续任务。
+- 已知工具缺口：Supabase CLI、Deno 未在 PATH 或已检查目录发现；已记录 D 盘安装方案，不因缺失伪造版本或通过结果。
