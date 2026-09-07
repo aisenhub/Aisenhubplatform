@@ -29,7 +29,7 @@ V1仅服务统一运营的自营平台，不包含支付、组织/团队、第�
 - `pnpm runtime:probe`：让 Node 与 Deno 导入同一份 Edge 共享边界。
 - `pnpm docs:check`：检查文档相对链接、任务依赖无环和验证用例 ID。
 - `pnpm db:start|db:stop|db:reset`：仅操作根 `supabase/` 的本地配置；发现远程 URL 或 project ref 会拒绝执行。
-- `pnpm test:db`：调用固定 Supabase CLI 的本地 pgTAP 命令；当前尚未建立数据库测试集，因此暂不作为通过项。
+- `pnpm test:db`：调用固定 Supabase CLI 的本地 pgTAP 命令，运行 `supabase/tests` 下的数据库测试集。
 - `pnpm test:api`、`pnpm test:e2e`：当前明确返回 `NOT_RUN`，分别待 T04–T16 与 T16 建立测试夹具后启用。
 
 历史文档位于 `docs/archive`，只作追溯。

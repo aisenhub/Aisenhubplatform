@@ -15,7 +15,7 @@
 | T05 | 私有SQL/pooler/角色探针 | T03 | DONE |
 | T06 | 受控上传与真实字节边界探针 | T03 | DONE |
 | T07 | 双连接事务、幂等与回滚探针 | T05 | DONE |
-| T08 | 核心平台与账户迁移 | T05,T07 | READY |
+| T08 | 核心平台与账户迁移 | T05,T07 | DONE |
 | T09 | 安全辅助表、角色和内部helper | T08,T04 | WAITING |
 | T10 | 数据库负向与事务设施验收 | T09,T07 | WAITING |
 | T11 | OpenAPI、SQL context和错误合同冻结 | T10,T04 | WAITING |
