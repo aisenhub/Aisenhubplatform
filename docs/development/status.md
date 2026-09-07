@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01、T02、T03已完成，T04～T07尚未执行；M1～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查和文档检查已通过；`SP-SQL`、`SP-AUTH`、`SP-UPLOAD`、`SP-TXN`、托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
+M0为IN_PROGRESS：T01、T02、T03已完成，T04为BLOCKED，T05/T06可继续，T07等待T05；M1～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查和文档检查已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，`SP-SQL`、`SP-UPLOAD`、`SP-TXN`、托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
 
-当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI均已完成，证据见[evidence/T01.md](evidence/T01.md)、[evidence/T02.md](evidence/T02.md)、[evidence/T03.md](evidence/T03.md)。T04/T05/T06已具备依赖，Local、Staging和正式产物发布的验收分别记录。
+当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI均已完成；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T05/T06仍可执行，Local、Staging和正式产物发布的验收分别记录。
 
 ## T01 任务交接
 
@@ -49,3 +49,10 @@ M0为IN_PROGRESS：T01、T02、T03已完成，T04～T07尚未执行；M1～M6仍
 - 结果：公共纯 TS domain 边界、Node/Deno 双运行时探针、真实只读脚本、文档一致性检查和固定版本 CI 已交付。
 - 验收：冻结安装、format、lint、typecheck、build、37 个单元测试、双运行时 import、docs check 均通过。
 - 未完成：Local Supabase、SQL/Auth/上传/事务探针和 G0-L/G0-S；这些不是 T03 的通过条件，分别交给 T04～T07/T17。
+
+## T04 任务交接
+
+- 分支：`task/T04-auth-probe`
+- 结果：Local password session、refresh、`session_id`、TOTP enrollment/challenge/verify 和 refresh 撤销已实测；SSR Cookie、真实 Provider 和 proof 设施未完成。
+- 状态：BLOCKED。logout 后已签发 access JWT 仍可用至过期，不能满足近期证明失效合同；未使用弱校验替代。
+- 下一步：T05/T06 可独立继续；T09/T12/T14 必须先采用服务端 session-bound proof 协议。

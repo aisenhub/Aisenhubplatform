@@ -11,7 +11,7 @@
 | T01 | 环境、上游与导入清单核验 | 无 | DONE |
 | T02 | 固定版本导入与Admin-only骨架 | T01 | DONE |
 | T03 | 双运行时公共边界、脚本与CI | T02 | DONE |
-| T04 | Auth/SSR/MFA与近期认证探针 | T03 | READY |
+| T04 | Auth/SSR/MFA与近期认证探针 | T03 | BLOCKED |
 | T05 | 私有SQL/pooler/角色探针 | T03 | READY |
 | T06 | 受控上传与真实字节边界探针 | T03 | READY |
 | T07 | 双连接事务、幂等与回滚探针 | T05 | WAITING |
