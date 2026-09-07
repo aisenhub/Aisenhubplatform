@@ -15,6 +15,7 @@
     "typecheck": "turbo typecheck --cache-dir=.turbo",
     "test": "pnpm run test:unit",
     "test:unit": "turbo test:unit --cache-dir=.turbo",
+    "test:upload": "node tests/spikes/upload/controlled-receiver.mjs",
     "test:db": "pnpm run --filter scripts supabase db --local",
     "test:api": "node tooling/scripts/src/not-enabled.mjs 'API tests' T04-T16",
     "test:e2e": "node tooling/scripts/src/not-enabled.mjs 'browser E2E tests' T16",

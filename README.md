@@ -25,6 +25,7 @@ V1仅服务统一运营的自营平台，不包含支付、组织/团队、第�
 - `pnpm install --frozen-lockfile`：按锁文件安装依赖。
 - `pnpm format:check && pnpm lint && pnpm typecheck && pnpm build`：执行只读质量检查和两个空壳应用构建。
 - `pnpm test:unit`：执行已有 Vitest 用例和领域合同用例。
+- `pnpm test:upload`：执行本地受控上传边界探针；不会写入 Storage。
 - `pnpm runtime:probe`：让 Node 与 Deno 导入同一份 Edge 共享边界。
 - `pnpm docs:check`：检查文档相对链接、任务依赖无环和验证用例 ID。
 - `pnpm db:start|db:stop|db:reset`：仅操作根 `supabase/` 的本地配置；发现远程 URL 或 project ref 会拒绝执行。

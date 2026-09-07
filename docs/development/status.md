@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01、T02、T03、T05已完成，T04为BLOCKED，T06/T07可继续；M1～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查和`SP-SQL Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，`SP-UPLOAD`、`SP-TXN`、托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
+M0为IN_PROGRESS：T01、T02、T03、T05、T06已完成，T04为BLOCKED，T07可继续；M1～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`和`SP-UPLOAD Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，`SP-TXN`、托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
 
-当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针均已完成；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T06/T07仍可执行，Local、Staging和正式产物发布的验收分别记录。
+当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针、T06 Local 上传边界探针均已完成；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T07仍可执行，Local、Staging和正式产物发布的验收分别记录。
 
 ## T01 任务交接
 
@@ -63,3 +63,10 @@ M0为IN_PROGRESS：T01、T02、T03、T05已完成，T04为BLOCKED，T06/T07可�
 - 结果：Local Node/Deno transaction pooler、NOLOGIN owner、最小 executor、私有 schema 和负向权限路径均已实测。
 - 验收：`SP-SQL Local` 与 `V-DB-02` 原型 PASS；托管 pooler/TLS 留 T17。
 - 下一步：T06 可独立继续，T07 已满足 T05 依赖。
+
+## T06 任务交接
+
+- 分支：`task/T06-upload-probe`
+- 结果：1MiB 边界、声明/真实大小、chunked、Content-Encoding、断流、并发名额和 provider timeout/unknown 均已实测。
+- 验收：`SP-UPLOAD Local`、`V-FILE-01` 原型 PASS；真实 host 的 Storage 取消/迟到写入留后续环境。
+- 下一步：T07 已具备依赖；T04 的 proof 阻塞保持不变。
