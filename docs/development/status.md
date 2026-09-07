@@ -9,7 +9,7 @@
 - C1架构基线commit：4d9b7edcf243b925a850ac2022596f5b1a9444b0，已push并通过ls-remote核对。
 - C2规划基线commit：08646a4b0baf6ca8c33208cb47651aa46cb570cc，已push并核对远端main。
 - C3规格与任务commit：175ec1435ccc84b1b58efec1dba2921277c68d21，已push并核对远端main；本进度记录随后作收尾同步，最新提交以Git历史为准。
-- 已只读核对本地Node/pnpm/Docker与Makerkit固定commit；没有导入上游代码或安装新软件。
+- 已只读核对本地Node/pnpm/Docker与Makerkit固定commit；Deno按T03安装到`D:\APP\Codex\Deno`，没有使用C盘默认路径。
 
 ## 本轮规划交付
 
@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01、T02已完成，T03～T07尚未执行；M1～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分及本地`V-BASE-01/02`已通过；`SP-SQL`、`SP-AUTH`、`SP-UPLOAD`、`SP-TXN`、托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
+M0为IN_PROGRESS：T01、T02、T03已完成，T04～T07尚未执行；M1～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查和文档检查已通过；`SP-SQL`、`SP-AUTH`、`SP-UPLOAD`、`SP-TXN`、托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
 
-当前任务状态：T01环境与固定上游导入清单核验已完成，证据见[evidence/T01.md](evidence/T01.md)；T02固定版本导入与Admin-only骨架已满足本地前置条件。T02～T18仍按依赖推进，Local、Staging和正式产物发布的验收分别记录。
+当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI均已完成，证据见[evidence/T01.md](evidence/T01.md)、[evidence/T02.md](evidence/T02.md)、[evidence/T03.md](evidence/T03.md)。T04/T05/T06已具备依赖，Local、Staging和正式产物发布的验收分别记录。
 
 ## T01 任务交接
 
@@ -42,3 +42,10 @@ M0为IN_PROGRESS：T01、T02已完成，T03～T07尚未执行；M1～M6仍为NOT
 - 结果：固定上游基础文件已导入；Admin 与 template-preview 为独立最小 Next 应用；旧 Starter migration、seed、业务账户界面和生产 deploy 入口未导入。
 - 验收：固定 pnpm 11.18.0 frozen install、项目级 Supabase CLI 2.111.0、两应用 typecheck、根 typecheck、两应用及根 build 均通过。
 - 限制：Next 16.3.0 在当前 Windows/Turbopack 布局下的默认构建存在内部模块解析错误，两个应用固定使用 `next build --webpack`；这不是依赖升级，后续升级前需重新验证。
+
+## T03 任务交接
+
+- 分支：`task/T03-runtime-ci`
+- 结果：公共纯 TS domain 边界、Node/Deno 双运行时探针、真实只读脚本、文档一致性检查和固定版本 CI 已交付。
+- 验收：冻结安装、format、lint、typecheck、build、37 个单元测试、双运行时 import、docs check 均通过。
+- 未完成：Local Supabase、SQL/Auth/上传/事务探针和 G0-L/G0-S；这些不是 T03 的通过条件，分别交给 T04～T07/T17。

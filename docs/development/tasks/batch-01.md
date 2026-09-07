@@ -2,7 +2,7 @@
 
 版本DP1，基于[总计划](../master-plan.md)、[公共合同](../contracts.md)与[验证目录](../verification-plan.md)。本批目标是完成开发基座、公共数据库设施和账户纵向链路，**不包含正式开发权益、文件业务或生产部署**；文件/事务探针只验证技术可行性。
 
-当前应用实现正在执行；T01、T02已完成并交接，T03可派发，其余按依赖等待。任务执行者必须读取根AGENTS和对应模块规格，先检查依赖证据，不把已有规划文字当作依赖已完成。
+当前应用实现正在执行；T01、T02、T03已完成交接，T04/T05/T06可派发，其余按依赖等待。任务执行者必须读取根AGENTS和对应模块规格，先检查依赖证据，不把已有规划文字当作依赖已完成。
 
 ## 任务导航
 
@@ -10,10 +10,10 @@
 |---|---|---|---|
 | T01 | 环境、上游与导入清单核验 | 无 | DONE |
 | T02 | 固定版本导入与Admin-only骨架 | T01 | DONE |
-| T03 | 双运行时公共边界、脚本与CI | T02 | READY |
-| T04 | Auth/SSR/MFA与近期认证探针 | T03 | WAITING |
-| T05 | 私有SQL/pooler/角色探针 | T03 | WAITING |
-| T06 | 受控上传与真实字节边界探针 | T03 | WAITING |
+| T03 | 双运行时公共边界、脚本与CI | T02 | DONE |
+| T04 | Auth/SSR/MFA与近期认证探针 | T03 | READY |
+| T05 | 私有SQL/pooler/角色探针 | T03 | READY |
+| T06 | 受控上传与真实字节边界探针 | T03 | READY |
 | T07 | 双连接事务、幂等与回滚探针 | T05 | WAITING |
 | T08 | 核心平台与账户迁移 | T05,T07 | WAITING |
 | T09 | 安全辅助表、角色和内部helper | T08,T04 | WAITING |
@@ -233,7 +233,7 @@ Close和Global Delete request按T04/T11近期认证协议，删除请求只是pe
 
 扫描Browser bundle确认无Platform/Supabase Secret/SQL凭据，测试Token刷新不串用户、CSRF/returnTo/缓存、authorization unavailable不放行。BFF真正调用打包前SDK，不在测试中绕过中央API直连表。
 
-验收：G2-L与V-AUTH/ACCOUNT已交付矩阵，M0/M1/M2本地命令可复现。不要声称完整Registry安装或权益/文件已完成。
+验收：G2-L与V-AUTH-01/02/03/04、V-ACCOUNT-01/02/03/04/05已交付矩阵，M0/M1/M2本地命令可复现。不要声称完整Registry安装或权益/文件已完成。
 
 ## T17 — 托管环境探针与真实Auth验收
 
@@ -256,7 +256,7 @@ Close和Global Delete request按T04/T11近期认证协议，删除请求只是pe
 
 核对T01～T17真实commit/证据、G1/G2-L/G2-S状态、Schema/OpenAPI/SDK兼容、无未关闭安全问题。使用干净依赖与Local库复现关键链路，核对远端已推送。
 
-把M3权益/兑换和M4文件规格细化为下一批任务：依赖已实现函数和fixture，不重新复制公共设施；为每项关联V-ENT/REDEEM/FILE/JOB用例与代码范围。
+把M3权益/兑换和M4文件规格细化为下一批任务：依赖已实现函数和fixture，不重新复制公共设施；为每项关联V-ENT-01/02/03、V-REDEEM-01/02/03/04、V-FILE-01/02/03/04/05/06/07、V-JOB-01用例与代码范围。
 
 验收：首批应用完成报告、真实未解决项、下一批任务清单。T17缺输入时只能交付本地阶段总结，T18保持部分完成/WAITING，不将整个首批标DONE。
 

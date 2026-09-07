@@ -25,6 +25,7 @@ playwright-report/
 *.log
 *.dump
 *.backup
+*.tsbuildinfo
 __pycache__/
 .DS_Store
 Thumbs.db

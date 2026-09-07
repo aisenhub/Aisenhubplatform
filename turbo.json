@@ -27,6 +27,10 @@
     "test": {
       "dependsOn": ["^topo"]
     },
+    "test:unit": {
+      "dependsOn": ["^test:unit"],
+      "outputs": []
+    },
     "clean": {
       "cache": false
     },

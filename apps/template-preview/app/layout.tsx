@@ -6,7 +6,9 @@ export const metadata: Metadata = {
   description: 'Minimal consumer integration shell',
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
       <body>{children}</body>
