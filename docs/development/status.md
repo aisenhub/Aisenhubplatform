@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；M1为IN_PROGRESS（T08已完成，T09/T10待T04相关安全辅助设施）；M2～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`、`SP-UPLOAD Local`和`SP-TXN Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
+M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；M1为IN_PROGRESS（T08、T09已完成，T10已具备依赖）；M2～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`、`SP-UPLOAD Local`和`SP-TXN Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
 
-当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针、T06 Local 上传边界探针、T07 Local 事务探针、T08核心平台与账户迁移均已完成；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T08的Local reset/升级基线、pgTAP和核心关系负向验证见[evidence/T08.md](evidence/T08.md)。
+当前任务状态：T01环境与固定上游导入清单核验、T02固定版本导入与Admin-only骨架、T03双运行时公共边界/脚本/CI、T05 Local SQL/pooler/角色探针、T06 Local 上传边界探针、T07 Local 事务探针、T08核心平台与账户迁移、T09安全辅助表与内部helper均已完成；T04证据见[evidence/T04.md](evidence/T04.md)，当前阻塞在已签发JWT的logout失效边界。T08与T09的 Local reset/pgTAP/行为验证分别见[evidence/T08.md](evidence/T08.md)和[evidence/T09.md](evidence/T09.md)。
 
 ## T01 任务交接
 
@@ -84,3 +84,10 @@ M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；
 - 结果：按数据模型交付固定时间戳核心迁移，包含平台、平台账户、资料、偏好、Origin、Plan、默认 Free 同平台复合外键、墓碑约束、row_version、updated_at 触发器，以及核心表 RLS/运行时默认拒绝。
 - 验收：Local 空库 reset 两次、迁移历史升级基线、pgTAP 24/24、核心关系/墓碑/版本/触发器/anon 默认拒绝探针均通过；生成数据库类型写入 `packages/shared/src/database.types.ts`。
 - 限制：只覆盖 T08 核心表，未提前创建 Grant/Billing 或 M1 辅助表；Staging/Production 迁移未执行，T04 proof 阻塞仍交由 T09/T12/T14 处理。
+
+## T09 任务交接
+
+- 分支：`task/T09-security-helpers`
+- 结果：交付 M1 辅助表、非登录运行角色、受控 session/identity helper、幂等 claim/finalize、审计 append-only、固定窗口限流和 job lease fencing；未向 HTTP executor 授予基础表 DML 或拆分 helper 权限。
+- 验收：T08 回归与 T09 pgTAP 共 54/54；幂等、审计、lease、限流和 Local Auth identity deletion gate 行为探针通过；public schema 类型已重新生成，包含 `audit_logs`。
+- 限制：T04 的真实近期 proof 协议仍 BLOCKED；`admin_step_up` 仅交付 session/factor/5分钟边界和权限存储，不能据此宣称 V-AUTH-03 全部通过。下一项满足依赖的任务是 T10。

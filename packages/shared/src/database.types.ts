@@ -9,6 +9,69 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          actor_type: string;
+          actor_user_id: string | null;
+          created_at: string;
+          event_type: string;
+          id: string;
+          ip: unknown;
+          metadata: Json;
+          platform_account_id: string | null;
+          platform_id: string | null;
+          request_id: string;
+          target_id: string | null;
+          target_type: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          actor_type: string;
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          ip?: unknown;
+          metadata?: Json;
+          platform_account_id?: string | null;
+          platform_id?: string | null;
+          request_id: string;
+          target_id?: string | null;
+          target_type: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          actor_type?: string;
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          ip?: unknown;
+          metadata?: Json;
+          platform_account_id?: string | null;
+          platform_id?: string | null;
+          request_id?: string;
+          target_id?: string | null;
+          target_type?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'audit_logs_platform_id_fkey';
+            columns: ['platform_id'];
+            isOneToOne: false;
+            referencedRelation: 'platforms';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'audit_logs_platform_id_platform_account_id_fkey';
+            columns: ['platform_id', 'platform_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'platform_accounts';
+            referencedColumns: ['platform_id', 'id'];
+          },
+        ];
+      };
       plans: {
         Row: {
           code: string;
