@@ -3,7 +3,16 @@ import type {
   RecentAuthProof,
   SessionVerifier,
 } from '@kit/account-auth';
+import type {
+  ApiErrorCode,
+  ApiResponse,
+  PlanDto,
+  PreferencesDto,
+  ProfileDto,
+} from '@kit/domain/contracts';
 import { createHmac, randomBytes } from 'node:crypto';
+
+export type { ApiErrorCode } from '@kit/domain/contracts';
 
 export interface Membership {
   readonly userId: string;
@@ -151,4 +160,136 @@ export function validateCallbackUrl(value: string, origin: string): string {
   )
     throw new Error('ORIGIN_MISMATCH');
   return callback.toString();
+}
+
+export interface AccountApiClient {
+  readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
+  readonly getPrincipal: (accessToken: string) => Promise<unknown>;
+  readonly activate: (accessToken: string) => Promise<unknown>;
+  readonly getProfile: (accessToken: string) => Promise<ProfileDto>;
+  readonly patchProfile: (
+    accessToken: string,
+    ifMatch: string,
+    patch: Readonly<Record<string, unknown>>,
+  ) => Promise<ProfileDto>;
+  readonly getPreferences: (accessToken: string) => Promise<PreferencesDto>;
+  readonly patchPreferences: (
+    accessToken: string,
+    ifMatch: string,
+    patch: Readonly<Record<string, unknown>>,
+  ) => Promise<PreferencesDto>;
+}
+
+export interface AccountApiFetchResponse {
+  readonly ok: boolean;
+  readonly status: number;
+  readonly json: () => Promise<unknown>;
+}
+
+export type AccountApiFetcher = (
+  input: string,
+  init: {
+    readonly method: string;
+    readonly headers: Readonly<Record<string, string>>;
+    readonly body?: string;
+  },
+) => Promise<AccountApiFetchResponse>;
+
+export class AccountApiError extends Error {
+  readonly status: number;
+  readonly code: ApiErrorCode;
+
+  constructor(status: number, code: ApiErrorCode) {
+    super(code);
+    this.name = 'AccountApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export function createAccountApiClient(input: {
+  readonly baseUrl: string;
+  readonly platformKey: string;
+  readonly fetcher?: AccountApiFetcher;
+}): AccountApiClient {
+  const baseUrl = input.baseUrl.replace(/\/$/u, '');
+  const fetcher: AccountApiFetcher =
+    input.fetcher ??
+    (async (url, init) =>
+      fetch(url, {
+        method: init.method,
+        headers: init.headers,
+        body: init.body,
+      }));
+
+  async function request<T>(options: {
+    readonly method: 'GET' | 'POST' | 'PATCH';
+    readonly path: string;
+    readonly accessToken?: string;
+    readonly ifMatch?: string;
+    readonly body?: Readonly<Record<string, unknown>>;
+  }): Promise<T> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Cache-Control': 'no-store',
+      'X-Platform-Key': input.platformKey,
+    };
+    if (options.accessToken)
+      headers.Authorization = `Bearer ${options.accessToken}`;
+    if (options.ifMatch) headers['If-Match'] = options.ifMatch;
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
+    const response = await fetcher(`${baseUrl}${options.path}`, {
+      method: options.method,
+      headers,
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+    });
+    const payload = (await response.json()) as
+      | ApiResponse<T>
+      | { readonly error?: { readonly code?: ApiErrorCode } };
+    if (!response.ok) {
+      const code =
+        'error' in payload
+          ? (payload.error?.code ?? 'AUTHORIZATION_UNAVAILABLE')
+          : 'AUTHORIZATION_UNAVAILABLE';
+      throw new AccountApiError(response.status, code);
+    }
+    if (!('data' in payload))
+      throw new AccountApiError(502, 'AUTHORIZATION_UNAVAILABLE');
+    return payload.data;
+  }
+
+  return {
+    listPublicPlans: () =>
+      request<readonly PlanDto[]>({ method: 'GET', path: '/v1/plans' }),
+    getPrincipal: (accessToken) =>
+      request({ method: 'GET', path: '/v1/account/principal', accessToken }),
+    activate: (accessToken) =>
+      request({ method: 'POST', path: '/v1/account/activate', accessToken }),
+    getProfile: (accessToken) =>
+      request<ProfileDto>({ method: 'GET', path: '/v1/profile', accessToken }),
+    patchProfile: (accessToken, ifMatch, patch) =>
+      request<ProfileDto>({
+        method: 'PATCH',
+        path: '/v1/profile',
+        accessToken,
+        ifMatch,
+        body: patch,
+      }),
+    getPreferences: (accessToken) =>
+      request<PreferencesDto>({
+        method: 'GET',
+        path: '/v1/preferences',
+        accessToken,
+      }),
+    patchPreferences: (accessToken, ifMatch, patch) =>
+      request<PreferencesDto>({
+        method: 'PATCH',
+        path: '/v1/preferences',
+        accessToken,
+        ifMatch,
+        body: patch,
+      }),
+  };
 }

@@ -38,3 +38,8 @@ h1 {
   color: #0f766e;
   font-weight: 700;
 }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
