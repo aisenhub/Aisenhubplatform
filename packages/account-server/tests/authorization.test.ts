@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   authorizeAccountRequest,
   authorizeAdminRequest,
+  generatePlatformKeyMaterial,
+  normalizeOrigin,
+  validateCallbackUrl,
 } from '../src/index.ts';
 import { createSessionVerifier } from '@kit/account-auth';
 
@@ -60,5 +63,41 @@ describe('server authorization guards', () => {
       expectedUserId: 'admin-1',
     });
     expect(denied.ok ? undefined : denied.code).toBe('UNAUTHORIZED');
+  });
+
+  it('generates non-repeatable HMAC-backed key material and validates origins', () => {
+    const one = generatePlatformKeyMaterial({
+      hmacSecret: 'test-secret',
+      version: 1,
+      platformId: 'platform-1',
+      keyId: 'key-1',
+    });
+    const two = generatePlatformKeyMaterial({
+      hmacSecret: 'test-secret',
+      version: 1,
+      platformId: 'platform-1',
+      keyId: 'key-2',
+    });
+    expect(one.presentedKey).not.toBe(two.presentedKey);
+    expect(one.keyHmac).toMatch(/^[0-9a-f]{64}$/);
+    expect(one.keySuffix.length).toBe(8);
+    expect(normalizeOrigin('HTTPS://App.Example.test/')).toBe(
+      'https://app.example.test',
+    );
+    expect(
+      validateCallbackUrl(
+        'https://app.example.test/auth/callback',
+        'https://app.example.test',
+      ),
+    ).toContain('/auth/callback');
+    expect(() =>
+      normalizeOrigin('https://user:pass@app.example.test/'),
+    ).toThrow('INVALID_ORIGIN');
+    expect(() =>
+      validateCallbackUrl(
+        'https://evil.example.test/callback',
+        'https://app.example.test',
+      ),
+    ).toThrow('ORIGIN_MISMATCH');
   });
 });

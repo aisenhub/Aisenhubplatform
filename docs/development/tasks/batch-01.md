@@ -20,8 +20,8 @@
 | T10 | 数据库负向与事务设施验收 | T09,T07 | DONE |
 | T11 | OpenAPI、SQL context和错误合同冻结 | T10,T04 | DONE |
 | T12 | Auth SDK、SSR adapter和Admin鉴权 | T11 | PARTIAL/BLOCKED |
-| T13 | Platform Key、Principal与Admin平台基础 | T12,T10 | WAITING |
-| T14 | 激活、状态控制、关闭与删除请求 | T13 | WAITING |
+| T13 | Platform Key、Principal与Admin平台基础 | T12,T10 | DONE |
+| T14 | 激活、状态控制、关闭与删除请求 | T13 | READY |
 | T15 | Profile、Preferences与公开Plan | T14,T11 | WAITING |
 | T16 | 最小Consumer/BFF纵向集成 | T15,T12 | WAITING |
 | T17 | 托管环境探针与真实Auth验收 | T16,T06 | WAITING |
