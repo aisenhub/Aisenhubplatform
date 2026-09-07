@@ -56,7 +56,7 @@
 | X02 | Admin/BFF实际部署host、Staging域名/可信代理链 | 上传与SSR托管验证 | 本地有界接收、接口和CSRF测试 |
 | X03 | Google OAuth测试客户端、回调地址、SMTP测试发送配置 | 真实OAuth/邮箱E2E | 密码本地流程、callback负向测试 |
 | X04 | 独立备份目标、加密/凭据托管、告警接收渠道 | G6 | manifest及恢复脚本设计、隔离模拟 |
-| X05 | 正式npm scope、Registry地址与发布权限 | G5发布 | 本地tarball及静态Registry测试 |
+| X05 | 正式npm scope、Registry地址与发布权限 | G5-P | G5-L本地tarball及静态Registry测试 |
 | X06 | 生产区域、预算、预计平台/用户/负载 | G6 | 默认容量测试及记录 |
 
 不得把上述真实值写进公开仓库。证据记录环境别名与脱敏结果，Secret通过受控配置传递。缺少输入时先完成对应本地任务，再明确指出被阻塞的托管验证。

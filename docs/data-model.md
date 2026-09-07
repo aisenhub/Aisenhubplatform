@@ -52,6 +52,7 @@ create table public.platform_profiles (
   locale text,
   timezone text,
   metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata) = 'object'),
+  row_version bigint not null default 1 check (row_version > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -60,6 +61,7 @@ create table public.platform_preferences (
   platform_account_id uuid primary key
     references public.platform_accounts(id) on delete cascade,
   preferences jsonb not null default '{}'::jsonb check (jsonb_typeof(preferences) = 'object'),
+  row_version bigint not null default 1 check (row_version > 0),
   updated_at timestamptz not null default now()
 );
 
@@ -133,7 +135,7 @@ features 是当前实时配置；更新立即影响后续权益读取，不承�
 
 | 表 | 必备字段及约束 |
 |---|---|
-| private.platform_api_keys | id PK、platform_id FK、name、key_hmac、hmac_key_version、prefix/suffix、status(active/revoked)、expires_at、revoked_at、created_by/ revoked_by nullable Auth FK SET NULL、created_at；unique(version,hmac) |
+| private.platform_api_keys | id PK、platform_id FK、name、key_hmac（64字符小写hex）、hmac_key_version、prefix/suffix、status(active/revoked)、expires_at、revoked_at、created_by/ revoked_by nullable Auth FK SET NULL、creation_operation_id UUID、created_at；unique(version,hmac)、unique(platform_id,creation_operation_id) |
 | private.idempotency_keys | platform_id、platform_account_id、operation、actor_scope、idempotency_key、request_hash、state(pending/completed)、response_status/body、created_at、expires_at；上述 scope+key 唯一；复合账户 FK |
 | public.audit_logs | id PK、request_id、actor_type、actor_user_id nullable Auth FK SET NULL、platform_id nullable、platform_account_id nullable、event_type、target_type/id、ip、user_agent、metadata、created_at |
 | private.deletion_jobs | id PK、user_id nullable Auth FK SET NULL、scope、state、checkpoint、retry_count、next_attempt_at、last_error_code、created_at、completed_at；用户活跃删除任务唯一 |
@@ -148,6 +150,7 @@ actor_scope 对用户操作固定 user:账户ID，对 Admin 操作固定 admin:�
 - 所有跨租户敏感关系使用复合 FK；同账户关系进一步包含 platform_account_id。事件中的非空 code/subscription/grant 引用必须能由数据库验证。
 - Platform、Plan、Account、Code 不物理删除；Global Purge 留墓碑账户并脱离身份，文件内容按保留策略实际清除。
 - 所有 updated_at 由统一 trigger 更新，业务方不能覆盖 created_at。原始事件排序不依赖客户端时钟。
+- Profile/Preferences的row_version用于ETag/If-Match原子条件更新；成功PATCH递增，失败不变。updated_at不替代并发版本；该字段由DP1实施规格细化并同步于此，避免迁移和API各自采用不同版本模型。
 - 业务 Ledger 的 effect 字段 append-only；管理员原因不得携带个人信息。受控清除可匿名化 actor/metadata，不得改变 Plan、时间、sequence 或 reversal 目标。
 - 高风险审计同业务事务写入，审计写入失败则业务回滚。拒绝事件与基础设施失败的记录见订阅与兑换文档。
 - 迁移中显式建立 RLS、REVOKE、最小权限 policy 和必要索引；public 表的位置不代表可公开读取。

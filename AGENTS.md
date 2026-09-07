@@ -9,7 +9,7 @@
 
 ## 阅读与边界
 
-先阅读docs/architecture.md，再阅读当前任务引用的专题与实施规格。docs/archive不是有效实现依据。用户指令优先于本文件；公共合同冲突须先记录并修订，不在局部代码静默选择另一套规则。
+先阅读docs/architecture.md、docs/development/README.md，再阅读当前任务引用的专题、实施规格及docs/development/contracts.md。任务状态以docs/development/status.md和当前批次清单为准；docs/archive不是有效实现依据。用户指令优先于本文件；公共合同冲突须先记录并修订，不在局部代码静默选择另一套规则。
 
 只执行已派发的任务及必要依赖检查；任务清单的存在不等于获准自动开发全部模块。不要自行增加组织、支付、微服务或第三方接入能力。依赖门槛未通过时完成独立准备，报告具体阻塞，不伪造通过结果。
 

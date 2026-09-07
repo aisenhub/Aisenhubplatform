@@ -8,9 +8,24 @@
 2. [开发总计划](master-plan.md)：模块、依赖、阶段门槛与完成定义。
 3. [决策和默认参数](decision-register.md)：已确认、工程默认、外部待提供项。
 4. [验证计划](verification-plan.md)：技术验证与验收用例ID。
-5. [实际进度](status.md)：规划交付与应用实现分开记录。
+5. [公共合同](contracts.md)：目录所有权、SQL入口、序列化与剩余验证边界。
+6. [首批任务T01～T18](tasks/batch-01.md)：依赖、范围、步骤、验收与首项派发指令。
+7. [实际进度](status.md)：规划交付与应用实现分开记录。
+8. [规划复核记录](planning-review.md)：中断恢复后的修正、静态检查和剩余验证边界。
 
-模块规格与首批任务将在本轮规划中一并交付。执行任务前必须读取其引用的模块规格及公共合同，不能从总计划直接推测接口。
+## 模块实施规格
+
+| 模块 | 规格 |
+|---|---|
+| M0 | [工程基座与技术验证](modules/M0-foundation.md) |
+| M1 | [数据库与安全公共设施](modules/M1-database-security.md) |
+| M2 | [身份、平台与账户](modules/M2-identity-platform.md) |
+| M3 | [权益与兑换](modules/M3-entitlements-redemption.md) |
+| M4 | [配置文件与持久任务](modules/M4-files-jobs.md) |
+| M5 | [SDK、Admin与Registry成品](modules/M5-sdk-admin-registry.md) |
+| M6 | [生产运行与发布](modules/M6-operations-release.md) |
+
+执行任务前必须读取所引用规格及公共合同，不能从总计划直接推测接口。验证报告遵循[证据规则](evidence/README.md)。
 
 ## 状态词典
 
