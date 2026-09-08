@@ -12,7 +12,7 @@
 | M1 / G1 | 基础任务有Local通过记录；候选commit统一复验未运行 | T18-L确认G1 |
 | M2 / G2-L | T12/T16 PARTIAL；T12-R1已交付，T12-R2已完成Admin MFA安全实现但普通proof/浏览器仍未收口 | T12-R2证据、T16-R1/R2、T18-L |
 | G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS | T17-R1/R2/R3、T18-S |
-| M3 / G3 | M3-01～03 Local交付；M3-R1为PARTIAL（SQL/API Local基线通过，剩余G3子情景未补齐） | 补月末/闰年/UTC、影子重放、竞争、禁用顺序、HMAC轮换/响应丢失矩阵，不推定整体G3 PASS |
+| M3 / G3 | M3-01～03 Local交付；M3-R1为PARTIAL（SQL/API Local基线及主要G3子情景通过） | 补API级双Secret轮换/提交后响应丢失注入，不推定整体G3 PASS |
 | M4～M6 | NOT_STARTED；本次仅计划 | 第三批M4、DP2后续路线 |
 | T18 | WAITING；允许独立整理本地材料 | T18-L与T18-S分层完成，全部条件满足才关闭父任务 |
 

@@ -20,6 +20,9 @@ let managedPlanId;
 let targetUser;
 let adminUser;
 let concurrentUser;
+let multiCodeUser;
+let grantRaceUser;
+let hmacRotationUser;
 const [existingSystemAdmin] = await sql`
   select user_id from private.system_admin where singleton_id = 1
 `;
@@ -105,6 +108,27 @@ try {
     sql`row(${targetUser.user}, ${targetUser.session}, ${platformId}, ${keyId}, ${crypto.randomUUID()})::private.account_context`;
   const adminContext = () =>
     sql`row(${adminUser.user}, ${adminUser.session}, ${crypto.randomUUID()})::private.admin_context`;
+  const createBatch = async (planId, codeHmac, name, keyVersion = 1) => {
+    const receiptHmac = `${name}-receipt`;
+    const [created] = await asRole(
+      'admin_executor',
+      (transaction) =>
+        transaction`select * from private.admin_batch_create(${adminContext()}, ${platformId}, ${planId}, ${name}, 1, 30, 'day', ${expiresAt}, ${deliveryDeadline}, ${crypto.randomUUID()}, ${receiptHmac}, ${sql.json([{ code_hmac: codeHmac, hmac_key_version: keyVersion, code_prefix: 'AISEN-V1', code_suffix: codeHmac.slice(-4).toUpperCase() }])})`,
+    );
+    return { batchId: created.batch_id, receiptHmac };
+  };
+  const fixtureCodeHmac = () =>
+    `${crypto.randomUUID().replaceAll('-', '')}${crypto.randomUUID().replaceAll('-', '')}`;
+  const activateBatch = async (planId, codeHmac, name, keyVersion = 1) => {
+    const created = await createBatch(planId, codeHmac, name, keyVersion);
+    const [confirmed] = await asRole(
+      'admin_executor',
+      (transaction) =>
+        transaction`select * from private.admin_batch_confirm(${adminContext()}, ${platformId}, ${created.batchId}, ${created.receiptHmac})`,
+    );
+    assert(confirmed.status === 'active', `${name} batch is active`);
+    return created;
+  };
   const [managedPlan] = await asRole(
     'admin_executor',
     (transaction) =>
@@ -284,6 +308,18 @@ try {
     batch.status === 'pending_delivery' && batch.quantity === 1,
     'batch starts pending delivery',
   );
+  const [lostDeliveryResponseRetry] = await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_batch_create(${adminContext()}, ${platformId}, ${paidPlanId}, 'M3 batch', 1, 30, 'day', ${expiresAt}, ${deliveryDeadline}, ${creationOperationId}, ${receiptHmac}, ${sql.json(codePayload)})`,
+  );
+  assert(
+    lostDeliveryResponseRetry.batch_id === batch.batch_id &&
+      lostDeliveryResponseRetry.status === 'pending_delivery' &&
+      lostDeliveryResponseRetry.quantity === 1 &&
+      !('codes' in lostDeliveryResponseRetry),
+    'lost batch response retry cannot recover plaintext codes',
+  );
   const [beforeDelivery] = await asRole(
     'account_executor',
     (transaction) =>
@@ -340,6 +376,160 @@ try {
   assert(
     afterRedeem.code === 'pro' && afterRedeem.entitlement_kind === 'term',
     'redemption updates projection',
+  );
+  await sql`update public.subscriptions
+    set plan_id = null, status = 'active', started_at = null,
+      current_period_end = null, next_transition_at = null, last_event_sequence = 0
+    where platform_account_id = ${account.platform_account_id}`;
+  const [replayedProjection] = await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.entitlement_read(${context()})`,
+  );
+  assert(
+    replayedProjection.code === 'pro' &&
+      replayedProjection.entitlement_kind === 'term',
+    'shadow projection replay restores the ordered ledger result',
+  );
+  multiCodeUser = await signup('m3-multicode');
+  const multiCodeContext = () =>
+    sql`row(${multiCodeUser.user}, ${multiCodeUser.session}, ${platformId}, ${keyId}, ${crypto.randomUUID()})::private.account_context`;
+  await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.account_activate(${multiCodeContext()})`,
+  );
+  const multiCodeHmacA = fixtureCodeHmac();
+  const multiCodeHmacB = fixtureCodeHmac();
+  await activateBatch(paidPlanId, multiCodeHmacA, 'M3 multi A');
+  await activateBatch(otherPlanId, multiCodeHmacB, 'M3 multi B');
+  const multiCodeResults = await Promise.all(
+    [
+      [multiCodeHmacA, 'm3-multi-a'],
+      [multiCodeHmacB, 'm3-multi-b'],
+    ].map(([codeHmac, idempotencyKey]) =>
+      asRole(
+        'account_executor',
+        (transaction) =>
+          transaction`select * from private.redeem_subscription_code(${multiCodeContext()}, ${codeHmac}::text, 1::smallint, ${idempotencyKey}::text)`,
+      ),
+    ),
+  );
+  const multiCodeOutcomes = multiCodeResults.map(([result]) => result);
+  assert(
+    multiCodeOutcomes.filter((result) => result.outcome === 'applied')
+      .length === 1 &&
+      multiCodeOutcomes.filter(
+        (result) => result.error_code === 'PLAN_CONFLICT',
+      ).length === 1,
+    'two first redemptions on an empty account yield one grant and one plan conflict',
+  );
+  grantRaceUser = await signup('m3-grant-race');
+  const grantRaceContext = () =>
+    sql`row(${grantRaceUser.user}, ${grantRaceUser.session}, ${platformId}, ${keyId}, ${crypto.randomUUID()})::private.account_context`;
+  const [grantRaceAccount] = await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.account_activate(${grantRaceContext()})`,
+  );
+  const grantRaceCodeHmac = fixtureCodeHmac();
+  await activateBatch(paidPlanId, grantRaceCodeHmac, 'M3 grant race');
+  const grantRace = await Promise.all([
+    asRole(
+      'account_executor',
+      (transaction) =>
+        transaction`select * from private.redeem_subscription_code(${grantRaceContext()}, ${grantRaceCodeHmac}::text, 1::smallint, 'm3-grant-race-redeem'::text)`,
+    )
+      .then(([result]) => ({ result }))
+      .catch((error) => ({ error })),
+    asRole(
+      'admin_executor',
+      (transaction) =>
+        transaction`select * from private.admin_entitlement_command(${adminContext()}, ${platformId}, ${grantRaceAccount.platform_account_id}, 'grant', ${crypto.randomUUID()}, ${otherPlanId}, 30, 'day', null, 'M3 grant race')`,
+    )
+      .then(([result]) => ({ result }))
+      .catch((error) => ({ error })),
+  ]);
+  const grantRaceApplied = grantRace.filter(
+    (entry) => entry.result?.outcome === 'applied',
+  );
+  const grantRaceLoser = grantRace.find(
+    (entry) => entry.result?.outcome !== 'applied',
+  );
+  assert(
+    grantRaceApplied.length === 1 &&
+      (grantRaceLoser?.result?.error_code === 'PLAN_CONFLICT' ||
+        grantRaceLoser?.error?.code === 'P0001'),
+    'redemption and Admin Grant competition has one winner and one plan conflict',
+  );
+  const pendingDisableCode = fixtureCodeHmac();
+  const pendingDisable = await createBatch(
+    paidPlanId,
+    pendingDisableCode,
+    'M3 pending disable',
+  );
+  await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_batch_disable(${adminContext()}, ${platformId}, ${pendingDisable.batchId})`,
+  );
+  await expectSqlState(
+    () =>
+      asRole(
+        'admin_executor',
+        (transaction) =>
+          transaction`select * from private.admin_batch_confirm(${adminContext()}, ${platformId}, ${pendingDisable.batchId}, ${pendingDisable.receiptHmac})`,
+      ),
+    'P0001',
+    'disabled pending batch cannot be confirmed',
+  );
+  const activeDisableCode = fixtureCodeHmac();
+  const activeDisable = await activateBatch(
+    paidPlanId,
+    activeDisableCode,
+    'M3 active disable',
+  );
+  await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_batch_disable(${adminContext()}, ${platformId}, ${activeDisable.batchId})`,
+  );
+  const [disabledBatchRedeem] = await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.redeem_subscription_code(${context()}, ${activeDisableCode}::text, 1::smallint, 'm3-disabled-batch'::text)`,
+  );
+  assert(
+    disabledBatchRedeem.outcome === 'rejected' &&
+      disabledBatchRedeem.error_code === 'CODE_EXPIRED',
+    'disabled active batch cannot redeem',
+  );
+  hmacRotationUser = await signup('m3-hmac-rotation');
+  const hmacRotationContext = () =>
+    sql`row(${hmacRotationUser.user}, ${hmacRotationUser.session}, ${platformId}, ${keyId}, ${crypto.randomUUID()})::private.account_context`;
+  await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.account_activate(${hmacRotationContext()})`,
+  );
+  const oldVersionCode = fixtureCodeHmac();
+  const currentVersionCode = fixtureCodeHmac();
+  await activateBatch(paidPlanId, oldVersionCode, 'M3 HMAC old', 1);
+  await activateBatch(paidPlanId, currentVersionCode, 'M3 HMAC current', 2);
+  const [oldVersionRedeem] = await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.redeem_subscription_code(${hmacRotationContext()}, ${oldVersionCode}::text, 1::smallint, 'm3-hmac-old'::text)`,
+  );
+  const [currentVersionRedeem] = await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.redeem_subscription_code(${hmacRotationContext()}, ${currentVersionCode}::text, 2::smallint, 'm3-hmac-current'::text)`,
+  );
+  assert(
+    oldVersionRedeem.outcome === 'applied' &&
+      currentVersionRedeem.outcome === 'applied',
+    'old verify-only and current HMAC versions remain redeemable',
   );
   concurrentUser = await signup('m3-concurrent');
   const concurrentContext = () =>
@@ -427,6 +617,12 @@ try {
       delivery: 'PASS',
       redemption: 'PASS',
       concurrentRedemption: 'PASS',
+      shadowProjectionReplay: 'PASS',
+      emptyAccountMultiCodeRace: 'PASS',
+      redemptionAdminGrantRace: 'PASS',
+      batchDisableOrders: 'PASS',
+      hmacVersionOverlap: 'PASS',
+      lostDeliveryResponseRetry: 'PASS',
       planManagement: 'PASS',
     }),
   );
@@ -476,6 +672,21 @@ try {
     }).catch(() => undefined);
   if (concurrentUser?.user)
     await fetch(`${localUrl}/auth/v1/admin/users/${concurrentUser.user}`, {
+      method: 'DELETE',
+      headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
+    }).catch(() => undefined);
+  if (multiCodeUser?.user)
+    await fetch(`${localUrl}/auth/v1/admin/users/${multiCodeUser.user}`, {
+      method: 'DELETE',
+      headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
+    }).catch(() => undefined);
+  if (grantRaceUser?.user)
+    await fetch(`${localUrl}/auth/v1/admin/users/${grantRaceUser.user}`, {
+      method: 'DELETE',
+      headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
+    }).catch(() => undefined);
+  if (hmacRotationUser?.user)
+    await fetch(`${localUrl}/auth/v1/admin/users/${hmacRotationUser.user}`, {
       method: 'DELETE',
       headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
     }).catch(() => undefined);
