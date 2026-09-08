@@ -9,6 +9,8 @@ const secretKey = process.env.SUPABASE_LOCAL_SECRET_KEY;
 const apiUrl = process.env.M3_ACCOUNT_API_URL ?? 'http://127.0.0.1:8787';
 const platformSecret = process.env.PLATFORM_KEY_HMAC_SECRET;
 const redemptionSecret = process.env.REDEMPTION_HMAC_SECRET;
+const previousRedemptionSecret = process.env.REDEMPTION_HMAC_SECRET_PREVIOUS;
+const rotationEnabled = process.env.M3_ROTATION_E2E === '1';
 if (
   !databaseUrl ||
   !authUrl ||
@@ -28,12 +30,16 @@ const platformId = crypto.randomUUID();
 const keyId = crypto.randomUUID();
 const freePlanId = crypto.randomUUID();
 const paidPlanId = crypto.randomUUID();
+const rotationPlanId = crypto.randomUUID();
+const rotationBatchId = crypto.randomUUID();
+const rotationCodeId = crypto.randomUUID();
 const presentedKey = `phk_v1_${keyId}_m3-api-fixture`;
 const keyHmac = createHmac('sha256', platformSecret)
   .update(`1:platform-key:${keyId}:${presentedKey}`)
   .digest('hex');
 let user;
 let admin;
+let rotationUser;
 let proofId;
 const [existingSystemAdmin] = await sql`
   select user_id from private.system_admin where singleton_id = 1
@@ -187,6 +193,13 @@ async function json(response) {
 try {
   user = await signup('m3-api-user');
   admin = await signup('m3-api-admin');
+  if (rotationEnabled) {
+    if (!previousRedemptionSecret)
+      throw new Error(
+        'M3_ROTATION_E2E requires the previous redemption Secret',
+      );
+    rotationUser = await signup('m3-api-rotation');
+  }
   assert.equal(jwtPayload(admin.accessToken).aal, 'aal1');
   await elevateToAal2(admin);
   const elevatedClaims = jwtPayload(admin.accessToken);
@@ -208,8 +221,32 @@ try {
   await sql`insert into public.plans (id, platform_id, code, name, kind, features) values
     (${freePlanId}, ${platformId}, 'free', 'Free', 'free', ${sql.json({ quota: 1 })}),
     (${paidPlanId}, ${platformId}, 'pro', 'Pro', 'paid', ${sql.json({ quota: 10 })})`;
+  if (rotationEnabled) {
+    await sql`insert into public.plans (id, platform_id, code, name, kind, features) values
+      (${rotationPlanId}, ${platformId}, 'legacy-pro', 'Legacy Pro', 'paid', ${sql.json({ quota: 7 })})`;
+  }
   await sql`update public.platforms set default_plan_id = ${freePlanId} where id = ${platformId}`;
   await sql`insert into private.platform_api_keys (id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix, creation_operation_id) values (${keyId}, ${platformId}, 'M3 API key', ${keyHmac}, 1, 'phk_v1', 'xture', ${crypto.randomUUID()})`;
+  if (rotationEnabled) {
+    const rotationCode = 'ABCD23456789';
+    const rotationCodeHmac = createHmac('sha256', previousRedemptionSecret)
+      .update(`redeem:v1:platform:${platformId}:key:1:code:${rotationCode}`)
+      .digest('hex');
+    const rotationReceipt = createHmac('sha256', previousRedemptionSecret)
+      .update(`delivery:v1:platform:${platformId}:receipt:legacy-rotation`)
+      .digest('hex');
+    await sql`insert into public.redemption_code_batches
+      (id, platform_id, plan_id, name, quantity, duration_value, duration_unit,
+       expires_at, status, delivery_deadline, delivered_at, delivery_session_id,
+       delivery_receipt_hmac, created_by, creation_operation_id)
+      values (${rotationBatchId}, ${platformId}, ${rotationPlanId}, 'Legacy rotation fixture', 1,
+        30, 'day', now() + interval '30 days', 'active', now() + interval '1 day', now(),
+        ${admin.sessionId}, ${rotationReceipt}, ${admin.userId}, ${crypto.randomUUID()})`;
+    await sql`insert into public.redemption_codes
+      (id, platform_id, batch_id, plan_id, code_hmac, hmac_key_version, code_prefix, code_suffix)
+      values (${rotationCodeId}, ${platformId}, ${rotationBatchId}, ${rotationPlanId},
+        ${rotationCodeHmac}, 1, 'ABCD', '6789')`;
+  }
   await sql`insert into private.system_admin (user_id) values (${admin.userId}) on conflict (singleton_id) do update set user_id = excluded.user_id`;
   const recentProofResponse = await apiRequest(
     '/functions/v1/account-api/admin/api/v1/auth/recent-proof',
@@ -253,6 +290,38 @@ try {
   const activated = await json(activateResponse);
   const accountId = activated.data.platform_account_id;
 
+  if (rotationEnabled) {
+    const rotationActivateResponse = await apiRequest(
+      '/functions/v1/account-api/v1/account/activate',
+      {
+        method: 'POST',
+        headers: {
+          ...keyHeaders,
+          Authorization: `Bearer ${rotationUser.accessToken}`,
+        },
+      },
+    );
+    assertStatus(rotationActivateResponse, 200, 'rotation user activate');
+    const rotationRedeemResponse = await apiRequest(
+      '/functions/v1/account-api/v1/subscription/redeem',
+      {
+        method: 'POST',
+        headers: {
+          ...keyHeaders,
+          Authorization: `Bearer ${rotationUser.accessToken}`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'm3-api-old-secret-redeem-1',
+        },
+        body: JSON.stringify({ code: 'ABCD23456789' }),
+      },
+    );
+    assertStatus(rotationRedeemResponse, 200, 'old Secret redeem');
+    assert.equal(
+      (await json(rotationRedeemResponse)).data.plan.code,
+      'legacy-pro',
+    );
+  }
+
   const subscriptionResponse = await apiRequest(
     '/functions/v1/account-api/v1/subscription',
     { headers: { ...keyHeaders, Authorization: `Bearer ${user.accessToken}` } },
@@ -269,7 +338,10 @@ try {
     { headers: adminHeaders },
   );
   assertStatus(adminPlansResponse, 200, 'admin plan list');
-  assert.equal((await json(adminPlansResponse)).data.length, 2);
+  assert.equal(
+    (await json(adminPlansResponse)).data.length,
+    2 + (rotationEnabled ? 1 : 0),
+  );
 
   const createPlanResponse = await apiRequest(
     `/functions/v1/account-api/admin/api/v1/platforms/${platformId}/plans`,
@@ -346,7 +418,10 @@ try {
     { headers: adminHeaders },
   );
   assertStatus(listedBatchesResponse, 200, 'admin batch list');
-  assert.equal((await json(listedBatchesResponse)).data.length, 1);
+  assert.equal(
+    (await json(listedBatchesResponse)).data.length,
+    1 + (rotationEnabled ? 1 : 0),
+  );
 
   const redeemPath = '/functions/v1/account-api/v1/subscription/redeem';
   const redeemOptions = {
@@ -462,6 +537,7 @@ try {
       responseLostRetry: 'PASS',
       redemption: 'PASS',
       ...(responseLost ? { postCommitResponseLoss: 'PASS' } : {}),
+      ...(rotationEnabled ? { dualSecretOldCode: 'PASS' } : {}),
       adminSubscription: 'PASS',
       pauseResume: 'PASS',
       recentAuthProof: 'PASS',
@@ -517,7 +593,7 @@ try {
     await sql`delete from private.system_admin where singleton_id = 1`.catch(
       () => undefined,
     );
-  for (const account of [user, admin]) {
+  for (const account of [user, admin, rotationUser]) {
     if (!account?.userId) continue;
     await fetch(`${authUrl}/auth/v1/admin/users/${account.userId}`, {
       method: 'DELETE',

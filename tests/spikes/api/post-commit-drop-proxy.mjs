@@ -28,7 +28,8 @@ const server = http.createServer(async (request, response) => {
     const upstreamBody = Buffer.from(await upstream.arrayBuffer());
     const isRedeem =
       request.method === 'POST' &&
-      request.url?.includes('/v1/subscription/redeem');
+      request.url?.includes('/v1/subscription/redeem') &&
+      !body.toString('utf8').includes('ABCD23456789');
     if (isRedeem && upstream.ok && !dropped) {
       dropped = true;
       request.socket.destroy();

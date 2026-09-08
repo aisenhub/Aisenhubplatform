@@ -97,16 +97,18 @@ begin
       raise exception using errcode = '23505', message = 'idempotency_conflict';
     end if;
   end if;
-  if not coalesce(v_new_claim, false) and v_claim.state = 'completed' then
-    if v_claim.response_body->>'error_code' is not null then
-      return query select 'rejected'::text, null::uuid, null::uuid,
-        v_claim.response_body->>'error_code';
-    else
-      return query select 'replayed'::text,
-        (v_claim.response_body->>'grant_id')::uuid,
-        (v_claim.response_body->>'plan_id')::uuid, null::text;
+  if not coalesce(v_new_claim, false) then
+    if v_claim.state = 'completed' then
+      if v_claim.response_body->>'error_code' is not null then
+        return query select 'rejected'::text, null::uuid, null::uuid,
+          v_claim.response_body->>'error_code';
+      else
+        return query select 'replayed'::text,
+          (v_claim.response_body->>'grant_id')::uuid,
+          (v_claim.response_body->>'plan_id')::uuid, null::text;
+      end if;
+      return;
     end if;
-    return;
   end if;
 
   select * into v_code from public.redemption_codes c
