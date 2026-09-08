@@ -6,8 +6,8 @@
 
 | ID | 交付 | 依赖任务 | 初始状态 |
 |---|---|---|---|
-| T12-R1 | 真实 Auth/SSR adapter 与会话范围 | 无 | READY |
-| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | WAITING |
+| T12-R1 | 真实 Auth/SSR adapter 与会话范围 | 无 | PARTIAL（实现提交 aa5089d；证据见 T12-R1） |
+| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | READY |
 | T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | WAITING |
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | WAITING |
 | T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |
