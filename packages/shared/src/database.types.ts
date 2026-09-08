@@ -72,6 +72,137 @@ export type Database = {
           },
         ];
       };
+      platform_config_files: {
+        Row: {
+          actual_size_bytes: number | null;
+          created_at: string;
+          delete_requested_at: string | null;
+          deleted_at: string | null;
+          fencing_token: number;
+          id: string;
+          intent_expires_at: string;
+          lease_until: string | null;
+          mime_type: string | null;
+          original_name: string;
+          platform_account_id: string;
+          platform_id: string;
+          purpose: string | null;
+          replaces_file_id: string | null;
+          reserved_bytes: number;
+          reserved_count: number;
+          sha256: string | null;
+          status: string;
+          storage_bucket: string;
+          storage_path: string;
+          uploaded_at: string | null;
+          updated_at: string;
+          requested_size_bytes: number;
+          write_outcome: string;
+        };
+        Insert: {
+          actual_size_bytes?: number | null;
+          created_at?: string;
+          delete_requested_at?: string | null;
+          deleted_at?: string | null;
+          fencing_token?: number;
+          id?: string;
+          intent_expires_at: string;
+          lease_until?: string | null;
+          mime_type?: string | null;
+          original_name: string;
+          platform_account_id: string;
+          platform_id: string;
+          purpose?: string | null;
+          replaces_file_id?: string | null;
+          reserved_bytes?: number;
+          reserved_count?: number;
+          sha256?: string | null;
+          status?: string;
+          storage_bucket?: string;
+          storage_path: string;
+          uploaded_at?: string | null;
+          updated_at?: string;
+          requested_size_bytes: number;
+          write_outcome?: string;
+        };
+        Update: {
+          actual_size_bytes?: number | null;
+          created_at?: string;
+          delete_requested_at?: string | null;
+          deleted_at?: string | null;
+          fencing_token?: number;
+          id?: string;
+          intent_expires_at?: string;
+          lease_until?: string | null;
+          mime_type?: string | null;
+          original_name?: string;
+          platform_account_id?: string;
+          platform_id?: string;
+          purpose?: string | null;
+          replaces_file_id?: string | null;
+          reserved_bytes?: number;
+          reserved_count?: number;
+          sha256?: string | null;
+          status?: string;
+          storage_bucket?: string;
+          storage_path?: string;
+          uploaded_at?: string | null;
+          updated_at?: string;
+          requested_size_bytes?: number;
+          write_outcome?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_config_files_platform_id_platform_account_id_fkey';
+            columns: ['platform_id', 'platform_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'platform_accounts';
+            referencedColumns: ['platform_id', 'id'];
+          },
+          {
+            foreignKeyName: 'platform_config_files_platform_id_platform_account_id_replaces_file_id_fkey';
+            columns: ['platform_id', 'platform_account_id', 'replaces_file_id'];
+            isOneToOne: false;
+            referencedRelation: 'platform_config_files';
+            referencedColumns: ['platform_id', 'platform_account_id', 'id'];
+          },
+        ];
+      };
+      platform_file_policies: {
+        Row: {
+          enabled: boolean;
+          max_file_bytes: number;
+          max_files: number;
+          max_total_bytes: number;
+          platform_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          enabled?: boolean;
+          max_file_bytes?: number;
+          max_files?: number;
+          max_total_bytes?: number;
+          platform_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          enabled?: boolean;
+          max_file_bytes?: number;
+          max_files?: number;
+          max_total_bytes?: number;
+          platform_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_file_policies_platform_id_fkey';
+            columns: ['platform_id'];
+            isOneToOne: true;
+            referencedRelation: 'platforms';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       plans: {
         Row: {
           code: string;

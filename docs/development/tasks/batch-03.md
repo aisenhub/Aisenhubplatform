@@ -1,6 +1,6 @@
 # 第三批任务：M4配置文件与持久任务
 
-日期：2026-09-08；DP2。依据[M4规格](../modules/M4-files-jobs.md)、[文件合同](../../config-files.md)、[认证清除合同](../../auth-security.md)、[运维](../../operations.md)、[公共合同](../contracts.md)及[验证计划](../verification-plan.md)。本批是计划交付，M4仍NOT_STARTED，所有新运行验收NOT_RUN。
+日期：2026-09-08；DP2。依据[M4规格](../modules/M4-files-jobs.md)、[文件合同](../../config-files.md)、[认证清除合同](../../auth-security.md)、[运维](../../operations.md)、[公共合同](../contracts.md)及[验证计划](../verification-plan.md)。M4-01规格与M4-02 Local持久模型已交付；后续文件/Storage/worker验收仍按各任务逐项运行。
 
 ## 依赖和执行规则
 
@@ -11,8 +11,8 @@ M4-01规格可现在派发；M4实现从M4-02开始，必须取得[收尾任务]
 | ID | 交付 | 依赖任务 | 初始状态 |
 |---|---|---|---|
 | M4-01 | 文件/恢复合同与故障矩阵冻结 | 无 | DONE（合同交付；证据见 M4-01） |
-| M4-02 | 持久模型、权限与备份屏障基础 | M4-01,T18-L | WAITING |
-| M4-03 | 策略、配额预约和接收状态SQL | M4-02 | WAITING |
+| M4-02 | 持久模型、权限与备份屏障基础 | M4-01,T18-L | PASS（Local；空库升级、结构/RLS/真实角色负向通过） |
+| M4-03 | 策略、配额预约和接收状态SQL | M4-02 | READY |
 | M4-04 | 有界HTTP上传与可信Storage adapter | M4-03 | WAITING |
 | M4-05 | 删除、过期、对账与持久worker | M4-04 | WAITING |
 | M4-06 | Replace原子切换与竞争恢复 | M4-05 | WAITING |
