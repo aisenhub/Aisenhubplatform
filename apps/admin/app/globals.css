@@ -108,6 +108,40 @@ h3 {
   color: #62708a;
   text-align: right;
 }
+.section-heading,
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.file-row {
+  align-items: flex-start;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid #e7ebf4;
+}
+.file-row:last-child {
+  border-bottom: 0;
+}
+.file-row small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #62708a;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+@media (max-width: 40rem) {
+  .shell {
+    padding: 4rem 1rem;
+  }
+  .file-row,
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
 .link {
   color: #5267d8;
   font-weight: 700;

@@ -805,7 +805,41 @@
                 "type": "array",
                 "items": { "$ref": "#/components/schemas/ConfigFile" }
               },
-              "next_cursor": { "type": ["string", "null"], "format": "uuid" }
+              "next_cursor": { "type": ["string", "null"], "format": "uuid" },
+              "budget": {
+                "type": "object",
+                "required": [
+                  "enabled",
+                  "max_file_bytes",
+                  "max_files",
+                  "max_total_bytes",
+                  "reserved_bytes",
+                  "reserved_count",
+                  "available_bytes",
+                  "available_count",
+                  "over_quota"
+                ],
+                "properties": {
+                  "platform_id": {
+                    "type": ["string", "null"],
+                    "format": "uuid"
+                  },
+                  "enabled": { "type": "boolean" },
+                  "max_file_bytes": { "type": "integer", "minimum": 0 },
+                  "max_files": { "type": "integer", "minimum": 0 },
+                  "max_total_bytes": { "type": "integer", "minimum": 0 },
+                  "reserved_bytes": { "type": "integer", "minimum": 0 },
+                  "reserved_count": { "type": "integer", "minimum": 0 },
+                  "available_bytes": { "type": "integer", "minimum": 0 },
+                  "available_count": { "type": "integer", "minimum": 0 },
+                  "over_quota": { "type": "boolean" },
+                  "updated_at": {
+                    "type": ["string", "null"],
+                    "format": "date-time"
+                  }
+                },
+                "additionalProperties": false
+              }
             },
             "additionalProperties": false
           },

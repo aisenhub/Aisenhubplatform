@@ -1,6 +1,6 @@
 # M4 配置文件与持久任务实施规格
 
-状态：IN_PROGRESS；M4-02持久模型与权限基础、M4-03策略/预约/接收状态SQL、M4-04有界上传/Storage、M4-05删除/过期/对账worker、M4-06 Replace原子切换和M4-07查询/下载代理已通过Local，后续实现仍依赖M2账户/授权、M1任务/门闩、SP-UPLOAD结论。依据[文件合同](../../config-files.md)、[安全清除流程](../../auth-security.md)。
+状态：IN_PROGRESS；M4-02持久模型与权限基础、M4-03策略/预约/接收状态SQL、M4-04有界上传/Storage、M4-05删除/过期/对账worker、M4-06 Replace原子切换和M4-07查询/下载代理已通过Local；M4-08已交付Consumer上传/状态/下载/删除、Admin策略/状态/下载页面及预算读取，但Admin受控删除仍待M4-09领域入口。后续实现仍依赖M2账户/授权、M1任务/门闩、SP-UPLOAD结论。依据[文件合同](../../config-files.md)、[安全清除流程](../../auth-security.md)。
 
 DP2已细化为[第三批11项任务](../tasks/batch-03.md)：规格可先做，实现须T18-L确认G1/G2-L；G4-S另依赖完整托管门槛。M4/M5/M6衔接见[后续路线](../roadmap-dp2.md)。
 

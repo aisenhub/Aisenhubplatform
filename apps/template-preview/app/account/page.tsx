@@ -228,6 +228,9 @@ export default function AccountPage() {
         </div>
       </section>
       <nav className="actions" aria-label="Account navigation">
+        <a className="link" href="/files">
+          管理配置文件
+        </a>
         <a className="link" href="/subscription">
           查看订阅
         </a>

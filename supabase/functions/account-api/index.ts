@@ -494,6 +494,30 @@ function fileDto(row: Row): Record<string, unknown> {
   };
 }
 
+function fileBudgetDto(row: Row): Record<string, unknown> {
+  return {
+    platform_id: uuidValue(row.platform_id),
+    enabled: row.enabled === true,
+    max_file_bytes: Number(row.max_file_bytes ?? 0),
+    max_files: Number(row.max_files ?? 0),
+    max_total_bytes: Number(row.max_total_bytes ?? 0),
+    reserved_bytes: Number(row.reserved_bytes ?? 0),
+    reserved_count: Number(row.reserved_count ?? 0),
+    available_bytes: Number(row.available_bytes ?? 0),
+    available_count: Number(row.available_count ?? 0),
+    over_quota: row.over_quota === true,
+    updated_at: isoDate(row.updated_at),
+  };
+}
+
+function adminFileDto(row: Row): Record<string, unknown> {
+  return {
+    ...fileDto(row),
+    platform_id: uuidValue(row.platform_id),
+    platform_account_id: uuidValue(row.platform_account_id),
+  };
+}
+
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const copy = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(copy).set(bytes);
@@ -633,12 +657,17 @@ async function dispatchAccount(
       'select * from private.file_list(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::integer)',
       [...contextValues, cursor, limit],
     );
+    const [budget] = await transaction.unsafe<Row>(
+      'select * from private.file_budget_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
+      contextValues,
+    );
     return {
       status: 200,
       data: {
         items: rows.map(fileDto),
         next_cursor:
           rows.length === limit ? uuidValue(rows.at(-1)?.file_id) : null,
+        budget: fileBudgetDto(budget ?? {}),
       },
     };
   }
@@ -966,10 +995,52 @@ async function dispatchAdmin(
     );
     return {
       status: 200,
-      data: rows.map(fileDto),
+      data: rows.map(adminFileDto),
       next_cursor:
         rows.length === limit ? uuidValue(rows.at(-1)?.file_id) : null,
     };
+  }
+  const policyMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/file-policy$/u.exec(
+    path,
+  );
+  if (policyMatch && UUID.test(policyMatch[1]!)) {
+    const platformId = policyMatch[1]!;
+    if (request.method === 'GET') {
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_file_policy_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return { status: 200, data: result };
+    }
+    if (request.method === 'PATCH') {
+      await adminStepUp(transaction, session, request);
+      const input = await body(request);
+      const enabled = input.enabled;
+      const maxFileBytes = Number(input.max_file_bytes);
+      const maxFiles = Number(input.max_files);
+      const maxTotalBytes = Number(input.max_total_bytes);
+      if (
+        typeof enabled !== 'boolean' ||
+        !Number.isSafeInteger(maxFileBytes) ||
+        !Number.isSafeInteger(maxFiles) ||
+        !Number.isSafeInteger(maxTotalBytes)
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_file_policy_update(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::boolean, $6::bigint, $7::integer, $8::bigint)',
+        [
+          ...context,
+          platformId,
+          enabled,
+          maxFileBytes,
+          maxFiles,
+          maxTotalBytes,
+        ],
+      );
+      if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      return { status: 200, data: result };
+    }
   }
   const adminFileMatch = /^admin\/api\/v1\/config-files\/([^/]+)$/u.exec(path);
   if (adminFileMatch && request.method === 'GET') {
@@ -980,7 +1051,7 @@ async function dispatchAdmin(
       [...context, fileId],
     );
     if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
-    return { status: 200, data: fileDto(result) };
+    return { status: 200, data: adminFileDto(result) };
   }
   if (path === 'admin/api/v1/platforms' && request.method === 'POST') {
     const input = await body(request);

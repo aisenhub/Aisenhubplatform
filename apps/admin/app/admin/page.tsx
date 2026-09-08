@@ -14,6 +14,13 @@ export default function AdminHomePage() {
         </a>
       </div>
       <div className="panel">
+        <strong>继续到文件运维</strong>
+        <span>查看策略、文件状态并通过近期 MFA 证明代理下载。</span>
+        <a className="link" href="/admin/files">
+          打开 M4 File Operations
+        </a>
+      </div>
+      <div className="panel">
         <strong>继续到平台运维</strong>
         <span>平台、Origin、账户状态和 Key 生命周期均经 Admin API。</span>
         <a className="link" href="/admin/platforms">

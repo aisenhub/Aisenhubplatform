@@ -394,6 +394,35 @@
         }
       }
     },
+    "/admin/api/v1/platforms/{platformId}/file-policy": {
+      "get": {
+        "operationId": "adminGetFilePolicy",
+        "x-module": "M4",
+        "x-implementation-status": "local-only",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "operationId": "adminUpdateFilePolicy",
+        "x-module": "M4",
+        "x-implementation-status": "local-only",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/admin/api/v1/config-files/{fileId}/content": {
       "get": {
         "operationId": "adminDownloadConfigFileContent",

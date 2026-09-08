@@ -42,8 +42,11 @@ async function dispatch(
       if (!csrfCookie || csrfCookie !== request.headers.get('x-csrf-token'))
         return errorResponse(403, 'INVALID_INPUT', id);
     }
+    const binaryDownload =
+      request.method === 'GET' &&
+      /^admin\/api\/v1\/config-files\/[^/]+\/content$/u.test(path.join('/'));
     const headers: Record<string, string> = {
-      Accept: 'application/json',
+      Accept: binaryDownload ? 'application/octet-stream' : 'application/json',
       'Cache-Control': 'no-store',
     };
     const token = cookie(request, 'aisenhub-admin-session');
@@ -57,6 +60,22 @@ async function dispatch(
       headers,
       body: mutation ? await request.text() : undefined,
     });
+    if (binaryDownload) {
+      return new Response(upstream.body, {
+        status: upstream.status,
+        headers: {
+          'Cache-Control':
+            upstream.headers.get('cache-control') ?? 'private, no-store',
+          'Content-Type':
+            upstream.headers.get('content-type') ?? 'application/octet-stream',
+          'Content-Disposition':
+            upstream.headers.get('content-disposition') ?? 'attachment',
+          'X-Content-Type-Options':
+            upstream.headers.get('x-content-type-options') ?? 'nosniff',
+          'X-Request-Id': id,
+        },
+      });
+    }
     const payload = await upstream.text();
     return new Response(payload, {
       status: upstream.status,
@@ -86,6 +105,13 @@ export function POST(
 }
 
 export function PATCH(
+  request: NextRequest,
+  context: RouteContext,
+): Promise<Response> {
+  return dispatch(request, context);
+}
+
+export function DELETE(
   request: NextRequest,
   context: RouteContext,
 ): Promise<Response> {
