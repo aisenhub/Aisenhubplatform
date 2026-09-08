@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过；G0-L 为 PASS。Staging 项目公共 Auth 健康探针已返回 200，但 G0-S 仍 BLOCKED：该项目存在另一套 `platform.*` 业务模型、旧 Edge Functions 和既有数据，和仓库 `public.*`/`private.*` 迁移基线不一致，不能直接混合部署。
+M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过 Local 验收；G0-L 为 PASS。Staging 已清理旧项目基线并应用仓库 13 个迁移，公共 Auth 健康探针返回 200，`account-api` 已部署；G0-S 当前为 PARTIAL，真实 Auth 用户业务探针尚未完成。
 
-当前任务状态：T01～T11、T13～T15已完成；T04 Local JWT/logout/proof 子项已完成，真实 Provider 与浏览器 SSR 留给 T17；T12与T16为PARTIAL；T17、T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，证据见[evidence/M3.md](evidence/M3.md)；G0-L 证据见[evidence/G0-L.md](evidence/G0-L.md)，G0-S 已完成公共 Auth 连通性核对但整体仍 BLOCKED，证据见[evidence/G0-S.md](evidence/G0-S.md)。
+当前任务状态：T01～T11、T13～T15已完成；T04 Local JWT/logout/proof 子项已完成，真实 Provider 与浏览器 SSR 留给 T17；T12与T16为PARTIAL；T17为PARTIAL，T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，证据见[evidence/M3.md](evidence/M3.md)；G0-L 证据见[evidence/G0-L.md](evidence/G0-L.md)，G0-S 已完成 Staging 清理、迁移和 Edge 部署，但真实 Auth/API 业务探针仍待完成，证据见[evidence/G0-S.md](evidence/G0-S.md)。
 
 ## T01 任务交接
 
@@ -54,8 +54,8 @@ M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项�
 
 - 分支：`task/T04-session-revocation`
 - 结果：Local password session、refresh、`session_id`、TOTP、中央近期 proof、logout 与旧 JWT 拒绝均已实测；logout 路由和 Account API 已采用 Auth 验证及 session-bound 授权。
-- 状态：DONE（Local）。真实 OAuth/SMTP、浏览器 SSR 和托管环境由 T17/G0-S 验收，不再标记为 T04 阻塞；Staging 控制台可访问，但应用/API 验收尚未执行。
-- 下一步：T12/T16 可继续本地纵向集成；T17 等待托管输入 X01/X02/X03。
+- 状态：DONE（Local）。真实 OAuth/SMTP、浏览器 SSR 和托管环境由 T17/G0-S 验收，不再标记为 T04 阻塞；Staging 已完成迁移和 `account-api` 部署，但真实用户应用/API验收仍未执行。
+- 下一步：补齐 Staging Auth 用户探针，再继续 T17 的真实 Auth/API、浏览器和托管输入验收。
 
 ## T05 任务交接
 
@@ -83,7 +83,7 @@ M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项�
 - 分支：`task/T08-core-migrations`
 - 结果：按数据模型交付固定时间戳核心迁移，包含平台、平台账户、资料、偏好、Origin、Plan、默认 Free 同平台复合外键、墓碑约束、row_version、updated_at 触发器，以及核心表 RLS/运行时默认拒绝。
 - 验收：Local 空库 reset 两次、迁移历史升级基线、pgTAP 24/24、核心关系/墓碑/版本/触发器/anon 默认拒绝探针均通过；生成数据库类型写入 `packages/shared/src/database.types.ts`。
-- 限制：只覆盖 T08 核心表，未提前创建 Grant/Billing 或 M1 辅助表；Staging/Production 迁移未执行，真实 Provider/托管验证留 T17。
+- 限制：只覆盖 T08 核心表，未提前创建 Grant/Billing 或 M1 辅助表；Staging 已重建为仓库迁移基线并应用 13 个迁移，真实 Provider/托管验证仍留 T17。
 
 ## T09 任务交接
 
