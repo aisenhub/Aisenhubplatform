@@ -115,6 +115,20 @@ Deno.test('Account API validates the Platform Key boundary before public plans',
   assertEquals(response.headers.get('cache-control'), 'no-store');
 });
 
+Deno.test('Account API accepts the Edge runtime function-name path prefix', async () => {
+  const response = await handleRequest(
+    new Request(`http://edge/account-api/v1/plans`, {
+      headers: { 'X-Platform-Key': `phk_v1_${keyId}_fixture` },
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data[0].code, 'free');
+});
+
 Deno.test('Account API rejects missing Platform Key without touching the database', async () => {
   const response = await handleRequest(
     new Request('http://local/functions/v1/account-api/v1/plans'),

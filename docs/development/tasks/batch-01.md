@@ -24,10 +24,10 @@
 | T14 | 激活、状态控制、关闭与删除请求 | T13 | DONE |
 | T15 | Profile、Preferences与公开Plan | T14,T11 | DONE |
 | T16 | 最小Consumer/BFF纵向集成 | T15,T12 | PARTIAL/BLOCKED |
-| T17 | 托管环境探针与真实Auth验收 | T16,T06 | PARTIAL（Staging基线/迁移/Edge已完成；真实Auth用户探针与X02/X03仍待完成） |
+| T17 | 托管环境探针与真实Auth验收 | T16,T06 | PARTIAL（基础 Auth/API 与 logout 旧 JWT 拒绝已完成；X02/X03、pooler/TLS、浏览器/Storage仍待完成） |
 | T18 | G1/G2验收、首批交接与下一批细化 | T16,T17 | WAITING |
 
-T04/T05/T06依赖相同，可按资源独立安排，但不自动授权多agent。T17已获得X01 Staging项目并完成仓库迁移与Edge部署；仍需要一个可正常创建/登录的临时Auth用户，以及X02/X03才能完成真实托管验收。T18可提前整理G2-L材料，但T17未过不能宣称整批托管验收完成。
+T04/T05/T06依赖相同，可按资源独立安排，但不自动授权多agent。T17已获得X01 Staging项目并完成仓库迁移、Edge部署和基础 Auth/API 探针；仍需要X02/X03、托管 pooler/TLS、浏览器/Storage条件才能完成真实托管验收。T18可提前整理G2-L材料，但T17未过不能宣称整批托管验收完成。
 
 ## 通用执行合同
 

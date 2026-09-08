@@ -431,16 +431,20 @@ function withEtag(row: Row): Record<string, string> {
   return Number.isSafeInteger(version) ? { ETag: `W/"${version}"` } : {};
 }
 
+function requestPath(request: Request): string {
+  return new URL(request.url).pathname
+    .replace(/^\/functions\/v1\/account-api(?:\/|$)/iu, '')
+    .replace(/^\/account-api(?:\/|$)/iu, '')
+    .replace(/^\/+/u, '');
+}
+
 async function dispatchAccount(
   request: Request,
   transaction: Transaction,
   dependencies: AccountApiDependencies,
   session?: SessionContext,
 ): Promise<DispatchResult> {
-  const url = new URL(request.url);
-  const path = url.pathname
-    .replace(/^\/functions\/v1\/account-api/iu, '')
-    .replace(/^\/+/u, '');
+  const path = requestPath(request);
   const key = await verifyPlatformKey(transaction, request, dependencies);
 
   if (path === 'v1/plans' && request.method === 'GET') {
@@ -590,9 +594,7 @@ async function dispatchAdmin(
   session: SessionContext,
 ): Promise<DispatchResult> {
   const url = new URL(request.url);
-  const path = url.pathname
-    .replace(/^\/functions\/v1\/account-api/iu, '')
-    .replace(/^\/+/u, '');
+  const path = requestPath(request);
   const context = adminContextValues(session);
   if (path === 'admin/api/v1/auth/recent-proof' && request.method === 'POST') {
     if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
@@ -790,9 +792,7 @@ export async function handleRequest(
 ): Promise<Response> {
   const id = requestId();
   try {
-    const path = new URL(request.url).pathname
-      .replace(/^\/functions\/v1\/account-api/iu, '')
-      .replace(/^\/+/u, '');
+    const path = requestPath(request);
     const session =
       path.startsWith('admin/') ||
       !(path === 'v1/plans' && request.method === 'GET')
