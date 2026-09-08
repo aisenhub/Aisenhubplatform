@@ -87,7 +87,7 @@ export default function AdminSubscriptionsPage() {
           method: 'POST',
           headers: mutationHeaders(),
           body: JSON.stringify({
-            command,
+            action: command,
             operation_id: operationId,
             reason: reason.trim(),
           }),

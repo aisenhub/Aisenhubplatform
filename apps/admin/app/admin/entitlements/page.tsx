@@ -15,11 +15,11 @@ type Plan = {
 
 type Batch = {
   batch_id: string;
-  plan_code: string;
+  plan_code?: string;
   name: string;
   quantity: number;
   status: string;
-  expires_at: string;
+  expires_at?: string;
 };
 
 function csrfToken(): string {
@@ -39,6 +39,11 @@ export default function EntitlementsPage() {
   const [planCode, setPlanCode] = useState('pro');
   const [planName, setPlanName] = useState('Pro');
   const [planKind, setPlanKind] = useState<'free' | 'paid'>('paid');
+  const [batchPlanId, setBatchPlanId] = useState('');
+  const [batchName, setBatchName] = useState('Admin batch');
+  const [batchQuantity, setBatchQuantity] = useState('1');
+  const [batchCodes, setBatchCodes] = useState<string[]>([]);
+  const [batchReceipt, setBatchReceipt] = useState('');
 
   const load = useCallback(async () => {
     if (!platformId) return;
@@ -62,6 +67,7 @@ export default function EntitlementsPage() {
     const batchesBody = (await batchesResponse.json()) as { data: Batch[] };
     setPlans(plansBody.data ?? []);
     setBatches(batchesBody.data ?? []);
+    setBatchPlanId((current) => current || plansBody.data?.[0]?.plan_id || '');
     setStatus('已加载；所有写入仍由中央 Account API 和数据库领域函数执行。');
   }, [platformId]);
 
@@ -95,6 +101,81 @@ export default function EntitlementsPage() {
       response.ok ? '计划已提交。' : '计划写入失败，请确认近期认证证明。',
     );
     if (response.ok) await load();
+  }
+
+  async function createBatch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!platformId || !batchPlanId) return;
+    const response = await fetch('/api/v1/admin/api/v1/redemption-batches', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: window.location.origin,
+        'X-CSRF-Token': csrfToken(),
+      },
+      body: JSON.stringify({
+        platform_id: platformId,
+        plan_id: batchPlanId,
+        name: batchName,
+        quantity: Number(batchQuantity),
+        duration_value: 30,
+        duration_unit: 'day',
+        expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+        delivery_deadline: new Date(Date.now() + 10 * 60_000).toISOString(),
+        creation_operation_id: crypto.randomUUID(),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      data?: { codes?: Array<{ code?: string }>; delivery_receipt?: string };
+      error?: { code?: string };
+    } | null;
+    if (!response.ok) {
+      setStatus(`批次创建失败：${payload?.error?.code ?? response.status}。`);
+      return;
+    }
+    setBatchCodes(
+      payload?.data?.codes
+        ?.map((code) => code.code)
+        .filter((code): code is string => Boolean(code)) ?? [],
+    );
+    setBatchReceipt(payload?.data?.delivery_receipt ?? '');
+    setStatus(
+      '批次已创建为 pending_delivery；明文码仅在当前响应显示，先保存再确认交付。',
+    );
+    await load();
+  }
+
+  async function confirmBatch(batchId: string) {
+    if (!batchReceipt) {
+      setStatus(
+        '缺少本次响应中的 delivery receipt，不能确认或重新导出明文码。',
+      );
+      return;
+    }
+    if (!window.confirm('确认已安全保存本次明文兑换码，并激活该批次？')) return;
+    const response = await fetch(
+      `/api/v1/admin/api/v1/redemption-batches/${batchId}/confirm-delivery`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: window.location.origin,
+          'X-CSRF-Token': csrfToken(),
+        },
+        body: JSON.stringify({
+          platform_id: platformId,
+          delivery_receipt: batchReceipt,
+        }),
+      },
+    );
+    if (!response.ok) {
+      setStatus(`交付确认失败：${response.status}。明文码不会重新导出。`);
+      return;
+    }
+    setBatchCodes([]);
+    setBatchReceipt('');
+    setStatus('批次已确认交付；页面已清除本次明文码和 receipt。');
+    await load();
   }
 
   async function logout() {
@@ -198,6 +279,64 @@ export default function EntitlementsPage() {
           <p className="muted">
             兑换码明文只在受控生成响应中出现；页面不会重新导出已生成码。
           </p>
+          <form onSubmit={createBatch} className="stack-form">
+            <h3>创建一次性批次</h3>
+            <label htmlFor="batch-plan">Plan</label>
+            <select
+              id="batch-plan"
+              value={batchPlanId}
+              onChange={(event) => setBatchPlanId(event.target.value)}
+              required
+            >
+              <option value="">选择 Plan</option>
+              {plans
+                .filter((plan) => plan.status === 'active')
+                .map((plan) => (
+                  <option key={plan.plan_id} value={plan.plan_id}>
+                    {plan.code} · {plan.kind}
+                  </option>
+                ))}
+            </select>
+            <input
+              value={batchName}
+              onChange={(event) => setBatchName(event.target.value)}
+              aria-label="Batch name"
+              placeholder="Batch name"
+              required
+            />
+            <input
+              type="number"
+              min={1}
+              max={1000}
+              value={batchQuantity}
+              onChange={(event) => setBatchQuantity(event.target.value)}
+              aria-label="Batch quantity"
+              required
+            />
+            <button type="submit" disabled={!platformId || !batchPlanId}>
+              生成 pending 批次（需近期 MFA）
+            </button>
+          </form>
+          {batchCodes.length > 0 ? (
+            <div className="one-time-secret" role="status">
+              <strong>仅本次响应显示的明文码</strong>
+              <code>{batchCodes.join('\n')}</code>
+              <p className="muted">
+                请先使用受控方式保存，再确认交付；确认后页面会清除明文码。
+              </p>
+            </div>
+          ) : null}
+          {batches
+            .filter((batch) => batch.status === 'pending_delivery')
+            .map((batch) => (
+              <button
+                type="button"
+                key={batch.batch_id}
+                onClick={() => void confirmBatch(batch.batch_id)}
+              >
+                确认 {batch.name} 已保存并交付
+              </button>
+            ))}
         </div>
       </section>
       <button type="button" onClick={() => void logout()}>

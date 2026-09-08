@@ -175,6 +175,19 @@ h3 {
   color: #62708a;
   font-weight: 700;
 }
+.one-time-secret {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  border: 1px solid #e2b45e;
+  border-radius: 0.65rem;
+  background: #fff8e7;
+}
+.one-time-secret code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
 .section-heading,
 .file-row {
   display: flex;
