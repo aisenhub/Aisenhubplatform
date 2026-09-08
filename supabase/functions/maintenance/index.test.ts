@@ -5,6 +5,7 @@ import { assertEquals } from 'jsr:@std/assert@1';
 import { handleMaintenanceRequest } from './index.ts';
 
 const fileId = '00000000-0000-4000-8000-000000000001';
+const jobId = '00000000-0000-4000-8000-000000000002';
 const fence = 4;
 const events: string[] = [];
 
@@ -35,7 +36,11 @@ function database(): TestDatabase {
                 ? 'candidates'
                 : query.includes('file_cleanup_claim')
                   ? 'claim'
-                  : 'finish',
+                  : query.includes('deletion_job_claim')
+                    ? 'delete-claim'
+                    : query.includes('deletion_job_step')
+                      ? 'delete-step'
+                      : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -46,6 +51,19 @@ function database(): TestDatabase {
                 storage_path: 'platform/file',
                 fencing_token: fence,
               },
+            ] as unknown as T[];
+          if (query.includes('deletion_job_claim'))
+            return [
+              {
+                job_id: jobId,
+                checkpoint: 'created',
+                fence: 2,
+                lease_fence: 1,
+              },
+            ] as unknown as T[];
+          if (query.includes('deletion_job_step'))
+            return [
+              { job_id: jobId, state: 'retry', checkpoint: 'sessions_revoked' },
             ] as unknown as T[];
           return [
             { file_id: fileId, status: 'deleted', retry_count: 0 },
@@ -154,4 +172,47 @@ Deno.test('maintenance worker rejects user-style requests and arbitrary routes',
     { jobToken: 'test-job', database: database() },
   );
   assertEquals(notFound.status, 404);
+});
+
+Deno.test('maintenance exposes fenced Global Delete claim and step boundaries', async () => {
+  events.length = 0;
+  const claim = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/deletion-jobs/claim', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ job_id: jobId }),
+    }),
+    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+  );
+  assertEquals(claim.status, 200);
+  const step = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/deletion-jobs/step', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        job_id: jobId,
+        fence: 2,
+        lease_fence: 1,
+        step: 'sessions_revoked',
+        outcome: 'retry',
+        error_code: 'provider_timeout',
+      }),
+    }),
+    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+  );
+  assertEquals(step.status, 200);
+  assertEquals(events, [
+    'begin',
+    'role',
+    'delete-claim',
+    'begin',
+    'role',
+    'delete-step',
+  ]);
 });

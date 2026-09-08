@@ -383,7 +383,7 @@
       "delete": {
         "operationId": "adminDeleteConfigFile",
         "x-module": "M4",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/FileId" }],
@@ -451,17 +451,44 @@
     "/admin/api/v1/deletion-jobs": {
       "get": {
         "operationId": "adminListDeletionJobs",
-        "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-module": "M4",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
         "responses": { "200": { "$ref": "#/components/responses/Page" } }
+      },
+      "post": {
+        "operationId": "adminStartDeletionJob",
+        "x-module": "M4",
+        "x-implementation-status": "local-only",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "202": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
       }
     },
     "/admin/api/v1/deletion-jobs/{jobId}": {
       "get": {
         "operationId": "adminGetDeletionJob",
-        "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-module": "M4",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/JobId" }],
         "responses": {
@@ -473,8 +500,8 @@
     "/admin/api/v1/deletion-jobs/{jobId}/retry": {
       "post": {
         "operationId": "adminRetryDeletionJob",
-        "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-module": "M4",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/JobId" }],

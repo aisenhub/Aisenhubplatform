@@ -518,6 +518,22 @@ function adminFileDto(row: Row): Record<string, unknown> {
   };
 }
 
+function deletionJobDto(row: Row): Record<string, unknown> {
+  return {
+    job_id: row.job_id,
+    request_id: row.request_id,
+    user_id: row.user_id,
+    state: row.state,
+    checkpoint: row.checkpoint,
+    fence: row.fence,
+    retry_count: row.retry_count,
+    next_attempt_at: row.next_attempt_at,
+    last_error_code: row.last_error_code,
+    created_at: row.created_at,
+    completed_at: row.completed_at,
+  };
+}
+
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const copy = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(copy).set(bytes);
@@ -1000,6 +1016,65 @@ async function dispatchAdmin(
         rows.length === limit ? uuidValue(rows.at(-1)?.file_id) : null,
     };
   }
+  if (path === 'admin/api/v1/deletion-jobs' && request.method === 'GET') {
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_deletion_job_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::integer)',
+      [...context, boundedLimit(url.searchParams.get('limit'))],
+    );
+    return { status: 200, data: rows.map(deletionJobDto) };
+  }
+  if (path === 'admin/api/v1/deletion-jobs' && request.method === 'POST') {
+    await adminStepUp(transaction, session, request);
+    const requestId = uuidValue((await body(request)).request_id);
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (
+      !requestId ||
+      !proofId ||
+      !idempotencyKey ||
+      idempotencyKey.length > 128
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [row] = await transaction.unsafe<Row>(
+      'select * from private.admin_deletion_job_start(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
+      [...context, requestId, proofId, idempotencyKey],
+    );
+    if (!row) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 202, data: deletionJobDto(row) };
+  }
+  const deletionJobMatch = /^admin\/api\/v1\/deletion-jobs\/([^/]+)$/u.exec(
+    path,
+  );
+  if (deletionJobMatch && UUID.test(deletionJobMatch[1]!)) {
+    const jobId = deletionJobMatch[1]!;
+    if (request.method === 'GET') {
+      const [row] = await transaction.unsafe<Row>(
+        'select * from private.admin_deletion_job_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, jobId],
+      );
+      if (!row) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return { status: 200, data: deletionJobDto(row) };
+    }
+  }
+  const deletionRetryMatch =
+    /^admin\/api\/v1\/deletion-jobs\/([^/]+)\/retry$/u.exec(path);
+  if (
+    deletionRetryMatch &&
+    UUID.test(deletionRetryMatch[1]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (!proofId || !idempotencyKey || idempotencyKey.length > 128)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [row] = await transaction.unsafe<Row>(
+      'select * from private.admin_deletion_job_retry(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
+      [...context, deletionRetryMatch[1], proofId, idempotencyKey],
+    );
+    if (!row) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 202, data: deletionJobDto(row) };
+  }
   const policyMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/file-policy$/u.exec(
     path,
   );
@@ -1052,6 +1127,20 @@ async function dispatchAdmin(
     );
     if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
     return { status: 200, data: adminFileDto(result) };
+  }
+  if (adminFileMatch && request.method === 'DELETE') {
+    await adminStepUp(transaction, session, request);
+    const fileId = uuidValue(adminFileMatch[1]);
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (!fileId || !proofId || !idempotencyKey || idempotencyKey.length > 128)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_file_delete_request(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
+      [...context, fileId, proofId, idempotencyKey],
+    );
+    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 202, data: adminFileDto(result) };
   }
   if (path === 'admin/api/v1/platforms' && request.method === 'POST') {
     const input = await body(request);

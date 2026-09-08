@@ -79,8 +79,8 @@ function uuid(value: unknown): string | null {
   return typeof value === 'string' && UUID.test(value) ? value : null;
 }
 
-function context(workerId: string, id: string) {
-  return [crypto.randomUUID(), workerId, 1, id];
+function context(workerId: string, id: string, fencingToken = 1) {
+  return [crypto.randomUUID(), workerId, fencingToken, id];
 }
 
 async function withJobRole<T>(
@@ -227,6 +227,77 @@ async function reconcile(
   return response(200, { issues: rows });
 }
 
+async function deletionJobClaim(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  if (!jobId || Object.keys(input).some((key) => key !== 'job_id'))
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id);
+  const [claim] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.deletion_job_claim(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, 60)',
+      [...jobContext, jobId],
+    ),
+  );
+  return response(claim ? 200 : 409, claim ?? { job_id: jobId, state: 'busy' });
+}
+
+async function deletionJobStep(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  const fence = Number(input.fence);
+  const leaseFence = Number(input.lease_fence);
+  const step = typeof input.step === 'string' ? input.step : null;
+  const outcome = typeof input.outcome === 'string' ? input.outcome : null;
+  const errorCode =
+    input.error_code === undefined ? null : String(input.error_code);
+  if (
+    !jobId ||
+    !Number.isSafeInteger(fence) ||
+    !Number.isSafeInteger(leaseFence) ||
+    !step ||
+    !outcome ||
+    Object.keys(input).some(
+      (key) =>
+        ![
+          'job_id',
+          'fence',
+          'lease_fence',
+          'step',
+          'outcome',
+          'error_code',
+        ].includes(key),
+    )
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id, fence);
+  const [result] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.deletion_job_step(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
+      [...jobContext, jobId, leaseFence, step, outcome, errorCode],
+    ),
+  );
+  return response(200, result ?? { job_id: jobId, state: 'unknown' });
+}
+
 export async function handleMaintenanceRequest(
   request: Request,
   dependencies: MaintenanceDependencies = {},
@@ -249,6 +320,10 @@ export async function handleMaintenanceRequest(
       return await runCleanup(request, dependencies, id);
     if (path === '/maintenance/v1/files/reconcile')
       return await reconcile(request, dependencies, id);
+    if (path === '/maintenance/v1/deletion-jobs/claim')
+      return await deletionJobClaim(request, dependencies, id);
+    if (path === '/maintenance/v1/deletion-jobs/step')
+      return await deletionJobStep(request, dependencies, id);
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });
   } catch (error) {
     const code = errorCode(error);

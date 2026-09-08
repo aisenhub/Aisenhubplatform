@@ -13,7 +13,7 @@
 | M2 / G2-L | T12-R2、T16-R1、T16-R2 与候选 commit Local 复验已通过 | 托管 G2-S、Provider/SMTP 与生产门槛 |
 | G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS；T17-R1已补网关配置与独立URL适配，但托管角色/TLS未运行 | T17-R1 hosted核验、T17-R2/R3、T18-S |
 | M3 / G3 | M3-01～03 Local交付；M3-R1为PASS（Local证据） | 托管、浏览器与生产验收仍不属于本项，不推定整体阶段完成 |
-| M4～M6 | M4-02～M4-07 PASS（Local）；M4-08为PARTIAL（Local） | 先完成M4-09受控删除/清理，再回收M4-08 Admin删除体验；M5/M6按路线 |
+| M4～M6 | M4-02～M4-08 PASS（Local）；M4-09为PARTIAL（Local） | 补齐M4-09外部副作用/Close定时器，再执行M4-10 G4-L；M5/M6按路线 |
 | T18 | PARTIAL；T18-L Local已完成 | T18-S仍依赖托管输入，全部条件满足才关闭父任务 |
 
 T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），但证据判定为PARTIAL：本地Auth探针、包单测、类型检查和两个应用构建通过；真实浏览器SSR、OAuth/邮件及应用路由端到端Local回归留给T16-R2/T17-R2。T12-R2已在`task/T12-R2-browser-regression`补齐Admin真实MFA挑战、中央recent-proof消费者、普通用户独立 email `token_hash` 事件、双session中央proof issuer、HttpOnly proof cookie及真实Local Chrome敏感生命周期回归；T12-R2判定为PASS（Local），完整Close/Delete HTTP消费者由T16-R1承接，详见`evidence/T12-R2.md`。T16-R1已补齐M2平台/Origin/Key/账户管理的受控HTTP→SQL链路、普通Account敏感消费者、SDK/BFF与最小页面，并通过Local数据库/API/单测/构建回归，详见`evidence/T16-R1.md`；T16-R2已接入可复现 `pnpm run test:e2e`，真实 Chrome 双 Origin/Platform、独立上下文、Admin停用恢复、普通敏感操作和 bundle 凭据扫描通过，详见`evidence/T16-R2.md`。托管CI、SMTP、Storage和生产证据仍未宣称。M4-01已完成合同/恢复矩阵冻结（当前分支 `task/M4-01-file-contract`，运行证据见 `evidence/M4-01.md`），不改变M4实现仍等待T18-L的门槛。T12父任务仍保持PARTIAL。
@@ -31,7 +31,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
-- 当前下一项：执行 M4-09，补齐关闭保留清理、Global Purge 与 Admin 受控删除任务入口；完成后回收 M4-08 Admin 删除体验。T17-R1、M4-01、M5-01仍有独立范围，T18-S继续等待托管输入。
+- 当前下一项：继续 M4-09，补齐关闭保留清理、Global Purge 的外部 Auth/Storage worker 与定时入口，再执行 M4-10 G4-L。T17-R1、M4-01、M5-01仍有独立范围，T18-S继续等待托管输入。
 - 本轮已在独立任务分支执行T12-R2普通proof合同/issuer、Admin MFA与真实Local浏览器子集、M4-01和M3-R1完整Local SQL/API范围内验证；未执行的托管、Storage及生产项仍保持BLOCKED/NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实

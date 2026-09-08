@@ -97,6 +97,50 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
+          if (
+            query.startsWith('select * from private.admin_deletion_job_list')
+          ) {
+            return [
+              {
+                job_id: keyId,
+                request_id: sessionId,
+                user_id: userId,
+                state: 'pending',
+                checkpoint: 'created',
+                retry_count: 0,
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_deletion_job_start')
+          ) {
+            return [
+              {
+                job_id: keyId,
+                request_id: sessionId,
+                state: 'pending',
+                checkpoint: 'created',
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_file_delete_request')
+          ) {
+            return [
+              {
+                file_id: keyId,
+                platform_id: platformId,
+                platform_account_id: userId,
+                status: 'deleting',
+                write_outcome: 'confirmed',
+                reserved_bytes: 5,
+                reserved_count: 1,
+                actual_size_bytes: 5,
+                original_name: 'fixture.txt',
+                mime_type: 'text/plain',
+              },
+            ] as unknown as R[];
+          }
           if (query.startsWith('select * from private.admin_platform_get')) {
             return [
               {
@@ -615,6 +659,48 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(key.status, 201);
   assertEquals((await key.json()).data.status, 'active');
+});
+
+Deno.test('Account API exposes Global Delete job start and list wrappers', async () => {
+  const headers = {
+    Authorization: `Bearer ${fakeJwt('aal2')}`,
+    'X-Recent-Auth-Proof': '00000000-0000-4000-8000-000000000009',
+    'Content-Type': 'application/json',
+    'Idempotency-Key': 'delete-start-fixture',
+  };
+  const start = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/deletion-jobs',
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ request_id: sessionId }),
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(start.status, 202);
+  assertEquals((await start.json()).data.checkpoint, 'created');
+
+  const list = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/deletion-jobs',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(list.status, 200);
+  assertEquals((await list.json()).data[0].state, 'pending');
+
+  const fileDelete = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/config-files/${keyId}`,
+      { method: 'DELETE', headers },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(fileDelete.status, 202);
+  assertEquals((await fileDelete.json()).data.status, 'deleting');
 });
 
 Deno.test('Account API refuses every other Admin route at AAL1', async () => {

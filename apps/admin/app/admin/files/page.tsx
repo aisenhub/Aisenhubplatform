@@ -134,6 +134,25 @@ export default function AdminFilesPage() {
     setStatus('Admin 下载流已完成；不代表客户端已保存。');
   }
 
+  async function remove(fileId: string) {
+    const response = await fetch(
+      `/api/v1/admin/api/v1/config-files/${fileId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          ...mutationHeaders(),
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+      },
+    );
+    setStatus(
+      response.ok
+        ? '删除请求已受控提交；202 不代表对象已从 Storage 删除。'
+        : '删除请求失败，请确认近期 MFA proof 和文件状态。',
+    );
+    if (response.ok) await load();
+  }
+
   return (
     <main className="shell wide-shell">
       <p className="eyebrow">Aisenhub Admin · M4</p>
@@ -237,18 +256,29 @@ export default function AdminFilesPage() {
                     {formatBytes(file.reserved_bytes)}
                   </small>
                 </div>
-                <button
-                  type="button"
-                  disabled={
-                    file.status !== 'active' ||
-                    file.write_outcome !== 'confirmed'
-                  }
-                  onClick={() =>
-                    void download(file.file_id, file.original_name)
-                  }
-                >
-                  下载
-                </button>
+                <div className="file-actions">
+                  <button
+                    type="button"
+                    disabled={
+                      file.status !== 'active' ||
+                      file.write_outcome !== 'confirmed'
+                    }
+                    onClick={() =>
+                      void download(file.file_id, file.original_name)
+                    }
+                  >
+                    下载
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      file.status === 'deleted' || file.status === 'deleting'
+                    }
+                    onClick={() => void remove(file.file_id)}
+                  >
+                    受控删除
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -256,6 +286,9 @@ export default function AdminFilesPage() {
       </section>
       <a className="link" href="/admin">
         返回控制中心
+      </a>
+      <a className="link" href="/admin/deletion-jobs">
+        打开 Global Delete 任务
       </a>
     </main>
   );
