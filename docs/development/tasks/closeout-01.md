@@ -11,7 +11,7 @@
 | T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | WAITING |
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | WAITING |
 | T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |
-| M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PARTIAL（双Secret适配已实现；旧Secret端到端兑换与真实响应丢失注入未完成，证据见 M3-R1） |
+| M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PARTIAL（双Secret适配及响应丢失代理已实现；两项端到端运行未完成，证据见 M3-R1） |
 | T17-R1 | 托管独立executor、TLS与网关合同 | 无 | BLOCKED（配置已补；hosted证据见 T17-R1） |
 | T17-R2 | 托管浏览器、Origin、真实Provider | T16-R2,T17-R1 | WAITING |
 | T17-R3 | 实际BFF/Edge上传与Storage探针 | T17-R1 | WAITING |

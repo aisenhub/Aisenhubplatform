@@ -164,6 +164,20 @@ async function apiRequest(path, options = {}) {
     headers: { ...(options.headers ?? {}) },
   });
 }
+
+async function requestWithInjectedResponseLoss(path, options) {
+  let firstRequestError;
+  try {
+    await apiRequest(path, options);
+  } catch (error) {
+    firstRequestError = error;
+  }
+  assert.ok(
+    firstRequestError,
+    'post-commit response loss must reach the client',
+  );
+  return apiRequest(path, options);
+}
 async function json(response) {
   const value = await response.json();
   assert.ok(value.request_id, 'response includes request_id');
@@ -334,19 +348,21 @@ try {
   assertStatus(listedBatchesResponse, 200, 'admin batch list');
   assert.equal((await json(listedBatchesResponse)).data.length, 1);
 
-  const redeemResponse = await apiRequest(
-    '/functions/v1/account-api/v1/subscription/redeem',
-    {
-      method: 'POST',
-      headers: {
-        ...keyHeaders,
-        Authorization: `Bearer ${user.accessToken}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': 'm3-api-redeem-1',
-      },
-      body: JSON.stringify({ code: batch.data.codes[0].code }),
+  const redeemPath = '/functions/v1/account-api/v1/subscription/redeem';
+  const redeemOptions = {
+    method: 'POST',
+    headers: {
+      ...keyHeaders,
+      Authorization: `Bearer ${user.accessToken}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': 'm3-api-redeem-1',
     },
-  );
+    body: JSON.stringify({ code: batch.data.codes[0].code }),
+  };
+  const responseLost = process.env.M3_POST_COMMIT_RESPONSE_LOSS === '1';
+  const redeemResponse = responseLost
+    ? await requestWithInjectedResponseLoss(redeemPath, redeemOptions)
+    : await apiRequest(redeemPath, redeemOptions);
   assertStatus(redeemResponse, 200, 'redeem');
   const redeemed = await json(redeemResponse);
   assert.equal(redeemed.data.plan.code, 'pro');
@@ -445,6 +461,7 @@ try {
       batchList: 'PASS',
       responseLostRetry: 'PASS',
       redemption: 'PASS',
+      ...(responseLost ? { postCommitResponseLoss: 'PASS' } : {}),
       adminSubscription: 'PASS',
       pauseResume: 'PASS',
       recentAuthProof: 'PASS',
