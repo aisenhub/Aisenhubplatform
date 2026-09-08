@@ -78,6 +78,10 @@ input {
   border-radius: 0.5rem;
   font: inherit;
 }
+.filter-control {
+  display: grid;
+  gap: 0.4rem;
+}
 textarea,
 select {
   min-height: 2.75rem;

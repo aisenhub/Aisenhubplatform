@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
 
 type Job = {
@@ -36,6 +37,7 @@ function requestUrl(path: string): string {
 
 export default function AdminDeletionJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobFilter, setJobFilter] = useState('');
   const [requestId, setRequestId] = useState('');
   const [status, setStatus] = useState('正在读取删除任务…');
 
@@ -55,6 +57,12 @@ export default function AdminDeletionJobsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visibleJobs = jobs.filter((job) =>
+    `${job.state} ${job.checkpoint} ${job.job_id} ${job.request_id} ${job.last_error_code ?? ''}`
+      .toLowerCase()
+      .includes(jobFilter.trim().toLowerCase()),
+  );
 
   async function start() {
     if (!requestId) return;
@@ -119,16 +127,25 @@ export default function AdminDeletionJobsPage() {
       </section>
       <section className="panel">
         <div className="section-heading">
-          <h2>任务状态</h2>
+          <div>
+            <h2>任务状态</h2>
+            <AdminFilterInput
+              id="deletion-job-filter"
+              label="筛选任务"
+              value={jobFilter}
+              onChange={setJobFilter}
+              placeholder="state、checkpoint 或 request ID"
+            />
+          </div>
           <button type="button" onClick={() => void load()}>
             刷新
           </button>
         </div>
-        {jobs.length === 0 ? (
+        {visibleJobs.length === 0 ? (
           <p className="muted">暂无删除任务。</p>
         ) : (
           <div className="data-list">
-            {jobs.map((job) => (
+            {visibleJobs.map((job) => (
               <div key={job.job_id} className="file-row">
                 <div>
                   <strong>

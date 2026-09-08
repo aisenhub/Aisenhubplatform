@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
 
 type Platform = { platform_id: string; code: string; name: string };
@@ -263,11 +264,12 @@ export default function AdminFilesPage() {
             刷新
           </button>
         </div>
-        <input
+        <AdminFilterInput
+          id="file-filter"
+          label="筛选文件"
           value={fileFilter}
-          onChange={(event) => setFileFilter(event.target.value)}
-          placeholder="筛选名称、status 或 write_outcome"
-          aria-label="File filter"
+          onChange={setFileFilter}
+          placeholder="名称、status 或 write_outcome"
         />
         {files.some(
           (file) =>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminFilterInput } from '../components/admin-filter-input';
 
 type AuditEntry = {
   id?: string;
@@ -66,17 +67,17 @@ export default function AdminAuditPage() {
       </p>
       <section className="panel">
         <div className="section-heading">
-          <label htmlFor="audit-filter">筛选 action / target</label>
+          <AdminFilterInput
+            id="audit-filter"
+            label="筛选 action / target"
+            value={filter}
+            onChange={setFilter}
+            placeholder="例如 revoke、platform"
+          />
           <button type="button" onClick={() => void load()}>
             刷新
           </button>
         </div>
-        <input
-          id="audit-filter"
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-          placeholder="例如 revoke、platform"
-        />
         <p className="muted" role="status">
           {status}
         </p>

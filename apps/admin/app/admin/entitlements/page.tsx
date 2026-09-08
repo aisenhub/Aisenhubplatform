@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
 
 type Plan = {
@@ -37,6 +38,8 @@ export default function EntitlementsPage() {
   const [platformId, setPlatformId] = useState('');
   const [plans, setPlans] = useState<Plan[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [planFilter, setPlanFilter] = useState('');
+  const [batchFilter, setBatchFilter] = useState('');
   const [status, setStatus] = useState('输入 Platform ID 后加载管理数据。');
   const [planCode, setPlanCode] = useState('pro');
   const [planName, setPlanName] = useState('Pro');
@@ -76,6 +79,17 @@ export default function EntitlementsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visiblePlans = plans.filter((plan) =>
+    `${plan.code} ${plan.name} ${plan.kind} ${plan.status}`
+      .toLowerCase()
+      .includes(planFilter.trim().toLowerCase()),
+  );
+  const visibleBatches = batches.filter((batch) =>
+    `${batch.name} ${batch.plan_code ?? ''} ${batch.status}`
+      .toLowerCase()
+      .includes(batchFilter.trim().toLowerCase()),
+  );
 
   async function createPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -265,11 +279,18 @@ export default function EntitlementsPage() {
       <section className="grid-two">
         <div className="panel">
           <h2>Plans</h2>
-          {plans.length === 0 ? (
+          <AdminFilterInput
+            id="plan-filter"
+            label="筛选计划"
+            value={planFilter}
+            onChange={setPlanFilter}
+            placeholder="code、name 或 status"
+          />
+          {visiblePlans.length === 0 ? (
             <p className="muted">暂无数据。</p>
           ) : (
             <ul className="data-list">
-              {plans.map((plan) => (
+              {visiblePlans.map((plan) => (
                 <li key={plan.plan_id}>
                   <strong>{plan.code}</strong>
                   <span>
@@ -341,11 +362,18 @@ export default function EntitlementsPage() {
         </div>
         <div className="panel">
           <h2>Redemption batches</h2>
-          {batches.length === 0 ? (
+          <AdminFilterInput
+            id="batch-filter"
+            label="筛选批次"
+            value={batchFilter}
+            onChange={setBatchFilter}
+            placeholder="name、plan 或 status"
+          />
+          {visibleBatches.length === 0 ? (
             <p className="muted">暂无批次。</p>
           ) : (
             <ul className="data-list">
-              {batches.map((batch) => (
+              {visibleBatches.map((batch) => (
                 <li key={batch.batch_id}>
                   <strong>{batch.name}</strong>
                   <span>
