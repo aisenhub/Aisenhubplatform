@@ -48,55 +48,73 @@ export default function AdminFilesPage() {
   const [platformId, setPlatformId] = useState('');
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [files, setFiles] = useState<ConfigFile[]>([]);
+  const [fileFilter, setFileFilter] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [status, setStatus] = useState('正在读取文件运维数据…');
 
-  const load = useCallback(async () => {
-    const platformResponse = await fetch(
-      '/api/v1/admin/api/v1/platforms?limit=100',
-      { cache: 'no-store' },
-    );
-    if (!platformResponse.ok) {
-      setStatus('平台读取失败，请确认 AAL2 管理员会话。');
-      return;
-    }
-    const platformBody = (await platformResponse.json()) as {
-      data?: Platform[];
-    };
-    const nextPlatforms = platformBody.data ?? [];
-    setPlatforms(nextPlatforms);
-    const selected = platformId || nextPlatforms[0]?.platform_id || '';
-    setPlatformId(selected);
-    if (!selected) {
-      setStatus('暂无平台。');
-      return;
-    }
-    const [policyResponse, filesResponse] = await Promise.all([
-      fetch(`/api/v1/admin/api/v1/platforms/${selected}/file-policy`, {
-        cache: 'no-store',
-      }),
-      fetch('/api/v1/admin/api/v1/config-files?limit=100', {
-        cache: 'no-store',
-      }),
-    ]);
-    if (!policyResponse.ok || !filesResponse.ok) {
-      setStatus('文件策略或状态读取失败。');
-      return;
-    }
-    setPolicy(
-      ((await policyResponse.json()) as { data?: Policy }).data ?? null,
-    );
-    const fileBody = (await filesResponse.json()) as { data?: ConfigFile[] };
-    setFiles(
-      (fileBody.data ?? []).filter(
-        (file) => !file.platform_id || file.platform_id === selected,
-      ),
-    );
-    setStatus('文件策略和状态已从 Admin API 刷新。');
-  }, [platformId]);
+  const load = useCallback(
+    async (cursor?: string) => {
+      const platformResponse = await fetch(
+        '/api/v1/admin/api/v1/platforms?limit=100',
+        { cache: 'no-store' },
+      );
+      if (!platformResponse.ok) {
+        setStatus('平台读取失败，请确认 AAL2 管理员会话。');
+        return;
+      }
+      const platformBody = (await platformResponse.json()) as {
+        data?: Platform[];
+      };
+      const nextPlatforms = platformBody.data ?? [];
+      setPlatforms(nextPlatforms);
+      const selected = platformId || nextPlatforms[0]?.platform_id || '';
+      setPlatformId(selected);
+      if (!selected) {
+        setStatus('暂无平台。');
+        return;
+      }
+      const [policyResponse, filesResponse] = await Promise.all([
+        fetch(`/api/v1/admin/api/v1/platforms/${selected}/file-policy`, {
+          cache: 'no-store',
+        }),
+        fetch(
+          `/api/v1/admin/api/v1/config-files?limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+          {
+            cache: 'no-store',
+          },
+        ),
+      ]);
+      if (!policyResponse.ok || !filesResponse.ok) {
+        setStatus('文件策略或状态读取失败。');
+        return;
+      }
+      setPolicy(
+        ((await policyResponse.json()) as { data?: Policy }).data ?? null,
+      );
+      const fileBody = (await filesResponse.json()) as {
+        data?: ConfigFile[];
+        next_cursor?: string | null;
+      };
+      setFiles(
+        (fileBody.data ?? []).filter(
+          (file) => !file.platform_id || file.platform_id === selected,
+        ),
+      );
+      setNextCursor(fileBody.next_cursor ?? null);
+      setStatus('文件策略和状态已从 Admin API 刷新。');
+    },
+    [platformId],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visibleFiles = files.filter((file) =>
+    `${file.original_name ?? ''} ${file.status} ${file.write_outcome}`
+      .toLowerCase()
+      .includes(fileFilter.trim().toLowerCase()),
+  );
 
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -245,11 +263,27 @@ export default function AdminFilesPage() {
             刷新
           </button>
         </div>
-        {files.length === 0 ? (
+        <input
+          value={fileFilter}
+          onChange={(event) => setFileFilter(event.target.value)}
+          placeholder="筛选名称、status 或 write_outcome"
+          aria-label="File filter"
+        />
+        {files.some(
+          (file) =>
+            file.status === 'deleting' || file.write_outcome === 'unknown',
+        ) ? (
+          <p className="warning" role="alert">
+            存在 deleting/unknown
+            文件：不要释放预算或重复上传；等待状态查询/worker
+            结算，页面不提供绕过状态机的恢复按钮。
+          </p>
+        ) : null}
+        {visibleFiles.length === 0 ? (
           <p className="muted">暂无文件。</p>
         ) : (
           <div className="data-list">
-            {files.map((file) => (
+            {visibleFiles.map((file) => (
               <div key={file.file_id} className="file-row">
                 <div>
                   <strong>{file.original_name ?? 'unnamed file'}</strong>
@@ -285,6 +319,16 @@ export default function AdminFilesPage() {
             ))}
           </div>
         )}
+        <div className="section-heading">
+          <span className="muted">每页 20 条；游标由服务端返回。</span>
+          <button
+            type="button"
+            disabled={!nextCursor}
+            onClick={() => void load(nextCursor ?? undefined)}
+          >
+            下一页
+          </button>
+        </div>
       </section>
       <a className="link" href="/admin">
         返回控制中心
