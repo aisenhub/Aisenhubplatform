@@ -54,6 +54,7 @@ interface DispatchResult {
   readonly status: number;
   readonly data: unknown;
   readonly headers?: Record<string, string>;
+  readonly next_cursor?: string | null;
 }
 
 type SessionContext = {
@@ -325,6 +326,8 @@ function mapSqlFault(error: unknown): ApiFault {
   if (message.includes('quota_exceeded'))
     return new ApiFault(409, 'QUOTA_EXCEEDED');
   if (message.includes('file_busy')) return new ApiFault(409, 'FILE_BUSY');
+  if (message.includes('file_not_downloadable'))
+    return new ApiFault(409, 'FILE_NOT_DOWNLOADABLE');
   if (message.includes('operation_in_progress'))
     return new ApiFault(409, 'OPERATION_IN_PROGRESS');
   if (message.includes('intent_expired'))
@@ -476,8 +479,17 @@ function fileDto(row: Row): Record<string, unknown> {
     file_id: uuidValue(row.file_id ?? row.id),
     status: stringValue(row.status) ?? 'pending',
     size: Number(row.actual_size_bytes ?? row.reserved_bytes ?? 0),
+    reserved_bytes: Number(row.reserved_bytes ?? 0),
+    reserved_count: Number(row.reserved_count ?? 0),
+    actual_size_bytes:
+      row.actual_size_bytes === null || row.actual_size_bytes === undefined
+        ? null
+        : Number(row.actual_size_bytes),
+    original_name: stringValue(row.original_name),
     content_type: stringValue(row.mime_type) ?? 'application/octet-stream',
     created_at: isoDate(row.created_at) ?? new Date(0).toISOString(),
+    updated_at: isoDate(row.updated_at) ?? new Date(0).toISOString(),
+    cancel_requested_at: isoDate(row.cancel_requested_at),
     write_outcome: stringValue(row.write_outcome) ?? 'not_started',
   };
 }
@@ -611,6 +623,36 @@ async function dispatchAccount(
   }
 
   const contextValues = accountContextValues(session, key);
+  if (path === 'v1/config-files' && request.method === 'GET') {
+    const cursorValue = new URL(request.url).searchParams.get('cursor');
+    const cursor = cursorValue === null ? null : uuidValue(cursorValue);
+    if (cursorValue !== null && !cursor)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const limit = boundedLimit(new URL(request.url).searchParams.get('limit'));
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.file_list(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::integer)',
+      [...contextValues, cursor, limit],
+    );
+    return {
+      status: 200,
+      data: {
+        items: rows.map(fileDto),
+        next_cursor:
+          rows.length === limit ? uuidValue(rows.at(-1)?.file_id) : null,
+      },
+    };
+  }
+  const getFileMatch = /^v1\/config-files\/([^/]+)$/u.exec(path);
+  if (getFileMatch && request.method === 'GET') {
+    const fileId = uuidValue(getFileMatch[1]);
+    if (!fileId) throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.file_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+      [...contextValues, fileId],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: fileDto(result) };
+  }
   if (path === 'v1/config-files/upload-intent' && request.method === 'POST') {
     assertAllowed(row);
     const idempotencyKey = request.headers.get('idempotency-key');
@@ -910,6 +952,35 @@ async function dispatchAdmin(
       [...context, boundedLimit(url.searchParams.get('limit'))],
     );
     return { status: 200, data: rows };
+  }
+
+  if (path === 'admin/api/v1/config-files' && request.method === 'GET') {
+    const cursorValue = url.searchParams.get('cursor');
+    const cursor = cursorValue === null ? null : uuidValue(cursorValue);
+    if (cursorValue !== null && !cursor)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_file_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer)',
+      [...context, cursor, limit],
+    );
+    return {
+      status: 200,
+      data: rows.map(fileDto),
+      next_cursor:
+        rows.length === limit ? uuidValue(rows.at(-1)?.file_id) : null,
+    };
+  }
+  const adminFileMatch = /^admin\/api\/v1\/config-files\/([^/]+)$/u.exec(path);
+  if (adminFileMatch && request.method === 'GET') {
+    const fileId = uuidValue(adminFileMatch[1]);
+    if (!fileId) throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_file_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+      [...context, fileId],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: fileDto(result) };
   }
   if (path === 'admin/api/v1/platforms' && request.method === 'POST') {
     const input = await body(request);
@@ -1314,6 +1385,31 @@ function contentFileId(request: Request): string | null {
   return match && uuidValue(match[1]) ? uuidValue(match[1]) : null;
 }
 
+function safeDownloadFilename(value: unknown): string {
+  const name = stringValue(value)
+    ?.split('')
+    .map((character) => {
+      const code = character.charCodeAt(0);
+      return code <= 31 || code === 127 ? '_' : character;
+    })
+    .join('')
+    .replace(/[\\/\r\n"']/gu, '_')
+    .trim();
+  return name && name !== '.' && name !== '..'
+    ? name.slice(0, 180)
+    : 'config-file';
+}
+
+function downloadHeaders(filename: unknown): Record<string, string> {
+  const safeName = safeDownloadFilename(filename);
+  return {
+    'Cache-Control': 'private, no-store',
+    'Content-Type': 'application/octet-stream',
+    'Content-Disposition': `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+    'X-Content-Type-Options': 'nosniff',
+  };
+}
+
 async function uploadTransaction<T>(
   request: Request,
   dependencies: AccountApiDependencies,
@@ -1324,6 +1420,199 @@ async function uploadTransaction<T>(
     await setRole(transaction, 'account_executor');
     const key = await verifyPlatformKey(transaction, request, dependencies);
     return callback(transaction, key);
+  });
+}
+
+async function adminTransaction<T>(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+  callback: (transaction: Transaction) => Promise<T>,
+): Promise<T> {
+  const db = dependencies.database ?? database('admin');
+  return db.begin(async (transaction) => {
+    await setRole(transaction, 'admin_executor');
+    await adminStepUp(transaction, session, request);
+    return callback(transaction);
+  });
+}
+
+async function adminEventTransaction<T>(
+  dependencies: AccountApiDependencies,
+  callback: (transaction: Transaction) => Promise<T>,
+): Promise<T> {
+  const db = dependencies.database ?? database('admin');
+  return db.begin(async (transaction) => {
+    await setRole(transaction, 'admin_executor');
+    return callback(transaction);
+  });
+}
+
+async function recordDownloadEvent(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+  fileId: string,
+  event: 'stream_completed' | 'failed',
+  admin: boolean,
+  errorCode?: string,
+): Promise<void> {
+  try {
+    if (admin) {
+      await adminEventTransaction(dependencies, async (transaction) => {
+        await transaction.unsafe(
+          'select private.admin_file_download_event(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::text)',
+          [...adminContextValues(session), fileId, event, errorCode ?? null],
+        );
+      });
+    } else {
+      await uploadTransaction(
+        request,
+        dependencies,
+        async (transaction, key) => {
+          await transaction.unsafe(
+            'select private.file_download_event(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::text)',
+            [
+              ...accountContextValues(session, key),
+              fileId,
+              event,
+              errorCode ?? null,
+            ],
+          );
+        },
+      );
+    }
+  } catch {
+    // A download response must never be replaced with an error JSON after its
+    // body has started. The failed audit is best effort at this boundary.
+  }
+}
+
+async function handleDownload(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+  admin: boolean,
+): Promise<Response> {
+  if (request.method !== 'GET') throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const fileId =
+    contentFileId(request) ??
+    uuidValue(
+      /^admin\/api\/v1\/config-files\/([^/]+)\/content$/u.exec(
+        requestPath(request),
+      )?.[1],
+    );
+  if (!fileId) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const target = admin
+    ? await adminTransaction(
+        request,
+        dependencies,
+        session,
+        async (transaction) => {
+          const [row] = await transaction.unsafe<Row>(
+            'select * from private.admin_file_download_authorize(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+            [...adminContextValues(session), fileId],
+          );
+          if (!row) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+          return row;
+        },
+      )
+    : await uploadTransaction(
+        request,
+        dependencies,
+        async (transaction, key) => {
+          const [principalRow] = await transaction.unsafe<Row>(
+            'select * from private.account_principal(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
+            accountContextValues(session, key),
+          );
+          if (!principalRow)
+            throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+          assertAllowed(principalRow);
+          const [row] = await transaction.unsafe<Row>(
+            'select * from private.file_download_authorize(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+            [...accountContextValues(session, key), fileId],
+          );
+          if (!row) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+          return row;
+        },
+      );
+  const adapter = dependencies.storageAdapter ?? createSupabaseStorageAdapter();
+  let upstream: Response;
+  try {
+    upstream = await adapter.download({
+      bucket: 'platform-config-files',
+      path: String(target.storage_path),
+      timeoutMs: 30_000,
+    });
+  } catch {
+    await recordDownloadEvent(
+      request,
+      dependencies,
+      session,
+      fileId,
+      'failed',
+      admin,
+      'storage_unavailable',
+    );
+    throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+  }
+  if (!upstream.ok || !upstream.body) {
+    await recordDownloadEvent(
+      request,
+      dependencies,
+      session,
+      fileId,
+      'failed',
+      admin,
+      upstream.ok
+        ? 'empty_stream'
+        : upstream.status === 404
+          ? 'missing_object'
+          : 'storage_unavailable',
+    );
+    throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+  }
+  const reader = upstream.body.getReader();
+  let settled = false;
+  const settle = async (
+    event: 'stream_completed' | 'failed',
+    errorCode?: string,
+  ) => {
+    if (settled) return;
+    settled = true;
+    await recordDownloadEvent(
+      request,
+      dependencies,
+      session,
+      fileId,
+      event,
+      admin,
+      errorCode,
+    );
+  };
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const chunk = await reader.read();
+        if (chunk.done) {
+          await settle('stream_completed');
+          controller.close();
+        } else if (chunk.value) {
+          controller.enqueue(chunk.value);
+        }
+      } catch {
+        await settle('failed', 'stream_error');
+        controller.error(new Error('STORAGE_STREAM_FAILED'));
+      }
+    },
+    async cancel(reason) {
+      await reader.cancel(reason);
+      await settle('failed', 'stream_cancelled');
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: downloadHeaders(target.original_name),
   });
 }
 
@@ -1518,6 +1807,22 @@ export async function handleRequest(
         id,
       );
     }
+    if (
+      path.startsWith('v1/config-files/') &&
+      path.endsWith('/content') &&
+      request.method === 'GET'
+    ) {
+      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+      return await handleDownload(request, dependencies, session, false);
+    }
+    if (
+      path.startsWith('admin/api/v1/config-files/') &&
+      path.endsWith('/content') &&
+      request.method === 'GET'
+    ) {
+      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+      return await handleDownload(request, dependencies, session, true);
+    }
     const executor = path.startsWith('admin/') ? 'admin' : 'account';
     const db = dependencies.database ?? database(executor);
     const result = await db.begin(async (transaction) => {
@@ -1536,7 +1841,13 @@ export async function handleRequest(
       );
     });
     return response(
-      { data: result.data, request_id: id },
+      {
+        data: result.data,
+        ...(result.next_cursor === undefined
+          ? {}
+          : { next_cursor: result.next_cursor }),
+        request_id: id,
+      },
       result.status,
       id,
       result.headers,

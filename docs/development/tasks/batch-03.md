@@ -16,8 +16,8 @@ M4-01规格可现在派发；M4实现从M4-02开始，必须取得[收尾任务]
 | M4-04 | 有界HTTP上传与可信Storage adapter | M4-03 | PASS（Local；有界接收/Storage对象核验/finalize/重试冲突通过） |
 | M4-05 | 删除、过期、对账与持久worker | M4-04 | PASS（Local；删除/过期/对账/Storage remove与独立job worker通过） |
 | M4-06 | Replace原子切换与竞争恢复 | M4-05 | PASS（Local；原子切换/FILE_BUSY补偿/容量错误通过） |
-| M4-07 | 列表、状态、用户/Admin下载 | M4-04 | READY |
-| M4-08 | 文件策略与最小管理/消费页面 | M4-05,M4-06,M4-07 | WAITING |
+| M4-07 | 列表、状态、用户/Admin下载 | M4-04 | PASS（Local；证据见 M4-07） |
+| M4-08 | 文件策略与最小管理/消费页面 | M4-05,M4-06,M4-07 | READY |
 | M4-09 | 关闭保留清理与Global Purge | M4-05,M3-R1,T12-R2 | WAITING |
 | M4-10 | G4-L故障与集成验收 | M4-08,M4-09 | WAITING |
 | M4-11 | G4-S实际host验收 | M4-10,T18-S | WAITING |

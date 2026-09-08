@@ -787,6 +787,135 @@ Deno.test('Account API exposes idempotent file deletion through the account exec
   assertEquals((await response.json()).data.status, 'deleting');
 });
 
+Deno.test('Account API streams an authorized file with download security headers', async () => {
+  let auditEvents = 0;
+  const database = {
+    async begin<T>(
+      callback: (transaction: {
+        json: (value: unknown) => unknown;
+        unsafe: <R extends Record<string, unknown>>(
+          query: string,
+          values?: unknown[],
+        ) => Promise<R[]>;
+      }) => Promise<T>,
+    ) {
+      return callback({
+        json(value: unknown) {
+          return value;
+        },
+        async unsafe<R extends Record<string, unknown>>(
+          query: string,
+        ): Promise<R[]> {
+          if (
+            query.startsWith(
+              'select * from private.platform_key_verify_presented',
+            )
+          )
+            return [
+              {
+                key_id: keyId,
+                platform_id: platformId,
+                platform_status: 'active',
+              },
+            ] as unknown as R[];
+          if (query.startsWith('select * from private.file_download_authorize'))
+            return [
+              {
+                file_id: keyId,
+                storage_bucket: 'platform-config-files',
+                storage_path: `${platformId}/account/${keyId}`,
+                original_name: 'settings.ini',
+                mime_type: 'text/plain',
+              },
+            ] as unknown as R[];
+          if (query.startsWith('select * from private.account_principal'))
+            return [
+              { authorization: 'allowed', platform_account_id: userId },
+            ] as unknown as R[];
+          if (query.startsWith('select private.file_download_event')) {
+            auditEvents += 1;
+            return [] as unknown as R[];
+          }
+          return [] as unknown as R[];
+        },
+      });
+    },
+  };
+  const response = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/v1/config-files/${keyId}/content`,
+      {
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        },
+      },
+    ),
+    {
+      database,
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+      storageAdapter: {
+        async putImmutable() {
+          return { providerRequestId: null };
+        },
+        async getInfo() {
+          return { size: 5, etag: null };
+        },
+        async download() {
+          return new Response('hello');
+        },
+        async remove() {},
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(
+    response.headers.get('content-type'),
+    'application/octet-stream',
+  );
+  assertMatch(response.headers.get('content-disposition') ?? '', /attachment/);
+  assertEquals(response.headers.get('x-content-type-options'), 'nosniff');
+  assertEquals(response.headers.get('cache-control'), 'private, no-store');
+  assertEquals(await response.text(), 'hello');
+  assertEquals(auditEvents, 1);
+});
+
+Deno.test('Account API requires recent MFA before an Admin file download', async () => {
+  let storageCalls = 0;
+  const response = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/config-files/${keyId}/content`,
+      {
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal1')}`,
+          'X-Recent-Auth-Proof': keyId,
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      storageAdapter: {
+        async putImmutable() {
+          return { providerRequestId: null };
+        },
+        async getInfo() {
+          return { size: 5, etag: null };
+        },
+        async download() {
+          storageCalls += 1;
+          return new Response('hello');
+        },
+        async remove() {},
+      },
+    },
+  );
+  assertEquals(response.status, 403);
+  assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
+  assertEquals(storageCalls, 0);
+});
+
 Deno.test('Account API maps replacement capacity failures to the stable contract code', async () => {
   const database = {
     async begin<T>(

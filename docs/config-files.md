@@ -111,7 +111,7 @@ Replace 固定为新对象验证完成后，在同一数据库事务中将新行
 
 ## 5. 下载和删除
 
-GET /v1/config-files/:id/content 经 BFF/Account API 重新校验身份、平台、账户、文件 active 后代理私有对象。Admin 下载额外要求近期 MFA。响应固定 application/octet-stream、Content-Disposition: attachment、X-Content-Type-Options: nosniff、Cache-Control: private, no-store，文件名转义，不提供浏览器直接预览或永久 URL。
+GET /v1/config-files/:id/content 经 BFF/Account API 重新校验身份、平台、账户、文件 active 后代理私有对象。Admin 下载额外要求近期 MFA。响应固定 application/octet-stream、Content-Disposition: attachment、X-Content-Type-Options: nosniff、Cache-Control: private, no-store，文件名转义，不提供浏览器直接预览或永久 URL。GET /v1/config-files 使用 `limit`（默认20、最大100）和绑定账户/平台排序的 UUID `cursor`，返回 `items` 与 `next_cursor`；详情至少返回 status、write_outcome、reserved bytes/count、actual size、created/updated。
 
 下载审计区分 download_authorized、download_stream_completed、download_failed；服务端流完成不等于客户端已保存。已经开始的下载不承诺被后续 Suspend 瞬间撤回，新的下载请求必须拒绝。
 

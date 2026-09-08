@@ -25,6 +25,7 @@
     "test:sql:m4-03-file-intent": "node tests/spikes/sql/m4-03-file-intent.mjs",
     "test:sql:m4-05-file-cleanup": "node tests/spikes/sql/m4-05-file-cleanup.mjs",
     "test:sql:m4-06-replace-switch": "node tests/spikes/sql/m4-06-replace-switch.mjs",
+    "test:api:m4-07-file-query-download": "node tests/spikes/api/m4-07-file-query-download.mjs",
     "test:api:m4-05-maintenance": "node tests/spikes/api/m4-05-maintenance.mjs",
     "test:api:m4-04-upload": "node tests/spikes/api/m4-04-upload.mjs",
     "test:maintenance": "D:\\APP\\Codex\\Deno\\bin\\deno.exe test --allow-env --allow-net --allow-read --allow-import supabase/functions/maintenance/index.test.ts",

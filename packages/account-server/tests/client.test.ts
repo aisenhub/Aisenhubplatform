@@ -181,4 +181,53 @@ describe('account API server client', () => {
       },
     });
   });
+
+  it('supports bounded file state reads and binary downloads through the server key', async () => {
+    const requests: Array<{
+      url: string;
+      init: { method: string; headers: Readonly<Record<string, string>> };
+    }> = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+        if (url.includes('/content'))
+          return new Response('hello', {
+            status: 200,
+            headers: { 'Content-Type': 'application/octet-stream' },
+          });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: url.endsWith('/config-files')
+              ? { items: [], next_cursor: null }
+              : { file_id: 'file-1', status: 'active' },
+            request_id: 'req-1',
+          }),
+        };
+      },
+    });
+
+    await client.listConfigFiles('access-token-1', null, 20);
+    await client.getConfigFile('access-token-1', 'file-1');
+    const download = await client.downloadConfigFile(
+      'access-token-1',
+      'file-1',
+    );
+    expect(await download.arrayBuffer?.()).toEqual(
+      new TextEncoder().encode('hello').buffer,
+    );
+    expect(requests.map((request) => request.url)).toEqual([
+      'https://account.example.invalid/v1/config-files?limit=20',
+      'https://account.example.invalid/v1/config-files/file-1',
+      'https://account.example.invalid/v1/config-files/file-1/content',
+    ]);
+    expect(requests[2]?.init.headers).toMatchObject({
+      Accept: 'application/octet-stream',
+      'X-Platform-Key': 'phk_test_server_only',
+      Authorization: 'Bearer access-token-1',
+    });
+  });
 });

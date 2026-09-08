@@ -12,6 +12,7 @@ import type {
   ProfileDto,
   RecentAuthProofDto,
   ConfigFileDto,
+  ConfigFileListDto,
   UploadIntentDto,
 } from '@kit/domain/contracts';
 import { generateRedemptionCodes as generateDomainRedemptionCodes } from '@kit/domain';
@@ -235,6 +236,19 @@ export interface AccountApiClient {
     fileId: string,
     idempotencyKey: string,
   ) => Promise<ConfigFileDto>;
+  readonly listConfigFiles: (
+    accessToken: string,
+    cursor?: string | null,
+    limit?: number,
+  ) => Promise<ConfigFileListDto>;
+  readonly getConfigFile: (
+    accessToken: string,
+    fileId: string,
+  ) => Promise<ConfigFileDto>;
+  readonly downloadConfigFile: (
+    accessToken: string,
+    fileId: string,
+  ) => Promise<AccountApiBinaryResponse>;
 }
 
 export type AccountApiRequestBody = string | Uint8Array;
@@ -245,6 +259,15 @@ export interface AccountApiFetchResponse {
   readonly json: () => Promise<unknown>;
 }
 
+export interface AccountApiBinaryResponse {
+  readonly ok: boolean;
+  readonly status: number;
+  readonly headers?: Headers;
+  readonly body?: ReadableStream<Uint8Array> | null;
+  readonly arrayBuffer?: () => Promise<ArrayBuffer>;
+  readonly json?: () => Promise<unknown>;
+}
+
 export type AccountApiFetcher = (
   input: string,
   init: {
@@ -252,7 +275,7 @@ export type AccountApiFetcher = (
     readonly headers: Readonly<Record<string, string>>;
     readonly body?: AccountApiRequestBody;
   },
-) => Promise<AccountApiFetchResponse>;
+) => Promise<AccountApiFetchResponse & AccountApiBinaryResponse>;
 
 export class AccountApiError extends Error {
   readonly status: number;
@@ -332,6 +355,34 @@ export function createAccountApiClient(input: {
     if (!('data' in payload))
       throw new AccountApiError(502, 'AUTHORIZATION_UNAVAILABLE');
     return payload.data;
+  }
+
+  async function requestBinary(options: {
+    readonly path: string;
+    readonly accessToken?: string;
+  }): Promise<AccountApiBinaryResponse> {
+    const response = await fetcher(`${baseUrl}${options.path}`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/octet-stream',
+        'Cache-Control': 'no-store',
+        'X-Platform-Key': input.platformKey,
+        ...(options.accessToken
+          ? { Authorization: `Bearer ${options.accessToken}` }
+          : {}),
+      },
+    });
+    if (!response.ok) {
+      let code: ApiErrorCode = 'AUTHORIZATION_UNAVAILABLE';
+      if (response.json) {
+        const payload = (await response.json().catch(() => null)) as {
+          readonly error?: { readonly code?: ApiErrorCode };
+        } | null;
+        code = payload?.error?.code ?? code;
+      }
+      throw new AccountApiError(response.status, code);
+    }
+    return response;
   }
 
   return {
@@ -424,6 +475,30 @@ export function createAccountApiClient(input: {
         path: `/v1/config-files/${encodeURIComponent(fileId)}`,
         accessToken,
         idempotencyKey,
+      }),
+    listConfigFiles: (accessToken, cursor, limit) =>
+      request<ConfigFileListDto>({
+        method: 'GET',
+        path: `/v1/config-files${
+          cursor || limit
+            ? `?${new URLSearchParams({
+                ...(cursor ? { cursor } : {}),
+                ...(limit ? { limit: String(limit) } : {}),
+              }).toString()}`
+            : ''
+        }`,
+        accessToken,
+      }),
+    getConfigFile: (accessToken, fileId) =>
+      request<ConfigFileDto>({
+        method: 'GET',
+        path: `/v1/config-files/${encodeURIComponent(fileId)}`,
+        accessToken,
+      }),
+    downloadConfigFile: (accessToken, fileId) =>
+      requestBinary({
+        path: `/v1/config-files/${encodeURIComponent(fileId)}/content`,
+        accessToken,
       }),
   };
 }

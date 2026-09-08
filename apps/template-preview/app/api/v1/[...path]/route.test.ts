@@ -102,6 +102,55 @@ describe('template consumer BFF', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
   });
 
+  it('forwards file state reads and keeps binary downloads non-cacheable', async () => {
+    process.env.ACCOUNT_API_URL = 'https://account.example.test';
+    process.env.PLATFORM_KEY = 'phk_server_only_fixture';
+    process.env.CONSUMER_ORIGIN = 'https://consumer-a.example.test';
+    const fetchMock = vi.fn(async (input: string) => {
+      if (input.includes('/content'))
+        return new Response('hello', {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': 'attachment; filename="config.ini"',
+            'X-Content-Type-Options': 'nosniff',
+            'Cache-Control': 'private, no-store',
+          },
+        });
+      return new Response(
+        JSON.stringify({
+          data: { items: [], next_cursor: null },
+          request_id: 'file-1',
+        }),
+        { status: 200 },
+      );
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const list = await GET(
+      request('config-files?limit=20', {
+        headers: { cookie: 'aisenhub-session=session-1' },
+      }),
+      { params: Promise.resolve({ path: ['config-files'] }) },
+    );
+    expect(list.status).toBe(200);
+    expect(await list.json()).toMatchObject({ data: { items: [] } });
+    const download = await GET(
+      request('config-files/file-1/content', {
+        headers: { cookie: 'aisenhub-session=session-1' },
+      }),
+      {
+        params: Promise.resolve({
+          path: ['config-files', 'file-1', 'content'],
+        }),
+      },
+    );
+    expect(download.status).toBe(200);
+    expect(download.headers.get('cache-control')).toBe('private, no-store');
+    expect(download.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(await download.text()).toBe('hello');
+  });
+
   it('requires idempotency and same-origin CSRF for redemption', async () => {
     process.env.ACCOUNT_API_URL = 'https://account.example.test';
     process.env.PLATFORM_KEY = 'phk_server_only_fixture';

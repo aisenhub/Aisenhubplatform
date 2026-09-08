@@ -114,6 +114,17 @@ export interface ConfigFileDto {
   readonly size: number;
   readonly content_type: string;
   readonly created_at: string;
+  readonly reserved_bytes: number;
+  readonly reserved_count: number;
+  readonly actual_size_bytes: number | null;
+  readonly original_name: string | null;
+  readonly updated_at: string;
+  readonly cancel_requested_at: string | null;
+}
+
+export interface ConfigFileListDto {
+  readonly items: readonly ConfigFileDto[];
+  readonly next_cursor: string | null;
 }
 
 export interface DeleteRequestDto {

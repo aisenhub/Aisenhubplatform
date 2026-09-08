@@ -325,6 +325,54 @@ async function dispatch(
         id,
       );
     }
+    if (route === 'config-files' && method === 'GET') {
+      const cursor = request.nextUrl.searchParams.get('cursor');
+      const rawLimit = request.nextUrl.searchParams.get('limit');
+      const limit = rawLimit === null ? undefined : Number(rawLimit);
+      if (
+        rawLimit !== null &&
+        (limit === undefined ||
+          !Number.isInteger(limit) ||
+          limit < 1 ||
+          limit > 100)
+      )
+        throw new BffError(400, 'INVALID_INPUT');
+      return jsonResponse(
+        {
+          data: await api.listConfigFiles(token, cursor, limit),
+          request_id: id,
+        },
+        200,
+        id,
+      );
+    }
+    const downloadMatch = /^config-files\/([^/]+)\/content$/u.exec(route);
+    if (downloadMatch && method === 'GET') {
+      const upstream = await api.downloadConfigFile(token, downloadMatch[1]!);
+      const headers = new Headers({
+        'Cache-Control':
+          upstream.headers?.get('cache-control') ?? 'private, no-store',
+        'Content-Type':
+          upstream.headers?.get('content-type') ?? 'application/octet-stream',
+        'Content-Disposition':
+          upstream.headers?.get('content-disposition') ?? 'attachment',
+        'X-Content-Type-Options':
+          upstream.headers?.get('x-content-type-options') ?? 'nosniff',
+        'X-Request-Id': id,
+      });
+      const body =
+        upstream.body ??
+        (upstream.arrayBuffer ? await upstream.arrayBuffer() : null);
+      return new Response(body, { status: 200, headers });
+    }
+    const getMatch = /^config-files\/([^/]+)$/u.exec(route);
+    if (getMatch && method === 'GET') {
+      return jsonResponse(
+        { data: await api.getConfigFile(token, getMatch[1]!), request_id: id },
+        200,
+        id,
+      );
+    }
     const contentMatch = /^config-files\/([^/]+)\/content$/u.exec(route);
     if (contentMatch && method === 'PUT') {
       const fileId = contentMatch[1]!;

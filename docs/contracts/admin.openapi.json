@@ -344,8 +344,27 @@
       "get": {
         "operationId": "adminListConfigFiles",
         "x-module": "M4",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
         "responses": { "200": { "$ref": "#/components/responses/Page" } }
       }
     },
@@ -353,7 +372,7 @@
       "get": {
         "operationId": "adminGetConfigFile",
         "x-module": "M4",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/FileId" }],
         "responses": {
@@ -379,7 +398,7 @@
       "get": {
         "operationId": "adminDownloadConfigFileContent",
         "x-module": "M4",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/FileId" }],
         "responses": {

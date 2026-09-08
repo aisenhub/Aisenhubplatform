@@ -34,6 +34,7 @@ export type {
   ApiErrorResponse,
   ApiResponse,
   ConfigFileDto,
+  ConfigFileListDto,
   DeleteRequestDto,
   ETag,
   EntitlementDto,
