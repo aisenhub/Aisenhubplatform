@@ -562,11 +562,14 @@ async function exerciseAdmin(page, adminTotp) {
   await page.getByRole('heading', { name: 'Platform operations' }).waitFor();
   await page.getByRole('button', { name: platformACode, exact: true }).click();
   const accountRow = page.locator('li').filter({ hasText: userId });
-  await accountRow.getByRole('button', { name: '暂停', exact: true }).click();
-  await page.waitForResponse(
-    (item) =>
-      item.url().includes(`/accounts/`) && item.url().endsWith('/suspend'),
-  );
+  const [suspendResponse] = await Promise.all([
+    page.waitForResponse(
+      (item) =>
+        item.url().includes(`/accounts/`) && item.url().endsWith('/suspend'),
+    ),
+    accountRow.getByRole('button', { name: '暂停', exact: true }).click(),
+  ]);
+  assertStatus(suspendResponse.status(), 200, 'Admin account suspend');
   await page.waitForTimeout(250);
   return accountRow;
 }
@@ -727,6 +730,11 @@ try {
   );
 
   await exerciseAdmin(adminPage, adminTotp);
+  const [suspendedRow] = await sql`
+    select status from public.platform_accounts
+    where platform_id = ${platformAId} and user_id = ${userId}
+  `;
+  assert.equal(suspendedRow?.status, 'suspended', 'Admin suspend must persist');
   const suspended = await browserRequest(pageA, '/api/v1/profile');
   assertStatus(suspended.status, 403, 'suspended account protected route');
   assert.equal(suspended.payload?.error?.code, 'ACCOUNT_SUSPENDED');
