@@ -36,6 +36,7 @@ function requestCode(response: Response, payload: unknown): string {
 }
 
 export default function AdminSubscriptionsPage() {
+  const [platformId, setPlatformId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [command, setCommand] = useState('pause');
@@ -45,12 +46,12 @@ export default function AdminSubscriptionsPage() {
 
   async function load(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
-    if (!accountId) return;
+    if (!platformId || !accountId) return;
     setBusy(true);
     setStatus('正在读取订阅投影…');
     try {
       const response = await fetch(
-        `/api/v1/admin/api/v1/subscriptions/${encodeURIComponent(accountId)}`,
+        `/api/v1/admin/api/v1/subscriptions/${encodeURIComponent(accountId)}?platform_id=${encodeURIComponent(platformId)}`,
         { cache: 'no-store' },
       );
       const payload = (await response.json().catch(() => null)) as {
@@ -72,8 +73,10 @@ export default function AdminSubscriptionsPage() {
 
   async function applyCommand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!accountId || !reason.trim()) {
-      setStatus('敏感订阅动作必须填写原因；原因不要包含个人信息。');
+    if (!platformId || !accountId || !reason.trim()) {
+      setStatus(
+        '平台范围、账户 ID 和敏感订阅动作原因均为必填；原因不要包含个人信息。',
+      );
       return;
     }
     if (!window.confirm(`确认对账户 ${accountId} 执行 ${command}？`)) return;
@@ -82,7 +85,7 @@ export default function AdminSubscriptionsPage() {
     setStatus(`正在提交 ${command}…`);
     try {
       const response = await fetch(
-        `/api/v1/admin/api/v1/subscriptions/${encodeURIComponent(accountId)}/commands`,
+        `/api/v1/admin/api/v1/subscriptions/${encodeURIComponent(accountId)}/commands?platform_id=${encodeURIComponent(platformId)}`,
         {
           method: 'POST',
           headers: mutationHeaders(),
@@ -122,6 +125,14 @@ export default function AdminSubscriptionsPage() {
         的入口。敏感动作需要近期 MFA proof。
       </p>
       <form className="panel stack-form" onSubmit={load}>
+        <label htmlFor="platform-id">Platform ID</label>
+        <input
+          id="platform-id"
+          value={platformId}
+          onChange={(event) => setPlatformId(event.target.value)}
+          placeholder="UUID"
+          required
+        />
         <label htmlFor="account-id">Platform Account ID</label>
         <div className="inline-form">
           <input
@@ -131,7 +142,7 @@ export default function AdminSubscriptionsPage() {
             placeholder="UUID"
             required
           />
-          <button type="submit" disabled={busy}>
+          <button type="submit" disabled={busy || !platformId || !accountId}>
             读取
           </button>
         </div>
@@ -184,7 +195,7 @@ export default function AdminSubscriptionsPage() {
             maxLength={500}
             required
           />
-          <button type="submit" disabled={busy || !accountId}>
+          <button type="submit" disabled={busy || !platformId || !accountId}>
             确认并提交（需近期 MFA）
           </button>
         </form>
