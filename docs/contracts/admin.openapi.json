@@ -7,6 +7,21 @@
   },
   "servers": [{ "url": "https://admin.example.invalid" }],
   "paths": {
+    "/admin/api/v1/auth/recent-proof": {
+      "post": {
+        "operationId": "adminIssueRecentAuthProof",
+        "x-module": "M3",
+        "x-implementation-status": "local-only",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/MfaFactorId" }],
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" }
+        }
+      }
+    },
     "/admin/api/v1/platforms": {
       "get": {
         "operationId": "adminListPlatforms",
@@ -432,6 +447,12 @@
       }
     },
     "parameters": {
+      "MfaFactorId": {
+        "name": "X-Mfa-Factor-Id",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
       "PlatformId": {
         "name": "platformId",
         "in": "path",

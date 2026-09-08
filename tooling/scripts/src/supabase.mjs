@@ -36,11 +36,12 @@ if (process.env.SUPABASE_PROJECT_REF) {
   process.exit(2);
 }
 
-const executable = path.join(
+const cliEntrypoint = path.join(
   root,
   'node_modules',
-  '.bin',
-  process.platform === 'win32' ? 'supabase.cmd' : 'supabase',
+  'supabase',
+  'dist',
+  'supabase.js',
 );
 const command =
   action === 'db-reset'
@@ -48,7 +49,9 @@ const command =
     : action === 'db'
       ? ['test', 'db', ...args]
       : [action, ...args];
-const result = spawnSync(executable, command, {
+// Calling the package entrypoint through the current Node executable avoids
+// Windows' non-executable .cmd shim while preserving the pinned project CLI.
+const result = spawnSync(process.execPath, [cliEntrypoint, ...command], {
   cwd: root,
   env: { ...process.env, SUPABASE_TELEMETRY_DISABLED: '1' },
   stdio: 'inherit',

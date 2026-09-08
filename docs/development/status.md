@@ -25,9 +25,9 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01、T02、T03、T05、T06、T07已完成，T04为BLOCKED；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16已交付BFF安全边界但完整HTTP/Auth纵向仍阻塞），真实Auth/近期证明仍受T04约束；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-SOURCE`的来源/脚本审查部分、本地`V-BASE-01/02`、双运行时import、质量检查、文档检查、`SP-SQL Local`、`SP-UPLOAD Local`和`SP-TXN Local`已通过；`SP-AUTH`基础登录/TOTP子项已通过但近期证明被阻塞，托管探针和G0-L/G0-S仍按证据记录为`NOT_RUN`，不会因骨架可构建而宣称M0完成。
+M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过；G0-L 为 PASS，G0-S 及托管/浏览器探针仍为 NOT_RUN。
 
-当前任务状态：T01、T02、T03、T05～T11、T13～T15均已完成；T04为BLOCKED，阻塞在已签发JWT的logout即时失效边界；T12已交付可独立认证边界但整体受T04阻塞，T16已交付BFF安全边界但完整中央HTTP/Auth链路为PARTIAL；T17、T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，证据见[evidence/M3.md](evidence/M3.md)，任务拆分见[tasks/batch-02.md](tasks/batch-02.md)；托管/生产验证仍未完成。T04及T08～T16的验证分别见[evidence/T04.md](evidence/T04.md)、[evidence/T08.md](evidence/T08.md)、[evidence/T09.md](evidence/T09.md)、[evidence/T10.md](evidence/T10.md)、[evidence/T11.md](evidence/T11.md)、[evidence/T12.md](evidence/T12.md)、[evidence/T13.md](evidence/T13.md)、[evidence/T14.md](evidence/T14.md)、[evidence/T15.md](evidence/T15.md)和[evidence/T16.md](evidence/T16.md)。
+当前任务状态：T01～T11、T13～T15已完成；T04 Local JWT/logout/proof 子项已完成，真实 Provider 与浏览器 SSR 留给 T17；T12与T16为PARTIAL；T17、T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，证据见[evidence/M3.md](evidence/M3.md)；G0-L 证据见[evidence/G0-L.md](evidence/G0-L.md)，G0-S 未开始。
 
 ## T01 任务交接
 

@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   assertSameOrigin,
   createPerRequestClient,
   noStoreHeaders,
+  revokeSupabaseSession,
 } from '../src/index.ts';
 
 describe('SSR auth adapter', () => {
@@ -42,5 +43,38 @@ describe('SSR auth adapter', () => {
       ),
     ).toThrow('CSRF_ORIGIN_MISMATCH');
     expect(noStoreHeaders('request-1')['Cache-Control']).toBe('no-store');
+  });
+
+  it('revokes the upstream session before callers clear local cookies', async () => {
+    const fetcher = vi.fn(
+      async (input: string | Request | URL, init?: RequestInit) => {
+        expect(input).toBe('https://auth.example.test/auth/v1/logout');
+        expect(init?.method).toBe('POST');
+        expect(init?.cache).toBe('no-store');
+        expect(init?.headers).toEqual({
+          apikey: 'publishable-key',
+          Authorization: 'Bearer access-token',
+        });
+        return new Response(null, { status: 204 });
+      },
+    );
+    await revokeSupabaseSession({
+      url: 'https://auth.example.test/',
+      publishableKey: 'publishable-key',
+      accessToken: 'access-token',
+      fetcher,
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it('does not treat an upstream logout outage as successful', async () => {
+    await expect(
+      revokeSupabaseSession({
+        url: 'https://auth.example.test',
+        publishableKey: 'publishable-key',
+        accessToken: 'access-token',
+        fetcher: async () => new Response(null, { status: 503 }),
+      }),
+    ).rejects.toThrow('AUTH_LOGOUT_UNAVAILABLE');
   });
 });

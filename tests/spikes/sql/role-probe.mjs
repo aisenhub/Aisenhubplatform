@@ -13,6 +13,9 @@ const denoCommand =
   (process.platform === 'win32'
     ? 'D:\\APP\\Codex\\Deno\\bin\\deno.exe'
     : 'deno');
+const denoCache =
+  process.env.DENO_DIR ??
+  (process.platform === 'win32' ? 'E:\\AppData\\deno\\cache' : undefined);
 
 if (!directUrl || !apiUrl || !anonKey) {
   console.error('NOT_RUN: local DB URL, API URL and anon key are required.');
@@ -171,7 +174,7 @@ if (
 const denoEnv = {
   ...process.env,
   SUPABASE_POOLER_URL: poolerUrl,
-  DENO_DIR: `${process.cwd()}\\.deno-cache`,
+  ...(denoCache ? { DENO_DIR: denoCache } : {}),
 };
 const denoResult = spawnSync(
   denoCommand,

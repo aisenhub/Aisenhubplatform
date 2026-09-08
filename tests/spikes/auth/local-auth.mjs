@@ -200,12 +200,12 @@ console.log(
     mfaEnrollChallengeVerify: 'PASS',
     logoutRefreshRevoked: 'PASS',
     oldAccessRevokedImmediately,
+    serverSessionCheckRequired: !oldAccessRevokedImmediately,
   }),
 );
 
 if (!oldAccessRevokedImmediately) {
-  console.error(
-    'BLOCKED: local Auth accepts the already-issued access JWT after logout until its expiry.',
+  console.warn(
+    'OBSERVED: local Auth accepts an already-issued access JWT. Sensitive application requests must additionally validate session_id against the server-side session store.',
   );
-  process.exit(3);
 }

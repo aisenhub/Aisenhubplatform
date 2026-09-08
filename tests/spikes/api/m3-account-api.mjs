@@ -28,14 +28,13 @@ const platformId = crypto.randomUUID();
 const keyId = crypto.randomUUID();
 const freePlanId = crypto.randomUUID();
 const paidPlanId = crypto.randomUUID();
-const proofId = crypto.randomUUID();
-const factorId = crypto.randomUUID();
 const presentedKey = `phk_v1_${keyId}_m3-api-fixture`;
 const keyHmac = createHmac('sha256', platformSecret)
   .update(`1:platform-key:${keyId}:${presentedKey}`)
   .digest('hex');
 let user;
 let admin;
+let proofId;
 const assertStatus = (response, expected, label) => {
   assert.equal(
     response.status,
@@ -171,7 +170,17 @@ try {
   await elevateToAal2(admin);
   const elevatedClaims = jwtPayload(admin.accessToken);
   assert.equal(elevatedClaims.aal, 'aal2');
+  assert.equal(
+    elevatedClaims.sub,
+    admin.userId,
+    'JWT subject matches Auth user',
+  );
   admin.sessionId = elevatedClaims.session_id;
+  const activeAdminResponse = await authRequest('/auth/v1/user', {
+    headers: { Authorization: `Bearer ${admin.accessToken}` },
+  });
+  assertStatus(activeAdminResponse, 200, 'active elevated admin session');
+  assert.equal((await activeAdminResponse.json()).id, admin.userId);
   await sql`grant account_executor to postgres`;
   await sql`grant admin_executor to postgres`;
   await sql`insert into public.platforms (id, code, name) values (${platformId}, ${`m3-api-${platformId.slice(0, 8)}`}, 'M3 API Platform')`;
@@ -181,7 +190,19 @@ try {
   await sql`update public.platforms set default_plan_id = ${freePlanId} where id = ${platformId}`;
   await sql`insert into private.platform_api_keys (id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix, creation_operation_id) values (${keyId}, ${platformId}, 'M3 API key', ${keyHmac}, 1, 'phk_v1', 'xture', ${crypto.randomUUID()})`;
   await sql`insert into private.system_admin (user_id) values (${admin.userId})`;
-  await sql`insert into private.admin_step_up (id, user_id, session_id, factor_id, verified_at, expires_at) values (${proofId}, ${admin.userId}, ${admin.sessionId}, ${factorId}, now(), now() + interval '4 minutes')`;
+  const recentProofResponse = await apiRequest(
+    '/functions/v1/account-api/admin/api/v1/auth/recent-proof',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${admin.accessToken}`,
+        'X-Mfa-Factor-Id': admin.factorId,
+      },
+    },
+  );
+  assertStatus(recentProofResponse, 201, 'issue recent authentication proof');
+  proofId = (await json(recentProofResponse)).data.proof_id;
+  assert.ok(proofId, 'recent authentication proof is returned');
   const keyHeaders = { 'X-Platform-Key': presentedKey };
   const plansResponse = await apiRequest('/functions/v1/account-api/v1/plans', {
     headers: keyHeaders,
@@ -374,6 +395,23 @@ try {
   assertStatus(resumeResponse, 200, 'admin resume');
   await json(resumeResponse);
 
+  const logoutResponse = await authRequest('/auth/v1/logout', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${user.accessToken}` },
+  });
+  assertStatus(logoutResponse, 204, 'user logout');
+  const revokedSessionResponse = await apiRequest(
+    '/functions/v1/account-api/v1/account/principal',
+    { headers: { ...keyHeaders, Authorization: `Bearer ${user.accessToken}` } },
+  );
+  assertStatus(revokedSessionResponse, 401, 'revoked access token');
+  assert.ok(
+    ['SESSION_REVOKED', 'UNAUTHORIZED'].includes(
+      (await json(revokedSessionResponse)).error.code,
+    ),
+    'a logout-revoked access token must not authorize a new request',
+  );
+
   console.log(
     JSON.stringify({
       plans: 'PASS',
@@ -386,6 +424,8 @@ try {
       redemption: 'PASS',
       adminSubscription: 'PASS',
       pauseResume: 'PASS',
+      recentAuthProof: 'PASS',
+      revokedAccessToken: 'PASS',
     }),
   );
 } finally {
@@ -410,9 +450,10 @@ try {
   await sql`delete from public.redemption_code_batches where platform_id = ${platformId}`.catch(
     () => undefined,
   );
-  await sql`delete from private.admin_step_up where id = ${proofId}`.catch(
-    () => undefined,
-  );
+  if (proofId)
+    await sql`delete from private.admin_step_up where id = ${proofId}`.catch(
+      () => undefined,
+    );
   await sql`delete from private.platform_api_keys where platform_id = ${platformId}`.catch(
     () => undefined,
   );

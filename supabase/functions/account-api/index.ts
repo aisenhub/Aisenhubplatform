@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import postgres from 'npm:postgres@3.4.3';
 
 import {
@@ -21,6 +23,12 @@ interface AccountApiDependencies {
   readonly platformKeySecret?: string;
   readonly redemptionSecret?: string;
   readonly redemptionKeyVersion?: number;
+  /**
+   * Verifies a bearer token with Supabase Auth and returns its subject. This
+   * is injectable only for isolated Deno tests; production uses Auth's
+   * /auth/v1/user endpoint with the publishable key.
+   */
+  readonly verifyAccessToken?: (accessToken: string) => Promise<string | null>;
 }
 
 type KeyContext = {
@@ -60,7 +68,9 @@ const stringValue = (value: unknown): string | null =>
 
 const uuidValue = (value: unknown): string | null => {
   const valueString = stringValue(value);
-  return valueString && UUID.test(valueString) ? valueString : null;
+  return valueString && UUID.test(valueString)
+    ? valueString.toLowerCase()
+    : null;
 };
 
 function objectValue(value: unknown): Record<string, unknown> {
@@ -83,11 +93,15 @@ function base64UrlDecode(value: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-function sessionFromRequest(request: Request): SessionContext {
+function presentedSession(request: Request): {
+  readonly accessToken: string;
+  readonly session: SessionContext;
+} {
   const authorization = request.headers.get('authorization') ?? '';
   const match = /^Bearer\s+([^\s]+)$/iu.exec(authorization);
   if (!match) throw new ApiFault(401, 'UNAUTHORIZED');
-  const parts = match[1]!.split('.');
+  const accessToken = match[1]!;
+  const parts = accessToken.split('.');
   if (parts.length !== 3) throw new ApiFault(401, 'UNAUTHORIZED');
   try {
     const claims = objectValue(JSON.parse(base64UrlDecode(parts[1]!)));
@@ -97,10 +111,52 @@ function sessionFromRequest(request: Request): SessionContext {
       claims.aal === 'aal2' ? 'aal2' : claims.aal === 'aal1' ? 'aal1' : null;
     if (!userId || !sessionId || !aal)
       throw new Error('session claims missing');
-    return { userId, sessionId, aal };
+    return { accessToken, session: { userId, sessionId, aal } };
   } catch {
     throw new ApiFault(401, 'UNAUTHORIZED');
   }
+}
+
+async function verifyAccessTokenWithAuth(
+  accessToken: string,
+): Promise<string | null> {
+  const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
+  const publishableKey =
+    Deno.env.get('SUPABASE_ANON_KEY') ??
+    Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+  if (!url || !publishableKey)
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+
+  let response: Response;
+  try {
+    response = await fetch(`${url}/auth/v1/user`, {
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  }
+  if (response.status === 401 || response.status === 403) return null;
+  if (!response.ok) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+
+  const payload = objectValue(await response.json().catch(() => null));
+  return uuidValue(objectValue(payload.user).id) ?? uuidValue(payload.id);
+}
+
+async function verifiedSessionFromRequest(
+  request: Request,
+  dependencies: AccountApiDependencies,
+): Promise<SessionContext> {
+  const presented = presentedSession(request);
+  const verifiedUserId = await (dependencies.verifyAccessToken
+    ? dependencies.verifyAccessToken(presented.accessToken)
+    : verifyAccessTokenWithAuth(presented.accessToken));
+  if (!verifiedUserId || verifiedUserId !== presented.session.userId)
+    throw new ApiFault(401, 'UNAUTHORIZED');
+  return presented.session;
 }
 
 function parsePlatformKey(value: string | null): {
@@ -379,6 +435,7 @@ async function dispatchAccount(
   request: Request,
   transaction: Transaction,
   dependencies: AccountApiDependencies,
+  session?: SessionContext,
 ): Promise<DispatchResult> {
   const url = new URL(request.url);
   const path = url.pathname
@@ -405,7 +462,7 @@ async function dispatchAccount(
     };
   }
 
-  const session = sessionFromRequest(request);
+  if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
   const row = await principal(transaction, key, session);
   if (path === 'v1/account/principal' && request.method === 'GET') {
     return { status: 200, data: principalDto(row, key, session) };
@@ -530,13 +587,24 @@ async function dispatchAdmin(
   request: Request,
   transaction: Transaction,
   dependencies: AccountApiDependencies,
+  session: SessionContext,
 ): Promise<DispatchResult> {
   const url = new URL(request.url);
   const path = url.pathname
     .replace(/^\/functions\/v1\/account-api/iu, '')
     .replace(/^\/+/u, '');
-  const session = sessionFromRequest(request);
   const context = adminContextValues(session);
+  if (path === 'admin/api/v1/auth/recent-proof' && request.method === 'POST') {
+    if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
+    const factorId = uuidValue(request.headers.get('x-mfa-factor-id'));
+    if (!factorId) throw new ApiFault(400, 'INVALID_INPUT');
+    const [proof] = await transaction.unsafe<Row>(
+      'select * from private.admin_step_up_issue(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+      [...context, factorId],
+    );
+    if (!proof) throw new ApiFault(403, 'MFA_REQUIRED');
+    return { status: 201, data: proof };
+  }
   const planMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/plans$/u.exec(path);
   if (planMatch && UUID.test(planMatch[1]!)) {
     const platformId = planMatch[1]!;
@@ -725,14 +793,20 @@ export async function handleRequest(
     const path = new URL(request.url).pathname
       .replace(/^\/functions\/v1\/account-api/iu, '')
       .replace(/^\/+/u, '');
+    const session =
+      path.startsWith('admin/') ||
+      !(path === 'v1/plans' && request.method === 'GET')
+        ? await verifiedSessionFromRequest(request, dependencies)
+        : undefined;
     const db = dependencies.database ?? database();
     const result = await db.begin(async (transaction) => {
       if (path.startsWith('admin/')) {
+        if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
         await setRole(transaction, 'admin_executor');
-        return dispatchAdmin(request, transaction, dependencies);
+        return dispatchAdmin(request, transaction, dependencies, session);
       }
       await setRole(transaction, 'account_executor');
-      return dispatchAccount(request, transaction, dependencies);
+      return dispatchAccount(request, transaction, dependencies, session);
     });
     return response(
       { data: result.data, request_id: id },

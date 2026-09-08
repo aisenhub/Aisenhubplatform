@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import { assertEquals, assertMatch } from 'jsr:@std/assert@1';
 
 import { handleRequest } from './index.ts';
@@ -7,13 +9,13 @@ const keyId = '00000000-0000-4000-8000-000000000002';
 const userId = '00000000-0000-4000-8000-000000000003';
 const sessionId = '00000000-0000-4000-8000-000000000004';
 
-function fakeJwt(): string {
+function fakeJwt(aal: 'aal1' | 'aal2' = 'aal1'): string {
   const encode = (value: unknown) =>
     btoa(JSON.stringify(value))
       .replaceAll('+', '-')
       .replaceAll('/', '_')
       .replaceAll('=', '');
-  return `${encode({ alg: 'none' })}.${encode({ sub: userId, session_id: sessionId, aal: 'aal1' })}.x`;
+  return `${encode({ alg: 'none' })}.${encode({ sub: userId, session_id: sessionId, aal })}.x`;
 }
 
 function fakeDatabase() {
@@ -64,6 +66,14 @@ function fakeDatabase() {
                 authorization: 'allowed',
                 account_status: 'active',
                 platform_account_id: userId,
+              },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_step_up_issue')) {
+            return [
+              {
+                proof_id: '00000000-0000-4000-8000-000000000005',
+                expires_at: '2026-09-08T00:05:00.000Z',
               },
             ] as unknown as R[];
           }
@@ -128,8 +138,74 @@ Deno.test('Account API maps an entitlement read to the stable DTO', async () => 
     {
       database: fakeDatabase(),
       platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
     },
   );
   assertEquals(response.status, 200);
   assertEquals((await response.json()).data.entitlement_kind, 'free');
+});
+
+Deno.test('Account API rejects a parsed JWT whose Auth-verified subject differs', async () => {
+  const response = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/subscription', {
+      headers: {
+        Authorization: `Bearer ${fakeJwt()}`,
+        'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+      },
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => '00000000-0000-4000-8000-000000000099',
+    },
+  );
+  assertEquals(response.status, 401);
+  assertEquals((await response.json()).error.code, 'UNAUTHORIZED');
+});
+
+Deno.test('Account API issues a recent proof only after Auth verification and AAL2', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/auth/recent-proof',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'X-Mfa-Factor-Id': '00000000-0000-4000-8000-000000000006',
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 201);
+  assertEquals(
+    (await response.json()).data.proof_id,
+    '00000000-0000-4000-8000-000000000005',
+  );
+});
+
+Deno.test('Account API refuses recent-proof issuance at AAL1', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/auth/recent-proof',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Mfa-Factor-Id': '00000000-0000-4000-8000-000000000006',
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 403);
+  assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
 });
