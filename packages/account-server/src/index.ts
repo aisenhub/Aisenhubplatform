@@ -6,6 +6,8 @@ import type {
 import type {
   ApiErrorCode,
   ApiResponse,
+  AccountPrincipalDto,
+  DeleteRequestDto,
   EntitlementDto,
   PlanDto,
   PreferencesDto,
@@ -188,14 +190,14 @@ export interface AccountApiClient {
   readonly closeAccount: (
     accessToken: string,
     recentAuthProofId: string,
-  ) => Promise<unknown>;
+  ) => Promise<AccountPrincipalDto>;
   readonly requestIdentityDeletion: (
     accessToken: string,
     recentAuthProofId: string,
-  ) => Promise<unknown>;
+  ) => Promise<DeleteRequestDto>;
   readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
-  readonly getPrincipal: (accessToken: string) => Promise<unknown>;
-  readonly activate: (accessToken: string) => Promise<unknown>;
+  readonly getPrincipal: (accessToken: string) => Promise<AccountPrincipalDto>;
+  readonly activate: (accessToken: string) => Promise<AccountPrincipalDto>;
   readonly getProfile: (accessToken: string) => Promise<ProfileDto>;
   readonly patchProfile: (
     accessToken: string,
@@ -274,18 +276,33 @@ export type AccountApiFetcher = (
     readonly method: string;
     readonly headers: Readonly<Record<string, string>>;
     readonly body?: AccountApiRequestBody;
+    readonly signal?: AbortSignal;
   },
 ) => Promise<AccountApiFetchResponse & AccountApiBinaryResponse>;
+
+export interface AccountApiRetryOptions {
+  readonly maxRetries?: number;
+  readonly baseDelayMs?: number;
+  readonly maxDelayMs?: number;
+  readonly sleep?: (milliseconds: number) => Promise<void>;
+  readonly random?: () => number;
+}
 
 export class AccountApiError extends Error {
   readonly status: number;
   readonly code: ApiErrorCode;
+  readonly requestId: string | null;
 
-  constructor(status: number, code: ApiErrorCode) {
+  constructor(
+    status: number,
+    code: ApiErrorCode,
+    requestId: string | null = null,
+  ) {
     super(code);
     this.name = 'AccountApiError';
     this.status = status;
     this.code = code;
+    this.requestId = requestId;
   }
 }
 
@@ -293,8 +310,20 @@ export function createAccountApiClient(input: {
   readonly baseUrl: string;
   readonly platformKey: string;
   readonly fetcher?: AccountApiFetcher;
+  readonly timeoutMs?: number;
+  readonly retry?: AccountApiRetryOptions;
 }): AccountApiClient {
   const baseUrl = input.baseUrl.replace(/\/$/u, '');
+  const timeoutMs = input.timeoutMs ?? 5_000;
+  const retry = input.retry ?? {};
+  const maxRetries = Math.max(0, Math.min(retry.maxRetries ?? 2, 2));
+  const baseDelayMs = Math.max(0, retry.baseDelayMs ?? 50);
+  const maxDelayMs = Math.max(baseDelayMs, retry.maxDelayMs ?? 500);
+  const sleep =
+    retry.sleep ??
+    ((milliseconds: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
+  const random = retry.random ?? Math.random;
   const fetcher: AccountApiFetcher =
     input.fetcher ??
     (async (url, init) =>
@@ -302,7 +331,49 @@ export function createAccountApiClient(input: {
         method: init.method,
         headers: init.headers,
         body: init.body as never,
+        signal: init.signal,
       }));
+
+  function retryableStatus(status: number): boolean {
+    return status === 502 || status === 503 || status === 504;
+  }
+
+  function retryDelay(attempt: number): number {
+    const exponential = Math.min(maxDelayMs, baseDelayMs * 2 ** attempt);
+    return Math.round(exponential * (0.75 + random() * 0.5));
+  }
+
+  function retryableOperation(options: {
+    readonly method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+    readonly idempotencyKey?: string;
+    readonly binaryBody?: Uint8Array;
+  }): boolean {
+    if (options.binaryBody) return false;
+    return options.method === 'GET' || Boolean(options.idempotencyKey);
+  }
+
+  async function waitForRetry(
+    attempt: number,
+    deadline: number,
+  ): Promise<void> {
+    const delayMs = retryDelay(attempt);
+    if (Date.now() + delayMs >= deadline)
+      throw new AccountApiError(503, 'AUTHORIZATION_UNAVAILABLE');
+    await sleep(delayMs);
+  }
+
+  async function withTimeout<T>(
+    operation: (signal: AbortSignal) => Promise<T>,
+    remainingMs = timeoutMs,
+  ): Promise<T> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), remainingMs);
+    try {
+      return await operation(controller.signal);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
   async function request<T>(options: {
     readonly method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
@@ -333,56 +404,123 @@ export function createAccountApiClient(input: {
     if (options.body || options.binaryBody) {
       headers['Content-Type'] = options.contentType ?? 'application/json';
     }
-    const response = await fetcher(`${baseUrl}${options.path}`, {
-      method: options.method,
-      headers,
-      ...(options.binaryBody
-        ? { body: options.binaryBody }
-        : options.body
-          ? { body: JSON.stringify(options.body) }
-          : {}),
-    });
-    const payload = (await response.json()) as
-      | ApiResponse<T>
-      | { readonly error?: { readonly code?: ApiErrorCode } };
-    if (!response.ok) {
-      const code =
-        'error' in payload
-          ? (payload.error?.code ?? 'AUTHORIZATION_UNAVAILABLE')
-          : 'AUTHORIZATION_UNAVAILABLE';
-      throw new AccountApiError(response.status, code);
+    const canRetry = retryableOperation(options);
+    const deadline = Date.now() + timeoutMs;
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0)
+        throw new AccountApiError(503, 'AUTHORIZATION_UNAVAILABLE');
+      try {
+        const response = await withTimeout(
+          (signal) =>
+            fetcher(`${baseUrl}${options.path}`, {
+              method: options.method,
+              headers,
+              signal,
+              ...(options.binaryBody
+                ? { body: options.binaryBody }
+                : options.body
+                  ? { body: JSON.stringify(options.body) }
+                  : {}),
+            }),
+          remainingMs,
+        );
+        const payload = (await response.json()) as
+          | ApiResponse<T>
+          | {
+              readonly error?: { readonly code?: ApiErrorCode };
+              readonly request_id?: string;
+            };
+        const requestId =
+          'request_id' in payload ? (payload.request_id ?? null) : null;
+        if (!response.ok) {
+          const code =
+            'error' in payload
+              ? (payload.error?.code ?? 'AUTHORIZATION_UNAVAILABLE')
+              : 'AUTHORIZATION_UNAVAILABLE';
+          if (
+            canRetry &&
+            retryableStatus(response.status) &&
+            attempt < maxRetries
+          ) {
+            await waitForRetry(attempt, deadline);
+            continue;
+          }
+          throw new AccountApiError(response.status, code, requestId);
+        }
+        if (!('data' in payload))
+          throw new AccountApiError(
+            502,
+            'AUTHORIZATION_UNAVAILABLE',
+            requestId,
+          );
+        return payload.data;
+      } catch (error) {
+        if (error instanceof AccountApiError) throw error;
+        if (canRetry && attempt < maxRetries) {
+          await waitForRetry(attempt, deadline);
+          continue;
+        }
+        throw new AccountApiError(503, 'AUTHORIZATION_UNAVAILABLE');
+      }
     }
-    if (!('data' in payload))
-      throw new AccountApiError(502, 'AUTHORIZATION_UNAVAILABLE');
-    return payload.data;
+    throw new AccountApiError(503, 'AUTHORIZATION_UNAVAILABLE');
   }
 
   async function requestBinary(options: {
     readonly path: string;
     readonly accessToken?: string;
   }): Promise<AccountApiBinaryResponse> {
-    const response = await fetcher(`${baseUrl}${options.path}`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/octet-stream',
-        'Cache-Control': 'no-store',
-        'X-Platform-Key': input.platformKey,
-        ...(options.accessToken
-          ? { Authorization: `Bearer ${options.accessToken}` }
-          : {}),
-      },
-    });
-    if (!response.ok) {
-      let code: ApiErrorCode = 'AUTHORIZATION_UNAVAILABLE';
-      if (response.json) {
-        const payload = (await response.json().catch(() => null)) as {
-          readonly error?: { readonly code?: ApiErrorCode };
-        } | null;
-        code = payload?.error?.code ?? code;
+    const deadline = Date.now() + timeoutMs;
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0)
+        throw new AccountApiError(503, 'AUTHORIZATION_UNAVAILABLE');
+      try {
+        const response = await withTimeout(
+          (signal) =>
+            fetcher(`${baseUrl}${options.path}`, {
+              method: 'GET',
+              headers: {
+                Accept: 'application/octet-stream',
+                'Cache-Control': 'no-store',
+                'X-Platform-Key': input.platformKey,
+                ...(options.accessToken
+                  ? { Authorization: `Bearer ${options.accessToken}` }
+                  : {}),
+              },
+              signal,
+            }),
+          remainingMs,
+        );
+        if (!response.ok) {
+          let code: ApiErrorCode = 'AUTHORIZATION_UNAVAILABLE';
+          let requestId: string | null = null;
+          if (response.json) {
+            const payload = (await response.json().catch(() => null)) as {
+              readonly error?: { readonly code?: ApiErrorCode };
+              readonly request_id?: string;
+            } | null;
+            code = payload?.error?.code ?? code;
+            requestId = payload?.request_id ?? null;
+          }
+          if (retryableStatus(response.status) && attempt < maxRetries) {
+            await waitForRetry(attempt, deadline);
+            continue;
+          }
+          throw new AccountApiError(response.status, code, requestId);
+        }
+        return response;
+      } catch (error) {
+        if (error instanceof AccountApiError) throw error;
+        if (attempt < maxRetries) {
+          await waitForRetry(attempt, deadline);
+          continue;
+        }
+        throw new AccountApiError(503, 'AUTHORIZATION_UNAVAILABLE');
       }
-      throw new AccountApiError(response.status, code);
     }
-    return response;
+    throw new AccountApiError(503, 'AUTHORIZATION_UNAVAILABLE');
   }
 
   return {
@@ -394,14 +532,14 @@ export function createAccountApiClient(input: {
         reauthAccessToken,
       }),
     closeAccount: (accessToken, recentAuthProofId) =>
-      request({
+      request<AccountPrincipalDto>({
         method: 'POST',
         path: '/v1/account/close',
         accessToken,
         recentAuthProofId,
       }),
     requestIdentityDeletion: (accessToken, recentAuthProofId) =>
-      request({
+      request<DeleteRequestDto>({
         method: 'POST',
         path: '/v1/identity/delete-request',
         accessToken,
@@ -410,9 +548,17 @@ export function createAccountApiClient(input: {
     listPublicPlans: () =>
       request<readonly PlanDto[]>({ method: 'GET', path: '/v1/plans' }),
     getPrincipal: (accessToken) =>
-      request({ method: 'GET', path: '/v1/account/principal', accessToken }),
+      request<AccountPrincipalDto>({
+        method: 'GET',
+        path: '/v1/account/principal',
+        accessToken,
+      }),
     activate: (accessToken) =>
-      request({ method: 'POST', path: '/v1/account/activate', accessToken }),
+      request<AccountPrincipalDto>({
+        method: 'POST',
+        path: '/v1/account/activate',
+        accessToken,
+      }),
     getProfile: (accessToken) =>
       request<ProfileDto>({ method: 'GET', path: '/v1/profile', accessToken }),
     patchProfile: (accessToken, ifMatch, patch) =>

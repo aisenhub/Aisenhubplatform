@@ -118,6 +118,7 @@ describe('account API server client', () => {
         status: 503,
         json: async () => ({
           error: { code: 'AUTHORIZATION_UNAVAILABLE', message: 'SQL secret' },
+          request_id: 'req-error-1',
         }),
       }),
     });
@@ -126,6 +127,7 @@ describe('account API server client', () => {
       name: 'AccountApiError',
       status: 503,
       code: 'AUTHORIZATION_UNAVAILABLE',
+      requestId: 'req-error-1',
       message: 'AUTHORIZATION_UNAVAILABLE',
     });
   });
@@ -229,5 +231,105 @@ describe('account API server client', () => {
       'X-Platform-Key': 'phk_test_server_only',
       Authorization: 'Bearer access-token-1',
     });
+  });
+
+  it('retries transient reads and never retries upload streams', async () => {
+    let readAttempts = 0;
+    const delays: number[] = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      retry: {
+        baseDelayMs: 10,
+        maxDelayMs: 10,
+        random: () => 0.5,
+        sleep: async (milliseconds) => {
+          delays.push(milliseconds);
+        },
+      },
+      fetcher: async (url) => {
+        if (url.endsWith('/v1/plans')) {
+          readAttempts += 1;
+          if (readAttempts < 3)
+            return {
+              ok: false,
+              status: 503,
+              json: async () => ({
+                error: { code: 'AUTHORIZATION_UNAVAILABLE' },
+                request_id: `retry-${readAttempts}`,
+              }),
+            };
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ data: [], request_id: 'final-read' }),
+          };
+        }
+        throw new Error('upload transport failed');
+      },
+    });
+
+    await expect(client.listPublicPlans()).resolves.toEqual([]);
+    expect(readAttempts).toBe(3);
+    expect(delays).toEqual([10, 10]);
+    await expect(
+      client.uploadContent(
+        'access-token',
+        'file-1',
+        new Uint8Array([1]),
+        'idem-1',
+      ),
+    ).rejects.toMatchObject({
+      status: 503,
+      code: 'AUTHORIZATION_UNAVAILABLE',
+    });
+    expect(readAttempts).toBe(3);
+  });
+
+  it('retries an idempotent-key operation but not a business rejection', async () => {
+    let attempts = 0;
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      retry: { sleep: async () => undefined },
+      fetcher: async () => {
+        attempts += 1;
+        if (attempts === 1)
+          return {
+            ok: false,
+            status: 503,
+            json: async () => ({
+              error: { code: 'AUTHORIZATION_UNAVAILABLE' },
+              request_id: 'retry-once',
+            }),
+          };
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            data: {
+              file_id: 'file-1',
+              upload_path: '/v1/config-files/file-1/content',
+              expires_at: '2026-09-09T00:00:00Z',
+            },
+            request_id: 'intent-ok',
+          }),
+        };
+      },
+    });
+
+    await expect(
+      client.createUploadIntent(
+        'access-token',
+        {
+          name: 'config.json',
+          size: 1,
+          content_type: 'application/json',
+          purpose: 'config',
+        },
+        'idem-1',
+      ),
+    ).resolves.toMatchObject({ file_id: 'file-1' });
+    expect(attempts).toBe(2);
   });
 });

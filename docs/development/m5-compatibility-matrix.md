@@ -20,10 +20,10 @@
 
 | 包 | 当前exports/依赖 | 目标兼容规则 | 当前判定 |
 |---|---|---|---|
-| `@kit/account-auth` | `.`→`src/index.ts`；纯TS，无Supabase依赖 | browser/server均可导入；只提供Auth合同、意图和校验 | Local单测通过；需M5-02独立打包 |
-| `@kit/account-auth-nextjs` | `.`→`src/index.ts`；固定`@supabase/ssr`与`@supabase/supabase-js` | browser/server显式边界；server client、Cookie/PKCE/refresh不得进入浏览器bundle | T12-R1实现；V-SDK-01独立安装/扫描待M5-02 |
-| `@kit/account-server` | `.`→`src/index.ts`；依赖Auth/domain | 仅server；API错误、request_id、ETag、分页、超时/幂等方法与OpenAPI一致 | 仅M2/M3子集；文件/Admin完整方法待M5-02/03 |
-| `@kit/domain` | contracts/redemption公开exports；无Node生产依赖 | Node/Edge双运行时；不含生产权益/配额算法第二实现 | Local既有探针/单测通过；M5-02复验tarball |
+| `@kit/account-auth` | `.`/`./browser`/`./server`→`dist/index.js`；纯TS，无Supabase依赖 | browser/server均可导入；只提供Auth合同、意图和校验 | PASS（Local tarball）；内容与边界扫描通过 |
+| `@kit/account-auth-nextjs` | `.`/`./server`→`dist/index.js`，`./browser`→`dist/browser.js`；固定`@supabase/ssr`与`@supabase/supabase-js` | browser/server显式边界；server client、Cookie/PKCE/refresh不得进入浏览器bundle | PASS（Local tarball）；独立消费者类型检查通过 |
+| `@kit/account-server` | `.`/`./server`→`dist/index.js`；无browser export，依赖Auth/domain | 仅server；API错误、request_id、ETag、分页、超时/幂等方法与OpenAPI一致 | PASS（Local tarball）；server包浏览器导入被拒绝 |
+| `@kit/domain` | contracts/redemption/errors/validation公开exports；无Node生产依赖 | Node/Edge双运行时；不含生产权益/配额算法第二实现 | PASS（Local tarball）；Node/Edge导入通过 |
 
 版本策略固定为SemVer、API `/v1`；包当前均为 `0.1.0`、`private`，没有npm scope、Registry host或正式发布权限。M5-02必须先决定精确构建版本、依赖白名单、browser/server exports、tarball内容与校验和；在M5-06的X05与发布授权前不得声称可从npm/正式Registry安装。
 
@@ -47,7 +47,7 @@
 
 | 验收 | 当前状态 | 后续责任 |
 |---|---|---|
-| V-SDK-01/02 | PARTIAL | M5-02实现并验证tarball、错误/预算/重试/浏览器边界 |
+| V-SDK-01/02 | PASS（Local tarball） | M5-05继续做全新Consumer与Registry联合安装；M5-06仍需正式发布 |
 | V-UI-01 | PARTIAL | T16-R2提供运行入口；M5-03/04补完整页面和失败恢复 |
 | V-INTEGRATION-01 | NOT_RUN | M5-05全新Consumer安装 |
 | G5-L | NOT_RUN | M5-05 |
