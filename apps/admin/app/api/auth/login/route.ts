@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  createRequestAuthClient,
+  writeAuthSessionCookies,
+  type AuthCookieWriter,
+} from '@kit/account-auth-nextjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,58 +42,30 @@ export async function POST(request: NextRequest): Promise<Response> {
     };
     if (typeof body.email !== 'string' || typeof body.password !== 'string')
       return result({ code: 'INVALID_INPUT' }, 400);
-    const upstream = await fetch(
-      `${config.url}/auth/v1/token?grant_type=password`,
-      {
-        method: 'POST',
-        headers: {
-          apikey: config.anonKey,
-          Authorization: `Bearer ${config.anonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: body.email, password: body.password }),
-        cache: 'no-store',
-      },
-    );
-    const payload = (await upstream.json()) as {
-      access_token?: string;
-      refresh_token?: string;
-      expires_in?: number;
-      error_code?: string;
-    };
-    if (!upstream.ok || !payload.access_token)
+    const client = createRequestAuthClient({
+      url: config.url,
+      publishableKey: config.anonKey,
+    });
+    const { data, error } = await client.auth.signInWithPassword({
+      email: body.email,
+      password: body.password,
+    });
+    if (error || !data.session)
       return result(
-        { code: payload.error_code ?? 'UNAUTHORIZED' },
-        upstream.status === 400 ? 401 : 503,
+        {
+          code:
+            error?.status && error.status >= 500
+              ? 'AUTHORIZATION_UNAVAILABLE'
+              : 'UNAUTHORIZED',
+        },
+        error?.status && error.status >= 500 ? 503 : 401,
       );
     const response = result({ authenticated: true });
-    const maxAge = Math.max(60, Number(payload.expires_in ?? 3600));
-    response.cookies.set('aisenhub-admin-session', payload.access_token, {
-      httpOnly: true,
+    writeAuthSessionCookies({
+      writer: response.cookies as unknown as AuthCookieWriter,
+      session: data.session,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge,
-    });
-    if (payload.refresh_token) {
-      response.cookies.set(
-        'aisenhub-admin-refresh-token',
-        payload.refresh_token,
-        {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 30,
-        },
-      );
-    }
-    response.cookies.set('aisenhub-csrf', crypto.randomUUID(), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge,
+      prefix: 'admin',
     });
     return response;
   } catch {

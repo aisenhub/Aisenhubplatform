@@ -11,7 +11,9 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
-    "@kit/account-auth": "workspace:*"
+    "@kit/account-auth": "workspace:*",
+    "@supabase/ssr": "catalog:",
+    "@supabase/supabase-js": "catalog:"
   },
   "devDependencies": {
     "@kit/tsconfig": "workspace:*",

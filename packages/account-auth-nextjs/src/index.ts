@@ -1,4 +1,10 @@
 import { requireSafeReturnTo, safeReturnTo } from '@kit/account-auth';
+import { createBrowserClient, createServerClient } from '@supabase/ssr';
+import {
+  createClient,
+  type Session,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
 
 export interface CookiePolicy {
   readonly name: string;
@@ -27,6 +33,176 @@ export interface PerRequestClient<TClient> {
   readonly client: TClient;
   readonly headers: RequestHeaders;
   readonly returnTo: string;
+}
+
+export interface SupabaseAuthConfig {
+  readonly url: string;
+  readonly publishableKey: string;
+  readonly cookieName?: string;
+}
+
+export interface CookieStore {
+  readonly getAll: () => readonly { name: string; value: string }[];
+  readonly setAll: (
+    cookies: readonly {
+      name: string;
+      value: string;
+      options: Record<string, unknown>;
+    }[],
+  ) => void;
+}
+
+export function createBrowserSupabaseClient(
+  config: SupabaseAuthConfig,
+): SupabaseClient {
+  return createBrowserClient(config.url, config.publishableKey, {
+    ...(config.cookieName
+      ? { cookieOptions: { name: config.cookieName } }
+      : {}),
+  });
+}
+
+export function createServerSupabaseClient(
+  config: SupabaseAuthConfig,
+  cookies: CookieStore,
+): SupabaseClient {
+  return createServerClient(config.url, config.publishableKey, {
+    ...(config.cookieName
+      ? { cookieOptions: { name: config.cookieName } }
+      : {}),
+    cookies: {
+      getAll: () => [...cookies.getAll()],
+      setAll: (values) => cookies.setAll(values),
+    },
+  });
+}
+
+/** A request-scoped Auth client that never persists tokens to a shared store. */
+export function createRequestAuthClient(
+  config: SupabaseAuthConfig,
+): SupabaseClient {
+  return createClient(config.url, config.publishableKey, {
+    auth: {
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      persistSession: false,
+    },
+  });
+}
+
+export function authCookieNames(prefix: 'consumer' | 'admin' = 'consumer') {
+  return prefix === 'admin'
+    ? {
+        access: 'aisenhub-admin-session',
+        refresh: 'aisenhub-admin-refresh-token',
+        csrf: 'aisenhub-csrf',
+      }
+    : {
+        access: 'aisenhub-session',
+        refresh: 'aisenhub-refresh-token',
+        csrf: 'aisenhub-csrf',
+      };
+}
+
+export interface AuthCookieWriter {
+  readonly set: (
+    name: string,
+    value: string,
+    options: {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: 'lax' | 'strict';
+      path: '/';
+      maxAge: number;
+    },
+  ) => void;
+  readonly delete: (name: string) => void;
+}
+
+export function writeAuthSessionCookies(input: {
+  readonly writer: AuthCookieWriter;
+  readonly session: Session;
+  readonly secure: boolean;
+  readonly prefix?: 'consumer' | 'admin';
+  readonly csrfToken?: string;
+}): string {
+  const names = authCookieNames(input.prefix);
+  const maxAge = Math.max(60, input.session.expires_in);
+  const base = {
+    secure: input.secure,
+    sameSite: 'lax' as const,
+    path: '/' as const,
+    maxAge,
+  };
+  input.writer.set(names.access, input.session.access_token, {
+    ...base,
+    httpOnly: true,
+  });
+  input.writer.set(names.refresh, input.session.refresh_token, {
+    ...base,
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  const csrfToken = input.csrfToken ?? crypto.randomUUID();
+  input.writer.set(names.csrf, csrfToken, {
+    ...base,
+    httpOnly: false,
+  });
+  return csrfToken;
+}
+
+export function clearAuthSessionCookies(
+  writer: Pick<AuthCookieWriter, 'delete'>,
+  prefix: 'consumer' | 'admin' = 'consumer',
+): void {
+  const names = authCookieNames(prefix);
+  writer.delete(names.access);
+  writer.delete(names.refresh);
+  writer.delete(names.csrf);
+  if (prefix === 'admin') writer.delete('aisenhub-recent-auth-proof');
+}
+
+export async function signInWithPassword(
+  client: SupabaseClient,
+  input: { readonly email: string; readonly password: string },
+) {
+  return client.auth.signInWithPassword(input);
+}
+
+export async function refreshAuthSession(
+  client: SupabaseClient,
+  refreshToken: string,
+) {
+  return client.auth.refreshSession({ refresh_token: refreshToken });
+}
+
+export async function exchangeAuthCode(client: SupabaseClient, code: string) {
+  return client.auth.exchangeCodeForSession(code);
+}
+
+export async function signUpWithPassword(
+  client: SupabaseClient,
+  input: {
+    readonly email: string;
+    readonly password: string;
+    readonly emailRedirectTo?: string;
+  },
+) {
+  return client.auth.signUp({
+    email: input.email,
+    password: input.password,
+    options: input.emailRedirectTo
+      ? { emailRedirectTo: input.emailRedirectTo }
+      : undefined,
+  });
+}
+
+export async function requestPasswordReset(
+  client: SupabaseClient,
+  email: string,
+  redirectTo: string,
+) {
+  return client.auth.resetPasswordForEmail(email, { redirectTo });
 }
 
 export function createPerRequestClient<TClient>(

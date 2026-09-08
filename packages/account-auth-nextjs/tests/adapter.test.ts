@@ -2,9 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   assertSameOrigin,
+  authCookieNames,
+  clearAuthSessionCookies,
   createPerRequestClient,
   noStoreHeaders,
   revokeSupabaseSession,
+  writeAuthSessionCookies,
 } from '../src/index.ts';
 
 describe('SSR auth adapter', () => {
@@ -76,5 +79,57 @@ describe('SSR auth adapter', () => {
         fetcher: async () => new Response(null, { status: 503 }),
       }),
     ).rejects.toThrow('AUTH_LOGOUT_UNAVAILABLE');
+  });
+
+  it('writes a bounded, request-specific session cookie set', () => {
+    const set = vi.fn();
+    const writer = { set, delete: vi.fn() };
+    writeAuthSessionCookies({
+      writer,
+      session: {
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+        expires_in: 900,
+        expires_at: 1_000,
+        token_type: 'bearer',
+        user: {
+          id: 'user-1',
+          aud: 'authenticated',
+          role: 'authenticated',
+          email: 'user@example.test',
+          app_metadata: {},
+          user_metadata: {},
+          created_at: '',
+        },
+      },
+      secure: true,
+      csrfToken: 'csrf-token',
+    });
+    expect(set).toHaveBeenCalledWith(
+      'aisenhub-session',
+      'access-token',
+      expect.objectContaining({ httpOnly: true, maxAge: 900 }),
+    );
+    expect(set).toHaveBeenCalledWith(
+      'aisenhub-refresh-token',
+      'refresh-token',
+      expect.objectContaining({ httpOnly: true, maxAge: 2_592_000 }),
+    );
+    expect(set).toHaveBeenCalledWith(
+      'aisenhub-csrf',
+      'csrf-token',
+      expect.objectContaining({ httpOnly: false }),
+    );
+  });
+
+  it('clears all consumer and admin session material', () => {
+    const writer = { delete: vi.fn() };
+    clearAuthSessionCookies(writer, 'admin');
+    expect(writer.delete.mock.calls.map(([name]) => name)).toEqual([
+      authCookieNames('admin').access,
+      authCookieNames('admin').refresh,
+      authCookieNames('admin').csrf,
+      'aisenhub-recent-auth-proof',
+    ]);
   });
 });
