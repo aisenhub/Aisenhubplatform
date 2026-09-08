@@ -18,6 +18,7 @@
     "test:upload": "node tests/spikes/upload/controlled-receiver.mjs",
     "test:db": "pnpm run --filter scripts supabase db --local",
     "test:api": "node tooling/scripts/src/not-enabled.mjs 'API tests' T04-T16",
+    "test:e2e:t12-r2": "node tests/spikes/e2e/t12-r2-admin.mjs",
     "test:e2e": "node tooling/scripts/src/not-enabled.mjs 'browser E2E tests' T16",
     "runtime:probe": "pnpm run --filter scripts runtime:probe",
     "docs:check": "pnpm run --filter scripts docs:check",
