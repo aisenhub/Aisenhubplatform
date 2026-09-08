@@ -48,7 +48,7 @@ export default function AdminHomePage() {
       </div>
       <div className="panel">
         <strong>查看审计</strong>
-        <span>只读筛选审计记录；后端尚未实现时明确显示 contract-only。</span>
+        <span>只读筛选审计记录；查询失败时显示稳定错误码，不伪造空结果。</span>
         <a className="link" href="/admin/audit">
           打开 Audit Log
         </a>

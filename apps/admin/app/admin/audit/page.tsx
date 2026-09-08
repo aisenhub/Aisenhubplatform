@@ -92,9 +92,7 @@ export default function AdminAuditPage() {
           {status}
         </p>
         {visibleEntries.length === 0 ? (
-          <p className="muted">
-            暂无可显示记录；若后端返回 contract-only，不将其解释为空数据。
-          </p>
+          <p className="muted">暂无可显示记录；不会将查询失败解释为空数据。</p>
         ) : (
           <div
             className="data-table"
