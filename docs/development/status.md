@@ -18,6 +18,8 @@
 
 T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），但证据判定为PARTIAL：本地Auth探针、包单测、类型检查和两个应用构建通过；真实浏览器SSR、OAuth/邮件及应用路由端到端Local回归留给T12-R2/T16-R2/T17-R2。M4-01已完成合同/恢复矩阵冻结（当前分支 `task/M4-01-file-contract`，运行证据见 `evidence/M4-01.md`），不改变M4实现仍等待T18-L的门槛。当前下一项为T12-R2，T12父任务仍保持PARTIAL。
 
+M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；没有生成Registry或正式包，也未改变M4字段假设。M5-02/03/04仍分别等待前置任务和M4稳定。
+
 T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务列出的全部HTTP/Admin/Consumer体验均完成；缺失链路由T16-R1承接，完整体验由M5完善。T04的普通用户reauth、SSR与真实Provider仍有未完成项，不能从Admin proof通过推断普通用户proof通过。
 
 ## DP2本轮规划交付
