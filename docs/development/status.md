@@ -11,12 +11,14 @@
 | M0 / G0-L | Local已有PASS证据，模块仍IN_PROGRESS | G0-S托管补齐 |
 | M1 / G1 | 基础任务有Local通过记录；候选commit统一复验未运行 | T18-L确认G1 |
 | M2 / G2-L | T12/T16 PARTIAL；T12-R1已交付，T12-R2已完成Admin MFA安全实现但普通proof/浏览器仍未收口 | T12-R2证据、T16-R1/R2、T18-L |
-| G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS | T17-R1/R2/R3、T18-S |
+| G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS；T17-R1已补网关配置与独立URL适配，但托管角色/TLS未运行 | T17-R1 hosted核验、T17-R2/R3、T18-S |
 | M3 / G3 | M3-01～03 Local交付；M3-R1为PARTIAL（SQL/API Local基线及主要G3子情景通过） | 补API级双Secret轮换/提交后响应丢失注入，不推定整体G3 PASS |
 | M4～M6 | NOT_STARTED；本次仅计划 | 第三批M4、DP2后续路线 |
 | T18 | WAITING；允许独立整理本地材料 | T18-L与T18-S分层完成，全部条件满足才关闭父任务 |
 
 T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），但证据判定为PARTIAL：本地Auth探针、包单测、类型检查和两个应用构建通过；真实浏览器SSR、OAuth/邮件及应用路由端到端Local回归留给T12-R2/T16-R2/T17-R2。T12-R2已在`task/T12-R2-mfa-reauth`补齐Admin真实MFA挑战、中央recent-proof消费者、HttpOnly proof cookie及中央Admin AAL2入口，验证结果为PARTIAL；普通用户proof因缺少服务端可验证issuer/认证事件合同仍保持拒绝，真实浏览器链路未运行，详见`evidence/T12-R2.md`。M4-01已完成合同/恢复矩阵冻结（当前分支 `task/M4-01-file-contract`，运行证据见 `evidence/M4-01.md`），不改变M4实现仍等待T18-L的门槛。T12父任务仍保持PARTIAL。
+
+T17-R1本轮已完成可独立的网关合同配置与 Account/Admin 独立数据库 URL 选择；根据当前 Supabase 官方连接、SSL 与 Edge Functions 指南补充了 hosted 配置及验收矩阵。实际独立 executor、TLS、CA、pooler 和重新部署请求矩阵因受控 Staging 输入未提供而保持 BLOCKED/NOT_RUN，详见`evidence/T17-R1.md`；不改变远端部署，不把历史默认 `SUPABASE_DB_URL` 证据升级为通过。
 
 M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；没有生成Registry或正式包，也未改变M4字段假设。M5-02/03/04仍分别等待前置任务和M4稳定。
 

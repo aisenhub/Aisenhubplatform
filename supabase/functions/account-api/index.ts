@@ -263,18 +263,25 @@ function env(name: string): string {
   return value;
 }
 
-let defaultDatabase: Database | undefined;
-function database(): Database {
-  if (defaultDatabase) return defaultDatabase;
+const databases = new Map<'account' | 'admin', Database>();
+function database(executor: 'account' | 'admin'): Database {
+  const cached = databases.get(executor);
+  if (cached) return cached;
+  const dedicatedUrl = Deno.env.get(
+    executor === 'admin' ? 'ADMIN_DB_URL' : 'ACCOUNT_DB_URL',
+  );
   const url =
-    Deno.env.get('ACCOUNT_API_DB_URL') ?? Deno.env.get('SUPABASE_DB_URL');
+    dedicatedUrl ??
+    Deno.env.get('ACCOUNT_API_DB_URL') ??
+    Deno.env.get('SUPABASE_DB_URL');
   if (!url) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
-  defaultDatabase = postgres(url, {
+  const connection = postgres(url, {
     max: 8,
     prepare: false,
     connect_timeout: 5,
   }) as unknown as Database;
-  return defaultDatabase;
+  databases.set(executor, connection);
+  return connection;
 }
 
 async function setRole(
@@ -799,7 +806,8 @@ export async function handleRequest(
       !(path === 'v1/plans' && request.method === 'GET')
         ? await verifiedSessionFromRequest(request, dependencies)
         : undefined;
-    const db = dependencies.database ?? database();
+    const executor = path.startsWith('admin/') ? 'admin' : 'account';
+    const db = dependencies.database ?? database(executor);
     const result = await db.begin(async (transaction) => {
       if (path.startsWith('admin/')) {
         if (!session) throw new ApiFault(401, 'UNAUTHORIZED');

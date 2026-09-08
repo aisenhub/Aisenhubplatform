@@ -13,7 +13,7 @@
 | X04/X05/X06 | 当前证据未证明已提供 | M6-01整理，实际备份/发布/容量前确认 |
 | D05 | Local角色/pooler有证据，托管独立身份/TLS仍未证明 | T17-R1 |
 | D06 | Admin Local MFA/proof有证据，普通reauth及浏览器待补 | T12-R2、T17-R2 |
-| 网关差异 | Staging记录与安全专题不一致，未批准合同变更 | T17-R1先官方核对/ADR再修适配 |
+| 网关差异 | 已按安全专题及官方指南将仓库 `account-api` 配置改为 `verify_jwt=false`；远端旧部署未变更/未重验 | T17-R1；由 adapter 执行逐路由 Platform Key/JWT/AAL2 检查，hosted 矩阵待受控输入 |
 | 会话范围 | 当前logout调用未显式scope，不宣称local语义已验收 | T12-R1双独立会话实测 |
 | 文件/备份交界 | M4需持久屏障，M6负责真实备份与外部墓碑 | M4-01/02/05和M6-01/02，保持原领域不变量 |
 

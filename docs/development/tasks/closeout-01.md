@@ -12,7 +12,7 @@
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | WAITING |
 | T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |
 | M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PARTIAL（SQL/API Local基线通过；剩余G3子情景未补齐，证据见 M3-R1） |
-| T17-R1 | 托管独立executor、TLS与网关合同 | 无 | READY |
+| T17-R1 | 托管独立executor、TLS与网关合同 | 无 | BLOCKED（配置已补；hosted证据见 T17-R1） |
 | T17-R2 | 托管浏览器、Origin、真实Provider | T16-R2,T17-R1 | WAITING |
 | T17-R3 | 实际BFF/Edge上传与Storage探针 | T17-R1 | WAITING |
 | T18-S | G0-S/G2-S及首批最终交接 | T18-L,T17-R2,T17-R3 | WAITING |

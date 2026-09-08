@@ -107,4 +107,6 @@ verify_enabled = true
 enabled = false
 
 [functions.account-api]
-verify_jwt = true
+# The adapter serves both platform-key-only plans and user-session routes.
+# Authentication and authorization are enforced per route in index.ts.
+verify_jwt = false
