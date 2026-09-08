@@ -138,6 +138,27 @@ async function dispatch(
         id,
       );
     }
+    if (route === 'account/close' && method === 'POST') {
+      const proof = cookie(request, 'aisenhub-recent-auth-proof');
+      if (!proof) throw new BffError(403, 'RECENT_MFA_REQUIRED');
+      return jsonResponse(
+        { data: await api.closeAccount(token, proof), request_id: id },
+        200,
+        id,
+      );
+    }
+    if (route === 'identity/delete-request' && method === 'POST') {
+      const proof = cookie(request, 'aisenhub-recent-auth-proof');
+      if (!proof) throw new BffError(403, 'RECENT_MFA_REQUIRED');
+      return jsonResponse(
+        {
+          data: await api.requestIdentityDeletion(token, proof),
+          request_id: id,
+        },
+        202,
+        id,
+      );
+    }
     if (route === 'profile' && method === 'GET') {
       const data = await api.getProfile(token);
       return jsonResponse(

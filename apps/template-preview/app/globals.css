@@ -55,12 +55,18 @@ h1 {
 label {
   font-weight: 700;
 }
-input {
+input,
+textarea {
   min-height: 2.75rem;
   padding: 0 0.75rem;
   border: 1px solid #c7d6d8;
   border-radius: 0.5rem;
   font: inherit;
+}
+textarea {
+  min-height: 6rem;
+  padding-top: 0.65rem;
+  resize: vertical;
 }
 button {
   min-height: 2.75rem;

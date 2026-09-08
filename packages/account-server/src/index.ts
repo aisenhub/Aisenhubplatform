@@ -182,6 +182,14 @@ export interface AccountApiClient {
     accessToken: string,
     reauthAccessToken: string,
   ) => Promise<RecentAuthProofDto>;
+  readonly closeAccount: (
+    accessToken: string,
+    recentAuthProofId: string,
+  ) => Promise<unknown>;
+  readonly requestIdentityDeletion: (
+    accessToken: string,
+    recentAuthProofId: string,
+  ) => Promise<unknown>;
   readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
   readonly getPrincipal: (accessToken: string) => Promise<unknown>;
   readonly activate: (accessToken: string) => Promise<unknown>;
@@ -254,6 +262,8 @@ export function createAccountApiClient(input: {
     readonly ifMatch?: string;
     readonly idempotencyKey?: string;
     readonly reauthAccessToken?: string;
+    readonly recentAuthProofId?: string;
+    readonly contentType?: string;
     readonly body?: Readonly<Record<string, unknown>>;
   }): Promise<T> {
     const headers: Record<string, string> = {
@@ -268,8 +278,10 @@ export function createAccountApiClient(input: {
       headers['Idempotency-Key'] = options.idempotencyKey;
     if (options.reauthAccessToken)
       headers['X-Reauth-Access-Token'] = options.reauthAccessToken;
+    if (options.recentAuthProofId)
+      headers['X-Recent-Auth-Proof'] = options.recentAuthProofId;
     if (options.body) {
-      headers['Content-Type'] = 'application/json';
+      headers['Content-Type'] = options.contentType ?? 'application/json';
     }
     const response = await fetcher(`${baseUrl}${options.path}`, {
       method: options.method,
@@ -299,6 +311,20 @@ export function createAccountApiClient(input: {
         accessToken,
         reauthAccessToken,
       }),
+    closeAccount: (accessToken, recentAuthProofId) =>
+      request({
+        method: 'POST',
+        path: '/v1/account/close',
+        accessToken,
+        recentAuthProofId,
+      }),
+    requestIdentityDeletion: (accessToken, recentAuthProofId) =>
+      request({
+        method: 'POST',
+        path: '/v1/identity/delete-request',
+        accessToken,
+        recentAuthProofId,
+      }),
     listPublicPlans: () =>
       request<readonly PlanDto[]>({ method: 'GET', path: '/v1/plans' }),
     getPrincipal: (accessToken) =>
@@ -327,6 +353,7 @@ export function createAccountApiClient(input: {
         path: '/v1/preferences',
         accessToken,
         ifMatch,
+        contentType: 'application/merge-patch+json',
         body: patch,
       }),
     getSubscription: (accessToken) =>

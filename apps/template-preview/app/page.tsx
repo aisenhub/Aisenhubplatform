@@ -17,6 +17,9 @@ export default function TemplatePreviewPage() {
         <a className="link" href="/subscription">
           Subscription & redeem
         </a>
+        <a className="link" href="/account">
+          Account settings
+        </a>
       </nav>
     </main>
   );

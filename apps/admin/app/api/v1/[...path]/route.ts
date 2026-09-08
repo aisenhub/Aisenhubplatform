@@ -84,3 +84,10 @@ export function POST(
 ): Promise<Response> {
   return dispatch(request, context);
 }
+
+export function PATCH(
+  request: NextRequest,
+  context: RouteContext,
+): Promise<Response> {
+  return dispatch(request, context);
+}

@@ -13,6 +13,13 @@ export default function AdminHomePage() {
           打开 M3 Entitlements
         </a>
       </div>
+      <div className="panel">
+        <strong>继续到平台运维</strong>
+        <span>平台、Origin、账户状态和 Key 生命周期均经 Admin API。</span>
+        <a className="link" href="/admin/platforms">
+          打开 M2 Platform Operations
+        </a>
+      </div>
     </main>
   );
 }

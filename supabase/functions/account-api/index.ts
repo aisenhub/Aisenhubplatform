@@ -573,7 +573,42 @@ async function dispatchAccount(
     );
     return { status: 200, data: result };
   }
-  assertAllowed(row);
+  if (path === 'v1/account/close' && request.method === 'POST') {
+    const authorization = stringValue(row.authorization);
+    if (!['allowed', 'suspended', 'closed'].includes(authorization ?? '')) {
+      if (authorization === 'platform_disabled')
+        throw new ApiFault(403, 'PLATFORM_DISABLED');
+      throw new ApiFault(409, 'ACCOUNT_NOT_ACTIVATED');
+    }
+  } else if (
+    path === 'v1/identity/delete-request' &&
+    request.method === 'POST'
+  ) {
+    const authorization = stringValue(row.authorization);
+    if (authorization === 'platform_disabled')
+      throw new ApiFault(403, 'PLATFORM_DISABLED');
+    if (authorization === 'unauthorized')
+      throw new ApiFault(401, 'UNAUTHORIZED');
+  } else {
+    assertAllowed(row);
+  }
+
+  if (path === 'v1/account/close' && request.method === 'POST') {
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.account_close(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+      [...accountContextValues(session, key), proofId],
+    );
+    return { status: 200, data: result };
+  }
+  if (path === 'v1/identity/delete-request' && request.method === 'POST') {
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.identity_delete_request(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+      [...accountContextValues(session, key), proofId],
+    );
+    return { status: 202, data: result };
+  }
 
   if (path === 'v1/profile' && request.method === 'GET') {
     const [result] = await transaction.unsafe<Row>(
@@ -685,6 +720,50 @@ function adminContextValues(session: SessionContext): unknown[] {
   return [session.userId, session.sessionId, requestId()];
 }
 
+function boundedLimit(value: string | null): number {
+  const parsed = Number.parseInt(value ?? '20', 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100)
+    throw new ApiFault(400, 'INVALID_INPUT');
+  return parsed;
+}
+
+function randomBase64Url(bytes: number): string {
+  const value = new Uint8Array(bytes);
+  crypto.getRandomValues(value);
+  return btoa(String.fromCharCode(...value))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '');
+}
+
+async function generatedPlatformKey(
+  dependencies: AccountApiDependencies,
+  platformId: string,
+  version: number,
+): Promise<{
+  readonly keyId: string;
+  readonly presentedKey: string;
+  readonly keyHmac: string;
+  readonly keyPrefix: string;
+  readonly keySuffix: string;
+}> {
+  const keyId = crypto.randomUUID();
+  const presentedKey = `phk_v${version}_${keyId}_${randomBase64Url(32)}`;
+  const secret = platformHmacSecrets(dependencies)[0];
+  if (!secret) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  const keyHmac = await hmacHex(
+    secret,
+    `${version}:platform-key:${keyId}:${presentedKey}`,
+  );
+  return {
+    keyId,
+    presentedKey,
+    keyHmac,
+    keyPrefix: presentedKey.slice(0, 12),
+    keySuffix: presentedKey.slice(-8),
+  };
+}
+
 async function dispatchAdmin(
   request: Request,
   transaction: Transaction,
@@ -706,6 +785,229 @@ async function dispatchAdmin(
     return { status: 201, data: proof };
   }
   if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
+  if (path === 'admin/api/v1/platforms' && request.method === 'GET') {
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_platform_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::integer)',
+      [...context, boundedLimit(url.searchParams.get('limit'))],
+    );
+    return { status: 200, data: rows };
+  }
+  if (path === 'admin/api/v1/platforms' && request.method === 'POST') {
+    const input = await body(request);
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_platform_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::text, $5::text, $6::text, $7::boolean, $8::text, $9::jsonb)',
+      [
+        ...context,
+        input.code,
+        input.name,
+        input.status ?? 'active',
+        input.allow_activation ?? true,
+        input.default_locale ?? null,
+        transaction.json(input.config ?? {}),
+      ],
+    );
+    return { status: 201, data: result };
+  }
+
+  const platformMatch = /^admin\/api\/v1\/platforms\/([^/]+)$/u.exec(path);
+  if (platformMatch && UUID.test(platformMatch[1]!)) {
+    const platformId = platformMatch[1]!;
+    if (request.method === 'GET') {
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_platform_get(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return { status: 200, data: result };
+    }
+    if (request.method === 'PATCH') {
+      const input = await body(request);
+      if (
+        (typeof input.status !== 'string' && input.status !== undefined) ||
+        (typeof input.allow_activation !== 'boolean' &&
+          input.allow_activation !== undefined)
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const [current] = await transaction.unsafe<Row>(
+        'select * from private.admin_platform_get(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      if (!current) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_platform_update(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::boolean)',
+        [
+          ...context,
+          platformId,
+          input.status ?? current.status,
+          input.allow_activation ?? current.allow_activation,
+        ],
+      );
+      return { status: 200, data: result };
+    }
+  }
+
+  const originsMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/origins$/u.exec(
+    path,
+  );
+  if (originsMatch && UUID.test(originsMatch[1]!)) {
+    const platformId = originsMatch[1]!;
+    if (request.method === 'GET') {
+      const rows = await transaction.unsafe<Row>(
+        'select * from private.admin_origin_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      return { status: 200, data: rows };
+    }
+    if (request.method === 'POST') {
+      const input = await body(request);
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_origin_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::text, $7::text, $8::text, $9::text)',
+        [
+          ...context,
+          platformId,
+          input.environment,
+          input.origin,
+          input.oauth_callback_url,
+          input.password_reset_url,
+          input.email_confirmation_url,
+        ],
+      );
+      return { status: 201, data: result };
+    }
+  }
+
+  const accountsMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/accounts$/u.exec(
+    path,
+  );
+  if (
+    accountsMatch &&
+    UUID.test(accountsMatch[1]!) &&
+    request.method === 'GET'
+  ) {
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_account_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer)',
+      [
+        ...context,
+        accountsMatch[1],
+        boundedLimit(url.searchParams.get('limit')),
+      ],
+    );
+    return { status: 200, data: rows };
+  }
+
+  const accountMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/accounts\/([^/]+)$/u.exec(path);
+  if (
+    accountMatch &&
+    UUID.test(accountMatch[1]!) &&
+    UUID.test(accountMatch[2]!)
+  ) {
+    const platformId = accountMatch[1]!;
+    const accountId = accountMatch[2]!;
+    if (request.method === 'GET') {
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_account_get(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+        [...context, platformId, accountId],
+      );
+      if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return { status: 200, data: result };
+    }
+    if (request.method === 'PATCH') {
+      const input = await body(request);
+      const status = stringValue(input.status);
+      if (!status) throw new ApiFault(400, 'INVALID_INPUT');
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_account_patch(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
+        [...context, platformId, accountId, status],
+      );
+      return { status: 200, data: result };
+    }
+  }
+
+  const accountActionMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/accounts\/([^/]+)\/(suspend|restore|close)$/u.exec(
+      path,
+    );
+  if (
+    accountActionMatch &&
+    UUID.test(accountActionMatch[1]!) &&
+    UUID.test(accountActionMatch[2]!)
+  ) {
+    const action = accountActionMatch[3]!;
+    if (action === 'suspend' || action === 'close')
+      await adminStepUp(transaction, session, request);
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_account_transition(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
+      [...context, accountActionMatch[1], accountActionMatch[2], action],
+    );
+    return { status: action === 'close' ? 202 : 200, data: result };
+  }
+
+  const keysMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/keys$/u.exec(path);
+  if (keysMatch && UUID.test(keysMatch[1]!)) {
+    const platformId = keysMatch[1]!;
+    if (request.method === 'GET') {
+      const rows = await transaction.unsafe<Row>(
+        'select * from private.admin_platform_key_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      return { status: 200, data: rows };
+    }
+    if (request.method === 'POST') {
+      await adminStepUp(transaction, session, request);
+      const input = await body(request);
+      const version = Number(input.hmac_key_version ?? 1);
+      if (
+        !Number.isInteger(version) ||
+        version < 1 ||
+        typeof input.name !== 'string'
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const material = await generatedPlatformKey(
+        dependencies,
+        platformId,
+        version,
+      );
+      const operationId =
+        uuidValue(input.creation_operation_id) ?? crypto.randomUUID();
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_platform_key_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::text, $8::integer, $9::text, $10::text, $11::uuid, $12::timestamptz)',
+        [
+          ...context,
+          platformId,
+          material.keyId,
+          input.name,
+          material.keyHmac,
+          version,
+          material.keyPrefix,
+          material.keySuffix,
+          operationId,
+          input.expires_at ?? null,
+        ],
+      );
+      return {
+        status: 201,
+        data: { ...result, presented_key: material.presentedKey },
+      };
+    }
+  }
+
+  const revokeKeyMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/keys\/([^/]+)\/revoke$/u.exec(path);
+  if (
+    revokeKeyMatch &&
+    UUID.test(revokeKeyMatch[1]!) &&
+    UUID.test(revokeKeyMatch[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_platform_key_revoke(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+      [...context, revokeKeyMatch[1], revokeKeyMatch[2]],
+    );
+    return { status: 200, data: result };
+  }
+
   const planMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/plans$/u.exec(path);
   if (planMatch && UUID.test(planMatch[1]!)) {
     const platformId = planMatch[1]!;
