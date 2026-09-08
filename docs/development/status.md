@@ -20,7 +20,7 @@ T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），�
 
 T17-R1本轮已完成可独立的网关合同配置与 Account/Admin 独立数据库 URL 选择；根据当前 Supabase 官方连接、SSL 与 Edge Functions 指南补充了 hosted 配置及验收矩阵。实际独立 executor、TLS、CA、pooler 和重新部署请求矩阵因受控 Staging 输入未提供而保持 BLOCKED/NOT_RUN，详见`evidence/T17-R1.md`；不改变远端部署，不把历史默认 `SUPABASE_DB_URL` 证据升级为通过。
 
-M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；M5-02已完成四个本地tarball的可重复构建、边界扫描、独立消费者类型检查及Node/Edge导入回归（见 `evidence/M5-02.md`）。这些产物尚未发布到npm/Registry；M5-03已进入实现，首批资源导航、订阅/审计页面、批次交付、Plan生命周期和受控账户/Key动作已交付，完整Admin验收仍未完成（见 `evidence/M5-03.md`）；M5-04已进入实现，Local Registry manifest与Auth模板首批已交付，完整独立Consumer验收仍待M5-05（见 `evidence/M5-04.md`）。
+M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；M5-02已完成四个本地tarball的可重复构建、边界扫描、独立消费者类型检查及Node/Edge导入回归（见 `evidence/M5-02.md`）。这些产物尚未发布到npm/Registry；M5-03已进入实现，首批资源导航、订阅/审计页面、批次交付、Plan生命周期和受控账户/Key动作已交付，完整Admin验收仍未完成（见 `evidence/M5-03.md`）；M5-04已进入实现，Local Registry manifest与Auth模板首批已交付（见 `evidence/M5-04.md`）；M5-05已完成Local独立Consumer安装/typecheck/build，但Hosted双Origin/Platform E2E仍未运行（见 `evidence/M5-05.md`）。
 
 M6-01已完成环境、Secret、联合备份屏障、manifest、墓碑和告警运维协议设计（见 `m6-operations-protocol.md`）；X02/X04/X05/X06未确认，M6-02～04的真实运维/恢复/容量验证仍未开始。
 
