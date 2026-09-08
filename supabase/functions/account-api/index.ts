@@ -21,8 +21,13 @@ interface Database {
 interface AccountApiDependencies {
   readonly database?: Database;
   readonly platformKeySecret?: string;
+  readonly platformKeySecrets?: readonly string[];
   readonly redemptionSecret?: string;
   readonly redemptionKeyVersion?: number;
+  readonly redemptionSecrets?: readonly {
+    readonly secret: string;
+    readonly version: number;
+  }[];
   /**
    * Verifies a bearer token with Supabase Auth and returns its subject. This
    * is injectable only for isolated Deno tests; production uses Auth's
@@ -191,6 +196,48 @@ async function hmacHex(secret: string, value: string): Promise<string> {
     .join('');
 }
 
+function platformHmacSecrets(
+  dependencies: AccountApiDependencies,
+): readonly string[] {
+  if (dependencies.platformKeySecrets?.length)
+    return dependencies.platformKeySecrets;
+  return [
+    dependencies.platformKeySecret ?? env('PLATFORM_KEY_HMAC_SECRET'),
+    Deno.env.get('PLATFORM_KEY_HMAC_SECRET_PREVIOUS'),
+  ].filter((secret): secret is string => Boolean(secret));
+}
+
+function redemptionHmacSecrets(
+  dependencies: AccountApiDependencies,
+): readonly { readonly secret: string; readonly version: number }[] {
+  if (dependencies.redemptionSecrets?.length)
+    return dependencies.redemptionSecrets;
+  const version =
+    dependencies.redemptionKeyVersion ??
+    Number.parseInt(Deno.env.get('REDEMPTION_HMAC_KEY_VERSION') ?? '1', 10);
+  const secret = dependencies.redemptionSecret ?? env('REDEMPTION_HMAC_SECRET');
+  if (!Number.isSafeInteger(version) || version < 1 || version > 32767)
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  const previousSecret = Deno.env.get('REDEMPTION_HMAC_SECRET_PREVIOUS');
+  const previousVersionRaw = Deno.env.get(
+    'REDEMPTION_HMAC_PREVIOUS_KEY_VERSION',
+  );
+  if (!previousSecret && !previousVersionRaw) return [{ secret, version }];
+  const previousVersion = Number.parseInt(previousVersionRaw ?? '', 10);
+  if (
+    !previousSecret ||
+    !Number.isSafeInteger(previousVersion) ||
+    previousVersion < 1 ||
+    previousVersion > 32767 ||
+    previousVersion === version
+  )
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  return [
+    { secret, version },
+    { secret: previousSecret, version: previousVersion },
+  ];
+}
+
 function requestId(): string {
   return crypto.randomUUID();
 }
@@ -297,16 +344,18 @@ async function verifyPlatformKey(
   dependencies: AccountApiDependencies,
 ): Promise<KeyContext> {
   const parsed = parsePlatformKey(request.headers.get('x-platform-key'));
-  const secret =
-    dependencies.platformKeySecret ?? env('PLATFORM_KEY_HMAC_SECRET');
-  const keyHmac = await hmacHex(
-    secret,
-    `${parsed.version}:platform-key:${parsed.keyId}:${parsed.presentedKey}`,
-  );
-  const [row] = await transaction.unsafe<Row>(
-    'select * from private.platform_key_verify_presented($1::uuid, $2::text, $3::integer)',
-    [parsed.keyId, keyHmac, parsed.version],
-  );
+  let row: Row | undefined;
+  for (const secret of platformHmacSecrets(dependencies)) {
+    const keyHmac = await hmacHex(
+      secret,
+      `${parsed.version}:platform-key:${parsed.keyId}:${parsed.presentedKey}`,
+    );
+    [row] = await transaction.unsafe<Row>(
+      'select * from private.platform_key_verify_presented($1::uuid, $2::text, $3::integer)',
+      [parsed.keyId, keyHmac, parsed.version],
+    );
+    if (row) break;
+  }
   if (!row) throw new ApiFault(401, 'PLATFORM_CREDENTIAL_INVALID');
   const platformId = uuidValue(row.platform_id);
   const keyId = uuidValue(row.key_id);
@@ -548,18 +597,23 @@ async function dispatchAccount(
       .toUpperCase();
     if (!code || code.length > 128 || !CODE.test(code))
       throw new ApiFault(400, 'INVALID_INPUT');
-    const version =
-      dependencies.redemptionKeyVersion ??
-      Number.parseInt(Deno.env.get('REDEMPTION_HMAC_KEY_VERSION') ?? '1', 10);
-    const secret =
-      dependencies.redemptionSecret ?? env('REDEMPTION_HMAC_SECRET');
-    const codeHmac = await hmacHex(
-      secret,
-      `redeem:v1:platform:${key.platformId}:key:${version}:code:${code}`,
+    const candidates = redemptionHmacSecrets(dependencies);
+    const codeHmacs = await Promise.all(
+      candidates.map(({ secret, version }) =>
+        hmacHex(
+          secret,
+          `redeem:v1:platform:${key.platformId}:key:${version}:code:${code}`,
+        ),
+      ),
     );
     const [result] = await transaction.unsafe<Row>(
-      'select * from private.redeem_subscription_code(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text, $7::smallint, $8::text)',
-      [...contextValues, codeHmac, version, idempotencyKey],
+      'select * from private.redeem_subscription_code_candidates(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text[], $7::smallint[], $8::text)',
+      [
+        ...contextValues,
+        codeHmacs,
+        candidates.map(({ version }) => version),
+        idempotencyKey,
+      ],
     );
     if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     if (result.outcome === 'rejected') {
@@ -681,11 +735,10 @@ async function dispatchAdmin(
         quantity > 1000
       )
         throw new ApiFault(400, 'INVALID_INPUT');
-      const version =
-        dependencies.redemptionKeyVersion ??
-        Number.parseInt(Deno.env.get('REDEMPTION_HMAC_KEY_VERSION') ?? '1', 10);
-      const secret =
-        dependencies.redemptionSecret ?? env('REDEMPTION_HMAC_SECRET');
+      const currentRedemptionSecret = redemptionHmacSecrets(dependencies)[0];
+      if (!currentRedemptionSecret)
+        throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      const { secret, version } = currentRedemptionSecret;
       const codes = await generateRedemptionCodes({
         platformId: inputPlatformId,
         hmacSecret: secret,
@@ -740,15 +793,17 @@ async function dispatchAdmin(
     if (confirmMatch[2] === 'confirm-delivery') {
       const receipt = stringValue(input.delivery_receipt);
       if (!receipt) throw new ApiFault(400, 'INVALID_INPUT');
-      const secret =
-        dependencies.redemptionSecret ?? env('REDEMPTION_HMAC_SECRET');
-      const receiptHmac = await hmacHex(
-        secret,
-        `delivery:v1:platform:${platformId}:receipt:${receipt}`,
+      const receiptHmacs = await Promise.all(
+        redemptionHmacSecrets(dependencies).map(({ secret }) =>
+          hmacHex(
+            secret,
+            `delivery:v1:platform:${platformId}:receipt:${receipt}`,
+          ),
+        ),
       );
       const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_batch_confirm(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
-        [...context, platformId, confirmMatch[1], receiptHmac],
+        'select * from private.admin_batch_confirm_candidates(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text[])',
+        [...context, platformId, confirmMatch[1], receiptHmacs],
       );
       return { status: 200, data: result };
     }

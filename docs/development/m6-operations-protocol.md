@@ -26,7 +26,7 @@
 |---|---|---|
 | Auth | `SUPABASE_URL`、`SUPABASE_PUBLISHABLE_KEY`、Auth redirect/Origin allowlist | 部署后密码登录/refresh/logout；OAuth/SMTP由T17验证 |
 | Account/Admin/Job DB | `ACCOUNT_DB_URL`、`ADMIN_DB_URL`、`JOB_DB_URL` | 独立角色、TLS、prepare/连接回收；不得以postgres替代 |
-| 平台/兑换 | `PLATFORM_KEY_HMAC_SECRET`、`REDEMPTION_HMAC_SECRET`及版本 | 新版本verify-only→部署→验证→撤旧；不恢复明文 |
+| 平台/兑换 | 当前/上一 `PLATFORM_KEY_HMAC_SECRET`、`REDEMPTION_HMAC_SECRET` 及 `REDEMPTION_HMAC_*_VERSION` | 新版本 verify-only→部署→验证→撤旧；不恢复明文 |
 | Storage | bucket固定为`platform-config-files`、Storage server credential | get/put/remove权限与私有下载验证；无signed upload |
 | 备份 | 加密目标、manifest key、墓碑副本、告警webhook | 独立凭据；不与普通dump明文混放 |
 | 运行参数 | P01～P08默认值、迁移/函数/调度版本 | owner在G4-S/G6前确认，变更需记录原因与受影响用例 |

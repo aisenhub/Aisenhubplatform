@@ -53,7 +53,7 @@ Platform Key：创建新active Key→部署BFF→确认新Key有成功请求→�
 
 Key HMAC与兑换码HMAC分开。新Secret版本生成新凭据，旧Secret verify-only；不可在没有明文时重新计算旧HMAC。平台旧Key通过重新签发退出；兑换码旧版本保留到相关Batch全部失效，疑似泄露时禁用未用Code/Batch并重发。
 
-Supabase Secret、SQL账户密码、备份凭据分别轮换，各有部署顺序和撤销验证；Account/Admin/Job不共用一组SQL登录密码。Secrets命名模板包括SUPABASE_PUBLISHABLE_KEY、SUPABASE_SECRET_KEY、ACCOUNT_DB_URL、ADMIN_DB_URL、JOB_DB_URL、PLATFORM_API_KEY、PLATFORM_KEY_HMAC_SECRET、REDEMPTION_HMAC_SECRET。
+Supabase Secret、SQL账户密码、备份凭据分别轮换，各有部署顺序和撤销验证；Account/Admin/Job不共用一组SQL登录密码。Secrets命名模板包括SUPABASE_PUBLISHABLE_KEY、SUPABASE_SECRET_KEY、ACCOUNT_DB_URL、ADMIN_DB_URL、JOB_DB_URL、PLATFORM_API_KEY、PLATFORM_KEY_HMAC_SECRET、PLATFORM_KEY_HMAC_SECRET_PREVIOUS、REDEMPTION_HMAC_SECRET、REDEMPTION_HMAC_SECRET_PREVIOUS、REDEMPTION_HMAC_KEY_VERSION、REDEMPTION_HMAC_PREVIOUS_KEY_VERSION。上一 Secret 仅用于 verify-only，确认所有旧 Key/Code/Batch 已失效后才撤销。
 
 ## 4. 管理员恢复
 

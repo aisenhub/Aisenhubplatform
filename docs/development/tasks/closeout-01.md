@@ -11,7 +11,7 @@
 | T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | WAITING |
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | WAITING |
 | T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |
-| M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PARTIAL（SQL/API Local基线通过；剩余G3子情景未补齐，证据见 M3-R1） |
+| M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PARTIAL（双Secret适配已实现；旧Secret端到端兑换与真实响应丢失注入未完成，证据见 M3-R1） |
 | T17-R1 | 托管独立executor、TLS与网关合同 | 无 | BLOCKED（配置已补；hosted证据见 T17-R1） |
 | T17-R2 | 托管浏览器、Origin、真实Provider | T16-R2,T17-R1 | WAITING |
 | T17-R3 | 实际BFF/Edge上传与Storage探针 | T17-R1 | WAITING |
@@ -68,7 +68,7 @@
 - 依赖任务：无。
 - 已有基础：M3-01～03 Local交付；独立核对可以现在派发，不依赖M4。
 - 改动目录：M3测试/证据及必要缺陷修复；已应用迁移只追加修复。
-- 步骤：将V-ENT-01/02/03、V-REDEEM-01～04、V-DB-03逐子情景映射到可执行断言。月末/闰年/UTC边界、影子重放、无订阅多码首次竞争、兑换与Admin Grant竞争、Batch禁用两种提交顺序、旧/当前HMAC版本重叠及pending响应重试已补入Local探针；剩余重点是API级双Secret轮换与提交后响应丢失独立注入。单次同码10路成功不覆盖这些情景。
+- 步骤：将V-ENT-01/02/03、V-REDEEM-01～04、V-DB-03逐子情景映射到可执行断言。月末/闰年/UTC边界、影子重放、无订阅多码首次竞争、兑换与Admin Grant竞争、Batch禁用两种提交顺序、旧/当前HMAC版本重叠及pending响应重试已补入Local探针；双Secret候选适配、候选数据库函数和权限断言已实现，剩余重点是旧Secret端到端兑换/交付回归与提交后响应丢失独立注入。单次同码10路成功不覆盖这些情景。
 - 验收：缺失用例补齐后真实双连接/barrier、回滚/幂等和权限测试PASS才关闭G3；补M3领域/API缺项时复用现有入口。浏览器体验不由本项宣称验收，T16-R2提供运行器，M5-03/05承接完整界面与安装链路；本项交付SQL/API领域证据。
 - 交接：逐项PASS/FAIL/NOT_RUN及命令，不能由“M3 Local DONE”推定G3整体PASS。
 

@@ -1,6 +1,6 @@
 begin;
 
-select plan(39);
+select plan(43);
 
 select has_table('public', 'subscriptions', 'subscription projection exists');
 select has_table('public', 'subscription_grants', 'immutable grant ledger exists');
@@ -14,8 +14,10 @@ select has_function('private', 'entitlement_read', array['private.account_contex
 select has_function('private', 'admin_entitlement_command', array['private.admin_context', 'uuid', 'uuid', 'text', 'uuid', 'uuid', 'integer', 'text', 'uuid', 'text'], 'admin command exists');
 select has_function('private', 'admin_batch_create', array['private.admin_context', 'uuid', 'uuid', 'text', 'integer', 'integer', 'text', 'timestamptz', 'timestamptz', 'uuid', 'text', 'jsonb'], 'batch create exists');
 select has_function('private', 'admin_batch_confirm', array['private.admin_context', 'uuid', 'uuid', 'text'], 'batch confirm exists');
+select has_function('private', 'admin_batch_confirm_candidates', array['private.admin_context', 'uuid', 'uuid', 'text[]'], 'batch confirm candidate verifier exists');
 select has_function('private', 'admin_batch_disable', array['private.admin_context', 'uuid', 'uuid'], 'batch disable exists');
 select has_function('private', 'redeem_subscription_code', array['private.account_context', 'text', 'smallint', 'text'], 'redeem exists');
+select has_function('private', 'redeem_subscription_code_candidates', array['private.account_context', 'text[]', 'smallint[]', 'text'], 'redeem candidate verifier exists');
 select has_function('private', 'admin_plan_upsert', array['private.admin_context', 'uuid', 'uuid', 'text', 'text', 'text', 'text', 'jsonb', 'text', 'boolean', 'boolean'], 'plan upsert exists');
 select has_function('private', 'platform_key_verify_presented', array['uuid', 'text', 'integer'], 'presented key verifier exists');
 select has_function('private', 'admin_plan_list', array['private.admin_context', 'uuid'], 'admin plan list exists');
@@ -26,6 +28,8 @@ select ok(has_function_privilege('account_executor', 'private.entitlement_read(p
 select ok(has_function_privilege('admin_executor', 'private.admin_entitlement_command(private.admin_context, uuid, uuid, text, uuid, uuid, integer, text, uuid, text)', 'execute'), 'admin executor can command entitlement');
 select ok(has_function_privilege('admin_executor', 'private.admin_batch_create(private.admin_context, uuid, uuid, text, integer, integer, text, timestamptz, timestamptz, uuid, text, jsonb)', 'execute'), 'admin executor can create batches');
 select ok(has_function_privilege('account_executor', 'private.redeem_subscription_code(private.account_context, text, smallint, text)', 'execute'), 'account executor can redeem code');
+select ok(has_function_privilege('account_executor', 'private.redeem_subscription_code_candidates(private.account_context, text[], smallint[], text)', 'execute'), 'account executor can redeem with HMAC rotation candidates');
+select ok(has_function_privilege('admin_executor', 'private.admin_batch_confirm_candidates(private.admin_context, uuid, uuid, text[])', 'execute'), 'admin executor can confirm with HMAC rotation candidates');
 select ok(has_function_privilege('admin_executor', 'private.admin_plan_upsert(private.admin_context, uuid, uuid, text, text, text, text, jsonb, text, boolean, boolean)', 'execute'), 'admin executor can manage plans');
 select ok(has_function_privilege('account_executor', 'private.platform_key_verify_presented(uuid, text, integer)', 'execute'), 'account executor can verify presented keys');
 select ok(has_function_privilege('admin_executor', 'private.admin_plan_list(private.admin_context, uuid)', 'execute'), 'admin executor can list plans');
