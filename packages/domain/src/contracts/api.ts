@@ -120,6 +120,11 @@ export interface DeleteRequestDto {
   readonly state: 'pending_admin';
 }
 
+export interface RecentAuthProofDto {
+  readonly proof_id: string;
+  readonly expires_at: string;
+}
+
 export interface AccountSqlContext {
   readonly user_id: string;
   readonly session_id: string;

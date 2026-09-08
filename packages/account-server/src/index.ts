@@ -10,6 +10,7 @@ import type {
   PlanDto,
   PreferencesDto,
   ProfileDto,
+  RecentAuthProofDto,
 } from '@kit/domain/contracts';
 import { generateRedemptionCodes as generateDomainRedemptionCodes } from '@kit/domain';
 import type { RedemptionCodeMaterial } from '@kit/domain';
@@ -177,6 +178,10 @@ export function validateCallbackUrl(value: string, origin: string): string {
 }
 
 export interface AccountApiClient {
+  readonly issueRecentAuthProof: (
+    accessToken: string,
+    reauthAccessToken: string,
+  ) => Promise<RecentAuthProofDto>;
   readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
   readonly getPrincipal: (accessToken: string) => Promise<unknown>;
   readonly activate: (accessToken: string) => Promise<unknown>;
@@ -248,6 +253,7 @@ export function createAccountApiClient(input: {
     readonly accessToken?: string;
     readonly ifMatch?: string;
     readonly idempotencyKey?: string;
+    readonly reauthAccessToken?: string;
     readonly body?: Readonly<Record<string, unknown>>;
   }): Promise<T> {
     const headers: Record<string, string> = {
@@ -260,6 +266,8 @@ export function createAccountApiClient(input: {
     if (options.ifMatch) headers['If-Match'] = options.ifMatch;
     if (options.idempotencyKey)
       headers['Idempotency-Key'] = options.idempotencyKey;
+    if (options.reauthAccessToken)
+      headers['X-Reauth-Access-Token'] = options.reauthAccessToken;
     if (options.body) {
       headers['Content-Type'] = 'application/json';
     }
@@ -284,6 +292,13 @@ export function createAccountApiClient(input: {
   }
 
   return {
+    issueRecentAuthProof: (accessToken, reauthAccessToken) =>
+      request<RecentAuthProofDto>({
+        method: 'POST',
+        path: '/v1/auth/recent-proof',
+        accessToken,
+        reauthAccessToken,
+      }),
     listPublicPlans: () =>
       request<readonly PlanDto[]>({ method: 'GET', path: '/v1/plans' }),
     getPrincipal: (accessToken) =>

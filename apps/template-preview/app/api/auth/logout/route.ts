@@ -70,5 +70,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   response.cookies.delete('aisenhub-session');
   response.cookies.delete('aisenhub-refresh-token');
   response.cookies.delete('aisenhub-csrf');
+  response.cookies.delete('aisenhub-recent-auth-proof');
   return response;
 }

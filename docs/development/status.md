@@ -10,13 +10,13 @@
 |---|---|---|
 | M0 / G0-L | Local已有PASS证据，模块仍IN_PROGRESS | G0-S托管补齐 |
 | M1 / G1 | 基础任务有Local通过记录；候选commit统一复验未运行 | T18-L确认G1 |
-| M2 / G2-L | T12/T16 PARTIAL；T12-R1已交付，T12-R2已完成Admin MFA与真实Local浏览器子集，但普通proof仍未收口 | T12-R2普通proof合同、T16-R1/R2、T18-L |
+| M2 / G2-L | T12-R2普通双session proof与Admin真实Local浏览器子集已通过；T12/T16仍按完整范围收口 | T16-R1/R2、T18-L |
 | G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS；T17-R1已补网关配置与独立URL适配，但托管角色/TLS未运行 | T17-R1 hosted核验、T17-R2/R3、T18-S |
 | M3 / G3 | M3-01～03 Local交付；M3-R1为PASS（Local证据） | 托管、浏览器与生产验收仍不属于本项，不推定整体阶段完成 |
 | M4～M6 | NOT_STARTED；本次仅计划 | 第三批M4、DP2后续路线 |
 | T18 | WAITING；允许独立整理本地材料 | T18-L与T18-S分层完成，全部条件满足才关闭父任务 |
 
-T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），但证据判定为PARTIAL：本地Auth探针、包单测、类型检查和两个应用构建通过；真实浏览器SSR、OAuth/邮件及应用路由端到端Local回归留给T12-R2/T16-R2/T17-R2。T12-R2已在`task/T12-R2-mfa-reauth`补齐Admin真实MFA挑战、中央recent-proof消费者、HttpOnly proof cookie及中央Admin AAL2入口，并在`task/T12-R2-browser-regression`通过真实Local Chrome敏感生命周期回归；验证结果仍为PARTIAL，普通用户proof因缺少服务端可验证issuer/认证事件合同仍保持拒绝，详见`evidence/T12-R2.md`。M4-01已完成合同/恢复矩阵冻结（当前分支 `task/M4-01-file-contract`，运行证据见 `evidence/M4-01.md`），不改变M4实现仍等待T18-L的门槛。T12父任务仍保持PARTIAL。
+T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），但证据判定为PARTIAL：本地Auth探针、包单测、类型检查和两个应用构建通过；真实浏览器SSR、OAuth/邮件及应用路由端到端Local回归留给T16-R2/T17-R2。T12-R2已在`task/T12-R2-browser-regression`补齐Admin真实MFA挑战、中央recent-proof消费者、普通用户独立 email `token_hash` 事件、双session中央proof issuer、HttpOnly proof cookie及真实Local Chrome敏感生命周期回归；T12-R2判定为PASS（Local），完整Close/Delete HTTP消费者由T16-R1承接，详见`evidence/T12-R2.md`。M4-01已完成合同/恢复矩阵冻结（当前分支 `task/M4-01-file-contract`，运行证据见 `evidence/M4-01.md`），不改变M4实现仍等待T18-L的门槛。T12父任务仍保持PARTIAL。
 
 T17-R1本轮已完成可独立的网关合同配置与 Account/Admin 独立数据库 URL 选择；根据当前 Supabase 官方连接、SSL 与 Edge Functions 指南补充了 hosted 配置及验收矩阵。实际独立 executor、TLS、CA、pooler 和重新部署请求矩阵因受控 Staging 输入未提供而保持 BLOCKED/NOT_RUN，详见`evidence/T17-R1.md`；不改变远端部署，不把历史默认 `SUPABASE_DB_URL` 证据升级为通过。
 
@@ -31,8 +31,8 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
-- 当前下一项：先完成T12-R2普通proof合同/issuer；T17-R1、M4-01、M5-01仍有独立范围，但T12-R2完成前不关闭T12或派发T16-R1。
-- 本轮已在独立任务分支执行T12-R1、T12-R2 Admin MFA与真实Local浏览器子集、M4-01和M3-R1完整Local SQL/API范围内验证；未执行的普通proof、托管、Storage及生产项仍保持BLOCKED/NOT_RUN。各任务证据和最终同步以对应分支报告为准。
+- 当前下一项：执行T16-R1，补齐M2 HTTP/SDK/BFF与最小账户管理；T17-R1、M4-01、M5-01仍有独立范围。
+- 本轮已在独立任务分支执行T12-R2普通proof合同/issuer、Admin MFA与真实Local浏览器子集、M4-01和M3-R1完整Local SQL/API范围内验证；未执行的托管、Storage及生产项仍保持BLOCKED/NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实
 
@@ -53,7 +53,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 
 ## DP1历史检查
 
-28份Markdown文件、103个相对文件链接、7份模块规格、18项任务、40个具体验收ID、17个Account方法/路径组合已核对。任务导航与正文依赖一致且无环；围栏与引用检查无错误；常见凭据格式扫描无匹配；git diff --check通过。这里的检查不证明SQL或应用运行正确。
+28份Markdown文件、103个相对文件链接、7份模块规格、18项任务、40个具体验收ID、18个Account方法/路径组合已核对。任务导航与正文依赖一致且无环；围栏与引用检查无错误；常见凭据格式扫描无匹配；git diff --check通过。这里的检查不证明SQL或应用运行正确。
 
 ## DP2校准前的应用进度快照
 

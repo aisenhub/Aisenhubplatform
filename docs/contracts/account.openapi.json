@@ -48,6 +48,27 @@
         }
       }
     },
+    "/v1/auth/recent-proof": {
+      "post": {
+        "operationId": "issueRecentAuthProof",
+        "tags": ["account"],
+        "x-module": "M2",
+        "x-implementation-status": "local-only",
+        "x-reauthentication-event": "supabase-auth-email-otp-session",
+        "x-proof-binding": "original-user-session",
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/ReauthAccessToken" }
+        ],
+        "responses": {
+          "201": { "$ref": "#/components/responses/RecentAuthProof" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
     "/v1/account/activate": {
       "post": {
         "operationId": "activateAccount",
@@ -390,6 +411,13 @@
         "in": "path",
         "required": true,
         "schema": { "type": "string", "format": "uuid" }
+      },
+      "ReauthAccessToken": {
+        "name": "X-Reauth-Access-Token",
+        "in": "header",
+        "required": true,
+        "description": "Short-lived server-to-server token for the independently verified email-auth event. Never returned to the browser.",
+        "schema": { "type": "string", "minLength": 16, "maxLength": 4096 }
       }
     },
     "requestBodies": {
@@ -754,6 +782,23 @@
           },
           "request_id": { "type": "string", "format": "uuid" }
         }
+      },
+      "RecentAuthProof": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["proof_id", "expires_at"],
+            "properties": {
+              "proof_id": { "type": "string", "format": "uuid" },
+              "expires_at": { "type": "string", "format": "date-time" }
+            },
+            "additionalProperties": false
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
       }
     },
     "responses": {
@@ -777,6 +822,17 @@
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Principal" }
+          }
+        }
+      },
+      "RecentAuthProof": {
+        "description": "Recent-auth proof bound to the original account session.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/RecentAuthProof" }
           }
         }
       },

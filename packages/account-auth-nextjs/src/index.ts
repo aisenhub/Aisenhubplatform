@@ -159,7 +159,7 @@ export function clearAuthSessionCookies(
   writer.delete(names.access);
   writer.delete(names.refresh);
   writer.delete(names.csrf);
-  if (prefix === 'admin') writer.delete('aisenhub-recent-auth-proof');
+  writer.delete('aisenhub-recent-auth-proof');
 }
 
 export async function signInWithPassword(
@@ -207,6 +207,25 @@ export async function verifyReauthenticationOtp(
     token: input.token,
     type: 'reauthentication',
   });
+}
+
+/**
+ * Starts an isolated email sign-in flow used as the ordinary-user recent-auth
+ * event. The caller must never persist or return this client's session.
+ */
+export async function requestEmailOtp(client: SupabaseClient, email: string) {
+  return client.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false },
+  });
+}
+
+/** Verifies the token_hash delivered by the isolated email sign-in flow. */
+export async function verifyEmailOtpToken(
+  client: SupabaseClient,
+  tokenHash: string,
+) {
+  return client.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
 }
 
 export async function exchangeAuthCode(client: SupabaseClient, code: string) {

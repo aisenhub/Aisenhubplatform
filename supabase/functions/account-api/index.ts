@@ -98,14 +98,7 @@ function base64UrlDecode(value: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-function presentedSession(request: Request): {
-  readonly accessToken: string;
-  readonly session: SessionContext;
-} {
-  const authorization = request.headers.get('authorization') ?? '';
-  const match = /^Bearer\s+([^\s]+)$/iu.exec(authorization);
-  if (!match) throw new ApiFault(401, 'UNAUTHORIZED');
-  const accessToken = match[1]!;
+function sessionFromAccessToken(accessToken: string): SessionContext {
   const parts = accessToken.split('.');
   if (parts.length !== 3) throw new ApiFault(401, 'UNAUTHORIZED');
   try {
@@ -116,10 +109,21 @@ function presentedSession(request: Request): {
       claims.aal === 'aal2' ? 'aal2' : claims.aal === 'aal1' ? 'aal1' : null;
     if (!userId || !sessionId || !aal)
       throw new Error('session claims missing');
-    return { accessToken, session: { userId, sessionId, aal } };
+    return { userId, sessionId, aal };
   } catch {
     throw new ApiFault(401, 'UNAUTHORIZED');
   }
+}
+
+function presentedSession(request: Request): {
+  readonly accessToken: string;
+  readonly session: SessionContext;
+} {
+  const authorization = request.headers.get('authorization') ?? '';
+  const match = /^Bearer\s+([^\s]+)$/iu.exec(authorization);
+  if (!match) throw new ApiFault(401, 'UNAUTHORIZED');
+  const accessToken = match[1]!;
+  return { accessToken, session: sessionFromAccessToken(accessToken) };
 }
 
 async function verifyAccessTokenWithAuth(
@@ -162,6 +166,19 @@ async function verifiedSessionFromRequest(
   if (!verifiedUserId || verifiedUserId !== presented.session.userId)
     throw new ApiFault(401, 'UNAUTHORIZED');
   return presented.session;
+}
+
+async function verifiedSessionFromAccessToken(
+  accessToken: string,
+  dependencies: AccountApiDependencies,
+): Promise<SessionContext> {
+  const session = sessionFromAccessToken(accessToken);
+  const verifiedUserId = await (dependencies.verifyAccessToken
+    ? dependencies.verifyAccessToken(accessToken)
+    : verifyAccessTokenWithAuth(accessToken));
+  if (!verifiedUserId || verifiedUserId !== session.userId)
+    throw new ApiFault(401, 'UNAUTHORIZED');
+  return session;
 }
 
 function parsePlatformKey(value: string | null): {
@@ -499,6 +516,7 @@ async function dispatchAccount(
   transaction: Transaction,
   dependencies: AccountApiDependencies,
   session?: SessionContext,
+  reauthSession?: SessionContext,
 ): Promise<DispatchResult> {
   const path = requestPath(request);
   const key = await verifyPlatformKey(transaction, request, dependencies);
@@ -523,6 +541,25 @@ async function dispatchAccount(
   }
 
   if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+  if (path === 'v1/auth/recent-proof' && request.method === 'POST') {
+    if (
+      !reauthSession ||
+      reauthSession.userId !== session.userId ||
+      reauthSession.sessionId === session.sessionId
+    )
+      throw new ApiFault(403, 'RECENT_MFA_REQUIRED');
+    const [proof] = await transaction.unsafe<Row>(
+      'select * from private.user_recent_auth_proof_issue(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text)',
+      [
+        ...accountContextValues(session, key),
+        reauthSession.sessionId,
+        'email_otp',
+      ],
+    );
+    if (!proof) throw new ApiFault(403, 'RECENT_MFA_REQUIRED');
+    return { status: 201, data: proof };
+  }
+
   const row = await principal(transaction, key, session);
   if (path === 'v1/account/principal' && request.method === 'GET') {
     return { status: 200, data: principalDto(row, key, session) };
@@ -861,6 +898,13 @@ export async function handleRequest(
       !(path === 'v1/plans' && request.method === 'GET')
         ? await verifiedSessionFromRequest(request, dependencies)
         : undefined;
+    const reauthSession =
+      path === 'v1/auth/recent-proof' && request.method === 'POST'
+        ? await verifiedSessionFromAccessToken(
+            request.headers.get('x-reauth-access-token') ?? '',
+            dependencies,
+          )
+        : undefined;
     const executor = path.startsWith('admin/') ? 'admin' : 'account';
     const db = dependencies.database ?? database(executor);
     const result = await db.begin(async (transaction) => {
@@ -870,7 +914,13 @@ export async function handleRequest(
         return dispatchAdmin(request, transaction, dependencies, session);
       }
       await setRole(transaction, 'account_executor');
-      return dispatchAccount(request, transaction, dependencies, session);
+      return dispatchAccount(
+        request,
+        transaction,
+        dependencies,
+        session,
+        reauthSession,
+      );
     });
     return response(
       { data: result.data, request_id: id },

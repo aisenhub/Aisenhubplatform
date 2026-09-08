@@ -7,8 +7,8 @@
 | ID | 交付 | 依赖任务 | 初始状态 |
 |---|---|---|---|
 | T12-R1 | 真实 Auth/SSR adapter 与会话范围 | 无 | PARTIAL（实现提交 aa5089d；证据见 T12-R1） |
-| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | PARTIAL（Admin MFA与真实Local浏览器子集已完成；普通proof协议仍阻塞，证据见 T12-R2） |
-| T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | WAITING |
+| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | PASS（Local；Admin浏览器与普通双session proof均已通过，完整Close/Delete消费者由T16-R1承接，证据见 T12-R2） |
+| T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | READY |
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | WAITING |
 | T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |
 | M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PASS（Local；证据见 M3-R1） |
@@ -31,17 +31,17 @@
 
 - 依赖任务：T12-R1。
 - 改动目录：Auth包、Admin/Consumer认证页及BFF、`supabase/functions/account-api`、必要新增迁移、`docs/contracts`、`packages/domain/src/contracts`及测试。
-- 步骤：复用已在中央和Admin OpenAPI登记的`/admin/api/v1/auth/recent-proof`，逐字段核对其语义和消费者；明确普通用户proof签发、同user/session绑定、认证事件来源、过期/替换/退出失效，必要变更先同步API专题、OpenAPI、DTO及消费者。不以JWT iat、AAL2或前端布尔值替代近期认证事件。
-- 补齐Admin真实MFA挑战、proof获取和敏感动作恢复流程，实时查singleton/session；验证普通Close/Global Delete request与Link敏感步骤。普通用户可验证协议若不可用，记录具体阻塞并保持拒绝，不能将T12/G2-L标PASS。
+- 步骤：复用已在中央和Admin OpenAPI登记的`/admin/api/v1/auth/recent-proof`，逐字段核对其语义和消费者；普通用户改为独立 Supabase email `token_hash` Auth session，中央 API 双重验证同user、事件session与5分钟窗口，proof只绑定原业务session，必要变更同步API专题、OpenAPI、DTO及消费者。不以JWT iat、AAL2或前端布尔值替代近期认证事件。
+- 补齐Admin真实MFA挑战、proof获取和敏感动作恢复流程，实时查singleton/session；完成普通 proof issuer 与 BFF 邮件事件适配，临时事件session不返回浏览器且必须撤销。Close/Global Delete request 与 Link 敏感消费者由 T16-R1 使用该 proof；若任一服务端事件证据不可用，保持拒绝。
 - 验收：V-AUTH-01/03及V-DELETE-01请求子集；跨session/过期/撤销/管理员替换后proof拒绝，refresh不续期，重复请求无重复副作用；真实Local认证成功→敏感动作成功→退出后拒绝。Global Delete仅`pending_admin`，不开始purge。
-- 交接：合同变更记录、失败用例、实际API覆盖表，T12 Local完成结论单独报告。
+- 交接：合同变更记录、失败用例、实际API覆盖表，T12 Local完成结论单独报告；完整账户敏感端点及其消费者由 T16-R1 承接。
 
 ## T16-R1 — M2端到端资源补齐
 
 - 依赖任务：T12-R2。
 - 已有基础：T13～T15 SQL/SDK和M3中央Account API；逐方法复用，不另写账户或权益算法。
 - 改动目录：中央HTTP adapter、`packages/account-server`、`apps/admin`、`apps/template-preview`、必要领域包装/迁移及合同测试。
-- 步骤：逐条对照当前17个Account及32个Admin OpenAPI操作（已含Admin recent-proof），若T12-R2新增操作则同步数量，标记SQL/HTTP/SDK/BFF/UI/测试层实际覆盖。补M2的close、delete-request、Profile/Preferences及最小业务保护页；补平台创建/更新/读取、Origin配置、Key创建/轮换/撤销、账户suspend/restore/close的必要管理入口。缺SQL包装时补受控领域函数，不让UI直写表。
+- 步骤：逐条对照当前18个Account及32个Admin OpenAPI操作（已含普通与Admin recent-proof），标记SQL/HTTP/SDK/BFF/UI/测试层实际覆盖。补M2的close、delete-request、Profile/Preferences及最小业务保护页；补平台创建/更新/读取、Origin配置、Key创建/轮换/撤销、账户suspend/restore/close的必要管理入口。缺SQL包装时补受控领域函数，不让UI直写表。
 - 平台Key操作响应丢失按operation元数据追踪、撤未知交付Key再新建；Origin管理给出synced/drift/error，托管同步实测留T17-R2。M3资源由M3-R1追踪，M4资源仍contract-only；M5负责完整列表体验，不承接本任务必须的授权能力。
 - 提交边界：按覆盖表与合同、平台/Origin入口、Key交付轮换、账户敏感路径、最小表单集成分小提交逐项验证；若一个子项涉及多个公共合同或难回退迁移，再拆实施子任务，不把本收尾范围做成一次大迁移。
 - 验收：V-ACCOUNT-01～05、V-SDK-01/02及V-UI-01最小账户子集；真实HTTP→SQL的428/412、64KiB边界、跨目标404、停用/撤Key后拒绝、中央故障503；敏感写入与Audit同事务。创建平台不得要求手工SQL成为正常产品流程。

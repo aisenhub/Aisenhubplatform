@@ -7,10 +7,12 @@ import {
   createPerRequestClient,
   noStoreHeaders,
   listMfaFactors,
+  requestEmailOtp,
   revokeSupabaseSession,
   requestReauthentication,
   setRequestAuthSession,
   verifyMfaFactor,
+  verifyEmailOtpToken,
   verifyReauthenticationOtp,
   writeAuthSessionCookies,
 } from '../src/index.ts';
@@ -137,6 +139,11 @@ describe('SSR auth adapter', () => {
       authCookieNames('admin').csrf,
       'aisenhub-recent-auth-proof',
     ]);
+
+    clearAuthSessionCookies(writer, 'consumer');
+    expect(writer.delete).toHaveBeenLastCalledWith(
+      'aisenhub-recent-auth-proof',
+    );
   });
 
   it('keeps Auth MFA and reauthentication calls request-scoped', async () => {
@@ -157,6 +164,10 @@ describe('SSR auth adapter', () => {
         data: { session: input },
         error: null,
       })),
+      signInWithOtp: vi.fn(async (input: unknown) => ({
+        data: { user: input, session: null },
+        error: null,
+      })),
     };
     const client = { auth } as unknown as SupabaseClient;
 
@@ -171,6 +182,8 @@ describe('SSR auth adapter', () => {
       email: 'user@example.test',
       token: '123456',
     });
+    await requestEmailOtp(client, 'user@example.test');
+    await verifyEmailOtpToken(client, 'token-hash');
 
     expect(client.auth.setSession).toHaveBeenCalledWith({
       access_token: 'access-token',
@@ -184,6 +197,14 @@ describe('SSR auth adapter', () => {
       email: 'user@example.test',
       token: '123456',
       type: 'reauthentication',
+    });
+    expect(client.auth.signInWithOtp).toHaveBeenCalledWith({
+      email: 'user@example.test',
+      options: { shouldCreateUser: false },
+    });
+    expect(client.auth.verifyOtp).toHaveBeenCalledWith({
+      token_hash: 'token-hash',
+      type: 'email',
     });
   });
 });

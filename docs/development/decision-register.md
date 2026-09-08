@@ -31,6 +31,7 @@
 | D06 | Admin近期MFA证明绑定session、5分钟有效 | VERIFY | SP-AUTH证明不能靠refresh续期 |
 | D07 | unknown写入不释放预算，不猜测Storage已取消 | 基线固定 | M4给出保持占用/人工处理路径 |
 | D08 | M1只建立可审计删除请求/门闩骨架，M4完成对象相关清除 | 实施顺序固定 | 不在M2提供可用的半成品Global Purge |
+| D09 | 普通近期认证采用独立 email `token_hash` Auth session；中央 proof 绑定原业务 session，临时 session 必须撤销 | VERIFY（Local已实测） | BFF不得返回临时token；Account API验证双session与5分钟Auth session窗口，无法核实时拒绝 |
 
 ## 2. 上游及工具核对事实
 

@@ -34,6 +34,43 @@ describe('account API server client', () => {
     });
   });
 
+  it('forwards the independently verified reauthentication token only as a header', async () => {
+    const requests: Array<{
+      url: string;
+      init: { method: string; headers: Readonly<Record<string, string>> };
+    }> = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            data: {
+              proof_id: '00000000-0000-4000-8000-000000000001',
+              expires_at: '2026-09-08T12:05:00.000Z',
+            },
+            request_id: 'req-1',
+          }),
+        };
+      },
+    });
+
+    await client.issueRecentAuthProof('current-access', 'event-access');
+    expect(requests[0]).toMatchObject({
+      url: 'https://account.example.invalid/v1/auth/recent-proof',
+      init: {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer current-access',
+          'X-Reauth-Access-Token': 'event-access',
+        },
+      },
+    });
+  });
+
   it('maps central API errors without exposing the upstream message', async () => {
     const client = createAccountApiClient({
       baseUrl: 'https://account.example.invalid',
