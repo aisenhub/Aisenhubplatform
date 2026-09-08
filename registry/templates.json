@@ -1,0 +1,34 @@
+[
+  { "id": "auth-login", "route": "/login", "auth": "public" },
+  { "id": "auth-signup", "route": "/signup", "auth": "public" },
+  {
+    "id": "auth-forgot-password",
+    "route": "/forgot-password",
+    "auth": "public"
+  },
+  {
+    "id": "auth-reset-password",
+    "route": "/update-password",
+    "auth": "recovery-session"
+  },
+  {
+    "id": "oauth-callback",
+    "route": "/auth/callback",
+    "auth": "provider-callback"
+  },
+  { "id": "pricing-page", "route": "/pricing", "auth": "public" },
+  { "id": "profile-settings", "route": "/account#profile", "auth": "session" },
+  {
+    "id": "preferences-settings",
+    "route": "/account#preferences",
+    "auth": "session"
+  },
+  { "id": "subscription-status", "route": "/subscription", "auth": "session" },
+  {
+    "id": "subscription-redeem",
+    "route": "/subscription#redeem",
+    "auth": "session"
+  },
+  { "id": "config-files-manager", "route": "/files", "auth": "session" },
+  { "id": "user-menu", "route": "/account#session", "auth": "session" }
+]

@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
-export default function ConsumerLoginPage() {
+export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('');
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus('正在登录…');
-    const response = await fetch('/api/auth/login', {
+    setStatus('正在创建账户…');
+    const response = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -19,23 +19,27 @@ export default function ConsumerLoginPage() {
       },
       body: JSON.stringify({ email, password }),
     });
+    const payload = (await response.json().catch(() => null)) as {
+      data?: { needs_email_confirmation?: boolean };
+      error?: { code?: string };
+    } | null;
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as {
-        data?: { code?: string };
-      } | null;
-      setStatus(
-        `登录失败：${payload?.data?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
-      );
+      setStatus(`注册失败：${payload?.error?.code ?? response.status}`);
       return;
     }
-    window.location.assign('/subscription');
+    setStatus(
+      payload?.data?.needs_email_confirmation
+        ? '注册成功，请检查邮箱完成确认。'
+        : '注册成功，正在进入账户…',
+    );
+    if (!payload?.data?.needs_email_confirmation)
+      window.location.assign('/subscription');
   }
 
   return (
     <main className="shell">
       <p className="eyebrow">Template Preview</p>
-      <h1>Consumer login</h1>
-      <p className="muted">登录后由同源 BFF 访问 Account API。</p>
+      <h1>Create account</h1>
       <form className="panel stack-form" onSubmit={submit}>
         <label htmlFor="email">邮箱</label>
         <input
@@ -43,31 +47,25 @@ export default function ConsumerLoginPage() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          autoComplete="username"
           required
         />
-        <label htmlFor="password">密码</label>
+        <label htmlFor="password">密码（至少 8 位）</label>
         <input
           id="password"
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
+          minLength={8}
           required
         />
-        <button type="submit">登录</button>
+        <button type="submit">注册</button>
         <span className="muted" role="status">
           {status}
         </span>
       </form>
-      <nav className="actions" aria-label="Account recovery">
-        <a className="link" href="/signup">
-          创建账户
-        </a>
-        <a className="link" href="/forgot-password">
-          忘记密码
-        </a>
-      </nav>
+      <a className="link" href="/login">
+        已有账户？登录
+      </a>
     </main>
   );
 }
