@@ -111,6 +111,21 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
+          if (query.startsWith('select * from private.admin_audit_list')) {
+            return [
+              {
+                audit_id: keyId,
+                request_id: sessionId,
+                actor_type: 'admin',
+                actor_id: userId,
+                event_type: 'platform.updated',
+                target_type: 'platform',
+                target_id: platformId,
+                outcome: 'success',
+                created_at: '2026-09-09T00:00:00.000Z',
+              },
+            ] as unknown as R[];
+          }
           if (
             query.startsWith('select * from private.admin_deletion_job_start')
           ) {
@@ -708,6 +723,16 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
   );
   assertEquals(files.status, 200);
+
+  const audit = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/audit?q=platform&limit=20',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(audit.status, 200);
+  assertEquals((await audit.json()).data[0].action, 'platform.updated');
 
   const keys = await handleRequest(
     new Request(

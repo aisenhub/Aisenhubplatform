@@ -473,8 +473,13 @@
       "get": {
         "operationId": "adminListAuditLogs",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
         "responses": {
           "200": { "$ref": "#/components/responses/Page" },
           "403": { "$ref": "#/components/responses/Forbidden" }
@@ -583,6 +588,12 @@
           "maximum": 100,
           "default": 20
         }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "format": "uuid" }
       },
       "AccountId": {
         "name": "accountId",

@@ -518,6 +518,20 @@ function adminFileDto(row: Row): Record<string, unknown> {
   };
 }
 
+function adminAuditDto(row: Row): Record<string, unknown> {
+  return {
+    id: uuidValue(row.audit_id ?? row.id),
+    request_id: uuidValue(row.request_id),
+    action: stringValue(row.event_type),
+    actor_type: stringValue(row.actor_type),
+    actor_id: uuidValue(row.actor_id ?? row.actor_user_id),
+    target_type: stringValue(row.target_type),
+    target_id: uuidValue(row.target_id),
+    outcome: stringValue(row.outcome),
+    created_at: isoDate(row.created_at),
+  };
+}
+
 function deletionJobDto(row: Row): Record<string, unknown> {
   return {
     job_id: row.job_id,
@@ -1026,6 +1040,29 @@ async function dispatchAdmin(
       [...context, boundedLimit(url.searchParams.get('limit'))],
     );
     return { status: 200, data: rows.map(deletionJobDto) };
+  }
+  if (path === 'admin/api/v1/audit' && request.method === 'GET') {
+    const cursorValue = url.searchParams.get('cursor');
+    const cursor = cursorValue === null ? null : uuidValue(cursorValue);
+    if (cursorValue !== null && !cursor)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_audit_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer, $6::text)',
+      [
+        ...context,
+        cursor,
+        boundedLimit(url.searchParams.get('limit')),
+        url.searchParams.get('q'),
+      ],
+    );
+    return {
+      status: 200,
+      data: rows.map(adminAuditDto),
+      next_cursor:
+        rows.length === boundedLimit(url.searchParams.get('limit'))
+          ? uuidValue(rows.at(-1)?.audit_id)
+          : null,
+    };
   }
   if (path === 'admin/api/v1/deletion-jobs' && request.method === 'POST') {
     await adminStepUp(transaction, session, request);

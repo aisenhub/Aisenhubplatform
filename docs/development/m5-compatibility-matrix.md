@@ -11,10 +11,10 @@
 | 资源 | 领域入口 | HTTP/OpenAPI | SDK | 当前UI/消费者 | 缺口承接 |
 |---|---|---|---|---|---|
 | 平台/Origin/Key/账户 | M2 SQL与Account/Admin受控入口 | 18 Account、36 Admin已冻结；部分操作仍contract-only | `account-server`已有principal/activate/profile/preferences/subscription/redeem子集 | Admin已覆盖列表/筛选/轮换/状态页面；Consumer仍为登录、Pricing、Subscription | M5-03 Local页面与资源搜索已交付，Hosted联合验收留M5-05 |
-| Plan/订阅/批次/Code | M3 Local SQL、Account API、Admin计划/批次/订阅路由 | Admin路径已有Local-only实现，完整错误/分页/UI未成品 | `account-server`仅订阅读取/兑换方法 | Consumer Subscription已有基础页；无批次/Code成品管理 | M3-R1补证据；M5-03补Admin；M5-04补用户模板 |
+| Plan/订阅/批次/Code | M3 Local SQL、Account API、Admin计划/批次/订阅路由 | Admin路径已有Local-only实现，Plan/批次/订阅页面已接入 | `account-server`仅订阅读取/兑换方法 | Consumer Subscription与Redeem已有基础页；Admin覆盖Plan/批次/订阅管理 | M5-05补全新Consumer联合验收 |
 | 文件/策略/删除任务 | M4-01合同与M4-02～09 Local领域入口 | Account六个文件操作及Admin file/deletion-jobs已接入，部分托管能力仍待验证 | 尚无文件方法 | Admin文件/删除任务页面与Consumer文件页面已接入；unknown、deleting、blocked/retry原因可见 | M5-03补服务端资源搜索与细粒度原因展示；M5-05补Hosted联合验收 |
-| 审计 | M1事务 append 基础 | Admin audit资源已冻结 | 尚无Admin审计SDK | 无审计页 | M5-03补受控只读查询、分页、脱敏详情 |
-| 用户Auth模板 | M2 Auth adapter；T12-R1已交付请求级SDK/refresh/PKCE callback | 登录/退出已有；signup/reset/link路径未形成完整模板 | `account-auth`/`account-auth-nextjs`职责边界已存在 | 两应用有登录页，缺Signup/Forgot/Reset/OAuth/MFA流程 | T12-R2/T16-R2补合同与运行器；M5-04形成Registry模板 |
+| 审计 | M1事务 append 基础 | Admin audit资源已冻结并接入受控只读查询 | 尚无Admin审计SDK | Admin audit页提供服务端分页、q筛选和脱敏投影 | M5-05补全新Consumer联合验收 |
+| 用户Auth模板 | M2 Auth adapter；T12-R1已交付请求级SDK/refresh/PKCE callback | 登录/退出、signup/reset/link路径已形成Local模板 | `account-auth`/`account-auth-nextjs`职责边界已存在 | template-preview覆盖Signup/Forgot/Reset/OAuth/MFA、Pricing、Profile、Subscription、Files和UserMenu | M5-05补全新Consumer联合验收 |
 
 ## 2. 包与构建兼容
 
@@ -31,7 +31,7 @@
 
 目标Registry条目按API专题固定为：`auth-login`、`auth-signup`、`auth-forgot-password`、`auth-reset-password`、OAuth callback、`pricing-page`、`profile-settings`、`preferences-settings`、`subscription-status`、`subscription-redeem`、`config-files-manager`、`user-menu`。
 
-当前 `apps/template-preview` 只有登录、Pricing、Subscription和基础Account BFF路由；`apps/admin`只有登录、首页及最小Plan/Entitlement展示。不存在 `registry/` 目录，不能把preview当Registry或生产部署物。模板必须只复制页面、路由和SDK胶水，不复制授权、Ledger、日期、配额、Storage或删除算法。
+当前 `apps/template-preview` 已覆盖 Registry 清单中的Local页面与同源BFF路由；`apps/admin`已覆盖M5-03 Local Admin资源页面。`registry/`仅为Local metadata，不能把preview或Local metadata当正式Registry或生产部署物。模板必须只复制页面、路由和SDK胶水，不复制授权、Ledger、日期、配额、Storage或删除算法。
 
 独立Consumer的最低安装验收由M5-05承接：空Next项目从本次真实tarball和固定Registry安装，不使用workspace链接；两个不同Origin/Platform完成Auth/刷新/激活/Profile/兑换/文件/停用链路；执行typecheck/build/E2E和browser bundle Secret扫描。
 
@@ -48,7 +48,7 @@
 | 验收 | 当前状态 | 后续责任 |
 |---|---|---|
 | V-SDK-01/02 | PASS（Local tarball） | M5-05继续做全新Consumer与Registry联合安装；M5-06仍需正式发布 |
-| V-UI-01 | PARTIAL | T16-R2提供运行入口；M5-03/04补完整页面和失败恢复 |
-| V-INTEGRATION-01 | NOT_RUN | M5-05全新Consumer安装 |
+| V-UI-01 | PARTIAL（Local页面与关键浏览器路径已验证） | M5-05补全新Consumer联合浏览器路径 |
+| V-INTEGRATION-01 | PARTIAL（Local独立安装/typecheck/build） | M5-05补Hosted双Origin/Platform E2E |
 | G5-L | NOT_RUN | M5-05 |
 | G5-P | NOT_RUN | M5-06，依赖X05和发布授权 |

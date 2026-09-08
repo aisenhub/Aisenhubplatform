@@ -16,33 +16,39 @@ type AuditEntry = {
 export default function AdminAuditPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [filter, setFilter] = useState('');
+  const [query, setQuery] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [status, setStatus] = useState('正在读取审计日志…');
 
-  const load = useCallback(async () => {
-    setStatus('正在读取审计日志…');
-    try {
-      const response = await fetch('/api/v1/admin/api/v1/audit?limit=50', {
-        cache: 'no-store',
-      });
-      const payload = (await response.json().catch(() => null)) as {
-        data?: AuditEntry[];
-        error?: { code?: string };
-      } | null;
-      if (!response.ok) {
-        setEntries([]);
-        setStatus(
-          response.status === 404 || response.status === 501
-            ? '审计查询尚未由后端实现（contract-only），未伪造空结果。'
-            : `审计读取失败：${payload?.error?.code ?? `HTTP_${response.status}`}。`,
+  const load = useCallback(
+    async (cursor?: string) => {
+      setStatus('正在读取审计日志…');
+      try {
+        const response = await fetch(
+          `/api/v1/admin/api/v1/audit?limit=50${query.trim() ? `&q=${encodeURIComponent(query.trim())}` : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+          { cache: 'no-store' },
         );
-        return;
+        const payload = (await response.json().catch(() => null)) as {
+          data?: AuditEntry[];
+          next_cursor?: string | null;
+          error?: { code?: string };
+        } | null;
+        if (!response.ok) {
+          setEntries([]);
+          setStatus(
+            `审计读取失败：${payload?.error?.code ?? `HTTP_${response.status}`}。`,
+          );
+          return;
+        }
+        setEntries(payload?.data ?? []);
+        setNextCursor(payload?.next_cursor ?? null);
+        setStatus(`已读取 ${payload?.data?.length ?? 0} 条审计记录。`);
+      } catch {
+        setStatus('审计读取失败：AUTHORIZATION_UNAVAILABLE。');
       }
-      setEntries(payload?.data ?? []);
-      setStatus(`已读取 ${payload?.data?.length ?? 0} 条审计记录。`);
-    } catch {
-      setStatus('审计读取失败：AUTHORIZATION_UNAVAILABLE。');
-    }
-  }, []);
+    },
+    [query],
+  );
 
   useEffect(() => {
     void load();
@@ -72,6 +78,10 @@ export default function AdminAuditPage() {
             label="筛选 action / target"
             value={filter}
             onChange={setFilter}
+            onSubmit={() => {
+              setQuery(filter);
+              setNextCursor(null);
+            }}
             placeholder="例如 revoke、platform"
           />
           <button type="button" onClick={() => void load()}>
@@ -109,6 +119,16 @@ export default function AdminAuditPage() {
             ))}
           </div>
         )}
+        <div className="section-heading">
+          <span className="muted">每页 50 条；游标由服务端返回。</span>
+          <button
+            type="button"
+            disabled={!nextCursor}
+            onClick={() => void load(nextCursor ?? undefined)}
+          >
+            下一页
+          </button>
+        </div>
       </section>
       <a className="link" href="/admin">
         返回控制中心

@@ -575,6 +575,15 @@ async function exerciseAdmin(page, adminTotp) {
   const suspendResponse = await suspendRequest.response();
   assert.ok(suspendResponse, 'Admin account suspend must return a response');
   assertStatus(suspendResponse.status(), 200, 'Admin account suspend');
+  const audit = await browserRequest(
+    page,
+    '/api/v1/admin/api/v1/audit?q=account&limit=20',
+  );
+  assertStatus(audit.status, 200, 'Admin audit list');
+  assert.ok(
+    audit.payload?.data?.some((entry) => entry.action === 'account.suspend'),
+    'Admin audit must expose the suspended account event without raw metadata',
+  );
   await page.waitForTimeout(250);
   return accountRow;
 }
