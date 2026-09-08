@@ -106,4 +106,42 @@ describe('account API server client', () => {
       },
     });
   });
+
+  it('issues ordinary recent-auth proof without sending a platform key', async () => {
+    const requests: Array<{
+      url: string;
+      init: { method: string; headers: Readonly<Record<string, string>> };
+    }> = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            data: {
+              proof_id: '00000000-0000-4000-8000-000000000001',
+              expires_at: '2026-09-08T00:05:00.000Z',
+            },
+            request_id: 'req-1',
+          }),
+        };
+      },
+    });
+
+    await client.issueRecentAuthProof('access-token-1', '123456');
+    expect(requests[0]).toMatchObject({
+      url: 'https://account.example.invalid/v1/auth/recent-proof',
+      init: {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer access-token-1',
+          'Cache-Control': 'no-store',
+        },
+      },
+    });
+    expect(requests[0]!.init.headers['X-Platform-Key']).toBeUndefined();
+  });
 });

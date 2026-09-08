@@ -159,7 +159,7 @@ export function clearAuthSessionCookies(
   writer.delete(names.access);
   writer.delete(names.refresh);
   writer.delete(names.csrf);
-  if (prefix === 'admin') writer.delete('aisenhub-recent-auth-proof');
+  writer.delete('aisenhub-recent-auth-proof');
 }
 
 export async function signInWithPassword(

@@ -67,6 +67,11 @@ export interface AccountPrincipalDto {
   readonly account_status: 'active' | 'suspended' | 'closed' | 'not_activated';
 }
 
+export interface RecentAuthProofDto {
+  readonly proof_id: string;
+  readonly expires_at: string;
+}
+
 export interface PlanDto {
   readonly code: string;
   readonly name: string;

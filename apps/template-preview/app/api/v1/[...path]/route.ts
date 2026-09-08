@@ -117,6 +117,20 @@ async function dispatch(
     const api = perRequest.client;
     const token = accessToken(request);
 
+    if (route === 'auth/recent-proof' && method === 'POST') {
+      const body = await jsonObject(request);
+      if (typeof body.token !== 'string' || !/^\d{6}$/u.test(body.token))
+        throw new BffError(400, 'INVALID_INPUT');
+      return jsonResponse(
+        {
+          data: await api.issueRecentAuthProof(token, body.token),
+          request_id: id,
+        },
+        201,
+        id,
+      );
+    }
+
     if (route === 'plans' && method === 'GET') {
       return jsonResponse(
         { data: await api.listPublicPlans(), request_id: id },

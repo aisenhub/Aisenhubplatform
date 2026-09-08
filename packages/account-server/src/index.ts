@@ -10,6 +10,7 @@ import type {
   PlanDto,
   PreferencesDto,
   ProfileDto,
+  RecentAuthProofDto,
 } from '@kit/domain/contracts';
 import { generateRedemptionCodes as generateDomainRedemptionCodes } from '@kit/domain';
 import type { RedemptionCodeMaterial } from '@kit/domain';
@@ -178,6 +179,10 @@ export function validateCallbackUrl(value: string, origin: string): string {
 
 export interface AccountApiClient {
   readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
+  readonly issueRecentAuthProof: (
+    accessToken: string,
+    token: string,
+  ) => Promise<RecentAuthProofDto>;
   readonly getPrincipal: (accessToken: string) => Promise<unknown>;
   readonly activate: (accessToken: string) => Promise<unknown>;
   readonly getProfile: (accessToken: string) => Promise<ProfileDto>;
@@ -248,12 +253,15 @@ export function createAccountApiClient(input: {
     readonly accessToken?: string;
     readonly ifMatch?: string;
     readonly idempotencyKey?: string;
+    readonly includePlatformKey?: boolean;
     readonly body?: Readonly<Record<string, unknown>>;
   }): Promise<T> {
     const headers: Record<string, string> = {
       Accept: 'application/json',
       'Cache-Control': 'no-store',
-      'X-Platform-Key': input.platformKey,
+      ...(options.includePlatformKey === false
+        ? {}
+        : { 'X-Platform-Key': input.platformKey }),
     };
     if (options.accessToken)
       headers.Authorization = `Bearer ${options.accessToken}`;
@@ -286,6 +294,14 @@ export function createAccountApiClient(input: {
   return {
     listPublicPlans: () =>
       request<readonly PlanDto[]>({ method: 'GET', path: '/v1/plans' }),
+    issueRecentAuthProof: (accessToken, token) =>
+      request<RecentAuthProofDto>({
+        method: 'POST',
+        path: '/v1/auth/recent-proof',
+        accessToken,
+        includePlatformKey: false,
+        body: { token },
+      }),
     getPrincipal: (accessToken) =>
       request({ method: 'GET', path: '/v1/account/principal', accessToken }),
     activate: (accessToken) =>

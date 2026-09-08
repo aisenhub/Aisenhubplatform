@@ -29,6 +29,11 @@ interface AccountApiDependencies {
    * /auth/v1/user endpoint with the publishable key.
    */
   readonly verifyAccessToken?: (accessToken: string) => Promise<string | null>;
+  /** Verifies the one-time reauthentication code in isolated tests. */
+  readonly verifyReauthentication?: (
+    accessToken: string,
+    token: string,
+  ) => Promise<string | null>;
 }
 
 type KeyContext = {
@@ -117,9 +122,9 @@ function presentedSession(request: Request): {
   }
 }
 
-async function verifyAccessTokenWithAuth(
+async function authUserWithAuth(
   accessToken: string,
-): Promise<string | null> {
+): Promise<{ userId: string; email: string | null } | null> {
   const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
   const publishableKey =
     Deno.env.get('SUPABASE_ANON_KEY') ??
@@ -143,7 +148,65 @@ async function verifyAccessTokenWithAuth(
   if (!response.ok) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
 
   const payload = objectValue(await response.json().catch(() => null));
-  return uuidValue(objectValue(payload.user).id) ?? uuidValue(payload.id);
+  const user = objectValue(payload.user);
+  const userId = uuidValue(user.id) ?? uuidValue(payload.id);
+  return userId
+    ? { userId, email: stringValue(user.email) ?? stringValue(payload.email) }
+    : null;
+}
+
+async function verifyAccessTokenWithAuth(
+  accessToken: string,
+): Promise<string | null> {
+  return (await authUserWithAuth(accessToken))?.userId ?? null;
+}
+
+async function verifyReauthenticationWithAuth(
+  accessToken: string,
+  token: string,
+): Promise<string | null> {
+  const currentUser = await authUserWithAuth(accessToken);
+  if (!currentUser?.email) return null;
+  const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
+  const publishableKey =
+    Deno.env.get('SUPABASE_ANON_KEY') ??
+    Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+  if (!url || !publishableKey)
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+
+  let response: Response;
+  try {
+    response = await fetch(`${url}/auth/v1/verify`, {
+      method: 'POST',
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${publishableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: currentUser.email,
+        token,
+        type: 'reauthentication',
+      }),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  }
+  if (
+    response.status === 400 ||
+    response.status === 401 ||
+    response.status === 403
+  )
+    return null;
+  if (!response.ok) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+
+  const payload = objectValue(await response.json().catch(() => null));
+  const verifiedUserId =
+    uuidValue(objectValue(payload.user).id) ?? uuidValue(payload.user_id);
+  return verifiedUserId && verifiedUserId !== currentUser.userId
+    ? null
+    : currentUser.userId;
 }
 
 async function verifiedSessionFromRequest(
@@ -445,6 +508,30 @@ async function dispatchAccount(
   session?: SessionContext,
 ): Promise<DispatchResult> {
   const path = requestPath(request);
+  if (path === 'v1/auth/recent-proof' && request.method === 'POST') {
+    if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+    const input = await body(request);
+    const token = stringValue(input.token);
+    if (!token || !/^\d{6}$/u.test(token))
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const verifiedUserId = await (dependencies.verifyReauthentication
+      ? dependencies.verifyReauthentication(
+          presentedSession(request).accessToken,
+          token,
+        )
+      : verifyReauthenticationWithAuth(
+          presentedSession(request).accessToken,
+          token,
+        ));
+    if (verifiedUserId !== session.userId)
+      throw new ApiFault(403, 'RECENT_MFA_REQUIRED');
+    const [proof] = await transaction.unsafe<Row>(
+      'select * from private.user_recent_auth_proof_issue($1::uuid, $2::uuid, $3::text)',
+      [session.userId, session.sessionId, 'email-reauthentication'],
+    );
+    if (!proof) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 201, data: proof };
+  }
   const key = await verifyPlatformKey(transaction, request, dependencies);
 
   if (path === 'v1/plans' && request.method === 'GET') {
