@@ -1,6 +1,6 @@
 # 跨模块合同与所有权 DP1
 
-从属于[架构基线](../architecture.md)和[API合同](../api-sdk.md)。本文固定实施边界；不是已存在的代码声明。M1/M2任务将其转成SQL类型、OpenAPI及实际测试，未经变更记录不能随意重命名。
+从属于[架构基线](../architecture.md)和[API合同](../api-sdk.md)。本文固定实施边界；已有M1/M2/M3实现按任务证据判定，条目存在不代表全部入口已交付。未经变更记录不能随意重命名。
 
 ## 1. 目录和唯一维护方
 
@@ -10,7 +10,7 @@
 | packages/account-auth | M2 | 框架无关Auth adapter接口，不含平台Key |
 | packages/account-auth-nextjs | M2/M5 | SSR/Cookie/回调与同源BFF胶水，不能直写业务表 |
 | packages/account-server | M2起按领域扩展，M5发布 | server-only，遵守HTTP合同与预算 |
-| supabase/functions/account-api | M2/M3 | HTTP路由/用户与平台认证，不持有另一套业务算法；M3当前完成Local adapter，托管部署仍需单独验收 |
+| supabase/functions/account-api | M2/M3/M4 | HTTP路由/认证，不持有另一套业务算法；已有Local与Staging基础路径，完整资源/浏览器/托管验收仍分别收口 |
 | supabase/functions/maintenance | M4/M6 | job鉴权、租约与任务分派，不开放用户入口 |
 | supabase/functions/_shared | M0/M1 | 通用日志、SQL、时钟、错误、受控Storage adapter |
 | supabase/migrations | 每模块添加，集成人串行排定顺序 | 不多人改同一已提交migration |
@@ -83,13 +83,13 @@ Admin路径固定为/admin/api/v1，具体动作：
 
 Admin列表按平台/目标资源过滤；所有敏感动作使用同一授权包装和Audit。读列表也须Admin身份，不能因不修改数据跳过鉴权。
 
-## 6. T11冻结产物
+## 5. T11冻结产物
 
 T11将Account与Admin的OpenAPI 3.1合同冻结在`docs/contracts/account.openapi.json`和`docs/contracts/admin.openapi.json`。Account合同固定17个方法/路径组合；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计和删除任务资源。所有尚未实现的操作显式标为`contract-only`，不得返回假成功。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证仍依赖T04服务端session-bound proof，未以合同冻结替代实现。
 
-## 5. 时间、事务和失败边界
+## 6. 时间、事务和失败边界
 
 Postgres生成operation_now；生产函数不得接受用户自定当前时间。测试时钟只在隔离测试入口使用，不授予生产executor。重放用例的as_of是只读/测试能力，不开放给用户改变授权时刻。
 
@@ -97,8 +97,14 @@ Postgres生成operation_now；生产函数不得接受用户自定当前时间�
 
 Storage提供putImmutable/getInfo/download/remove四种受控adapter操作；收到网络超时返回unknown，不将404推断成没有未结算写入。受控内容不能进日志，id/hash与请求摘要才可用。
 
-## 6. 仍需验证后才能冻结的适配细节
+## 7. 适配验证与DP2差异登记
 
-SP-AUTH必须明确普通用户“近期重新认证”的服务端可验证证据与失效策略，并记录ADR；不得以普通JWT iat或前端布尔值代替。验证前M2可以实现只读与普通账户路径，但Close/Link敏感完成步骤/Global Delete请求不能以弱校验上线。若需新增公共reauth endpoint，先更新API专题和OpenAPI，再派发实现；本轮不猜测Provider尚未核实的接口。
+T04已交付Local管理员MFA/proof和logout旧JWT拒绝，T17记录Staging基础Auth/API；这不覆盖普通用户“近期重新认证”、真实SSR和Provider。T12-R1/R2补普通proof、local/global退出范围及回调；不得以JWT iat或前端布尔值代替。Close/Link敏感完成步骤/Global Delete请求不能以弱校验上线。
+
+当前OpenAPI为17个Account、32个Admin操作，Admin已包含recent-proof；不能把数量/结构检查PASS称为所有操作已实现或真实proof生命周期通过。T12-R2须核对API专题、OpenAPI、DTO/消费者的普通reauth及Admin proof语义，新增reauth endpoint先登记合同再实现，不重复新增已有Admin路由。
 
 SP-SQL确认Auth表实际可授予列与pooler角色形式；SP-UPLOAD确认真实host取消语义。发现必须改变上述合同的情况按决策登记处理，不由agent自行选择安全降级。
+
+T17-R1核对Staging `verify_jwt=true`与安全专题网关配置要求的差异，以及默认数据库连接尚未证明独立executor/TLS的问题。当前仅登记未闭环差异，不认可另一套权限规则；任何合同变更先有ADR及消费者/验收同步。
+
+M4-01负责补齐文件SQL参数/结果、file-policy/查询/恢复包装及备份屏障/删除墓碑合同，沿用当前字段与6个Account文件操作；M4-02持久化最小屏障基础，M4-05消费它阻止物理删除，M6实现联合备份及独立墓碑保存。复用已存在的private.job_leases，不能新增同名公共任务设施。unknown是write_outcome，不作为新增status枚举。

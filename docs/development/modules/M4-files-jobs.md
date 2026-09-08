@@ -2,6 +2,8 @@
 
 状态：待实施；依赖M2账户/授权、M1任务/门闩、SP-UPLOAD结论。依据[文件合同](../../config-files.md)、[安全清除流程](../../auth-security.md)。
 
+DP2已细化为[第三批11项任务](../tasks/batch-03.md)：规格可先做，实现须T18-L确认G1/G2-L；G4-S另依赖完整托管门槛。M4/M5/M6衔接见[后续路线](../roadmap-dp2.md)。
+
 ## 1. 范围和产物
 
 文件策略、预算预约、受控后端字节上传、状态查询、下载代理、Replace、删除、对账、任务重试和Global Purge对象阶段。同步交付最小文件Admin与Consumer UI。
@@ -10,7 +12,7 @@
 
 ## 2. 持久模型补齐
 
-落实platform_file_policies、platform_config_files、job_leases及replace复合FK；所有有reserved占用的行参与SUM，状态不是释放预算的充分条件。
+落实platform_file_policies、platform_config_files及replace复合FK；复用现有private.job_leases和删除job，不重复创建。所有有reserved占用的行参与SUM，状态不是释放预算的充分条件。M4-01定义备份删除屏障/墓碑接口，M4-02持久化基础，M4-05删除流程消费，M6接入真实联合备份。
 
 增加private.file_write_attempts：attempt_id PK、同平台/账户fileId复合FK、fence、started_at、settled_at、state(in_flight/confirmed/unknown/settled_absent)、provider_request_id nullable、error_code。每file最多一个未结算attempt的部分unique索引，结果只由可信adapter或恢复流程写入。
 

@@ -1,10 +1,10 @@
 # M0 工程基座与技术验证实施规格
 
-状态：待实施。依据[总计划](../master-plan.md)、[决策](../decision-register.md)、[公共合同](../contracts.md)。目标是可重现工程与可验证基础路径，不开发完整业务。
+状态：IN_PROGRESS；T01～T07有Local交付，G0-L有历史PASS，托管门槛仍PARTIAL。以下保留原实施规格，剩余范围见[DP2收尾](../tasks/closeout-01.md)。依据[总计划](../master-plan.md)、[决策](../decision-register.md)、[公共合同](../contracts.md)。
 
 ## 1. 输入、范围与输出
 
-输入为当前文档仓库、现有Node/pnpm/Docker、固定Makerkit候选commit。输出为清理后的Turborepo、apps/admin空壳、template-preview最小消费者、根supabase目录、公共TS包骨架、CI和探针报告。
+原始输入为文档仓库、现有Node/pnpm/Docker、固定Makerkit候选commit。工程导入、应用骨架、根supabase目录、公共TS包、CI和Local探针已分项交付；本规格不要求重复导入。
 
 不导入Starter业务账户/组织/Billing schema；不复制营销页面、示例业务或不需要的Auth授权逻辑。保留必要UI、i18n、form/query工具和许可证。现有README/AGENTS/docs/.git历史不能被上游覆盖。
 

@@ -1,6 +1,6 @@
 # M3 权益与兑换实施规格
 
-状态：待实施；依赖M1审计/幂等和M2身份/账户。依据[订阅兑换合同](../../subscription-redemption.md)、[公共合同](../contracts.md)。本模块生产计算唯一位于Postgres领域函数。
+状态：IN_PROGRESS；M3-01～03已有Local交付，完整G3矩阵由[收尾M3-R1](../tasks/closeout-01.md)核对，托管/浏览器仍按对应Gate验收。依赖M1审计/幂等和M2身份/账户。依据[订阅兑换合同](../../subscription-redemption.md)、[公共合同](../contracts.md)。本模块生产计算唯一位于Postgres领域函数。
 
 ## 1. 交付范围
 

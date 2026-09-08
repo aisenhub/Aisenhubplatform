@@ -2,6 +2,30 @@
 
 更新日期：2026-09-08。规划交付与应用实现严格分开。
 
+## DP2当前基线（优先于下方历史交接摘要）
+
+实现基线为`31b5142421847c26e61fe733b0df67f2fecd115a`，已核对远端`task/T04-session-revocation`；main仍为`f981ca533db67e543bbe3f6d88c337b78c0199d4`，应用尚未合并。下方原任务PASS沿用其报告范围，本次规划未重跑应用验收。详细差异见[DP2校准证据](evidence/DP2-baseline.md)。
+
+| 范围/Gate | 当前判定 | 剩余承接 |
+|---|---|---|
+| M0 / G0-L | Local已有PASS证据，模块仍IN_PROGRESS | G0-S托管补齐 |
+| M1 / G1 | 基础任务有Local通过记录；候选commit统一复验未运行 | T18-L确认G1 |
+| M2 / G2-L | T12/T16 PARTIAL，完整本地Gate未收口 | T12-R1/R2、T16-R1/R2、T18-L |
+| G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS | T17-R1/R2/R3、T18-S |
+| M3 / G3 | M3-01～03 Local交付；完整子情景矩阵待核对 | M3-R1，不推定整体G3 PASS |
+| M4～M6 | NOT_STARTED；本次仅计划 | 第三批M4、DP2后续路线 |
+| T18 | WAITING；允许独立整理本地材料 | T18-L与T18-S分层完成，全部条件满足才关闭父任务 |
+
+T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务列出的全部HTTP/Admin/Consumer体验均完成；缺失链路由T16-R1承接，完整体验由M5完善。T04的普通用户reauth、SSR与真实Provider仍有未完成项，不能从Admin proof通过推断普通用户proof通过。
+
+## DP2本轮规划交付
+
+- [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
+- [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
+- [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
+- 当前下一项可派发：T12-R1；M3-R1、T17-R1、M4-01、M5-01有独立范围，但本次不自动执行。
+- 本次变更仅规划文档；真实SQL/浏览器/Staging/生产验证均NOT_RUN。静态验证与最终同步见[本轮复核](planning-review.md)。
+
 ## 已完成事实
 
 - 架构v1.2及专题已写入，历史v1.1已归档；文档链接/SQL关系/示例熵经过静态核对。
@@ -11,7 +35,7 @@
 - C3规格与任务commit：175ec1435ccc84b1b58efec1dba2921277c68d21，已push并核对远端main；本进度记录随后作收尾同步，最新提交以Git历史为准。
 - 已只读核对本地Node/pnpm/Docker与Makerkit固定commit；Deno按T03安装到`D:\APP\Codex\Deno`，没有使用C盘默认路径。
 
-## 本轮规划交付
+## DP1历史规划交付
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
@@ -19,11 +43,13 @@
 | C2 | 开发总计划、决策、验证门槛 | 已提交并同步 |
 | C3 | M0～M6规格、公共合同、首批任务、复核修正 | 已提交并同步 |
 
-## 本轮检查
+## DP1历史检查
 
 28份Markdown文件、103个相对文件链接、7份模块规格、18项任务、40个具体验收ID、17个Account方法/路径组合已核对。任务导航与正文依赖一致且无环；围栏与引用检查无错误；常见凭据格式扫描无匹配；git diff --check通过。这里的检查不证明SQL或应用运行正确。
 
-## 应用实现
+## DP2校准前的应用进度快照
+
+以下保留此前阶段摘要；其中“proof通过”须按本页DP2表区分Admin与普通用户，“已完成”须按原报告区分SQL/API/浏览器，不作为新的Gate结论。
 
 M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过 Local 和 Staging 基础链路验收；G0-L 为 PASS。Staging 已清理旧项目基线并应用仓库 13 个迁移，公共 Auth 健康探针返回 200，`account-api` v13 已部署；G0-S 当前为 PARTIAL，X02/X03、托管 pooler/TLS、浏览器 SSR 和 Storage 真实语义仍未完成。
 

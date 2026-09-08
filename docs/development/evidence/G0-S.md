@@ -1,5 +1,7 @@
 # G0-S Staging 托管门槛
 
+> DP2校准：下文是既有探针快照，不是本次实时云端检查。`verify_jwt=true`与安全专题的网关要求存在未闭环差异，默认`SUPABASE_DB_URL`不证明独立executor/TLS已验收；由[收尾T17-R1](../tasks/closeout-01.md)核对，G0-S保持PARTIAL。
+
 日期：2026-09-08  
 项目：`workendstaging` / `egsokuicabbxspkdccqe`  
 状态：PARTIAL（项目基线、迁移、Edge 和真实 Auth/Account API 基础链路已完成；浏览器/Provider/Storage 托管条件仍未闭环）
