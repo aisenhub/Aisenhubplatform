@@ -77,18 +77,6 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
-          if (
-            query.startsWith(
-              'select * from private.user_recent_auth_proof_issue',
-            )
-          ) {
-            return [
-              {
-                proof_id: '00000000-0000-4000-8000-000000000007',
-                expires_at: '2026-09-08T00:05:00.000Z',
-              },
-            ] as unknown as R[];
-          }
           if (query.startsWith('select * from private.entitlement_read')) {
             return [
               {
@@ -234,52 +222,6 @@ Deno.test('Account API refuses recent-proof issuance at AAL1', async () => {
   );
   assertEquals(response.status, 403);
   assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
-});
-
-Deno.test('Account API issues an ordinary proof only after reauthentication', async () => {
-  const response = await handleRequest(
-    new Request('http://local/functions/v1/account-api/v1/auth/recent-proof', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${fakeJwt()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token: '123456' }),
-    }),
-    {
-      database: fakeDatabase(),
-      verifyAccessToken: async () => userId,
-      verifyReauthentication: async (accessToken, token) => {
-        assertEquals(accessToken, fakeJwt());
-        return token === '123456' ? userId : null;
-      },
-    },
-  );
-  assertEquals(response.status, 201);
-  assertEquals(
-    (await response.json()).data.proof_id,
-    '00000000-0000-4000-8000-000000000007',
-  );
-});
-
-Deno.test('Account API refuses ordinary proof without a verified reauthentication', async () => {
-  const response = await handleRequest(
-    new Request('http://local/functions/v1/account-api/v1/auth/recent-proof', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${fakeJwt()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token: '654321' }),
-    }),
-    {
-      database: fakeDatabase(),
-      verifyAccessToken: async () => userId,
-      verifyReauthentication: async () => null,
-    },
-  );
-  assertEquals(response.status, 403);
-  assertEquals((await response.json()).error.code, 'RECENT_MFA_REQUIRED');
 });
 
 Deno.test('Account API refuses every other Admin route at AAL1', async () => {

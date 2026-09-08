@@ -10,13 +10,13 @@
 |---|---|---|
 | M0 / G0-L | Local已有PASS证据，模块仍IN_PROGRESS | G0-S托管补齐 |
 | M1 / G1 | 基础任务有Local通过记录；候选commit统一复验未运行 | T18-L确认G1 |
-| M2 / G2-L | T12/T16 PARTIAL；T12-R1已交付，T12-R2已补齐Admin MFA与普通proof issuer，但真实浏览器/敏感生命周期仍未收口 | T12-R2证据、T16-R1/R2、T18-L |
+| M2 / G2-L | T12/T16 PARTIAL；T12-R1已交付，T12-R2已完成Admin MFA安全实现但普通proof/浏览器仍未收口 | T12-R2证据、T16-R1/R2、T18-L |
 | G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS | T17-R1/R2/R3、T18-S |
 | M3 / G3 | M3-01～03 Local交付；M3-R1为PARTIAL（SQL/API Local基线通过，剩余G3子情景未补齐） | 补月末/闰年/UTC、影子重放、竞争、禁用顺序、HMAC轮换/响应丢失矩阵，不推定整体G3 PASS |
 | M4～M6 | NOT_STARTED；本次仅计划 | 第三批M4、DP2后续路线 |
 | T18 | WAITING；允许独立整理本地材料 | T18-L与T18-S分层完成，全部条件满足才关闭父任务 |
 
-T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），但证据判定为PARTIAL：本地Auth探针、包单测、类型检查和两个应用构建通过；真实浏览器SSR、OAuth/邮件及应用路由端到端Local回归留给T12-R2/T16-R2/T17-R2。T12-R2已在`task/T12-R2-mfa-reauth`补齐Admin真实MFA挑战、中央recent-proof消费者、HttpOnly proof cookie及中央Admin AAL2入口，并在后续分支登记/实现普通用户reauthentication proof issuer、DTO、SDK与Consumer BFF；验证结果仍为PARTIAL，因为真实浏览器、Local邮件OTP及敏感生命周期未运行，详见`evidence/T12-R2.md`。M4-01已完成合同/恢复矩阵冻结（当前分支 `task/M4-01-file-contract`，运行证据见 `evidence/M4-01.md`），不改变M4实现仍等待T18-L的门槛。T12父任务仍保持PARTIAL。
+T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），但证据判定为PARTIAL：本地Auth探针、包单测、类型检查和两个应用构建通过；真实浏览器SSR、OAuth/邮件及应用路由端到端Local回归留给T12-R2/T16-R2/T17-R2。T12-R2已在`task/T12-R2-mfa-reauth`补齐Admin真实MFA挑战、中央recent-proof消费者、HttpOnly proof cookie及中央Admin AAL2入口，验证结果为PARTIAL；普通用户proof因缺少服务端可验证issuer/认证事件合同仍保持拒绝，真实浏览器链路未运行，详见`evidence/T12-R2.md`。M4-01已完成合同/恢复矩阵冻结（当前分支 `task/M4-01-file-contract`，运行证据见 `evidence/M4-01.md`），不改变M4实现仍等待T18-L的门槛。T12父任务仍保持PARTIAL。
 
 M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；没有生成Registry或正式包，也未改变M4字段假设。M5-02/03/04仍分别等待前置任务和M4稳定。
 
@@ -29,7 +29,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
-- 当前下一项：完成T12-R2真实普通proof/Admin MFA浏览器与敏感生命周期子集；M3-R1、T17-R1、M4-01、M5-01仍有独立范围，但T12-R2完成前不关闭T12或派发T16-R1。
+- 当前下一项：先完成T12-R2普通proof合同/issuer与真实浏览器子集；M3-R1、T17-R1、M4-01、M5-01仍有独立范围，但T12-R2完成前不关闭T12或派发T16-R1。
 - 本轮已在独立任务分支执行T12-R1、T12-R2安全实现、M4-01和M3-R1 SQL/API基线范围内验证；未执行的浏览器、托管、Storage及生产项仍保持NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实

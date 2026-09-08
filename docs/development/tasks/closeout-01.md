@@ -7,7 +7,7 @@
 | ID | 交付 | 依赖任务 | 初始状态 |
 |---|---|---|---|
 | T12-R1 | 真实 Auth/SSR adapter 与会话范围 | 无 | PARTIAL（实现提交 aa5089d；证据见 T12-R1） |
-| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | PARTIAL（Admin MFA链与普通proof issuer已实现；真实浏览器回归未完成，证据见 T12-R2） |
+| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | PARTIAL（Admin MFA链已实现；普通proof与真实浏览器回归未完成，证据见 T12-R2） |
 | T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | WAITING |
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | WAITING |
 | T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |
@@ -41,7 +41,7 @@
 - 依赖任务：T12-R2。
 - 已有基础：T13～T15 SQL/SDK和M3中央Account API；逐方法复用，不另写账户或权益算法。
 - 改动目录：中央HTTP adapter、`packages/account-server`、`apps/admin`、`apps/template-preview`、必要领域包装/迁移及合同测试。
-- 步骤：逐条对照当前18个Account及32个Admin OpenAPI操作（已含Admin recent-proof与普通recent-proof），标记SQL/HTTP/SDK/BFF/UI/测试层实际覆盖。补M2的close、delete-request、Profile/Preferences及最小业务保护页；补平台创建/更新/读取、Origin配置、Key创建/轮换/撤销、账户suspend/restore/close的必要管理入口。缺SQL包装时补受控领域函数，不让UI直写表。
+- 步骤：逐条对照当前17个Account及32个Admin OpenAPI操作（已含Admin recent-proof），若T12-R2新增操作则同步数量，标记SQL/HTTP/SDK/BFF/UI/测试层实际覆盖。补M2的close、delete-request、Profile/Preferences及最小业务保护页；补平台创建/更新/读取、Origin配置、Key创建/轮换/撤销、账户suspend/restore/close的必要管理入口。缺SQL包装时补受控领域函数，不让UI直写表。
 - 平台Key操作响应丢失按operation元数据追踪、撤未知交付Key再新建；Origin管理给出synced/drift/error，托管同步实测留T17-R2。M3资源由M3-R1追踪，M4资源仍contract-only；M5负责完整列表体验，不承接本任务必须的授权能力。
 - 提交边界：按覆盖表与合同、平台/Origin入口、Key交付轮换、账户敏感路径、最小表单集成分小提交逐项验证；若一个子项涉及多个公共合同或难回退迁移，再拆实施子任务，不把本收尾范围做成一次大迁移。
 - 验收：V-ACCOUNT-01～05、V-SDK-01/02及V-UI-01最小账户子集；真实HTTP→SQL的428/412、64KiB边界、跨目标404、停用/撤Key后拒绝、中央故障503；敏感写入与Audit同事务。创建平台不得要求手工SQL成为正常产品流程。

@@ -10,7 +10,7 @@
 
 | 资源 | 领域入口 | HTTP/OpenAPI | SDK | 当前UI/消费者 | 缺口承接 |
 |---|---|---|---|---|---|
-| 平台/Origin/Key/账户 | M2 SQL与Account/Admin部分入口 | 18 Account、32 Admin已冻结；部分操作仍contract-only | `account-server`已有recent-proof/principal/activate/profile/preferences/subscription/redeem子集 | Admin仅最小登录/首页；Consumer仅登录、Pricing、Subscription及reauth BFF | T16-R1补授权能力，M5-03补列表/筛选/轮换/状态页面 |
+| 平台/Origin/Key/账户 | M2 SQL与Account/Admin部分入口 | 17 Account、32 Admin已冻结；部分操作仍contract-only | `account-server`已有principal/activate/profile/preferences/subscription/redeem子集 | Admin仅最小登录/首页；Consumer仅登录、Pricing、Subscription | T16-R1补授权能力，M5-03补列表/筛选/轮换/状态页面 |
 | Plan/订阅/批次/Code | M3 Local SQL、Account API、Admin计划/批次/订阅路由 | Admin路径已有Local-only实现，完整错误/分页/UI未成品 | `account-server`仅订阅读取/兑换方法 | Consumer Subscription已有基础页；无批次/Code成品管理 | M3-R1补证据；M5-03补Admin；M5-04补用户模板 |
 | 文件/策略/删除任务 | M4-01已冻结合同；运行表/函数尚未实现 | Account六个文件操作及Admin file/deletion-jobs为contract-only | 尚无文件方法 | 无文件页面 | T18-L后M4-02～09；M5-03/04在M4-10后接入 |
 | 审计 | M1事务 append 基础 | Admin audit资源已冻结 | 尚无Admin审计SDK | 无审计页 | M5-03补受控只读查询、分页、脱敏详情 |
@@ -38,7 +38,7 @@
 ## 4. 兼容性风险与冻结点
 
 1. M4文件字段仍以M4-01冻结附录为准；M4-10前不在M5猜测status、write_outcome、预算或删除job字段。
-2. T12-R2普通用户近期认证已有安全发行入口；M5不能用JWT `iat`、AAL或前端flag代替proof，敏感模板仍须等待真实浏览器与消费链路回归。
+2. T12-R2普通用户近期认证仍缺安全发行入口；M5不能用JWT `iat`、AAL或前端flag代替proof，敏感模板必须保持拒绝。
 3. Admin的Key创建/轮换、批次交付确认、敏感MFA过期恢复必须保留非Secret输入并重新验证，不能在UI中恢复明文Key/Code。
 4. 依赖清单须保留固定pnpm/Node/Next版本和锁文件；不引入React Admin、Refine或第二套Query/Form/UI框架。
 5. M5-01仅完成覆盖盘点和承接映射；M5-02/03/04各自交付真实代码与测试，M5-05才判定G5-L，M5-06另需X05及明确发布授权。

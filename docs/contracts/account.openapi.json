@@ -48,26 +48,6 @@
         }
       }
     },
-    "/v1/auth/recent-proof": {
-      "post": {
-        "operationId": "issueRecentAuthProof",
-        "tags": ["account"],
-        "x-module": "M2",
-        "x-implementation-status": "local-only",
-        "x-reauthentication-event": "supabase-auth-reauthentication-otp",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "$ref": "#/components/requestBodies/Reauthentication"
-        },
-        "responses": {
-          "201": { "$ref": "#/components/responses/RecentAuthProof" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
-        }
-      }
-    },
     "/v1/account/activate": {
       "post": {
         "operationId": "activateAccount",
@@ -451,24 +431,6 @@
           }
         }
       },
-      "Reauthentication": {
-        "required": true,
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "required": ["token"],
-              "properties": {
-                "token": {
-                  "type": "string",
-                  "pattern": "^[0-9]{6}$"
-                }
-              },
-              "additionalProperties": false
-            }
-          }
-        }
-      },
       "UploadIntent": {
         "required": true,
         "content": {
@@ -584,23 +546,6 @@
             "features": {}
           }
         ]
-      },
-      "RecentAuthProof": {
-        "type": "object",
-        "required": ["data", "request_id"],
-        "properties": {
-          "data": {
-            "type": "object",
-            "required": ["proof_id", "expires_at"],
-            "properties": {
-              "proof_id": { "type": "string", "format": "uuid" },
-              "expires_at": { "type": "string", "format": "date-time" }
-            },
-            "additionalProperties": false
-          },
-          "request_id": { "type": "string", "format": "uuid" }
-        },
-        "additionalProperties": false
       },
       "PlanList": {
         "type": "object",
@@ -821,18 +766,6 @@
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/PlanList" }
-          }
-        }
-      },
-      "RecentAuthProof": {
-        "description": "Server-issued proof bound to the current user session for five minutes.",
-        "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "X-Request-Id": { "$ref": "#/components/headers/RequestId" }
-        },
-        "content": {
-          "application/json": {
-            "schema": { "$ref": "#/components/schemas/RecentAuthProof" }
           }
         }
       },

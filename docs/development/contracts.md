@@ -37,7 +37,6 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.check_user_session | M1/auth helper | user/session → active/reason；只读最小Auth列 |
 | private.account_principal | M2/account | ctx → Principal；deletion job门闩优先于lazy identity row创建 |
 | private.account_activate | M2/account | ctx → 唯一账户及状态；资料/偏好/审计同事务 |
-| private.user_recent_auth_proof_issue | M2/auth | user+session+server-verified reauthentication event → replacement proof/5分钟过期；仅account_executor调用，不能由客户端或JWT时间声明触发 |
 | private.account_close | M2/account | ctx+近期证明引用 → closed；不执行Auth删除 |
 | private.profile_get / profile_patch | M2/account | ctx+白名单patch+expected_version → DTO/412 |
 | private.preferences_get / preferences_patch | M2/account | ctx+MergePatch+expected_version → DTO/412 |
@@ -70,7 +69,7 @@ DomainResult<T>为成功data或确定性业务拒绝code/status，不把业务�
 
 Admin Grant必须有operation_id UUID和reason；兑换operation_id来自code.id；source+operation_id永久唯一。重放先重新鉴权。Profiles/Preferences增加row_version bigint（初始1、每次成功patch+1），ETag为服务端生成的不透明版本表示，客户端仅If-Match回传；updated_at仍用于展示。
 
-OpenAPI必须覆盖API专题当前全部18个Account方法/路径组合、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。`POST /v1/auth/recent-proof` 的 token 由中央服务调用 Supabase Auth reauthentication verify 校验后才签发 proof；不能由前端布尔值、JWT `iat` 或单独 AAL2 声明触发。尚未实现路由不应暴露成功假数据。
+OpenAPI必须覆盖API专题当前全部17个Account方法/路径组合、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。新增经过验证的reauth路径后同步更新清单和数量，实际条目由API表抽取核对。尚未实现路由不应暴露成功假数据。
 
 Admin路径固定为/admin/api/v1，具体动作：
 
@@ -86,7 +85,7 @@ Admin列表按平台/目标资源过滤；所有敏感动作使用同一授权�
 
 ## 5. T11冻结产物
 
-T11将Account与Admin的OpenAPI 3.1合同冻结在`docs/contracts/account.openapi.json`和`docs/contracts/admin.openapi.json`，Account基线为17个方法/路径组合；T12-R2追加并登记普通recent-proof后当前为18个。Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计和删除任务资源。所有尚未实现的操作显式标为`contract-only`，不得返回假成功。
+T11将Account与Admin的OpenAPI 3.1合同冻结在`docs/contracts/account.openapi.json`和`docs/contracts/admin.openapi.json`。Account合同固定17个方法/路径组合；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计和删除任务资源。所有尚未实现的操作显式标为`contract-only`，不得返回假成功。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证仍依赖T04服务端session-bound proof，未以合同冻结替代实现。
 
@@ -102,7 +101,7 @@ Storage提供putImmutable/getInfo/download/remove四种受控adapter操作；收
 
 T04已交付Local管理员MFA/proof和logout旧JWT拒绝，T17记录Staging基础Auth/API；这不覆盖普通用户“近期重新认证”、真实SSR和Provider。T12-R1/R2补普通proof、local/global退出范围及回调；不得以JWT iat或前端布尔值代替。Close/Link敏感完成步骤/Global Delete请求不能以弱校验上线。
 
-当前OpenAPI为18个Account、32个Admin操作，Admin已包含recent-proof；不能把数量/结构检查PASS称为所有操作已实现或真实proof生命周期通过。T12-R2已登记并实现普通reauth proof endpoint，仍需真实 Local 邮件/应用链路验证；不得重复新增已有Admin路由。
+当前OpenAPI为17个Account、32个Admin操作，Admin已包含recent-proof；不能把数量/结构检查PASS称为所有操作已实现或真实proof生命周期通过。T12-R2须核对API专题、OpenAPI、DTO/消费者的普通reauth及Admin proof语义，新增reauth endpoint先登记合同再实现，不重复新增已有Admin路由。
 
 SP-SQL确认Auth表实际可授予列与pooler角色形式；SP-UPLOAD确认真实host取消语义。发现必须改变上述合同的情况按决策登记处理，不由agent自行选择安全降级。
 
