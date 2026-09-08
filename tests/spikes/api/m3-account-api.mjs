@@ -350,6 +350,21 @@ try {
   assertStatus(redeemResponse, 200, 'redeem');
   const redeemed = await json(redeemResponse);
   assert.equal(redeemed.data.plan.code, 'pro');
+  const responseLostRetry = await apiRequest(
+    '/functions/v1/account-api/v1/subscription/redeem',
+    {
+      method: 'POST',
+      headers: {
+        ...keyHeaders,
+        Authorization: `Bearer ${user.accessToken}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'm3-api-redeem-1',
+      },
+      body: JSON.stringify({ code: batch.data.codes[0].code }),
+    },
+  );
+  assertStatus(responseLostRetry, 200, 'response-lost retry');
+  assert.equal((await json(responseLostRetry)).data.plan.code, 'pro');
 
   const adminSubscriptionResponse = await apiRequest(
     `/functions/v1/account-api/admin/api/v1/subscriptions/${accountId}?platform_id=${platformId}`,
@@ -428,6 +443,7 @@ try {
       adminPlan: 'PASS',
       batchDelivery: 'PASS',
       batchList: 'PASS',
+      responseLostRetry: 'PASS',
       redemption: 'PASS',
       adminSubscription: 'PASS',
       pauseResume: 'PASS',
