@@ -9,8 +9,8 @@
 | T12-R1 | 真实 Auth/SSR adapter 与会话范围 | 无 | PARTIAL（实现提交 aa5089d；证据见 T12-R1） |
 | T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | PASS（Local；Admin浏览器与普通双session proof均已通过，完整Close/Delete消费者由T16-R1承接，证据见 T12-R2） |
 | T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | PASS（Local；M2 HTTP/SDK/BFF/最小管理入口与回归通过，M4/M5/M6及托管仍按原边界） |
-| T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | READY |
-| T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |
+| T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | PASS（Local；双 Origin/Platform、独立上下文、Admin停用恢复、普通敏感操作与bundle扫描通过；CI托管运行仍需接入） |
+| T18-L | G1/G2-L 本地阶段收口 | T16-R2 | READY |
 | M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PASS（Local；证据见 M3-R1） |
 | T17-R1 | 托管独立executor、TLS与网关合同 | 无 | BLOCKED（配置已补；hosted证据见 T17-R1） |
 | T17-R2 | 托管浏览器、Origin、真实Provider | T16-R2,T17-R1 | WAITING |
@@ -53,7 +53,7 @@
 - 改动目录：两个应用的集成页面、`tests`、`tooling/scripts`、根测试脚本、CI及证据。
 - 步骤：两个不同Origin/Platform、独立浏览器上下文，真实登录→回调/刷新→principal→activate→Profile/Preferences→业务保护→Admin停用→再次访问拒绝；共享Global Identity经合法B入口正常使用，A Key不能构造B Principal。
 - 将现有API/SQL/Auth探针接入明确的可复现命令，用真实Local fixture启用`test:api`和`test:e2e`；CI补Local空库/升级、真实角色pgTAP、API负向和浏览器流程。缓存按工具存`E:\AppData\<tool>`，系统工具遵循安装约定；不使用生产凭据。依赖未启动返回明确NOT_RUN/失败，不能跳过后退出0。
-- 验收：V-AUTH-01/02/03、V-ACCOUNT-01～05、V-SDK-01/02；两用户Cookie隔离、CSRF/returnTo、AAL1拒绝、proof过期、停用/中央不可用拒绝、Browser bundle无后端凭据。保留失败fixture和回归用例，脱敏报告绑定commit。
+- 验收：V-AUTH-01/02/03、V-ACCOUNT-01～05、V-SDK-01/02；两用户Cookie隔离、CSRF/returnTo、AAL1拒绝、proof过期、停用/中央不可用拒绝、Browser bundle无后端凭据。保留失败fixture和回归用例，脱敏报告绑定commit。T16-R2 Local runner 已接入 `pnpm run test:e2e`，真实 Chrome 流程通过；托管 CI 执行链接和外部服务矩阵仍不宣称完成。
 - 交接：测试入口、环境准备和清理步骤、CI实际运行链接；仅工作流定义不算CI PASS。
 
 ## T18-L — 本地阶段收口
