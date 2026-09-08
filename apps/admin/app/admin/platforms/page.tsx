@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
 
 type Platform = {
@@ -57,6 +58,10 @@ export default function PlatformsPage() {
   const [origins, setOrigins] = useState<Origin[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [keys, setKeys] = useState<Key[]>([]);
+  const [platformFilter, setPlatformFilter] = useState('');
+  const [originFilter, setOriginFilter] = useState('');
+  const [keyFilter, setKeyFilter] = useState('');
+  const [accountFilter, setAccountFilter] = useState('');
   const [status, setStatus] = useState('正在读取平台…');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -243,6 +248,26 @@ export default function PlatformsPage() {
   const selected = platforms.find(
     (platform) => platform.platform_id === selectedId,
   );
+  const visiblePlatforms = platforms.filter((platform) =>
+    `${platform.code} ${platform.name} ${platform.status}`
+      .toLowerCase()
+      .includes(platformFilter.trim().toLowerCase()),
+  );
+  const visibleOrigins = origins.filter((item) =>
+    `${item.environment} ${item.origin} ${item.status}`
+      .toLowerCase()
+      .includes(originFilter.trim().toLowerCase()),
+  );
+  const visibleKeys = keys.filter((item) =>
+    `${item.name} ${item.status} ${item.key_prefix} ${item.key_suffix}`
+      .toLowerCase()
+      .includes(keyFilter.trim().toLowerCase()),
+  );
+  const visibleAccounts = accounts.filter((account) =>
+    `${account.user_id ?? ''} ${account.status}`
+      .toLowerCase()
+      .includes(accountFilter.trim().toLowerCase()),
+  );
 
   return (
     <main className="shell wide-shell">
@@ -273,8 +298,15 @@ export default function PlatformsPage() {
             <button type="submit">创建平台</button>
           </form>
           <h2>平台列表</h2>
+          <AdminFilterInput
+            id="platform-filter"
+            label="筛选平台"
+            value={platformFilter}
+            onChange={setPlatformFilter}
+            placeholder="code、name 或 status"
+          />
           <ul className="data-list">
-            {platforms.map((platform) => (
+            {visiblePlatforms.map((platform) => (
               <li key={platform.platform_id}>
                 <button
                   type="button"
@@ -307,8 +339,15 @@ export default function PlatformsPage() {
                 />
                 <button type="submit">登记 Origin</button>
               </form>
+              <AdminFilterInput
+                id="origin-filter"
+                label="筛选 Origin"
+                value={originFilter}
+                onChange={setOriginFilter}
+                placeholder="environment、origin 或 status"
+              />
               <ul className="data-list">
-                {origins.map((item) => (
+                {visibleOrigins.map((item) => (
                   <li key={item.origin_id}>
                     <strong>{item.environment}</strong>
                     <span>
@@ -326,8 +365,15 @@ export default function PlatformsPage() {
                 />
                 <button type="submit">创建 Key（需近期 MFA）</button>
               </form>
+              <AdminFilterInput
+                id="key-filter"
+                label="筛选 Key"
+                value={keyFilter}
+                onChange={setKeyFilter}
+                placeholder="name、status 或 suffix"
+              />
               <ul className="data-list">
-                {keys.map((item) => (
+                {visibleKeys.map((item) => (
                   <li key={item.key_id}>
                     <strong>{item.name}</strong>
                     <span>
@@ -375,11 +421,18 @@ export default function PlatformsPage() {
           maxLength={500}
           placeholder="例如：support review completed"
         />
-        {accounts.length === 0 ? (
+        <AdminFilterInput
+          id="account-filter"
+          label="筛选账户"
+          value={accountFilter}
+          onChange={setAccountFilter}
+          placeholder="user ID 或 status"
+        />
+        {visibleAccounts.length === 0 ? (
           <p className="muted">暂无账户。</p>
         ) : (
           <ul className="data-list">
-            {accounts.map((account) => (
+            {visibleAccounts.map((account) => (
               <li key={account.platform_account_id}>
                 <strong>{account.user_id ?? 'anonymized'}</strong>
                 <span>
