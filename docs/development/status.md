@@ -25,7 +25,7 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过；G0-L 为 PASS。Staging 项目已完成控制台只读连通性核对，公共 Auth 健康探针已返回 200，但 G0-S 的数据库/API/Edge/迁移实测仍 BLOCKED：当前工作进程没有可用的 Staging 数据库连接或 CLI 部署凭据，且项目仅有历史 0001/0002 迁移。
+M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过；G0-L 为 PASS。Staging 项目公共 Auth 健康探针已返回 200，但 G0-S 仍 BLOCKED：该项目存在另一套 `platform.*` 业务模型、旧 Edge Functions 和既有数据，和仓库 `public.*`/`private.*` 迁移基线不一致，不能直接混合部署。
 
 当前任务状态：T01～T11、T13～T15已完成；T04 Local JWT/logout/proof 子项已完成，真实 Provider 与浏览器 SSR 留给 T17；T12与T16为PARTIAL；T17、T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，证据见[evidence/M3.md](evidence/M3.md)；G0-L 证据见[evidence/G0-L.md](evidence/G0-L.md)，G0-S 已完成公共 Auth 连通性核对但整体仍 BLOCKED，证据见[evidence/G0-S.md](evidence/G0-S.md)。
 
