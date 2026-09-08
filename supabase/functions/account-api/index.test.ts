@@ -82,6 +82,88 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
+          if (query.startsWith('select private.admin_step_up_valid')) {
+            return [{ valid: true }] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_platform_list')) {
+            return [
+              {
+                platform_id: platformId,
+                code: 'fixture',
+                name: 'Fixture',
+                status: 'active',
+                allow_activation: true,
+              },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_platform_get')) {
+            return [
+              {
+                platform_id: platformId,
+                code: 'fixture',
+                name: 'Fixture',
+                status: 'active',
+                allow_activation: true,
+              },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_platform_update')) {
+            return [
+              {
+                platform_id: platformId,
+                status: 'disabled',
+                allow_activation: false,
+              },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_origin_list')) {
+            return [
+              { origin_id: platformId, environment: 'local' },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_account_list')) {
+            return [
+              { platform_account_id: sessionId, status: 'active' },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_account_get')) {
+            return [
+              { platform_account_id: sessionId, status: 'active' },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_account_patch')) {
+            return [
+              {
+                platform_account_id: sessionId,
+                user_id: userId,
+                status: 'suspended',
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_platform_key_list')
+          ) {
+            return [{ key_id: keyId, status: 'active' }] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_platform_key_create')
+          ) {
+            return [
+              { key_id: keyId, platform_id: platformId, status: 'active' },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_account_transition')
+          ) {
+            return [
+              { platform_account_id: sessionId, status: 'suspended' },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_platform_key_revoke')
+          ) {
+            return [{ key_id: keyId, status: 'revoked' }] as unknown as R[];
+          }
           if (
             query.startsWith(
               'select * from private.user_recent_auth_proof_issue',
@@ -108,6 +190,18 @@ function fakeDatabase() {
                 next_transition_at: null,
                 evaluated_at: new Date('2026-09-07T00:00:00Z'),
               },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.account_close')) {
+            return [
+              { platform_account_id: sessionId, account_status: 'closed' },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.identity_delete_request')
+          ) {
+            return [
+              { request_id: sessionId, state: 'pending_admin' },
             ] as unknown as R[];
           }
           return [] as R[];
@@ -433,6 +527,80 @@ Deno.test('Account API rejects ordinary proof without a separate event session',
   );
   assertEquals(response.status, 403);
   assertEquals((await response.json()).error.code, 'RECENT_MFA_REQUIRED');
+});
+
+Deno.test('Account API exposes the M2 account close and delete-request wrappers', async () => {
+  const headers = {
+    Authorization: `Bearer ${fakeJwt()}`,
+    'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+    'X-Recent-Auth-Proof': '00000000-0000-4000-8000-000000000009',
+  };
+  const close = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/account/close', {
+      method: 'POST',
+      headers,
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(close.status, 200);
+  assertEquals((await close.json()).data.account_status, 'closed');
+
+  const deletion = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/identity/delete-request',
+      { method: 'POST', headers },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(deletion.status, 202);
+  assertEquals((await deletion.json()).data.state, 'pending_admin');
+});
+
+Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async () => {
+  const list = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/platforms',
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(list.status, 200);
+  assertEquals((await list.json()).data[0].code, 'fixture');
+
+  const key = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/platforms/00000000-0000-4000-8000-000000000001/keys',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'X-Recent-Auth-Proof': '00000000-0000-4000-8000-000000000009',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: 'fixture-key' }),
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(key.status, 201);
+  assertEquals((await key.json()).data.status, 'active');
 });
 
 Deno.test('Account API refuses every other Admin route at AAL1', async () => {

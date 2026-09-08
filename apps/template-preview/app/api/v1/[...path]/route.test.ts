@@ -141,4 +141,29 @@ describe('template consumer BFF', () => {
     });
     expect(fetchMock).toHaveBeenCalledOnce();
   });
+
+  it('requires the HttpOnly recent-auth proof for account close', async () => {
+    process.env.ACCOUNT_API_URL = 'https://account.example.test';
+    process.env.PLATFORM_KEY = 'phk_server_only_fixture';
+    process.env.CONSUMER_ORIGIN = 'https://consumer-a.example.test';
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const response = await POST(
+      request('account/close', {
+        method: 'POST',
+        headers: {
+          origin: 'https://consumer-a.example.test',
+          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          'x-csrf-token': 'csrf-1',
+        },
+      }),
+      { params: Promise.resolve({ path: ['account', 'close'] }) },
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      error: { code: 'RECENT_MFA_REQUIRED' },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

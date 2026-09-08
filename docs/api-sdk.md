@@ -11,6 +11,7 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 | GET /v1/plans | 不需要用户；不建立账户 | 必需、平台active | 仅公开active套餐字段 |
 | GET /v1/account/principal | 有效用户/会话 | 必需 | 可返回not_activated/suspended/closed/disabled状态供界面提示 |
 | POST /v1/account/activate | 有效用户、非Admin、非deleting | 必需、平台active | 仅首次需要allow_activation |
+| POST /v1/auth/recent-proof | 当前业务会话 + 独立 email `token_hash` 事件会话 | 不需要Platform Key | 服务端校验同user、事件session及5分钟窗口，仅签发绑定原业务session的proof |
 | POST /v1/account/close | active或suspended用户、近期重新认证 | 必需、平台active | 幂等关闭；closed返回既有状态 |
 | GET /v1/profile | active账户 | 必需、平台active | 自身资料 |
 | PATCH /v1/profile | active账户 | 必需、平台active | 白名单字段更新 |

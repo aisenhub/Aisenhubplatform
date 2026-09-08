@@ -71,6 +71,43 @@ describe('account API server client', () => {
     });
   });
 
+  it('forwards recent proof only as a server-side header for sensitive account actions', async () => {
+    const requests: Array<{
+      url: string;
+      init: { method: string; headers: Readonly<Record<string, string>> };
+    }> = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      fetcher: async (url, init) => {
+        requests.push({ url, init });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: { account_status: 'closed' },
+            request_id: 'req-1',
+          }),
+        };
+      },
+    });
+
+    await client.closeAccount(
+      'access-token',
+      '00000000-0000-4000-8000-000000000009',
+    );
+    expect(requests[0]).toMatchObject({
+      url: 'https://account.example.invalid/v1/account/close',
+      init: {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer access-token',
+          'X-Recent-Auth-Proof': '00000000-0000-4000-8000-000000000009',
+        },
+      },
+    });
+  });
+
   it('maps central API errors without exposing the upstream message', async () => {
     const client = createAccountApiClient({
       baseUrl: 'https://account.example.invalid',

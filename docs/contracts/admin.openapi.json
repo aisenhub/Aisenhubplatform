@@ -26,7 +26,7 @@
       "get": {
         "operationId": "adminListPlatforms",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "responses": {
           "200": { "$ref": "#/components/responses/Page" },
@@ -37,7 +37,7 @@
       "post": {
         "operationId": "adminCreatePlatform",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
@@ -51,7 +51,7 @@
       "get": {
         "operationId": "adminGetPlatform",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "responses": {
@@ -62,7 +62,7 @@
       "patch": {
         "operationId": "adminPatchPlatform",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
@@ -77,7 +77,7 @@
       "get": {
         "operationId": "adminListOrigins",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "responses": {
@@ -88,7 +88,7 @@
       "post": {
         "operationId": "adminCreateOrigin",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
@@ -103,7 +103,7 @@
       "get": {
         "operationId": "adminListAccounts",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "responses": {
@@ -116,7 +116,7 @@
       "get": {
         "operationId": "adminGetAccount",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -130,7 +130,7 @@
       "patch": {
         "operationId": "adminPatchAccount",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -148,7 +148,7 @@
       "post": {
         "operationId": "adminSuspendAccount",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
@@ -167,7 +167,7 @@
       "post": {
         "operationId": "adminRestoreAccount",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -183,7 +183,7 @@
       "post": {
         "operationId": "adminCloseAccount",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
@@ -202,7 +202,7 @@
       "get": {
         "operationId": "adminListPlatformKeys",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "responses": { "200": { "$ref": "#/components/responses/Page" } }
@@ -210,7 +210,7 @@
       "post": {
         "operationId": "adminCreatePlatformKey",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
@@ -225,7 +225,7 @@
       "post": {
         "operationId": "adminRevokePlatformKey",
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [

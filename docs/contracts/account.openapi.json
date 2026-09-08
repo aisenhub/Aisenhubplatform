@@ -91,11 +91,13 @@
         "operationId": "closeAccount",
         "tags": ["account"],
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
-        "x-blocked-by": ["T04", "SP-AUTH"],
+        "x-implementation-status": "local-only",
         "x-requires-recent-auth": true,
         "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/RecentAuthProof" }
+        ],
         "responses": {
           "200": { "$ref": "#/components/responses/Principal" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
@@ -354,11 +356,13 @@
         "operationId": "createIdentityDeleteRequest",
         "tags": ["identity"],
         "x-module": "M2",
-        "x-implementation-status": "contract-only",
-        "x-blocked-by": ["T04", "SP-AUTH"],
+        "x-implementation-status": "local-only",
         "x-requires-recent-auth": true,
         "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/RecentAuthProof" }
+        ],
         "responses": {
           "202": { "$ref": "#/components/responses/DeleteRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
@@ -418,6 +422,13 @@
         "required": true,
         "description": "Short-lived server-to-server token for the independently verified email-auth event. Never returned to the browser.",
         "schema": { "type": "string", "minLength": 16, "maxLength": 4096 }
+      },
+      "RecentAuthProof": {
+        "name": "X-Recent-Auth-Proof",
+        "in": "header",
+        "required": true,
+        "description": "Opaque server-issued proof bound to the current account session.",
+        "schema": { "type": "string", "format": "uuid" }
       }
     },
     "requestBodies": {

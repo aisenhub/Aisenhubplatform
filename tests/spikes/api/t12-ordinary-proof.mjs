@@ -160,8 +160,20 @@ async function readMailpitToken() {
 }
 
 async function cleanup() {
+  await sql`delete from public.audit_logs where platform_id = ${platformId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.platform_accounts where platform_id = ${platformId}`.catch(
+    () => undefined,
+  );
   if (userId) {
     await sql`delete from private.user_recent_auth_proofs where user_id = ${userId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from private.deletion_jobs where user_id = ${userId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from private.deletion_requests where user_id = ${userId}`.catch(
       () => undefined,
     );
     await sql`delete from auth.sessions where user_id = ${userId}`.catch(
@@ -225,6 +237,18 @@ try {
       (${keyId}, ${platformId}, 'T12 ordinary proof', ${keyHmac}, 1, 'phk_v1', 'inary', ${crypto.randomUUID()})
   `;
 
+  const activate = await fetch(
+    `${apiUrl}/functions/v1/account-api/v1/account/activate`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${currentAccessToken}`,
+        'X-Platform-Key': presentedKey,
+      },
+    },
+  );
+  assertStatus(activate, 200, 'ordinary account activation');
+
   const otp = await authRequest('/auth/v1/otp', {
     method: 'POST',
     body: JSON.stringify({ email: userEmail, create_user: false }),
@@ -273,6 +297,24 @@ try {
     live: true,
   });
 
+  const proofHeaders = {
+    Authorization: `Bearer ${currentAccessToken}`,
+    'X-Platform-Key': presentedKey,
+    'X-Recent-Auth-Proof': proofId,
+  };
+  const deleteRequest = await fetch(
+    `${apiUrl}/functions/v1/account-api/v1/identity/delete-request`,
+    { method: 'POST', headers: proofHeaders },
+  );
+  assertStatus(deleteRequest, 202, 'ordinary pending global delete request');
+  assert.equal((await deleteRequest.json()).data.state, 'pending_admin');
+  const close = await fetch(
+    `${apiUrl}/functions/v1/account-api/v1/account/close`,
+    { method: 'POST', headers: proofHeaders },
+  );
+  assertStatus(close, 200, 'ordinary account close');
+  assert.equal((await close.json()).data.account_status, 'closed');
+
   const revoke = await authRequest('/auth/v1/logout', {
     method: 'POST',
     headers: { Authorization: `Bearer ${eventAccessToken}` },
@@ -291,6 +333,8 @@ try {
       independentSession: 'PASS',
       centralProof: 'PASS',
       originalSessionBinding: 'PASS',
+      pendingGlobalDelete: 'PASS',
+      accountClose: 'PASS',
       temporarySessionRevoked: 'PASS',
     }),
   );
