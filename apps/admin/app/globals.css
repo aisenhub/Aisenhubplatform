@@ -19,6 +19,27 @@ body {
   margin: 0 auto;
   padding: 8rem 1.5rem;
 }
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #dce2ef;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+.admin-nav a {
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.45rem;
+  color: #5267d8;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.admin-nav a:hover,
+.admin-nav a:focus-visible {
+  background: #eef1ff;
+}
 .wide-shell {
   max-width: 70rem;
 }
@@ -56,6 +77,18 @@ input {
   border: 1px solid #c7d0e1;
   border-radius: 0.5rem;
   font: inherit;
+}
+textarea,
+select {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #c7d0e1;
+  border-radius: 0.5rem;
+  font: inherit;
+}
+textarea {
+  min-height: 7rem;
+  resize: vertical;
 }
 button {
   min-height: 2.75rem;
@@ -107,6 +140,40 @@ h3 {
 .data-list span {
   color: #62708a;
   text-align: right;
+}
+.detail-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+.detail-list div {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e7ebf4;
+}
+.detail-list dt {
+  color: #62708a;
+}
+.detail-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.data-table {
+  overflow-x: auto;
+}
+.data-table-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.5fr 0.8fr;
+  min-width: 42rem;
+  gap: 0.75rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid #e7ebf4;
+}
+.data-table-head {
+  color: #62708a;
+  font-weight: 700;
 }
 .section-heading,
 .file-row {

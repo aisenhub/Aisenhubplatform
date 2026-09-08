@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { AdminNav } from '../components/admin-nav';
 
 type Job = {
   job_id: string;
@@ -89,6 +90,7 @@ export default function AdminDeletionJobsPage() {
 
   return (
     <main className="shell wide-shell">
+      <AdminNav />
       <p className="eyebrow">Aisenhub Admin · M4</p>
       <h1>Deletion jobs</h1>
       <p className="muted">

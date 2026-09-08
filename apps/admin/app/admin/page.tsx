@@ -1,6 +1,9 @@
+import { AdminNav } from './components/admin-nav';
+
 export default function AdminHomePage() {
   return (
     <main className="shell">
+      <AdminNav />
       <p className="eyebrow">Aisenhub Admin</p>
       <h1>Admin control center</h1>
       <p className="muted">
@@ -32,6 +35,22 @@ export default function AdminHomePage() {
         <span>平台、Origin、账户状态和 Key 生命周期均经 Admin API。</span>
         <a className="link" href="/admin/platforms">
           打开 M2 Platform Operations
+        </a>
+      </div>
+      <div className="panel">
+        <strong>继续到订阅</strong>
+        <span>
+          读取订阅投影并提交带原因、operation_id 和近期 MFA 的受控命令。
+        </span>
+        <a className="link" href="/admin/subscriptions">
+          打开 Subscription Operations
+        </a>
+      </div>
+      <div className="panel">
+        <strong>查看审计</strong>
+        <span>只读筛选审计记录；后端尚未实现时明确显示 contract-only。</span>
+        <a className="link" href="/admin/audit">
+          打开 Audit Log
         </a>
       </div>
     </main>

@@ -35,7 +35,7 @@
 |---|---|---|---|
 | M5-01 | 资源/包/模板差距与兼容矩阵 | 无 | DONE（盘点交付；见 m5-compatibility-matrix.md） |
 | M5-02 | 三SDK可安装版本产物 | M5-01,M4-10 | PASS（Local tarball；未发布） |
-| M5-03 | Admin资源与错误状态完善 | M5-01,M4-10,M3-R1 | WAITING |
+| M5-03 | Admin资源与错误状态完善 | M5-01,M4-10,M3-R1 | IN_PROGRESS（资源导航、订阅/审计首批） |
 | M5-04 | Registry与完整用户模板 | M5-02 | WAITING |
 | M5-05 | 全新Consumer实际安装验收 | M5-03,M5-04 | WAITING |
 | M5-06 | 正式scope/Registry发布与安装 | M5-05 | WAITING（另需X05及发布授权） |

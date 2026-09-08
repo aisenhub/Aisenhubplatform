@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AdminNav } from '../components/admin-nav';
 
 type Platform = {
   platform_id: string;
@@ -202,6 +203,7 @@ export default function PlatformsPage() {
 
   return (
     <main className="shell wide-shell">
+      <AdminNav />
       <p className="eyebrow">Aisenhub Admin · M2</p>
       <h1>Platform operations</h1>
       <p className="muted">

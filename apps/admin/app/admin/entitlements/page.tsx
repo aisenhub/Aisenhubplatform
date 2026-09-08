@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AdminNav } from '../components/admin-nav';
 
 type Plan = {
   plan_id: string;
@@ -109,6 +110,7 @@ export default function EntitlementsPage() {
 
   return (
     <main className="shell wide-shell">
+      <AdminNav />
       <p className="eyebrow">Aisenhub Admin · M3</p>
       <h1>Entitlements console</h1>
       <p className="muted">

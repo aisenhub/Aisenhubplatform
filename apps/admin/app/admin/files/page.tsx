@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AdminNav } from '../components/admin-nav';
 
 type Platform = { platform_id: string; code: string; name: string };
 type Policy = {
@@ -155,6 +156,7 @@ export default function AdminFilesPage() {
 
   return (
     <main className="shell wide-shell">
+      <AdminNav />
       <p className="eyebrow">Aisenhub Admin · M4</p>
       <h1>File operations</h1>
       <p className="muted">
