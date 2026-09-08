@@ -12,7 +12,7 @@
 | M1 / G1 | 基础任务有Local通过记录；候选commit统一复验未运行 | T18-L确认G1 |
 | M2 / G2-L | T12/T16 PARTIAL；T12-R1已交付，T12-R2已完成Admin MFA安全实现但普通proof/浏览器仍未收口 | T12-R2证据、T16-R1/R2、T18-L |
 | G0-S / G2-S | T17 PARTIAL，基础Auth/API有历史PASS | T17-R1/R2/R3、T18-S |
-| M3 / G3 | M3-01～03 Local交付；M3-R1为PARTIAL（SQL通过，API fixture singleton阻塞） | 受控Local fixture隔离后重跑M3-R1，不推定整体G3 PASS |
+| M3 / G3 | M3-01～03 Local交付；M3-R1为PARTIAL（SQL/API Local基线通过，剩余G3子情景未补齐） | 补月末/闰年/UTC、影子重放、竞争、禁用顺序、HMAC轮换/响应丢失矩阵，不推定整体G3 PASS |
 | M4～M6 | NOT_STARTED；本次仅计划 | 第三批M4、DP2后续路线 |
 | T18 | WAITING；允许独立整理本地材料 | T18-L与T18-S分层完成，全部条件满足才关闭父任务 |
 
@@ -30,7 +30,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
 - 当前下一项：先完成T12-R2普通proof合同/issuer与真实浏览器子集；M3-R1、T17-R1、M4-01、M5-01仍有独立范围，但T12-R2完成前不关闭T12或派发T16-R1。
-- 本轮已在独立任务分支执行T12-R1、M4-01和M3-R1的范围内验证；未执行的浏览器、托管、Storage及生产项仍保持NOT_RUN。各任务证据和最终同步以对应分支报告为准。
+- 本轮已在独立任务分支执行T12-R1、T12-R2安全实现、M4-01和M3-R1 SQL/API基线范围内验证；未执行的浏览器、托管、Storage及生产项仍保持NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实
 
@@ -59,7 +59,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 
 M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过 Local 和 Staging 基础链路验收；G0-L 为 PASS。Staging 已清理旧项目基线并应用仓库 13 个迁移，公共 Auth 健康探针返回 200，`account-api` v13 已部署；G0-S 当前为 PARTIAL，X02/X03、托管 pooler/TLS、浏览器 SSR 和 Storage 真实语义仍未完成。
 
-当前任务状态：T01～T11、T13～T15已完成；T04 Local JWT/logout/proof 子项已完成，Staging 基础 Auth/API 与 logout 旧 JWT 拒绝已完成，真实 Provider 与浏览器 SSR 留给 T17；T12与T16为PARTIAL；T17为PARTIAL，T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，M3-R1当前PARTIAL（SQL矩阵通过，中央API探针被既有singleton fixture阻塞），证据见[evidence/M3.md](evidence/M3.md)和[evidence/M3-R1.md](evidence/M3-R1.md)；G0-L 证据见[evidence/G0-L.md](evidence/G0-L.md)，G0-S 已完成 Staging 清理、迁移、Edge 部署和基础 Auth/API 探针，但完整托管门槛仍待完成，证据见[evidence/G0-S.md](evidence/G0-S.md)。
+当前任务状态：T01～T11、T13～T15已完成；T04 Local JWT/logout/proof 子项已完成，Staging 基础 Auth/API 与 logout 旧 JWT 拒绝已完成，真实 Provider 与浏览器 SSR 留给 T17；T12与T16为PARTIAL；T17为PARTIAL，T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，M3-R1当前PARTIAL（SQL/API Local基线已通过，但完整G3子情景仍缺），证据见[evidence/M3.md](evidence/M3.md)和[evidence/M3-R1.md](evidence/M3-R1.md)；G0-L 证据见[evidence/G0-L.md](evidence/G0-L.md)，G0-S 已完成 Staging 清理、迁移、Edge 部署和基础 Auth/API 探针，但完整托管门槛仍待完成，证据见[evidence/G0-S.md](evidence/G0-S.md)。
 
 ## T01 任务交接
 

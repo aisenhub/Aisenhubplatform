@@ -35,6 +35,13 @@ const keyHmac = createHmac('sha256', platformSecret)
 let user;
 let admin;
 let proofId;
+const [existingSystemAdmin] = await sql`
+  select user_id from private.system_admin where singleton_id = 1
+`;
+if (existingSystemAdmin && process.env.M3_ALLOW_SYSTEM_ADMIN_SWAP !== '1')
+  throw new Error(
+    'M3 fixture found an existing system_admin; set M3_ALLOW_SYSTEM_ADMIN_SWAP=1 only for an isolated Local run',
+  );
 const assertStatus = (response, expected, label) => {
   assert.equal(
     response.status,
@@ -189,7 +196,7 @@ try {
     (${paidPlanId}, ${platformId}, 'pro', 'Pro', 'paid', ${sql.json({ quota: 10 })})`;
   await sql`update public.platforms set default_plan_id = ${freePlanId} where id = ${platformId}`;
   await sql`insert into private.platform_api_keys (id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix, creation_operation_id) values (${keyId}, ${platformId}, 'M3 API key', ${keyHmac}, 1, 'phk_v1', 'xture', ${crypto.randomUUID()})`;
-  await sql`insert into private.system_admin (user_id) values (${admin.userId})`;
+  await sql`insert into private.system_admin (user_id) values (${admin.userId}) on conflict (singleton_id) do update set user_id = excluded.user_id`;
   const recentProofResponse = await apiRequest(
     '/functions/v1/account-api/admin/api/v1/auth/recent-proof',
     {
@@ -469,9 +476,14 @@ try {
   await sql`delete from public.platforms where id = ${platformId}`.catch(
     () => undefined,
   );
-  await sql`delete from private.system_admin where user_id = ${admin?.userId}`.catch(
-    () => undefined,
-  );
+  if (existingSystemAdmin)
+    await sql`update private.system_admin set user_id = ${existingSystemAdmin.user_id} where singleton_id = 1`.catch(
+      () => undefined,
+    );
+  else
+    await sql`delete from private.system_admin where singleton_id = 1`.catch(
+      () => undefined,
+    );
   for (const account of [user, admin]) {
     if (!account?.userId) continue;
     await fetch(`${authUrl}/auth/v1/admin/users/${account.userId}`, {

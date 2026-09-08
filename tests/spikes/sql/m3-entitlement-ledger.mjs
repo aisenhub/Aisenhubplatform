@@ -20,6 +20,13 @@ let managedPlanId;
 let targetUser;
 let adminUser;
 let concurrentUser;
+const [existingSystemAdmin] = await sql`
+  select user_id from private.system_admin where singleton_id = 1
+`;
+if (existingSystemAdmin && process.env.M3_ALLOW_SYSTEM_ADMIN_SWAP !== '1')
+  throw new Error(
+    'M3 fixture found an existing system_admin; set M3_ALLOW_SYSTEM_ADMIN_SWAP=1 only for an isolated Local run',
+  );
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -451,5 +458,13 @@ try {
       method: 'DELETE',
       headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
     }).catch(() => undefined);
+  if (existingSystemAdmin)
+    await sql`update private.system_admin set user_id = ${existingSystemAdmin.user_id} where singleton_id = 1`.catch(
+      () => undefined,
+    );
+  else
+    await sql`delete from private.system_admin where singleton_id = 1`.catch(
+      () => undefined,
+    );
   await sql.end({ timeout: 1 }).catch(() => undefined);
 }
