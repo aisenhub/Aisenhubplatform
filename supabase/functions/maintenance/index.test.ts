@@ -44,15 +44,17 @@ function database(): TestDatabase {
                       ? 'delete-step'
                       : query.includes('deletion_job_auth_target')
                         ? 'auth-target'
-                        : query.includes('account_retention_candidates')
-                          ? 'retention-candidates'
-                          : query.includes('account_retention_cleanup')
-                            ? 'retention-cleanup'
-                            : query.includes(
-                                  'deletion_job_backup_barrier_guard',
-                                )
-                              ? 'barrier-guard'
-                              : 'finish',
+                        : query.includes('deletion_job_auth_prepare')
+                          ? 'auth-prepare'
+                          : query.includes('account_retention_candidates')
+                            ? 'retention-candidates'
+                            : query.includes('account_retention_cleanup')
+                              ? 'retention-cleanup'
+                              : query.includes(
+                                    'deletion_job_backup_barrier_guard',
+                                  )
+                                ? 'barrier-guard'
+                                : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -79,6 +81,8 @@ function database(): TestDatabase {
             ] as unknown as T[];
           if (query.includes('deletion_job_auth_target'))
             return [{ user_id: userId }] as unknown as T[];
+          if (query.includes('deletion_job_auth_prepare'))
+            return [{ detached_accounts: 0 }] as unknown as T[];
           if (query.includes('account_retention_candidates'))
             return [{ platform_account_id: accountId }] as unknown as T[];
           if (query.includes('account_retention_cleanup'))
@@ -293,6 +297,9 @@ Deno.test('maintenance gates Auth deletion on provider success before checkpoint
     'begin',
     'role',
     'auth-target',
+    'begin',
+    'role',
+    'auth-prepare',
     `auth-delete:${userId}`,
     'begin',
     'role',

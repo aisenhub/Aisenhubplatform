@@ -111,6 +111,7 @@ try {
   userId = (await signup.json()).user.id;
   await sql`insert into public.platforms (id, code, name, status, allow_activation) values (${platformId}, ${`m4-05-worker-${platformId.slice(0, 8)}`}, 'M4-05 worker fixture', 'active', true)`;
   await sql`insert into public.platform_accounts (id, platform_id, user_id, status) values (${accountId}, ${platformId}, ${userId}, 'active')`;
+  await sql`grant job_executor to postgres`;
   await storageRequest('platform-config-files/' + storagePath, {
     method: 'POST',
     headers: { 'content-type': 'text/plain', 'x-upsert': 'false' },

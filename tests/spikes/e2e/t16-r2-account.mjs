@@ -309,6 +309,7 @@ async function createFixtures() {
   `;
   previousSystemAdmin = systemAdmin?.user_id ?? null;
   await sql`grant account_executor to postgres`;
+  await sql`grant admin_executor to postgres`;
   await sql`
     insert into private.system_admin (user_id)
     values (${adminId})

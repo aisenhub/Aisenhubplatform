@@ -86,7 +86,10 @@ function authAdminAdapter(): AuthAdminAdapter {
       } finally {
         clearTimeout(timer);
       }
-      if (!response.ok) throw new Error('AUTH_DELETE_FAILED');
+      if (!response.ok) {
+        await response.text();
+        throw new Error(`AUTH_DELETE_FAILED_${response.status}`);
+      }
     },
   };
 }
@@ -130,7 +133,16 @@ async function withJobRole<T>(
 }
 
 function errorCode(error: unknown): string {
-  const code = error instanceof Error ? error.message : 'provider_error';
+  const code =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null
+        ? 'message' in error && typeof error.message === 'string'
+          ? error.message
+          : 'code' in error && typeof error.code === 'string'
+            ? error.code
+            : 'provider_error'
+        : 'provider_error';
   return /^[a-z0-9_.-]{1,128}$/iu.test(code) ? code : 'provider_error';
 }
 
@@ -442,6 +454,12 @@ async function deletionJobAuth(
   const userId = uuid(target?.user_id);
   if (!userId)
     return response(503, { error: { code: 'AUTHORIZATION_UNAVAILABLE' } });
+  await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.deletion_job_auth_prepare(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint)',
+      [...jobContext, jobId, leaseFence],
+    ),
+  );
   let failureCode: string | null = null;
   try {
     await (dependencies.authAdapter ?? authAdminAdapter()).deleteUser(userId);
@@ -464,6 +482,7 @@ async function deletionJobAuth(
   return response(failureCode ? 503 : 200, {
     job_id: jobId,
     user_id: userId,
+    error_code: failureCode,
     step: step ?? null,
   });
 }
