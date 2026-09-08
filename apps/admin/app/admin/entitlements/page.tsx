@@ -11,6 +11,8 @@ type Plan = {
   kind: 'free' | 'paid';
   status: 'active' | 'archived';
   is_default: boolean;
+  description?: string | null;
+  features?: Record<string, unknown>;
 };
 
 type Batch = {
@@ -99,6 +101,53 @@ export default function EntitlementsPage() {
     );
     setStatus(
       response.ok ? '计划已提交。' : '计划写入失败，请确认近期认证证明。',
+    );
+    if (response.ok) await load();
+  }
+
+  async function updatePlan(
+    plan: Plan,
+    changes: {
+      status?: 'active' | 'archived';
+      make_default?: boolean;
+      clear_default?: boolean;
+    },
+  ) {
+    if (changes.status === 'archived' && plan.is_default) {
+      setStatus('默认 Free 计划不能直接归档；请先切换或清空默认计划。');
+      return;
+    }
+    if (
+      changes.status === 'archived' &&
+      !window.confirm(`确认归档 Plan ${plan.code}？历史权益不会被删除。`)
+    )
+      return;
+    const response = await fetch(
+      `/api/v1/admin/api/v1/platforms/${platformId}/plans`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: window.location.origin,
+          'X-CSRF-Token': csrfToken(),
+        },
+        body: JSON.stringify({
+          plan_id: plan.plan_id,
+          code: plan.code,
+          name: plan.name,
+          description: plan.description ?? null,
+          kind: plan.kind,
+          features: plan.features ?? {},
+          status: changes.status ?? plan.status,
+          make_default: changes.make_default ?? false,
+          clear_default: changes.clear_default ?? false,
+        }),
+      },
+    );
+    setStatus(
+      response.ok
+        ? `Plan ${plan.code} 已更新。`
+        : 'Plan 更新失败，请确认约束和近期 MFA。',
     );
     if (response.ok) await load();
   }
@@ -226,6 +275,36 @@ export default function EntitlementsPage() {
                   <span>
                     {plan.kind} · {plan.status}
                     {plan.is_default ? ' · default Free' : ''}
+                    {plan.status === 'active' && !plan.is_default ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void updatePlan(plan, { status: 'archived' })
+                        }
+                      >
+                        归档
+                      </button>
+                    ) : null}{' '}
+                    {plan.kind === 'free' && plan.status === 'active' ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void updatePlan(plan, { make_default: true })
+                        }
+                      >
+                        设为默认 Free
+                      </button>
+                    ) : null}{' '}
+                    {plan.is_default ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void updatePlan(plan, { clear_default: true })
+                        }
+                      >
+                        清空默认
+                      </button>
+                    ) : null}
                   </span>
                 </li>
               ))}
