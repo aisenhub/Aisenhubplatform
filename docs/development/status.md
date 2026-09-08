@@ -20,6 +20,8 @@ T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），�
 
 M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；没有生成Registry或正式包，也未改变M4字段假设。M5-02/03/04仍分别等待前置任务和M4稳定。
 
+M6-01已完成环境、Secret、联合备份屏障、manifest、墓碑和告警运维协议设计（见 `m6-operations-protocol.md`）；X02/X04/X05/X06未确认，M6-02～04的真实运维/恢复/容量验证仍未开始。
+
 T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务列出的全部HTTP/Admin/Consumer体验均完成；缺失链路由T16-R1承接，完整体验由M5完善。T04的普通用户reauth、SSR与真实Provider仍有未完成项，不能从Admin proof通过推断普通用户proof通过。
 
 ## DP2本轮规划交付
