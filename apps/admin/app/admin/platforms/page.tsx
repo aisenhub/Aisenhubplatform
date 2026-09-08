@@ -31,6 +31,7 @@ type Key = {
   status: string;
   key_prefix: string;
   key_suffix: string;
+  deployment_confirmed_at: string | null;
 };
 
 function csrfToken(): string {
@@ -198,6 +199,25 @@ export default function PlatformsPage() {
     if (response.ok) await loadSelected();
   }
 
+  async function confirmKeyDeployment(keyId: string) {
+    if (
+      !window.confirm(
+        '确认新 Key 已在目标 BFF/部署环境完成配置？确认后才允许撤销旧 Key。',
+      )
+    )
+      return;
+    const response = await fetch(
+      `/api/v1/admin/api/v1/platforms/${selectedId}/keys/${keyId}/confirm-deployment`,
+      { method: 'POST', headers: mutationHeaders() },
+    );
+    setStatus(
+      response.ok
+        ? 'Key 部署已记录；现在可以显式撤销旧 Key。'
+        : 'Key 部署确认失败，请先完成近期 MFA 并确认目标平台。',
+    );
+    if (response.ok) await loadSelected();
+  }
+
   async function accountAction(
     accountId: string,
     action: 'suspend' | 'restore' | 'close',
@@ -311,8 +331,21 @@ export default function PlatformsPage() {
                   <li key={item.key_id}>
                     <strong>{item.name}</strong>
                     <span>
-                      {item.status} · {item.key_prefix}…{item.key_suffix}{' '}
-                      {item.status === 'active' ? (
+                      {item.status} · {item.key_prefix}…{item.key_suffix} ·{' '}
+                      {item.deployment_confirmed_at
+                        ? '已确认部署'
+                        : '待部署确认'}{' '}
+                      {item.status === 'active' &&
+                      !item.deployment_confirmed_at ? (
+                        <button
+                          type="button"
+                          onClick={() => void confirmKeyDeployment(item.key_id)}
+                        >
+                          确认已部署
+                        </button>
+                      ) : null}{' '}
+                      {item.status === 'active' &&
+                      item.deployment_confirmed_at ? (
                         <button
                           type="button"
                           onClick={() => void revokeKey(item.key_id)}

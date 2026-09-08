@@ -1298,7 +1298,7 @@ async function dispatchAdmin(
     const platformId = keysMatch[1]!;
     if (request.method === 'GET') {
       const rows = await transaction.unsafe<Row>(
-        'select * from private.admin_platform_key_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        'select * from private.admin_platform_key_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
         [...context, platformId],
       );
       return { status: 200, data: rows };
@@ -1340,6 +1340,24 @@ async function dispatchAdmin(
         data: { ...result, presented_key: material.presentedKey },
       };
     }
+  }
+
+  const confirmDeploymentMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/keys\/([^/]+)\/confirm-deployment$/u.exec(
+      path,
+    );
+  if (
+    confirmDeploymentMatch &&
+    UUID.test(confirmDeploymentMatch[1]!) &&
+    UUID.test(confirmDeploymentMatch[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_platform_key_confirm_deployment(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+      [...context, confirmDeploymentMatch[1], confirmDeploymentMatch[2]],
+    );
+    return { status: 200, data: result };
   }
 
   const revokeKeyMatch =

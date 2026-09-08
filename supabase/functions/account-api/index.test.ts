@@ -211,6 +211,19 @@ function fakeDatabase() {
           }
           if (
             query.startsWith(
+              'select * from private.admin_platform_key_confirm_deployment',
+            )
+          ) {
+            return [
+              {
+                key_id: keyId,
+                status: 'active',
+                deployment_confirmed_at: '2026-09-08T00:00:00.000Z',
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
               'select * from private.user_recent_auth_proof_issue',
             )
           ) {
@@ -659,6 +672,25 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(key.status, 201);
   assertEquals((await key.json()).data.status, 'active');
+
+  const deployment = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/platforms/00000000-0000-4000-8000-000000000001/keys/00000000-0000-4000-8000-000000000002/confirm-deployment',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'X-Recent-Auth-Proof': '00000000-0000-4000-8000-000000000009',
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(deployment.status, 200);
+  assertEquals((await deployment.json()).data.status, 'active');
 });
 
 Deno.test('Account API exposes Global Delete job start and list wrappers', async () => {

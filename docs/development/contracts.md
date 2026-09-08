@@ -43,7 +43,7 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.public_plans_list | M2/account | 已验证platform key context → 公开active字段 |
 | private.admin_platform_update | M2/admin | Admin ctx+目标+patch → 平台；platform UPDATE锁 |
 | private.admin_account_transition | M2/admin | Admin ctx+目标+action+reason → suspend/restore/close |
-| private.admin_key_create / admin_key_revoke | M2/admin | Admin ctx+hash/version等 → key metadata；明文不入库 |
+| private.admin_key_create / admin_key_confirm_deployment / admin_key_revoke | M2/admin | Admin ctx+hash/version等 → key metadata；明文不入库；撤旧前必须持久确认新Key已部署 |
 | private.entitlement_read | M3/account | ctx → 标准权益；边界同步重算 |
 | private.entitlement_apply | M3/domain内部 | 已授权操作+source/operationId → Grant/Event/Projection；不授予executor直接调用 |
 | private.redeem_subscription_code | M3/account | ctx+规范化码HMAC+版本+idem → 原子结果 |
@@ -73,7 +73,7 @@ OpenAPI必须覆盖API专题当前全部17个Account方法/路径组合、body/h
 
 Admin路径固定为/admin/api/v1，具体动作：
 
-- platforms：创建/列表/读取/更新；子资源origins、keys、file-policy。
+- platforms：创建/列表/读取/更新；子资源origins、keys（创建、部署确认、撤销）、file-policy。
 - platform-accounts：列表/读取，动作suspend、restore、close。
 - plans：创建/更新/归档，默认Free通过platform更新。
 - redemption-batches：创建、读取、confirm-delivery、disable；codes只读mask和按码disable。
