@@ -31,7 +31,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
-- 当前下一项：继续 M4-09，补齐 Global Delete 的外部 Auth/Storage worker 和备份屏障，再执行 M4-10 G4-L。Close 30 天候选调度已接入 maintenance。T17-R1、M4-01、M5-01仍有独立范围，T18-S继续等待托管输入。
+- 当前下一项：继续 M4-09，完成真实 Supabase Auth/Storage provider 回归和 session revoke 观察，再执行 M4-10 G4-L。Close 30 天候选调度、Storage cleanup、Auth provider boundary 与 backup barrier guard 已接入 Local maintenance。T17-R1、M4-01、M5-01仍有独立范围，T18-S继续等待托管输入。
 - 本轮已在独立任务分支执行T12-R2普通proof合同/issuer、Admin MFA与真实Local浏览器子集、M4-01和M3-R1完整Local SQL/API范围内验证；未执行的托管、Storage及生产项仍保持BLOCKED/NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实

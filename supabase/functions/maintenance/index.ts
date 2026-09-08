@@ -21,8 +21,13 @@ interface Database {
 interface MaintenanceDependencies {
   readonly database?: Database;
   readonly storageAdapter?: StorageAdapter;
+  readonly authAdapter?: AuthAdminAdapter;
   readonly jobToken?: string;
   readonly workerId?: string;
+}
+
+interface AuthAdminAdapter {
+  deleteUser(userId: string): Promise<void>;
 }
 
 const UUID =
@@ -53,6 +58,37 @@ function database(): Database {
 
 function storageAdapter(): StorageAdapter {
   return createSupabaseStorageAdapter();
+}
+
+function authAdminAdapter(): AuthAdminAdapter {
+  const baseUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
+  const secret = Deno.env.get('SUPABASE_SECRET_KEY');
+  if (!baseUrl || !secret) throw new Error('AUTH_NOT_CONFIGURED');
+  return {
+    async deleteUser(userId) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      let response: Response;
+      try {
+        response = await fetch(
+          `${baseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
+          {
+            method: 'DELETE',
+            headers: {
+              apikey: secret,
+              Authorization: `Bearer ${secret}`,
+            },
+            signal: controller.signal,
+          },
+        );
+      } catch {
+        throw new Error('PROVIDER_TIMEOUT');
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!response.ok) throw new Error('AUTH_DELETE_FAILED');
+    },
+  };
 }
 
 function bearer(request: Request): string | null {
@@ -312,6 +348,126 @@ async function deletionJobStep(
   return response(200, result ?? { job_id: jobId, state: 'unknown' });
 }
 
+async function deletionJobFiles(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  const fence = Number(input.fence);
+  const leaseFence = Number(input.lease_fence);
+  if (
+    !jobId ||
+    !Number.isSafeInteger(fence) ||
+    !Number.isSafeInteger(leaseFence) ||
+    Object.keys(input).some(
+      (key) => !['job_id', 'fence', 'lease_fence'].includes(key),
+    )
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id, fence);
+  const files = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.deletion_job_file_list(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint)',
+      [...jobContext, jobId, leaseFence],
+    ),
+  );
+  let failed = false;
+  for (const file of files) {
+    if (file.write_outcome !== 'confirmed') {
+      failed = true;
+      break;
+    }
+    const fileId = uuid(file.file_id);
+    if (!fileId) continue;
+    const result = await cleanupFileId(dependencies, id, fileId);
+    if (result.status >= 500) failed = true;
+  }
+  const [step] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.deletion_job_step(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
+      [
+        ...jobContext,
+        jobId,
+        leaseFence,
+        'personal_data_cleared',
+        failed ? 'blocked' : 'completed',
+        failed ? 'storage_cleanup_pending' : null,
+      ],
+    ),
+  );
+  return response(failed ? 503 : 200, {
+    job_id: jobId,
+    files_seen: files.length,
+    step: step ?? null,
+  });
+}
+
+async function deletionJobAuth(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  const fence = Number(input.fence);
+  const leaseFence = Number(input.lease_fence);
+  if (
+    !jobId ||
+    !Number.isSafeInteger(fence) ||
+    !Number.isSafeInteger(leaseFence) ||
+    Object.keys(input).some(
+      (key) => !['job_id', 'fence', 'lease_fence'].includes(key),
+    )
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id, fence);
+  const [target] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.deletion_job_auth_target(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint)',
+      [...jobContext, jobId, leaseFence],
+    ),
+  );
+  const userId = uuid(target?.user_id);
+  if (!userId)
+    return response(503, { error: { code: 'AUTHORIZATION_UNAVAILABLE' } });
+  let failureCode: string | null = null;
+  try {
+    await (dependencies.authAdapter ?? authAdminAdapter()).deleteUser(userId);
+  } catch (error) {
+    failureCode = errorCode(error);
+  }
+  const [step] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.deletion_job_step(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
+      [
+        ...jobContext,
+        jobId,
+        leaseFence,
+        'auth_deleted',
+        failureCode ? 'blocked' : 'completed',
+        failureCode,
+      ],
+    ),
+  );
+  return response(failureCode ? 503 : 200, {
+    job_id: jobId,
+    user_id: userId,
+    step: step ?? null,
+  });
+}
+
 async function retentionRun(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -372,6 +528,10 @@ export async function handleMaintenanceRequest(
       return await deletionJobClaim(request, dependencies, id);
     if (path === '/maintenance/v1/deletion-jobs/step')
       return await deletionJobStep(request, dependencies, id);
+    if (path === '/maintenance/v1/deletion-jobs/files')
+      return await deletionJobFiles(request, dependencies, id);
+    if (path === '/maintenance/v1/deletion-jobs/auth')
+      return await deletionJobAuth(request, dependencies, id);
     if (path === '/maintenance/v1/accounts/retention')
       return await retentionRun(request, dependencies, id);
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });
