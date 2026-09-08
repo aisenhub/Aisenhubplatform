@@ -562,6 +562,9 @@ async function exerciseAdmin(page, adminTotp) {
   });
   await page.getByRole('heading', { name: 'Platform operations' }).waitFor();
   await page.getByRole('button', { name: platformACode, exact: true }).click();
+  await page
+    .getByLabel('账户状态操作原因（必填，勿含个人信息）')
+    .fill('T16 R2 browser suspend');
   const accountRow = page.locator('li').filter({ hasText: userId });
   const [suspendResponse] = await Promise.all([
     page.waitForResponse(
