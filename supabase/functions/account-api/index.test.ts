@@ -205,6 +205,19 @@ function fakeDatabase() {
               { request_id: sessionId, state: 'pending_admin' },
             ] as unknown as R[];
           }
+          if (query.startsWith('select * from private.file_delete_request')) {
+            return [
+              {
+                file_id: '00000000-0000-4000-8000-000000000010',
+                status: 'deleting',
+                write_outcome: 'confirmed',
+                reserved_bytes: 5,
+                actual_size_bytes: 5,
+                mime_type: 'text/plain',
+                created_at: new Date('2026-09-09T00:00:00Z'),
+              },
+            ] as unknown as R[];
+          }
           return [] as R[];
         },
       });
@@ -749,4 +762,27 @@ Deno.test('Account API settles a bounded upload through the injected Storage ada
   assertEquals(response.status, 202);
   assertEquals((await response.json()).data.status, 'active');
   assertEquals(storagePutCalls, 1);
+});
+
+Deno.test('Account API exposes idempotent file deletion through the account executor', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/config-files/00000000-0000-4000-8000-000000000010',
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Idempotency-Key': 'delete-1',
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 202);
+  assertEquals((await response.json()).data.status, 'deleting');
 });

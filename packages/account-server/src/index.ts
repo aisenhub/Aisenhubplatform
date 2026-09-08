@@ -230,6 +230,11 @@ export interface AccountApiClient {
     body: Uint8Array,
     idempotencyKey: string,
   ) => Promise<ConfigFileDto>;
+  readonly deleteConfigFile: (
+    accessToken: string,
+    fileId: string,
+    idempotencyKey: string,
+  ) => Promise<ConfigFileDto>;
 }
 
 export type AccountApiRequestBody = string | Uint8Array;
@@ -277,7 +282,7 @@ export function createAccountApiClient(input: {
       }));
 
   async function request<T>(options: {
-    readonly method: 'GET' | 'POST' | 'PATCH' | 'PUT';
+    readonly method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
     readonly path: string;
     readonly accessToken?: string;
     readonly ifMatch?: string;
@@ -412,6 +417,13 @@ export function createAccountApiClient(input: {
         idempotencyKey,
         contentType: 'application/octet-stream',
         binaryBody: body,
+      }),
+    deleteConfigFile: (accessToken, fileId, idempotencyKey) =>
+      request<ConfigFileDto>({
+        method: 'DELETE',
+        path: `/v1/config-files/${encodeURIComponent(fileId)}`,
+        accessToken,
+        idempotencyKey,
       }),
   };
 }

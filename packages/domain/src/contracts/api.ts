@@ -110,6 +110,7 @@ export interface UploadIntentDto {
 export interface ConfigFileDto {
   readonly file_id: string;
   readonly status: string;
+  readonly write_outcome: string;
   readonly size: number;
   readonly content_type: string;
   readonly created_at: string;

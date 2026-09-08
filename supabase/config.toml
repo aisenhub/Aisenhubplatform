@@ -110,3 +110,7 @@ enabled = false
 # The adapter serves both platform-key-only plans and user-session routes.
 # Authentication and authorization are enforced per route in index.ts.
 verify_jwt = false
+
+[functions.maintenance]
+# Maintenance authenticates with a server-only job token, independently of a user session.
+verify_jwt = false

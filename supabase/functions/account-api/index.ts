@@ -659,6 +659,20 @@ async function dispatchAccount(
       },
     };
   }
+  const deleteFileMatch = /^v1\/config-files\/([^/]+)$/u.exec(path);
+  if (deleteFileMatch && request.method === 'DELETE') {
+    assertAllowed(row);
+    const fileId = uuidValue(deleteFileMatch[1]);
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (!fileId || !idempotencyKey || idempotencyKey.length > 128)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.file_delete_request(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text)',
+      [...contextValues, fileId, idempotencyKey],
+    );
+    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 202, data: fileDto(result) };
+  }
   if (path === 'v1/account/activate' && request.method === 'POST') {
     const [result] = await transaction.unsafe<Row>(
       'select * from private.account_activate(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',

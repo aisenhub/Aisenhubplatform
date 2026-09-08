@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "file-cleanup",
+      "route": "/maintenance/v1/files/run",
+      "cadence": "every-minute",
+      "body": {}
+    },
+    {
+      "id": "file-reconcile",
+      "route": "/maintenance/v1/files/reconcile",
+      "cadence": "hourly",
+      "body": {}
+    }
+  ]
+}

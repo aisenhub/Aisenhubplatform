@@ -13,9 +13,9 @@ M4-01规格可现在派发；M4实现从M4-02开始，必须取得[收尾任务]
 | M4-01 | 文件/恢复合同与故障矩阵冻结 | 无 | DONE（合同交付；证据见 M4-01） |
 | M4-02 | 持久模型、权限与备份屏障基础 | M4-01,T18-L | PASS（Local；空库升级、结构/RLS/真实角色负向通过） |
 | M4-03 | 策略、配额预约和接收状态SQL | M4-02 | PASS（Local；预约/幂等/claim/prepare/配额与审计通过） |
-| M4-04 | 有界HTTP上传与可信Storage adapter | M4-03 | PARTIAL（代码/受控adapter与BFF Local通过；实际Local Storage被环境阻塞） |
-| M4-05 | 删除、过期、对账与持久worker | M4-04 | WAITING |
-| M4-06 | Replace原子切换与竞争恢复 | M4-05 | WAITING |
+| M4-04 | 有界HTTP上传与可信Storage adapter | M4-03 | PASS（Local；有界接收/Storage对象核验/finalize/重试冲突通过） |
+| M4-05 | 删除、过期、对账与持久worker | M4-04 | PASS（Local；删除/过期/对账/Storage remove与独立job worker通过） |
+| M4-06 | Replace原子切换与竞争恢复 | M4-05 | READY |
 | M4-07 | 列表、状态、用户/Admin下载 | M4-04 | WAITING |
 | M4-08 | 文件策略与最小管理/消费页面 | M4-05,M4-06,M4-07 | WAITING |
 | M4-09 | 关闭保留清理与Global Purge | M4-05,M3-R1,T12-R2 | WAITING |

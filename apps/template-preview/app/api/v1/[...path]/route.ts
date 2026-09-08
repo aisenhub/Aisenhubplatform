@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
-type SupportedMethod = 'GET' | 'POST' | 'PATCH' | 'PUT';
+type SupportedMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 const MAX_UPLOAD_BYTES = 1024 * 1024;
 let activeUploads = 0;
@@ -349,6 +349,23 @@ async function dispatch(
         releaseUpload(principal.platform_account_id);
       }
     }
+    const deleteMatch = /^config-files\/([^/]+)$/u.exec(route);
+    if (deleteMatch && method === 'DELETE') {
+      const idempotencyKey = request.headers.get('idempotency-key');
+      if (!idempotencyKey) throw new BffError(400, 'INVALID_INPUT');
+      return jsonResponse(
+        {
+          data: await api.deleteConfigFile(
+            token,
+            deleteMatch[1]!,
+            idempotencyKey,
+          ),
+          request_id: id,
+        },
+        202,
+        id,
+      );
+    }
     throw new BffError(404, 'RESOURCE_NOT_FOUND');
   } catch (error) {
     const bffError =
@@ -398,4 +415,11 @@ export function PUT(
   context: RouteContext,
 ): Promise<Response> {
   return dispatch(request, 'PUT', context);
+}
+
+export function DELETE(
+  request: NextRequest,
+  context: RouteContext,
+): Promise<Response> {
+  return dispatch(request, 'DELETE', context);
 }

@@ -334,7 +334,7 @@
         "operationId": "deleteConfigFile",
         "tags": ["files"],
         "x-module": "M4",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "platformKey": [], "bearerAuth": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformKey" },
@@ -742,10 +742,18 @@
       },
       "ConfigFile": {
         "type": "object",
-        "required": ["file_id", "status", "size", "content_type", "created_at"],
+        "required": [
+          "file_id",
+          "status",
+          "write_outcome",
+          "size",
+          "content_type",
+          "created_at"
+        ],
         "properties": {
           "file_id": { "type": "string", "format": "uuid" },
           "status": { "type": "string" },
+          "write_outcome": { "type": "string" },
           "size": { "type": "integer", "minimum": 0 },
           "content_type": { "type": "string" },
           "created_at": { "type": "string", "format": "date-time" }

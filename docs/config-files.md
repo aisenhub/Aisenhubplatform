@@ -141,8 +141,11 @@ pending 且未写入可取消并释放；receiving/storing 有租约或未知写
 | `file_receive_claim(ctx, file_id, owner, fence)` | account executor；重新认证的账户context、file_id、worker owner | pending→receiving，写lease/fence；不改变已结算预算 | 非pending、过期、已有有效租约、跨账户或旧fence拒绝；不因超时自动归零 |
 | `file_prepare_store(ctx, file_id, actual_size, sha256, idem_key)` | account executor；有界接收完成后的实际size/hash | receiving→storing，创建唯一未结算write attempt并按actual调整reserved bytes | size/hash/策略/门闩不符拒绝；同key同内容返回原attempt，异内容409；事务不等待Storage |
 | `file_write_attempt_settle(job_ctx, attempt_id, outcome, evidence)` | account/job recovery executor；trusted adapter结果、provider request id、size/hash | confirmed后storing→active，settled_absent后进入可清理状态；记录证据和Audit | in_flight/unknown不得由客户端改写；旧fence、错误file或重复矛盾结果拒绝；unknown持续占用 |
-| `file_delete_request(ctx, file_id, idem_key)` | account executor；用户文件id | active→deleting并返回现有状态；不在请求事务调用Storage | 重复请求返回现有状态；未知写入、Replace、Close/backup屏障返回处理中或FILE_BUSY，不释放预算 |
-| `file_reconcile_step(job_ctx, cursor, limit)` | job executor；固定游标/批量上限 | 分页核对active缺失、孤儿、unknown、deleting、预算漂移并产生告警事件 | 只接受有效lease/fence和固定游标；不接受任意表名/SQL；归属不明进入人工队列 |
+| `file_delete_request(ctx, file_id, idem_key)` | account executor；用户文件id | 无写入的pending/receiving可直接expired/deleted并释放；其他状态标记deleting并返回现有状态；不在请求事务调用Storage | 重复请求返回现有状态；未知写入、Replace、Close/backup屏障返回处理中或FILE_BUSY，不释放预算 |
+| `file_cleanup_candidates(cursor, limit)` | job executor；UUID游标/固定批量上限 | 返回到期、deleting或待结算的固定候选，不改变状态 | 不接受任意表名/SQL；仅返回受控文件id和调度时间 |
+| `file_cleanup_claim(job_ctx, file_id, lease_seconds)` | job executor；受控候选文件 | 复用job lease/fence；无写入过期、备份屏障或待结算分别返回受控动作；可删除对象时持有lease到finish | unknown/in-flight不释放预算或启动第二次PUT；旧/忙租约不能执行 |
+| `file_cleanup_finish(job_ctx, file_id, fence, outcome, error)` | job executor；可信Storage remove结果 | remove确认后deleted并归零；失败/unknown按1分钟起、1小时上限退避，预算保持 | 旧fence拒绝；10次失败转人工告警；Storage调用不在DB事务内 |
+| `file_reconcile_step(job_ctx, cursor, limit)` | job executor；固定UUID游标/批量上限 | 分页核对active缺失、孤儿、unknown、deleting、预算漂移并产生告警事件 | 只接受有效context和固定游标；不接受任意表名/SQL；归属不明进入人工队列 |
 | `file_backup_barrier_begin(job_ctx, snapshot_id)` / `file_backup_barrier_finish(job_ctx, snapshot_id, result)` | job/recovery executor；外部恢复集标识 | 持久化屏障scope、snapshot、lease、manifest状态；finish仅能提交完整/失败结果 | 2小时内未完成先将恢复集标记failed再解除；没有完整active对象清单不能标success |
 
 ### 7.2 `status` 与 `write_outcome` 分离

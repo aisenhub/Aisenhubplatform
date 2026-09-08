@@ -75,6 +75,7 @@ export type Database = {
       platform_config_files: {
         Row: {
           actual_size_bytes: number | null;
+          cancel_requested_at: string | null;
           created_at: string;
           delete_requested_at: string | null;
           deleted_at: string | null;
@@ -82,14 +83,18 @@ export type Database = {
           id: string;
           intent_expires_at: string;
           lease_until: string | null;
+          last_error_code: string | null;
           mime_type: string | null;
           original_name: string;
+          next_attempt_at: string;
+          over_quota: boolean;
           platform_account_id: string;
           platform_id: string;
           purpose: string | null;
           replaces_file_id: string | null;
           reserved_bytes: number;
           reserved_count: number;
+          retry_count: number;
           sha256: string | null;
           status: string;
           storage_bucket: string;
@@ -101,6 +106,7 @@ export type Database = {
         };
         Insert: {
           actual_size_bytes?: number | null;
+          cancel_requested_at?: string | null;
           created_at?: string;
           delete_requested_at?: string | null;
           deleted_at?: string | null;
@@ -108,14 +114,18 @@ export type Database = {
           id?: string;
           intent_expires_at: string;
           lease_until?: string | null;
+          last_error_code?: string | null;
           mime_type?: string | null;
           original_name: string;
+          next_attempt_at?: string;
+          over_quota?: boolean;
           platform_account_id: string;
           platform_id: string;
           purpose?: string | null;
           replaces_file_id?: string | null;
           reserved_bytes?: number;
           reserved_count?: number;
+          retry_count?: number;
           sha256?: string | null;
           status?: string;
           storage_bucket?: string;
@@ -127,6 +137,7 @@ export type Database = {
         };
         Update: {
           actual_size_bytes?: number | null;
+          cancel_requested_at?: string | null;
           created_at?: string;
           delete_requested_at?: string | null;
           deleted_at?: string | null;
@@ -134,14 +145,18 @@ export type Database = {
           id?: string;
           intent_expires_at?: string;
           lease_until?: string | null;
+          last_error_code?: string | null;
           mime_type?: string | null;
           original_name?: string;
+          next_attempt_at?: string;
+          over_quota?: boolean;
           platform_account_id?: string;
           platform_id?: string;
           purpose?: string | null;
           replaces_file_id?: string | null;
           reserved_bytes?: number;
           reserved_count?: number;
+          retry_count?: number;
           sha256?: string | null;
           status?: string;
           storage_bucket?: string;
