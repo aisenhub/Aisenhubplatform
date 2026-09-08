@@ -18,7 +18,7 @@ M4-01规格可现在派发；M4实现从M4-02开始，必须取得[收尾任务]
 | M4-06 | Replace原子切换与竞争恢复 | M4-05 | PASS（Local；原子切换/FILE_BUSY补偿/容量错误通过） |
 | M4-07 | 列表、状态、用户/Admin下载 | M4-04 | PASS（Local；证据见 M4-07） |
 | M4-08 | 文件策略与最小管理/消费页面 | M4-05,M4-06,M4-07 | PASS（Local；托管/真实Storage仍待G4-S） |
-| M4-09 | 关闭保留清理与Global Purge | M4-05,M3-R1,T12-R2 | PARTIAL（Local；外部Auth/Storage清除与Close定时器待补） |
+| M4-09 | 关闭保留清理与Global Purge | M4-05,M3-R1,T12-R2 | PARTIAL（Local；Global Delete外部Auth/Storage副作用待补） |
 | M4-10 | G4-L故障与集成验收 | M4-08,M4-09 | WAITING |
 | M4-11 | G4-S实际host验收 | M4-10,T18-S | WAITING |
 

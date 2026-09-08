@@ -6,6 +6,7 @@ import { handleMaintenanceRequest } from './index.ts';
 
 const fileId = '00000000-0000-4000-8000-000000000001';
 const jobId = '00000000-0000-4000-8000-000000000002';
+const accountId = '00000000-0000-4000-8000-000000000006';
 const fence = 4;
 const events: string[] = [];
 
@@ -40,7 +41,11 @@ function database(): TestDatabase {
                     ? 'delete-claim'
                     : query.includes('deletion_job_step')
                       ? 'delete-step'
-                      : 'finish',
+                      : query.includes('account_retention_candidates')
+                        ? 'retention-candidates'
+                        : query.includes('account_retention_cleanup')
+                          ? 'retention-cleanup'
+                          : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -64,6 +69,12 @@ function database(): TestDatabase {
           if (query.includes('deletion_job_step'))
             return [
               { job_id: jobId, state: 'retry', checkpoint: 'sessions_revoked' },
+            ] as unknown as T[];
+          if (query.includes('account_retention_candidates'))
+            return [{ platform_account_id: accountId }] as unknown as T[];
+          if (query.includes('account_retention_cleanup'))
+            return [
+              { platform_account_id: accountId, action: 'cleaned' },
             ] as unknown as T[];
           return [
             { file_id: fileId, status: 'deleted', retry_count: 0 },
@@ -214,5 +225,30 @@ Deno.test('maintenance exposes fenced Global Delete claim and step boundaries', 
     'begin',
     'role',
     'delete-step',
+  ]);
+});
+
+Deno.test('maintenance runs closed-account retention through the job role', async () => {
+  events.length = 0;
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/accounts/retention', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    }),
+    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data.processed, 1);
+  assertEquals(events, [
+    'begin',
+    'role',
+    'retention-candidates',
+    'begin',
+    'role',
+    'retention-cleanup',
   ]);
 });

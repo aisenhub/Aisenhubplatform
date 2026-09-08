@@ -12,6 +12,12 @@
       "route": "/maintenance/v1/files/reconcile",
       "cadence": "hourly",
       "body": {}
+    },
+    {
+      "id": "account-retention",
+      "route": "/maintenance/v1/accounts/retention",
+      "cadence": "daily",
+      "body": {}
     }
   ]
 }

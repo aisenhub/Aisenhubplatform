@@ -298,6 +298,40 @@ async function deletionJobStep(
   return response(200, result ?? { job_id: jobId, state: 'unknown' });
 }
 
+async function retentionRun(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  if (Object.keys(input).length !== 0)
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id);
+  const candidates = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.account_retention_candidates(null::timestamptz, null::uuid, 20)',
+    ),
+  );
+  const results: unknown[] = [];
+  for (const candidate of candidates) {
+    const accountId = uuid(candidate.platform_account_id);
+    if (!accountId) continue;
+    const [result] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.account_retention_cleanup(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, null::timestamptz, 60)',
+        [...jobContext, accountId],
+      ),
+    );
+    if (result) results.push(result);
+  }
+  return response(200, { processed: results.length, results });
+}
+
 export async function handleMaintenanceRequest(
   request: Request,
   dependencies: MaintenanceDependencies = {},
@@ -324,6 +358,8 @@ export async function handleMaintenanceRequest(
       return await deletionJobClaim(request, dependencies, id);
     if (path === '/maintenance/v1/deletion-jobs/step')
       return await deletionJobStep(request, dependencies, id);
+    if (path === '/maintenance/v1/accounts/retention')
+      return await retentionRun(request, dependencies, id);
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });
   } catch (error) {
     const code = errorCode(error);
