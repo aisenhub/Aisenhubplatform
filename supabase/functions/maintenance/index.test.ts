@@ -45,7 +45,9 @@ function database(): TestDatabase {
                         ? 'retention-candidates'
                         : query.includes('account_retention_cleanup')
                           ? 'retention-cleanup'
-                          : 'finish',
+                          : query.includes('deletion_job_backup_barrier_guard')
+                            ? 'barrier-guard'
+                            : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -75,6 +77,10 @@ function database(): TestDatabase {
           if (query.includes('account_retention_cleanup'))
             return [
               { platform_account_id: accountId, action: 'cleaned' },
+            ] as unknown as T[];
+          if (query.includes('deletion_job_backup_barrier_guard'))
+            return [
+              { can_proceed: false, error_code: 'backup_barrier' },
             ] as unknown as T[];
           return [
             { file_id: fileId, status: 'deleted', retry_count: 0 },

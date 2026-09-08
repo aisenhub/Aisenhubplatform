@@ -289,10 +289,24 @@ async function deletionJobStep(
     `maintenance-${crypto.randomUUID()}`;
   const db = dependencies.database ?? database();
   const jobContext = context(workerId, id, fence);
+  let stepOutcome = outcome;
+  let stepErrorCode = errorCode;
+  if (step === 'files_blocked' && outcome === 'completed') {
+    const [guard] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.deletion_job_backup_barrier_guard(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint)',
+        [...jobContext, jobId, leaseFence],
+      ),
+    );
+    if (guard && guard.can_proceed === false) {
+      stepOutcome = 'blocked';
+      stepErrorCode = String(guard.error_code ?? 'backup_barrier');
+    }
+  }
   const [result] = await withJobRole(db, (transaction) =>
     transaction.unsafe<Row>(
       'select * from private.deletion_job_step(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
-      [...jobContext, jobId, leaseFence, step, outcome, errorCode],
+      [...jobContext, jobId, leaseFence, step, stepOutcome, stepErrorCode],
     ),
   );
   return response(200, result ?? { job_id: jobId, state: 'unknown' });
