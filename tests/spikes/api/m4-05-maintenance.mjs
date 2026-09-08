@@ -39,6 +39,7 @@ const jobToken = `m4-05-job-${crypto.randomUUID()}`;
 const workerUrl = 'http://127.0.0.1:8791';
 let userId;
 let worker;
+let workerErrors = '';
 
 async function storageRequest(path, init = {}) {
   return fetch(`${status.API_URL}/storage/v1/object/${path}`, {
@@ -72,9 +73,12 @@ async function startWorker() {
         MAINTENANCE_JOB_TOKEN: jobToken,
         MAINTENANCE_PORT: '8791',
       },
-      stdio: 'ignore',
+      stdio: ['ignore', 'ignore', 'pipe'],
     },
   );
+  worker.stderr?.on('data', (chunk) => {
+    workerErrors += String(chunk);
+  });
   for (let attempt = 0; attempt < 40; attempt += 1) {
     try {
       const response = await fetch(
@@ -129,8 +133,12 @@ try {
     },
     body: JSON.stringify({ file_id: fileId }),
   });
-  assert.equal(response.status, 200);
   const result = await response.json();
+  assert.equal(
+    response.status,
+    200,
+    `${JSON.stringify(result)}\n${workerErrors}`,
+  );
   assert.equal(result.data.status, 'deleted');
   const [file] =
     await sql`select status, reserved_bytes from public.platform_config_files where id = ${fileId}`;

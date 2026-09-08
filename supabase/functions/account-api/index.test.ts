@@ -786,3 +786,81 @@ Deno.test('Account API exposes idempotent file deletion through the account exec
   assertEquals(response.status, 202);
   assertEquals((await response.json()).data.status, 'deleting');
 });
+
+Deno.test('Account API maps replacement capacity failures to the stable contract code', async () => {
+  const database = {
+    async begin<T>(
+      callback: (transaction: {
+        json: (value: unknown) => unknown;
+        unsafe: <R extends Record<string, unknown>>(
+          query: string,
+          values?: unknown[],
+        ) => Promise<R[]>;
+      }) => Promise<T>,
+    ) {
+      return callback({
+        json(value: unknown) {
+          return value;
+        },
+        async unsafe<R extends Record<string, unknown>>(
+          query: string,
+        ): Promise<R[]> {
+          if (
+            query.startsWith(
+              'select * from private.platform_key_verify_presented',
+            )
+          )
+            return [
+              {
+                key_id: keyId,
+                platform_id: platformId,
+                platform_status: 'active',
+              },
+            ] as unknown as R[];
+          if (query.startsWith('select * from private.account_principal'))
+            return [
+              {
+                authorization: 'allowed',
+                account_status: 'active',
+                platform_account_id: userId,
+              },
+            ] as unknown as R[];
+          if (query.startsWith('select * from private.file_intent_create'))
+            throw new Error('quota_exceeded');
+          return [] as R[];
+        },
+      });
+    },
+  };
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/config-files/upload-intent',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Idempotency-Key': 'replace-capacity-1',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'replacement.ini',
+          size: 5,
+          content_type: 'text/plain',
+          purpose: 'config',
+          replaces_file_id: '00000000-0000-4000-8000-000000000010',
+        }),
+      },
+    ),
+    {
+      database,
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 409);
+  assertEquals(
+    (await response.json()).error.code,
+    'REPLACEMENT_CAPACITY_REQUIRED',
+  );
+});

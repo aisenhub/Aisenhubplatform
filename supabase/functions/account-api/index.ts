@@ -637,18 +637,30 @@ async function dispatchAccount(
         !replacesFileId)
     )
       throw new ApiFault(400, 'INVALID_INPUT');
-    const [result] = await transaction.unsafe<Row>(
-      'select * from private.file_intent_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text, $7::bigint, $8::text, $9::text, $10::uuid, $11::text)',
-      [
-        ...contextValues,
-        name,
-        size,
-        contentType,
-        purpose,
-        replacesFileId,
-        idempotencyKey,
-      ],
-    );
+    let result: Row | undefined;
+    try {
+      [result] = await transaction.unsafe<Row>(
+        'select * from private.file_intent_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text, $7::bigint, $8::text, $9::text, $10::uuid, $11::text)',
+        [
+          ...contextValues,
+          name,
+          size,
+          contentType,
+          purpose,
+          replacesFileId,
+          idempotencyKey,
+        ],
+      );
+    } catch (error) {
+      if (
+        replacesFileId &&
+        String((error as { message?: string }).message ?? '').includes(
+          'quota_exceeded',
+        )
+      )
+        throw new ApiFault(409, 'REPLACEMENT_CAPACITY_REQUIRED');
+      throw error;
+    }
     if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     return {
       status: 201,
@@ -1398,6 +1410,8 @@ async function handleUploadContent(
           ],
         );
         if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        if (result.replace_outcome === 'file_busy')
+          return { status: 409, data: fileDto(result) };
         return result;
       },
     );
