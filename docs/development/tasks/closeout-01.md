@@ -10,7 +10,7 @@
 | T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | PASS（Local；Admin浏览器与普通双session proof均已通过，完整Close/Delete消费者由T16-R1承接，证据见 T12-R2） |
 | T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | PASS（Local；M2 HTTP/SDK/BFF/最小管理入口与回归通过，M4/M5/M6及托管仍按原边界） |
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | PASS（Local；双 Origin/Platform、独立上下文、Admin停用恢复、普通敏感操作与bundle扫描通过；CI托管运行仍需接入） |
-| T18-L | G1/G2-L 本地阶段收口 | T16-R2 | READY |
+| T18-L | G1/G2-L 本地阶段收口 | T16-R2 | PASS（Local；候选 commit 复验通过，托管 G0-S/G2-S 仍按原门槛） |
 | M3-R1 | G3证据矩阵与缺失回归收口 | 无 | PASS（Local；证据见 M3-R1） |
 | T17-R1 | 托管独立executor、TLS与网关合同 | 无 | BLOCKED（配置已补；hosted证据见 T17-R1） |
 | T17-R2 | 托管浏览器、Origin、真实Provider | T16-R2,T17-R1 | WAITING |
