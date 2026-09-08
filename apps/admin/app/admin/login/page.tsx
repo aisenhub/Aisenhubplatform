@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
       );
       return;
     }
-    window.location.assign('/admin');
+    window.location.assign('/admin/mfa');
   }
 
   return (

@@ -6,9 +6,15 @@ import {
   clearAuthSessionCookies,
   createPerRequestClient,
   noStoreHeaders,
+  listMfaFactors,
   revokeSupabaseSession,
+  requestReauthentication,
+  setRequestAuthSession,
+  verifyMfaFactor,
+  verifyReauthenticationOtp,
   writeAuthSessionCookies,
 } from '../src/index.ts';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 describe('SSR auth adapter', () => {
   it('creates a fresh client for each request and does not share headers', () => {
@@ -131,5 +137,53 @@ describe('SSR auth adapter', () => {
       authCookieNames('admin').csrf,
       'aisenhub-recent-auth-proof',
     ]);
+  });
+
+  it('keeps Auth MFA and reauthentication calls request-scoped', async () => {
+    const auth = {
+      setSession: vi.fn(async (tokens: unknown) => ({
+        data: { session: tokens },
+        error: null,
+      })),
+      mfa: {
+        listFactors: vi.fn(async () => ({ data: { all: [] }, error: null })),
+        challengeAndVerify: vi.fn(async (input: unknown) => ({
+          data: { session: input },
+          error: null,
+        })),
+      },
+      reauthenticate: vi.fn(async () => ({ data: {}, error: null })),
+      verifyOtp: vi.fn(async (input: unknown) => ({
+        data: { session: input },
+        error: null,
+      })),
+    };
+    const client = { auth } as unknown as SupabaseClient;
+
+    await setRequestAuthSession(client, {
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+    });
+    await listMfaFactors(client);
+    await verifyMfaFactor(client, { factorId: 'factor-1', code: '123456' });
+    await requestReauthentication(client);
+    await verifyReauthenticationOtp(client, {
+      email: 'user@example.test',
+      token: '123456',
+    });
+
+    expect(client.auth.setSession).toHaveBeenCalledWith({
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+    });
+    expect(client.auth.mfa.challengeAndVerify).toHaveBeenCalledWith({
+      factorId: 'factor-1',
+      code: '123456',
+    });
+    expect(client.auth.verifyOtp).toHaveBeenCalledWith({
+      email: 'user@example.test',
+      token: '123456',
+      type: 'reauthentication',
+    });
   });
 });

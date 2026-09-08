@@ -2,12 +2,12 @@
 
 日期：2026-09-08。依据[校准基线](../evidence/DP2-baseline.md)、[M2规格](../modules/M2-identity-platform.md)、[公共合同](../contracts.md)、[认证安全](../../auth-security.md)及[验证计划](../verification-plan.md)。本文件细化既有任务的剩余范围，不撤销历史 Local 验收，也不把计划当作已实现。
 
-父任务 T12/T16 保持 PARTIAL；T17 保持 PARTIAL；T18 保持 WAITING。下列 READY 仅表示可派发，当前授权仅为规划。依赖任务字段列本次收尾任务间的依赖；已交付基础及外部条件另列，不能用历史 SQL PASS 代替浏览器验收。
+父任务 T12/T16 保持 PARTIAL；T17 保持 PARTIAL；T18 保持 WAITING。下列 READY 仅表示可派发；本轮已按用户授权执行 T12-R2 的安全可独立部分。依赖任务字段列本次收尾任务间的依赖；已交付基础及外部条件另列，不能用历史 SQL PASS 代替浏览器验收。
 
 | ID | 交付 | 依赖任务 | 初始状态 |
 |---|---|---|---|
 | T12-R1 | 真实 Auth/SSR adapter 与会话范围 | 无 | PARTIAL（实现提交 aa5089d；证据见 T12-R1） |
-| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | READY |
+| T12-R2 | 近期认证、MFA 与敏感操作合同闭环 | T12-R1 | PARTIAL（Admin MFA链已实现；普通proof与真实浏览器回归未完成，证据见 T12-R2） |
 | T16-R1 | M2 HTTP/SDK/BFF与最小账户管理补齐 | T12-R2 | WAITING |
 | T16-R2 | 双入口浏览器链路与可复现CI | T16-R1 | WAITING |
 | T18-L | G1/G2-L 本地阶段收口 | T16-R2 | WAITING |

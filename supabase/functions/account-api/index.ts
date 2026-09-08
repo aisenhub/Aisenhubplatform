@@ -607,6 +607,7 @@ async function dispatchAdmin(
     if (!proof) throw new ApiFault(403, 'MFA_REQUIRED');
     return { status: 201, data: proof };
   }
+  if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
   const planMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/plans$/u.exec(path);
   if (planMatch && UUID.test(planMatch[1]!)) {
     const platformId = planMatch[1]!;

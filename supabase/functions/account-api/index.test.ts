@@ -223,3 +223,19 @@ Deno.test('Account API refuses recent-proof issuance at AAL1', async () => {
   assertEquals(response.status, 403);
   assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
 });
+
+Deno.test('Account API refuses every other Admin route at AAL1', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/redemption-batches',
+      { headers: { Authorization: `Bearer ${fakeJwt()}` } },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 403);
+  assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
+});

@@ -176,6 +176,39 @@ export async function refreshAuthSession(
   return client.auth.refreshSession({ refresh_token: refreshToken });
 }
 
+export async function setRequestAuthSession(
+  client: SupabaseClient,
+  tokens: { readonly access_token: string; readonly refresh_token: string },
+) {
+  return client.auth.setSession(tokens);
+}
+
+export async function listMfaFactors(client: SupabaseClient) {
+  return client.auth.mfa.listFactors();
+}
+
+export async function verifyMfaFactor(
+  client: SupabaseClient,
+  input: { readonly factorId: string; readonly code: string },
+) {
+  return client.auth.mfa.challengeAndVerify(input);
+}
+
+export async function requestReauthentication(client: SupabaseClient) {
+  return client.auth.reauthenticate();
+}
+
+export async function verifyReauthenticationOtp(
+  client: SupabaseClient,
+  input: { readonly email: string; readonly token: string },
+) {
+  return client.auth.verifyOtp({
+    email: input.email,
+    token: input.token,
+    type: 'reauthentication',
+  });
+}
+
 export async function exchangeAuthCode(client: SupabaseClient, code: string) {
   return client.auth.exchangeCodeForSession(code);
 }
