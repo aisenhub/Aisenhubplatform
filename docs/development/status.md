@@ -25,7 +25,7 @@
 
 ## 应用实现
 
-M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过；G0-L 为 PASS，G0-S 及托管/浏览器探针仍为 NOT_RUN。
+M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项已闭环；M1为IN_PROGRESS（T08、T09、T10、T11已完成）；M2为IN_PROGRESS（T12已交付可独立部分，T13、T14、T15 Local已完成，T16仍为 PARTIAL）；M3为IN_PROGRESS（M3-01、M3-02、M3-03 Local已完成，托管/生产全链路未验收）；M4～M6仍为NOT_STARTED。`SP-AUTH`的密码、refresh、TOTP、中央近期 proof 与 logout 后旧 JWT 拒绝均已通过；G0-L 为 PASS。Staging 项目已完成控制台只读连通性核对，但 G0-S 的数据库/API/Edge 实测仍 BLOCKED：当前工作进程没有可用的 Staging 连接变量或 CLI 凭据，且项目仅有历史 0001/0002 迁移。
 
 当前任务状态：T01～T11、T13～T15已完成；T04 Local JWT/logout/proof 子项已完成，真实 Provider 与浏览器 SSR 留给 T17；T12与T16为PARTIAL；T17、T18仍为WAITING。M3-01/M3-02/M3-03已完成 Local 交付，证据见[evidence/M3.md](evidence/M3.md)；G0-L 证据见[evidence/G0-L.md](evidence/G0-L.md)，G0-S 未开始。
 
@@ -52,45 +52,45 @@ M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项�
 
 ## T04 任务交接
 
-- 分支：`task/T04-auth-probe`
-- 结果：Local password session、refresh、`session_id`、TOTP enrollment/challenge/verify 和 refresh 撤销已实测；SSR Cookie、真实 Provider 和 proof 设施未完成。
-- 状态：BLOCKED。logout 后已签发 access JWT 仍可用至过期，不能满足近期证明失效合同；未使用弱校验替代。
-- 下一步：T05/T06 可独立继续；T09/T12/T14 必须先采用服务端 session-bound proof 协议。
+- 分支：`task/T04-session-revocation`
+- 结果：Local password session、refresh、`session_id`、TOTP、中央近期 proof、logout 与旧 JWT 拒绝均已实测；logout 路由和 Account API 已采用 Auth 验证及 session-bound 授权。
+- 状态：DONE（Local）。真实 OAuth/SMTP、浏览器 SSR 和托管环境由 T17/G0-S 验收，不再标记为 T04 阻塞；Staging 控制台可访问，但应用/API 验收尚未执行。
+- 下一步：T12/T16 可继续本地纵向集成；T17 等待托管输入 X01/X02/X03。
 
 ## T05 任务交接
 
 - 分支：`task/T05-sql-roles`
 - 结果：Local Node/Deno transaction pooler、NOLOGIN owner、最小 executor、私有 schema 和负向权限路径均已实测。
 - 验收：`SP-SQL Local` 与 `V-DB-02` 原型 PASS；托管 pooler/TLS 留 T17。
-- 下一步：T06 可独立继续，T07 已满足 T05 依赖。
+- 下一步：T06/T07 已完成；托管 pooler/TLS 留 T17。
 
 ## T06 任务交接
 
 - 分支：`task/T06-upload-probe`
 - 结果：1MiB 边界、声明/真实大小、chunked、Content-Encoding、断流、并发名额和 provider timeout/unknown 均已实测。
 - 验收：`SP-UPLOAD Local`、`V-FILE-01` 原型 PASS；真实 host 的 Storage 取消/迟到写入留后续环境。
-- 下一步：T07 已具备依赖；T04 的 proof 阻塞保持不变。
+- 下一步：Local 依赖已满足；真实 host 的 Storage 取消/迟到写入留 T17。
 
 ## T07 任务交接
 
 - 分支：`task/T07-transaction-probe`
 - 结果：双连接账户锁、同/异 hash 幂等、业务拒绝、异常回滚和响应丢失重放均已实测。
 - 验收：`SP-TXN`、`V-TXN-01/02` 原型 PASS；不宣称完整权益事务。
-- 下一步：T08 的 T05/T07 依赖已满足；T04 proof 阻塞在 M1 辅助表冻结前保留。
+- 下一步：T08 的 T05/T07 依赖已满足；T04 的 Local 近期证明协议已闭环。
 
 ## T08 任务交接
 
 - 分支：`task/T08-core-migrations`
 - 结果：按数据模型交付固定时间戳核心迁移，包含平台、平台账户、资料、偏好、Origin、Plan、默认 Free 同平台复合外键、墓碑约束、row_version、updated_at 触发器，以及核心表 RLS/运行时默认拒绝。
 - 验收：Local 空库 reset 两次、迁移历史升级基线、pgTAP 24/24、核心关系/墓碑/版本/触发器/anon 默认拒绝探针均通过；生成数据库类型写入 `packages/shared/src/database.types.ts`。
-- 限制：只覆盖 T08 核心表，未提前创建 Grant/Billing 或 M1 辅助表；Staging/Production 迁移未执行，T04 proof 阻塞仍交由 T09/T12/T14 处理。
+- 限制：只覆盖 T08 核心表，未提前创建 Grant/Billing 或 M1 辅助表；Staging/Production 迁移未执行，真实 Provider/托管验证留 T17。
 
 ## T09 任务交接
 
 - 分支：`task/T09-security-helpers`
 - 结果：交付 M1 辅助表、非登录运行角色、受控 session/identity helper、幂等 claim/finalize、审计 append-only、固定窗口限流和 job lease fencing；未向 HTTP executor 授予基础表 DML 或拆分 helper 权限。
 - 验收：T08 回归与 T09 pgTAP 共 54/54；幂等、审计、lease、限流和 Local Auth identity deletion gate 行为探针通过；public schema 类型已重新生成，包含 `audit_logs`。
-- 限制：T04 的真实近期 proof 协议仍 BLOCKED；`admin_step_up` 仅交付 session/factor/5分钟边界和权限存储，不能据此宣称 V-AUTH-03 全部通过。下一项满足依赖的任务是 T10。
+- 限制：T04 的 Local 近期 proof 协议已通过；`admin_step_up` 交付 session/factor/5分钟边界和权限存储，真实 Provider/托管验证不由 T09 宣称。下一项满足依赖的任务是 T10。
 
 ## T10 任务交接
 
