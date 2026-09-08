@@ -31,7 +31,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
-- 当前下一项：继续收尾 M5-03 Admin 成品中的文件 Replace/purge blocked 细粒度动作，并收尾 M5-04 模板细节；随后在 X05/托管后端到位后补 M5-05 Hosted 双 Origin/Platform 验收。Local Consumer install/typecheck/build 已完成。M4-11 的实际host G4-S仍依赖 T18-S 与受控托管输入。Close 30 天候选调度、Storage cleanup、Auth provider boundary 与 backup barrier guard 已接入 Local maintenance。M5-06正式发布仍依赖X05和明确发布授权。
+- 当前下一项：收尾 M5-04 模板细节；随后在 X05/托管后端到位后补 M5-05 Hosted 双 Origin/Platform 验收。M5-03 Local Admin 页面、服务端资源搜索和 Replace/purge blocked 原因展示已完成。Local Consumer install/typecheck/build 已完成。M4-11 的实际host G4-S仍依赖 T18-S 与受控托管输入。Close 30 天候选调度、Storage cleanup、Auth provider boundary 与 backup barrier guard 已接入 Local maintenance。M5-06正式发布仍依赖X05和明确发布授权。
 - 本轮已在独立任务分支执行T12-R2普通proof合同/issuer、Admin MFA与真实Local浏览器子集、M4-01和M3-R1完整Local SQL/API范围内验证；未执行的托管、Storage及生产项仍保持BLOCKED/NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实

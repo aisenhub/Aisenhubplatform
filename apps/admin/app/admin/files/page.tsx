@@ -23,6 +23,19 @@ type ConfigFile = {
   content_type: string;
 };
 
+function fileBlockedReason(file: ConfigFile): string | null {
+  if (file.write_outcome === 'unknown') {
+    return 'Purge blocked：写入结果未知，预算保持占用，等待 worker/对账确认。';
+  }
+  if (file.status === 'deleting') {
+    return 'Purge in progress：等待 Storage 与备份屏障确认，不重复提交。';
+  }
+  if (['pending', 'receiving', 'storing'].includes(file.status)) {
+    return `Replace/purge blocked：文件仍处于 ${file.status}，等待写入结算。`;
+  }
+  return null;
+}
+
 function csrfToken(): string {
   return (
     document.cookie
@@ -298,6 +311,11 @@ export default function AdminFilesPage() {
                     {file.file_id} · {file.status} · {file.write_outcome} ·{' '}
                     {formatBytes(file.reserved_bytes)}
                   </small>
+                  {fileBlockedReason(file) ? (
+                    <small className="warning" role="status">
+                      {fileBlockedReason(file)}
+                    </small>
+                  ) : null}
                 </div>
                 <div className="file-actions">
                   <button

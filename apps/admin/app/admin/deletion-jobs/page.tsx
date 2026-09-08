@@ -13,6 +13,16 @@ type Job = {
   last_error_code: string | null;
 };
 
+function purgeReason(job: Job): string | null {
+  if (job.state === 'blocked') {
+    return `Purge blocked：${job.last_error_code ?? '等待人工处理'}。不会宣称清除完成。`;
+  }
+  if (job.state === 'retry') {
+    return `Purge retry：${job.last_error_code ?? 'worker 将按退避重试'}。`;
+  }
+  return null;
+}
+
 function csrfToken(): string {
   return (
     document.cookie
@@ -156,6 +166,11 @@ export default function AdminDeletionJobsPage() {
                     {job.retry_count}
                     {job.last_error_code ? ` · ${job.last_error_code}` : ''}
                   </small>
+                  {purgeReason(job) ? (
+                    <small className="warning" role="status">
+                      {purgeReason(job)}
+                    </small>
+                  ) : null}
                 </div>
                 <button
                   type="button"

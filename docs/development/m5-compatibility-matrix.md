@@ -10,9 +10,9 @@
 
 | 资源 | 领域入口 | HTTP/OpenAPI | SDK | 当前UI/消费者 | 缺口承接 |
 |---|---|---|---|---|---|
-| 平台/Origin/Key/账户 | M2 SQL与Account/Admin部分入口 | 17 Account、32 Admin已冻结；部分操作仍contract-only | `account-server`已有principal/activate/profile/preferences/subscription/redeem子集 | Admin仅最小登录/首页；Consumer仅登录、Pricing、Subscription | T16-R1补授权能力，M5-03补列表/筛选/轮换/状态页面 |
+| 平台/Origin/Key/账户 | M2 SQL与Account/Admin受控入口 | 18 Account、36 Admin已冻结；部分操作仍contract-only | `account-server`已有principal/activate/profile/preferences/subscription/redeem子集 | Admin已覆盖列表/筛选/轮换/状态页面；Consumer仍为登录、Pricing、Subscription | M5-03 Local页面与资源搜索已交付，Hosted联合验收留M5-05 |
 | Plan/订阅/批次/Code | M3 Local SQL、Account API、Admin计划/批次/订阅路由 | Admin路径已有Local-only实现，完整错误/分页/UI未成品 | `account-server`仅订阅读取/兑换方法 | Consumer Subscription已有基础页；无批次/Code成品管理 | M3-R1补证据；M5-03补Admin；M5-04补用户模板 |
-| 文件/策略/删除任务 | M4-01已冻结合同；运行表/函数尚未实现 | Account六个文件操作及Admin file/deletion-jobs为contract-only | 尚无文件方法 | 无文件页面 | T18-L后M4-02～09；M5-03/04在M4-10后接入 |
+| 文件/策略/删除任务 | M4-01合同与M4-02～09 Local领域入口 | Account六个文件操作及Admin file/deletion-jobs已接入，部分托管能力仍待验证 | 尚无文件方法 | Admin文件/删除任务页面与Consumer文件页面已接入；unknown、deleting、blocked/retry原因可见 | M5-03补服务端资源搜索与细粒度原因展示；M5-05补Hosted联合验收 |
 | 审计 | M1事务 append 基础 | Admin audit资源已冻结 | 尚无Admin审计SDK | 无审计页 | M5-03补受控只读查询、分页、脱敏详情 |
 | 用户Auth模板 | M2 Auth adapter；T12-R1已交付请求级SDK/refresh/PKCE callback | 登录/退出已有；signup/reset/link路径未形成完整模板 | `account-auth`/`account-auth-nextjs`职责边界已存在 | 两应用有登录页，缺Signup/Forgot/Reset/OAuth/MFA流程 | T12-R2/T16-R2补合同与运行器；M5-04形成Registry模板 |
 
