@@ -2,6 +2,12 @@
 
 import postgres from 'npm:postgres@3.4.3';
 
+import { readBoundedBody, UploadFault, UploadGate } from '../_shared/upload.ts';
+import {
+  createSupabaseStorageAdapter,
+  type StorageAdapter,
+} from '../_shared/storage.ts';
+
 import {
   generateRedemptionCodes,
   REDEMPTION_CODE_ALPHABET,
@@ -34,6 +40,8 @@ interface AccountApiDependencies {
    * /auth/v1/user endpoint with the publishable key.
    */
   readonly verifyAccessToken?: (accessToken: string) => Promise<string | null>;
+  readonly storageAdapter?: StorageAdapter;
+  readonly uploadGate?: UploadGate;
 }
 
 type KeyContext = {
@@ -294,6 +302,8 @@ function mapSqlFault(error: unknown): ApiFault {
       return new ApiFault(403, 'ACCOUNT_CLOSED');
     if (message.includes('global_delete_pending'))
       return new ApiFault(403, 'GLOBAL_DELETE_PENDING');
+    if (message.includes('platform_file_policy_disabled'))
+      return new ApiFault(403, 'PLATFORM_DISABLED');
     if (message.includes('recent_mfa_required'))
       return new ApiFault(403, 'RECENT_MFA_REQUIRED');
     return new ApiFault(401, 'UNAUTHORIZED');
@@ -312,6 +322,15 @@ function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(409, 'ENTITLEMENT_PERPETUAL');
   if (message.includes('code_already_redeemed'))
     return new ApiFault(409, 'CODE_ALREADY_REDEEMED');
+  if (message.includes('quota_exceeded'))
+    return new ApiFault(409, 'QUOTA_EXCEEDED');
+  if (message.includes('file_busy')) return new ApiFault(409, 'FILE_BUSY');
+  if (message.includes('operation_in_progress'))
+    return new ApiFault(409, 'OPERATION_IN_PROGRESS');
+  if (message.includes('intent_expired'))
+    return new ApiFault(410, 'UPLOAD_INTENT_EXPIRED');
+  if (message.includes('size_mismatch'))
+    return new ApiFault(400, 'UPLOAD_SIZE_MISMATCH');
   if (message.includes('code_disabled'))
     return new ApiFault(409, 'CODE_DISABLED');
   if (message.includes('code_expired'))
@@ -328,6 +347,7 @@ function env(name: string): string {
 }
 
 const databases = new Map<'account' | 'admin', Database>();
+const defaultUploadGate = new UploadGate();
 function database(executor: 'account' | 'admin'): Database {
   const cached = databases.get(executor);
   if (cached) return cached;
@@ -444,6 +464,31 @@ function accountContextValues(
     key.keyId,
     requestId(),
   ];
+}
+
+function isoDate(value: unknown): string | null {
+  if (value instanceof Date) return value.toISOString();
+  return typeof value === 'string' ? value : null;
+}
+
+function fileDto(row: Row): Record<string, unknown> {
+  return {
+    file_id: uuidValue(row.file_id ?? row.id),
+    status: stringValue(row.status) ?? 'pending',
+    size: Number(row.actual_size_bytes ?? row.reserved_bytes ?? 0),
+    content_type: stringValue(row.mime_type) ?? 'application/octet-stream',
+    created_at: isoDate(row.created_at) ?? new Date(0).toISOString(),
+    write_outcome: stringValue(row.write_outcome) ?? 'not_started',
+  };
+}
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const copy = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(copy).set(bytes);
+  const digest = await crypto.subtle.digest('SHA-256', copy);
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 function entitlementDto(row: Row) {
@@ -566,6 +611,54 @@ async function dispatchAccount(
   }
 
   const contextValues = accountContextValues(session, key);
+  if (path === 'v1/config-files/upload-intent' && request.method === 'POST') {
+    assertAllowed(row);
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (!idempotencyKey || idempotencyKey.length > 128)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const input = await body(request);
+    const name = stringValue(input.name);
+    const contentType = stringValue(input.content_type);
+    const purpose = stringValue(input.purpose);
+    const size = Number(input.size);
+    const replacesFileId =
+      input.replaces_file_id === undefined || input.replaces_file_id === null
+        ? null
+        : uuidValue(input.replaces_file_id);
+    if (
+      !name ||
+      !contentType ||
+      purpose !== 'config' ||
+      !Number.isSafeInteger(size) ||
+      size < 1 ||
+      size > 1048576 ||
+      (input.replaces_file_id !== undefined &&
+        input.replaces_file_id !== null &&
+        !replacesFileId)
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.file_intent_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text, $7::bigint, $8::text, $9::text, $10::uuid, $11::text)',
+      [
+        ...contextValues,
+        name,
+        size,
+        contentType,
+        purpose,
+        replacesFileId,
+        idempotencyKey,
+      ],
+    );
+    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return {
+      status: 201,
+      data: {
+        file_id: result.file_id,
+        upload_path: `/v1/config-files/${result.file_id}/content`,
+        expires_at: isoDate(result.intent_expires_at),
+      },
+    };
+  }
   if (path === 'v1/account/activate' && request.method === 'POST') {
     const [result] = await transaction.unsafe<Row>(
       'select * from private.account_activate(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
@@ -1188,6 +1281,180 @@ async function dispatchAdmin(
   throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
 }
 
+function contentFileId(request: Request): string | null {
+  const match = /^v1\/config-files\/([^/]+)\/content$/u.exec(
+    requestPath(request),
+  );
+  return match && uuidValue(match[1]) ? uuidValue(match[1]) : null;
+}
+
+async function uploadTransaction<T>(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  callback: (transaction: Transaction, key: KeyContext) => Promise<T>,
+): Promise<T> {
+  const db = dependencies.database ?? database('account');
+  return db.begin(async (transaction) => {
+    await setRole(transaction, 'account_executor');
+    const key = await verifyPlatformKey(transaction, request, dependencies);
+    return callback(transaction, key);
+  });
+}
+
+async function handleUploadContent(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+): Promise<DispatchResult> {
+  if (request.method !== 'PUT') throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const fileId = contentFileId(request);
+  if (!fileId) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const idempotencyKey = request.headers.get('idempotency-key');
+  if (!idempotencyKey || idempotencyKey.length > 128)
+    throw new ApiFault(400, 'INVALID_INPUT');
+
+  const initial = await uploadTransaction(
+    request,
+    dependencies,
+    async (transaction, key) => {
+      const [state] = await transaction.unsafe<Row>(
+        'select * from private.file_upload_state(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+        [...accountContextValues(session, key), fileId],
+      );
+      if (!state) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return state;
+    },
+  );
+  const accountId = uuidValue(initial.platform_account_id);
+  if (!accountId) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  const gate = dependencies.uploadGate ?? defaultUploadGate;
+  if (!gate.tryAcquire(accountId)) throw new ApiFault(429, 'RATE_LIMITED');
+
+  try {
+    const stateStatus = stringValue(initial.status);
+    if (stateStatus === 'active') {
+      const limit = Math.min(Number(initial.requested_size_bytes), 1048576);
+      const received = await readBoundedBody(request, limit, 15_000);
+      const hash = await sha256Hex(received.bytes);
+      if (
+        hash !== stringValue(initial.sha256) ||
+        received.size !== Number(initial.actual_size_bytes)
+      )
+        throw new ApiFault(409, 'FILE_CONTENT_CONFLICT');
+      return { status: 202, data: fileDto(initial) };
+    }
+    if (stateStatus !== 'pending')
+      throw new ApiFault(409, 'OPERATION_IN_PROGRESS');
+
+    const claim = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.file_receive_claim(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::integer)',
+          [
+            ...accountContextValues(session, key),
+            fileId,
+            `account-api:${crypto.randomUUID()}`,
+            15,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    const limit = Math.min(
+      Number(claim.requested_size_bytes),
+      Number(claim.max_file_bytes),
+    );
+    const received = await readBoundedBody(request, limit, 15_000);
+    const hash = await sha256Hex(received.bytes);
+    const prepared = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.file_prepare_store(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::bigint, $8::text, $9::text)',
+          [
+            ...accountContextValues(session, key),
+            fileId,
+            received.size,
+            hash,
+            idempotencyKey,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    const adapter =
+      dependencies.storageAdapter ?? createSupabaseStorageAdapter();
+    let providerRequestId: string | null = null;
+    try {
+      const putResult = await adapter.putImmutable({
+        bucket: 'platform-config-files',
+        path: String(prepared.storage_path),
+        body: received.bytes,
+        contentType: stringValue(claim.mime_type) ?? 'application/octet-stream',
+        timeoutMs: 30_000,
+      });
+      providerRequestId = putResult.providerRequestId;
+      const info = await adapter.getInfo({
+        bucket: 'platform-config-files',
+        path: String(prepared.storage_path),
+        timeoutMs: 30_000,
+      });
+      if (info.size !== received.size) throw new Error('STORAGE_SIZE_MISMATCH');
+    } catch (error) {
+      await uploadTransaction(
+        request,
+        dependencies,
+        async (transaction, key) => {
+          await transaction.unsafe(
+            'select * from private.file_write_attempt_mark_unknown(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::text)',
+            [
+              ...accountContextValues(session, key),
+              fileId,
+              prepared.write_attempt_id,
+              error instanceof Error
+                ? error.message.slice(0, 128)
+                : 'storage_error',
+            ],
+          );
+          return undefined;
+        },
+      ).catch(() => undefined);
+      throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+    }
+    const finalized = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.file_write_attempt_finalize(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::bigint, $9::text, $10::text)',
+          [
+            ...accountContextValues(session, key),
+            fileId,
+            prepared.write_attempt_id,
+            received.size,
+            hash,
+            providerRequestId,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    return { status: 202, data: fileDto(finalized) };
+  } catch (error) {
+    if (error instanceof UploadFault)
+      throw new ApiFault(error.status, error.code);
+    throw error;
+  } finally {
+    gate.release(accountId);
+  }
+}
+
 export async function handleRequest(
   request: Request,
   dependencies: AccountApiDependencies = {},
@@ -1207,6 +1474,22 @@ export async function handleRequest(
             dependencies,
           )
         : undefined;
+    if (
+      path.startsWith('v1/config-files/') &&
+      path.endsWith('/content') &&
+      request.method === 'PUT'
+    ) {
+      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+      return response(
+        {
+          data: (await handleUploadContent(request, dependencies, session))
+            .data,
+          request_id: id,
+        },
+        202,
+        id,
+      );
+    }
     const executor = path.startsWith('admin/') ? 'admin' : 'account';
     const db = dependencies.database ?? database(executor);
     const result = await db.begin(async (transaction) => {

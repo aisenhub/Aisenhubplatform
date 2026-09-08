@@ -11,6 +11,8 @@ import type {
   PreferencesDto,
   ProfileDto,
   RecentAuthProofDto,
+  ConfigFileDto,
+  UploadIntentDto,
 } from '@kit/domain/contracts';
 import { generateRedemptionCodes as generateDomainRedemptionCodes } from '@kit/domain';
 import type { RedemptionCodeMaterial } from '@kit/domain';
@@ -211,7 +213,26 @@ export interface AccountApiClient {
     code: string,
     idempotencyKey: string,
   ) => Promise<EntitlementDto>;
+  readonly createUploadIntent: (
+    accessToken: string,
+    input: {
+      readonly name: string;
+      readonly size: number;
+      readonly content_type: string;
+      readonly purpose: 'config';
+      readonly replaces_file_id?: string | null;
+    },
+    idempotencyKey: string,
+  ) => Promise<UploadIntentDto>;
+  readonly uploadContent: (
+    accessToken: string,
+    fileId: string,
+    body: Uint8Array,
+    idempotencyKey: string,
+  ) => Promise<ConfigFileDto>;
 }
+
+export type AccountApiRequestBody = string | Uint8Array;
 
 export interface AccountApiFetchResponse {
   readonly ok: boolean;
@@ -224,7 +245,7 @@ export type AccountApiFetcher = (
   init: {
     readonly method: string;
     readonly headers: Readonly<Record<string, string>>;
-    readonly body?: string;
+    readonly body?: AccountApiRequestBody;
   },
 ) => Promise<AccountApiFetchResponse>;
 
@@ -252,11 +273,11 @@ export function createAccountApiClient(input: {
       fetch(url, {
         method: init.method,
         headers: init.headers,
-        body: init.body,
+        body: init.body as never,
       }));
 
   async function request<T>(options: {
-    readonly method: 'GET' | 'POST' | 'PATCH';
+    readonly method: 'GET' | 'POST' | 'PATCH' | 'PUT';
     readonly path: string;
     readonly accessToken?: string;
     readonly ifMatch?: string;
@@ -265,6 +286,7 @@ export function createAccountApiClient(input: {
     readonly recentAuthProofId?: string;
     readonly contentType?: string;
     readonly body?: Readonly<Record<string, unknown>>;
+    readonly binaryBody?: Uint8Array;
   }): Promise<T> {
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -280,13 +302,17 @@ export function createAccountApiClient(input: {
       headers['X-Reauth-Access-Token'] = options.reauthAccessToken;
     if (options.recentAuthProofId)
       headers['X-Recent-Auth-Proof'] = options.recentAuthProofId;
-    if (options.body) {
+    if (options.body || options.binaryBody) {
       headers['Content-Type'] = options.contentType ?? 'application/json';
     }
     const response = await fetcher(`${baseUrl}${options.path}`, {
       method: options.method,
       headers,
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+      ...(options.binaryBody
+        ? { body: options.binaryBody }
+        : options.body
+          ? { body: JSON.stringify(options.body) }
+          : {}),
     });
     const payload = (await response.json()) as
       | ApiResponse<T>
@@ -369,6 +395,23 @@ export function createAccountApiClient(input: {
         accessToken,
         idempotencyKey,
         body: { code },
+      }),
+    createUploadIntent: (accessToken, input, idempotencyKey) =>
+      request<UploadIntentDto>({
+        method: 'POST',
+        path: '/v1/config-files/upload-intent',
+        accessToken,
+        idempotencyKey,
+        body: input,
+      }),
+    uploadContent: (accessToken, fileId, body, idempotencyKey) =>
+      request<ConfigFileDto>({
+        method: 'PUT',
+        path: `/v1/config-files/${encodeURIComponent(fileId)}/content`,
+        accessToken,
+        idempotencyKey,
+        contentType: 'application/octet-stream',
+        binaryBody: body,
       }),
   };
 }

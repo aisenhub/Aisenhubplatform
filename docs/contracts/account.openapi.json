@@ -233,7 +233,7 @@
         "operationId": "createUploadIntent",
         "tags": ["files"],
         "x-module": "M4",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "platformKey": [], "bearerAuth": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformKey" },
@@ -257,7 +257,7 @@
         "operationId": "uploadConfigFileContent",
         "tags": ["files"],
         "x-module": "M4",
-        "x-implementation-status": "contract-only",
+        "x-implementation-status": "local-only",
         "security": [{ "platformKey": [], "bearerAuth": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformKey" },

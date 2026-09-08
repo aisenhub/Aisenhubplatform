@@ -6,7 +6,11 @@ import { NextRequest } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
-type SupportedMethod = 'GET' | 'POST' | 'PATCH';
+type SupportedMethod = 'GET' | 'POST' | 'PATCH' | 'PUT';
+
+const MAX_UPLOAD_BYTES = 1024 * 1024;
+let activeUploads = 0;
+const activeUploadsByAccount = new Map<string, number>();
 
 class BffError extends Error {
   constructor(
@@ -87,6 +91,65 @@ async function jsonObject(
   } catch {
     throw new BffError(400, 'INVALID_INPUT');
   }
+}
+
+async function boundedBinaryBody(request: NextRequest): Promise<Uint8Array> {
+  const declared = request.headers.get('content-length');
+  if (
+    declared !== null &&
+    (!/^\d+$/u.test(declared) || Number(declared) > MAX_UPLOAD_BYTES)
+  )
+    throw new BffError(413, 'PAYLOAD_TOO_LARGE');
+  const encoding = request.headers.get('content-encoding');
+  if (encoding && encoding.toLowerCase() !== 'identity')
+    throw new BffError(400, 'INVALID_INPUT');
+  const reader = request.body?.getReader();
+  if (!reader) throw new BffError(400, 'INVALID_INPUT');
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      if (size + value.byteLength > MAX_UPLOAD_BYTES) {
+        await reader.cancel('upload limit exceeded').catch(() => undefined);
+        throw new BffError(413, 'PAYLOAD_TOO_LARGE');
+      }
+      chunks.push(value);
+      size += value.byteLength;
+    }
+    if (declared !== null && Number(declared) !== size)
+      throw new BffError(400, 'UPLOAD_SIZE_MISMATCH');
+    if (size === 0) throw new BffError(400, 'INVALID_INPUT');
+    const result = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return result;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function acquireUpload(accountId: string): boolean {
+  const accountActive = activeUploadsByAccount.get(accountId) ?? 0;
+  if (activeUploads >= 16 || accountActive >= 2) return false;
+  activeUploads += 1;
+  activeUploadsByAccount.set(accountId, accountActive + 1);
+  return true;
+}
+
+function releaseUpload(accountId: string): void {
+  activeUploads = Math.max(0, activeUploads - 1);
+  const accountActive = Math.max(
+    0,
+    (activeUploadsByAccount.get(accountId) ?? 1) - 1,
+  );
+  if (accountActive === 0) activeUploadsByAccount.delete(accountId);
+  else activeUploadsByAccount.set(accountId, accountActive);
 }
 
 async function dispatch(
@@ -229,6 +292,63 @@ async function dispatch(
         id,
       );
     }
+    if (route === 'config-files/upload-intent' && method === 'POST') {
+      const idempotencyKey = request.headers.get('idempotency-key');
+      if (!idempotencyKey) throw new BffError(400, 'INVALID_INPUT');
+      const input = await jsonObject(request);
+      if (
+        typeof input.name !== 'string' ||
+        typeof input.size !== 'number' ||
+        typeof input.content_type !== 'string' ||
+        input.purpose !== 'config'
+      )
+        throw new BffError(400, 'INVALID_INPUT');
+      return jsonResponse(
+        {
+          data: await api.createUploadIntent(
+            token,
+            {
+              name: input.name,
+              size: input.size,
+              content_type: input.content_type,
+              purpose: 'config',
+              replaces_file_id:
+                typeof input.replaces_file_id === 'string'
+                  ? input.replaces_file_id
+                  : null,
+            },
+            idempotencyKey,
+          ),
+          request_id: id,
+        },
+        201,
+        id,
+      );
+    }
+    const contentMatch = /^config-files\/([^/]+)\/content$/u.exec(route);
+    if (contentMatch && method === 'PUT') {
+      const fileId = contentMatch[1]!;
+      const principal = (await api.getPrincipal(token)) as {
+        platform_account_id?: unknown;
+      };
+      if (typeof principal.platform_account_id !== 'string')
+        throw new BffError(409, 'ACCOUNT_NOT_ACTIVATED');
+      if (!acquireUpload(principal.platform_account_id))
+        throw new BffError(429, 'RATE_LIMITED');
+      try {
+        const idempotencyKey = request.headers.get('idempotency-key');
+        if (!idempotencyKey) throw new BffError(400, 'INVALID_INPUT');
+        const data = await api.uploadContent(
+          token,
+          fileId,
+          await boundedBinaryBody(request),
+          idempotencyKey,
+        );
+        return jsonResponse({ data, request_id: id }, 202, id);
+      } finally {
+        releaseUpload(principal.platform_account_id);
+      }
+    }
     throw new BffError(404, 'RESOURCE_NOT_FOUND');
   } catch (error) {
     const bffError =
@@ -271,4 +391,11 @@ export function PATCH(
   context: RouteContext,
 ): Promise<Response> {
   return dispatch(request, 'PATCH', context);
+}
+
+export function PUT(
+  request: NextRequest,
+  context: RouteContext,
+): Promise<Response> {
+  return dispatch(request, 'PUT', context);
 }

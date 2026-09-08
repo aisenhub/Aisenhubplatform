@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createAccountApiClient } from '../src/index.ts';
+import type { AccountApiRequestBody } from '../src/index.ts';
 
 describe('account API server client', () => {
   it('creates a fresh no-store request with server-only key and auth token', async () => {
@@ -135,7 +136,7 @@ describe('account API server client', () => {
       init: {
         method: string;
         headers: Readonly<Record<string, string>>;
-        body?: string;
+        body?: AccountApiRequestBody;
       };
     }> = [];
     const client = createAccountApiClient({

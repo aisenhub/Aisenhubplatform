@@ -3,6 +3,7 @@
 import { assertEquals, assertMatch } from 'jsr:@std/assert@1';
 
 import { handleRequest } from './index.ts';
+import { UploadGate } from '../_shared/upload.ts';
 
 const platformId = '00000000-0000-4000-8000-000000000001';
 const keyId = '00000000-0000-4000-8000-000000000002';
@@ -617,4 +618,135 @@ Deno.test('Account API refuses every other Admin route at AAL1', async () => {
   );
   assertEquals(response.status, 403);
   assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
+});
+
+Deno.test('Account API settles a bounded upload through the injected Storage adapter', async () => {
+  const attemptId = '00000000-0000-4000-8000-000000000009';
+  const fileId = '00000000-0000-4000-8000-000000000010';
+  let storagePutCalls = 0;
+  const database = {
+    async begin<T>(
+      callback: (transaction: {
+        json: (value: unknown) => unknown;
+        unsafe: <R extends Record<string, unknown>>(
+          query: string,
+          values?: unknown[],
+        ) => Promise<R[]>;
+      }) => Promise<T>,
+    ) {
+      return callback({
+        json(value: unknown) {
+          return value;
+        },
+        async unsafe<R extends Record<string, unknown>>(
+          query: string,
+        ): Promise<R[]> {
+          if (
+            query.startsWith(
+              'select * from private.platform_key_verify_presented',
+            )
+          )
+            return [
+              {
+                key_id: keyId,
+                platform_id: platformId,
+                platform_status: 'active',
+              },
+            ] as unknown as R[];
+          if (query.startsWith('select * from private.file_upload_state'))
+            return [
+              {
+                file_id: fileId,
+                platform_account_id: userId,
+                requested_size_bytes: 5,
+                max_file_bytes: 5,
+                status: 'pending',
+                write_outcome: 'not_started',
+              },
+            ] as unknown as R[];
+          if (query.startsWith('select * from private.file_receive_claim'))
+            return [
+              {
+                file_id: fileId,
+                platform_account_id: userId,
+                requested_size_bytes: 5,
+                max_file_bytes: 5,
+                status: 'receiving',
+                write_outcome: 'not_started',
+                storage_path: `${platformId}/${userId}/${fileId}`,
+                mime_type: 'text/plain',
+              },
+            ] as unknown as R[];
+          if (query.startsWith('select * from private.file_prepare_store'))
+            return [
+              {
+                file_id: fileId,
+                status: 'storing',
+                write_outcome: 'in_flight',
+                storage_path: `${platformId}/${userId}/${fileId}`,
+                write_attempt_id: attemptId,
+              },
+            ] as unknown as R[];
+          if (
+            query.startsWith(
+              'select * from private.file_write_attempt_finalize',
+            )
+          )
+            return [
+              {
+                file_id: fileId,
+                status: 'active',
+                write_outcome: 'confirmed',
+                actual_size_bytes: 5,
+                sha256:
+                  '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+                reserved_bytes: 5,
+                reserved_count: 1,
+                original_name: 'config.ini',
+                mime_type: 'text/plain',
+                created_at: new Date('2026-09-09T00:00:00Z'),
+              },
+            ] as unknown as R[];
+          return [] as unknown as R[];
+        },
+      });
+    },
+  };
+  const response = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/v1/config-files/${fileId}/content`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Idempotency-Key': 'content-1',
+          'Content-Type': 'application/octet-stream',
+        },
+        body: 'hello',
+      },
+    ),
+    {
+      database,
+      verifyAccessToken: async () => userId,
+      platformKeySecret: 'm3-test-platform-secret',
+      uploadGate: new UploadGate(16, 2),
+      storageAdapter: {
+        async putImmutable() {
+          storagePutCalls += 1;
+          return { providerRequestId: 'provider-1' };
+        },
+        async getInfo() {
+          return { size: 5, etag: 'not-a-hash' };
+        },
+        async download() {
+          return new Response('hello');
+        },
+        async remove() {},
+      },
+    },
+  );
+  assertEquals(response.status, 202);
+  assertEquals((await response.json()).data.status, 'active');
+  assertEquals(storagePutCalls, 1);
 });

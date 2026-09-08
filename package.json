@@ -23,6 +23,7 @@
     "test:api:t12-ordinary-proof": "node tests/spikes/api/t12-ordinary-proof.mjs",
     "test:api:t16-m2-management": "node tests/spikes/api/t16-m2-management.mjs",
     "test:sql:m4-03-file-intent": "node tests/spikes/sql/m4-03-file-intent.mjs",
+    "test:api:m4-04-upload": "node tests/spikes/api/m4-04-upload.mjs",
     "test:e2e": "node tests/spikes/e2e/t16-r2-account.mjs",
     "runtime:probe": "pnpm run --filter scripts runtime:probe",
     "docs:check": "pnpm run --filter scripts docs:check",

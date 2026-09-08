@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GET, PATCH, POST } from './route';
+import { GET, PATCH, POST, PUT } from './route';
 
 const originalFetch = globalThis.fetch;
 const originalEnv = {
@@ -165,5 +165,93 @@ describe('template consumer BFF', () => {
       error: { code: 'RECENT_MFA_REQUIRED' },
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('buffers bounded binary uploads before forwarding them through the server SDK', async () => {
+    process.env.ACCOUNT_API_URL = 'https://account.example.test';
+    process.env.PLATFORM_KEY = 'phk_server_only_fixture';
+    process.env.CONSUMER_ORIGIN = 'https://consumer-a.example.test';
+    const calls: RequestInit[] = [];
+    globalThis.fetch = vi.fn(async (_input: string, init?: RequestInit) => {
+      calls.push(init ?? {});
+      if (calls.length === 1)
+        return new Response(
+          JSON.stringify({ data: { platform_account_id: 'account-1' } }),
+          { status: 200 },
+        );
+      return new Response(
+        JSON.stringify({
+          data: { file_id: 'file-1', status: 'active', size: 5 },
+        }),
+        { status: 202 },
+      );
+    }) as typeof fetch;
+
+    const response = await PUT(
+      request('config-files/file-1/content', {
+        method: 'PUT',
+        headers: {
+          origin: 'https://consumer-a.example.test',
+          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          'x-csrf-token': 'csrf-1',
+          'idempotency-key': 'content-1',
+          'content-type': 'application/octet-stream',
+        },
+        body: 'hello',
+      }),
+      {
+        params: Promise.resolve({
+          path: ['config-files', 'file-1', 'content'],
+        }),
+      },
+    );
+    expect(response.status).toBe(202);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.headers).toMatchObject({
+      'X-Platform-Key': 'phk_server_only_fixture',
+      Authorization: 'Bearer session-1',
+      'Content-Type': 'application/octet-stream',
+      'Idempotency-Key': 'content-1',
+    });
+    expect(calls[1]?.body).toBeInstanceOf(Uint8Array);
+    expect(new TextDecoder().decode(calls[1]?.body as Uint8Array)).toBe(
+      'hello',
+    );
+  });
+
+  it('rejects compressed or oversized binary bodies before the central API', async () => {
+    process.env.ACCOUNT_API_URL = 'https://account.example.test';
+    process.env.PLATFORM_KEY = 'phk_server_only_fixture';
+    process.env.CONSUMER_ORIGIN = 'https://consumer-a.example.test';
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ data: { platform_account_id: 'account-1' } }),
+          {
+            status: 200,
+          },
+        ),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+    const response = await PUT(
+      request('config-files/file-1/content', {
+        method: 'PUT',
+        headers: {
+          origin: 'https://consumer-a.example.test',
+          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          'x-csrf-token': 'csrf-1',
+          'idempotency-key': 'content-2',
+          'content-encoding': 'gzip',
+        },
+        body: 'compressed',
+      }),
+      {
+        params: Promise.resolve({
+          path: ['config-files', 'file-1', 'content'],
+        }),
+      },
+    );
+    expect(response.status).toBe(400);
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });
