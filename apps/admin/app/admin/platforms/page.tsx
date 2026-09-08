@@ -61,6 +61,7 @@ export default function PlatformsPage() {
   const [name, setName] = useState('');
   const [origin, setOrigin] = useState('http://localhost:3000');
   const [keyName, setKeyName] = useState('BFF key');
+  const [accountReason, setAccountReason] = useState('');
 
   const loadPlatforms = useCallback(async () => {
     const response = await fetch('/api/v1/admin/api/v1/platforms', {
@@ -183,13 +184,35 @@ export default function PlatformsPage() {
     if (response.ok) await loadSelected();
   }
 
+  async function revokeKey(keyId: string) {
+    if (!window.confirm('确认撤销该 Platform Key？撤销后不可恢复。')) return;
+    const response = await fetch(
+      `/api/v1/admin/api/v1/platforms/${selectedId}/keys/${keyId}/revoke`,
+      { method: 'POST', headers: mutationHeaders() },
+    );
+    setStatus(
+      response.ok
+        ? 'Key 已撤销且不可恢复；如需轮换请先确认新 Key 已部署。'
+        : 'Key 撤销失败，请确认近期 MFA proof。',
+    );
+    if (response.ok) await loadSelected();
+  }
+
   async function accountAction(
     accountId: string,
     action: 'suspend' | 'restore' | 'close',
   ) {
+    if (!accountReason.trim()) {
+      setStatus('账户状态动作必须填写原因；原因不要包含个人信息。');
+      return;
+    }
     const response = await fetch(
       `/api/v1/admin/api/v1/platforms/${selectedId}/accounts/${accountId}/${action}`,
-      { method: 'POST', headers: mutationHeaders(), body: '{}' },
+      {
+        method: 'POST',
+        headers: mutationHeaders(),
+        body: JSON.stringify({ reason: accountReason.trim() }),
+      },
     );
     setStatus(
       response.ok ? `账户 ${action} 已提交。` : `账户 ${action} 失败。`,
@@ -288,7 +311,15 @@ export default function PlatformsPage() {
                   <li key={item.key_id}>
                     <strong>{item.name}</strong>
                     <span>
-                      {item.status} · {item.key_prefix}…{item.key_suffix}
+                      {item.status} · {item.key_prefix}…{item.key_suffix}{' '}
+                      {item.status === 'active' ? (
+                        <button
+                          type="button"
+                          onClick={() => void revokeKey(item.key_id)}
+                        >
+                          撤销
+                        </button>
+                      ) : null}
                     </span>
                   </li>
                 ))}
@@ -301,6 +332,16 @@ export default function PlatformsPage() {
       </section>
       <section className="panel">
         <h2>平台账户</h2>
+        <label htmlFor="account-reason">
+          账户状态操作原因（必填，勿含个人信息）
+        </label>
+        <input
+          id="account-reason"
+          value={accountReason}
+          onChange={(event) => setAccountReason(event.target.value)}
+          maxLength={500}
+          placeholder="例如：support review completed"
+        />
         {accounts.length === 0 ? (
           <p className="muted">暂无账户。</p>
         ) : (
