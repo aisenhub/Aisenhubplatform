@@ -141,6 +141,22 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
+          if (query.startsWith('select * from private.admin_file_list_v2')) {
+            return [
+              {
+                file_id: keyId,
+                platform_id: platformId,
+                platform_account_id: userId,
+                status: 'active',
+                write_outcome: 'confirmed',
+                reserved_bytes: 5,
+                reserved_count: 1,
+                actual_size_bytes: 5,
+                original_name: 'fixture.txt',
+                mime_type: 'text/plain',
+              },
+            ] as unknown as R[];
+          }
           if (query.startsWith('select * from private.admin_platform_get')) {
             return [
               {
@@ -650,6 +666,57 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(list.status, 200);
   assertEquals((await list.json()).data[0].code, 'fixture');
+
+  const searchedList = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/platforms?q=fixture&limit=20',
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(searchedList.status, 200);
+  assertEquals((await searchedList.json()).data[0].code, 'fixture');
+
+  const origins = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/platforms/00000000-0000-4000-8000-000000000001/origins?q=local',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(origins.status, 200);
+
+  const accounts = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/platforms/00000000-0000-4000-8000-000000000001/accounts?q=active&limit=20',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(accounts.status, 200);
+
+  const files = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/config-files?q=fixture&limit=20',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(files.status, 200);
+
+  const keys = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/platforms/00000000-0000-4000-8000-000000000001/keys?q=active',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(keys.status, 200);
 
   const key = await handleRequest(
     new Request(

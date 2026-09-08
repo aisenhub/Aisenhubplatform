@@ -28,6 +28,10 @@
         "x-module": "M2",
         "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
         "responses": {
           "200": { "$ref": "#/components/responses/Page" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
@@ -79,7 +83,10 @@
         "x-module": "M2",
         "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/SearchQuery" }
+        ],
         "responses": {
           "200": { "$ref": "#/components/responses/Page" },
           "404": { "$ref": "#/components/responses/NotFound" }
@@ -105,7 +112,11 @@
         "x-module": "M2",
         "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
         "responses": {
           "200": { "$ref": "#/components/responses/Page" },
           "404": { "$ref": "#/components/responses/NotFound" }
@@ -204,7 +215,10 @@
         "x-module": "M2",
         "x-implementation-status": "local-only",
         "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/SearchQuery" }
+        ],
         "responses": { "200": { "$ref": "#/components/responses/Page" } }
       },
       "post": {
@@ -381,7 +395,8 @@
               "maximum": 100,
               "default": 20
             }
-          }
+          },
+          { "$ref": "#/components/parameters/SearchQuery" }
         ],
         "responses": { "200": { "$ref": "#/components/responses/Page" } }
       }
@@ -551,6 +566,23 @@
         "in": "path",
         "required": true,
         "schema": { "type": "string", "format": "uuid" }
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "maxLength": 128 }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
       },
       "AccountId": {
         "name": "accountId",

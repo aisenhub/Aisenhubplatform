@@ -4,6 +4,7 @@ type AdminFilterInputProps = {
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  onSubmit?: () => void;
 };
 
 export function AdminFilterInput({
@@ -12,17 +13,27 @@ export function AdminFilterInput({
   placeholder,
   value,
   onChange,
+  onSubmit,
 }: AdminFilterInputProps) {
   return (
-    <div className="filter-control">
+    <form
+      className="filter-control"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit?.();
+      }}
+    >
       <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        type="search"
-      />
-    </div>
+      <div className="inline-form">
+        <input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          type="search"
+        />
+        {onSubmit ? <button type="submit">查询</button> : null}
+      </div>
+    </form>
   );
 }

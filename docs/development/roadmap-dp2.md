@@ -35,7 +35,7 @@
 |---|---|---|---|
 | M5-01 | 资源/包/模板差距与兼容矩阵 | 无 | DONE（盘点交付；见 m5-compatibility-matrix.md） |
 | M5-02 | 三SDK可安装版本产物 | M5-01,M4-10 | PASS（Local tarball；未发布） |
-| M5-03 | Admin资源与错误状态完善 | M5-01,M4-10,M3-R1 | IN_PROGRESS（资源导航、订阅/审计、Key部署确认/撤旧、共享筛选首批） |
+| M5-03 | Admin资源与错误状态完善 | M5-01,M4-10,M3-R1 | IN_PROGRESS（资源导航、订阅/审计、Key部署确认/撤旧、共享筛选及资源服务端搜索） |
 | M5-04 | Registry与完整用户模板 | M5-02 | IN_PROGRESS（Local manifest与Auth模板首批） |
 | M5-05 | 全新Consumer实际安装验收 | M5-03,M5-04 | IN_PROGRESS（Local install/build；Hosted待X05） |
 | M5-06 | 正式scope/Registry发布与安装 | M5-05 | WAITING（另需X05及发布授权） |
@@ -58,7 +58,7 @@
 
 - 依赖任务：M5-01,M4-10,M3-R1。
 - 范围：`apps/admin`、`packages/ui`、必要只读/领域API包装、OpenAPI及浏览器测试。
-- 交付：资源表全部页面和动作的导航、分页筛选、状态、原因、确认和失败恢复；MFA过期保留非Secret输入并重验证。Key新建→部署确认→撤旧，Batch一次交付→显式确认，禁止明文重取。
+- 交付：资源表全部页面和动作的导航、分页筛选、状态、原因、确认和失败恢复；平台、Origin、Key、账户和文件列表的查询参数必须由同一受控 Admin SQL wrapper 校验并服务端过滤；MFA过期保留非Secret输入并重验证。Key新建→部署确认→撤旧，Batch一次交付→显式确认，禁止明文重取。
 - 验收：V-UI-01和相关V-AUTH-03；每入口服务端授权、Audit、真实拒绝/恢复路径；Admin身份无法激活普通平台；不引入第二套UI/RBAC框架。缺领域API先补同一业务入口再连UI。
 
 ## M5-04 — Registry与用户模板

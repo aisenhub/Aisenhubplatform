@@ -50,6 +50,7 @@ export default function AdminFilesPage() {
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [files, setFiles] = useState<ConfigFile[]>([]);
   const [fileFilter, setFileFilter] = useState('');
+  const [fileQuery, setFileQuery] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [status, setStatus] = useState('正在读取文件运维数据…');
 
@@ -79,7 +80,7 @@ export default function AdminFilesPage() {
           cache: 'no-store',
         }),
         fetch(
-          `/api/v1/admin/api/v1/config-files?limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+          `/api/v1/admin/api/v1/config-files?limit=20${fileQuery.trim() ? `&q=${encodeURIComponent(fileQuery.trim())}` : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
           {
             cache: 'no-store',
           },
@@ -104,7 +105,7 @@ export default function AdminFilesPage() {
       setNextCursor(fileBody.next_cursor ?? null);
       setStatus('文件策略和状态已从 Admin API 刷新。');
     },
-    [platformId],
+    [fileQuery, platformId],
   );
 
   useEffect(() => {
@@ -269,6 +270,10 @@ export default function AdminFilesPage() {
           label="筛选文件"
           value={fileFilter}
           onChange={setFileFilter}
+          onSubmit={() => {
+            setFileQuery(fileFilter);
+            setNextCursor(null);
+          }}
           placeholder="名称、status 或 write_outcome"
         />
         {files.some(

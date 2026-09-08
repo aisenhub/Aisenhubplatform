@@ -81,7 +81,7 @@ Admin路径固定为/admin/api/v1，具体动作：
 - config-files：metadata、受控download、delete。
 - audit：只读筛选分页；deletion-jobs：只读状态、Admin start/retry；不提供任意checkpoint编辑。
 
-Admin列表按平台/目标资源过滤；所有敏感动作使用同一授权包装和Audit。读列表也须Admin身份，不能因不修改数据跳过鉴权。
+Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文件列表支持可选 `q`（最多128字符）以及既有 `limit`/cursor 参数，过滤在受控 SQL wrapper 内执行。所有敏感动作使用同一授权包装和Audit。读列表也须Admin身份，不能因不修改数据跳过鉴权。
 
 ## 5. T11冻结产物
 
@@ -101,7 +101,7 @@ Storage提供putImmutable/getInfo/download/remove四种受控adapter操作；收
 
 T04已交付Local管理员MFA/proof和logout旧JWT拒绝，T17记录Staging基础Auth/API；这不覆盖普通用户“近期重新认证”、真实SSR和Provider。T12-R1/R2补普通proof、local/global退出范围及回调；不得以JWT iat或前端布尔值代替。Close/Link敏感完成步骤/Global Delete请求不能以弱校验上线。
 
-当前OpenAPI为17个Account、32个Admin操作，Admin已包含recent-proof；不能把数量/结构检查PASS称为所有操作已实现或真实proof生命周期通过。T12-R2须核对API专题、OpenAPI、DTO/消费者的普通reauth及Admin proof语义，新增reauth endpoint先登记合同再实现，不重复新增已有Admin路由。
+当前OpenAPI为18个Account、36个Admin操作，Admin已包含recent-proof；不能把数量/结构检查PASS称为所有操作已实现或真实proof生命周期通过。T12-R2须核对API专题、OpenAPI、DTO/消费者的普通reauth及Admin proof语义，新增reauth endpoint先登记合同再实现，不重复新增已有Admin路由。
 
 SP-SQL确认Auth表实际可授予列与pooler角色形式；SP-UPLOAD确认真实host取消语义。发现必须改变上述合同的情况按决策登记处理，不由agent自行选择安全降级。
 

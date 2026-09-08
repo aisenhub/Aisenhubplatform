@@ -562,17 +562,18 @@ async function exerciseAdmin(page, adminTotp) {
   });
   await page.getByRole('heading', { name: 'Platform operations' }).waitFor();
   await page.getByRole('button', { name: platformACode, exact: true }).click();
+  await page.waitForTimeout(1_000);
   await page
     .getByLabel('账户状态操作原因（必填，勿含个人信息）')
     .fill('T16 R2 browser suspend');
   const accountRow = page.locator('li').filter({ hasText: userId });
-  const [suspendResponse] = await Promise.all([
-    page.waitForResponse(
-      (item) =>
-        item.url().includes(`/accounts/`) && item.url().endsWith('/suspend'),
-    ),
+  await accountRow.getByRole('button', { name: '暂停', exact: true }).waitFor();
+  const [suspendRequest] = await Promise.all([
+    page.waitForRequest((item) => item.url().includes(`/accounts/`)),
     accountRow.getByRole('button', { name: '暂停', exact: true }).click(),
   ]);
+  const suspendResponse = await suspendRequest.response();
+  assert.ok(suspendResponse, 'Admin account suspend must return a response');
   assertStatus(suspendResponse.status(), 200, 'Admin account suspend');
   await page.waitForTimeout(250);
   return accountRow;

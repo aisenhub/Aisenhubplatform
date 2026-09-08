@@ -993,8 +993,12 @@ async function dispatchAdmin(
   if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
   if (path === 'admin/api/v1/platforms' && request.method === 'GET') {
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_platform_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::integer)',
-      [...context, boundedLimit(url.searchParams.get('limit'))],
+      'select * from private.admin_platform_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::text, $5::integer)',
+      [
+        ...context,
+        url.searchParams.get('q'),
+        boundedLimit(url.searchParams.get('limit')),
+      ],
     );
     return { status: 200, data: rows };
   }
@@ -1006,8 +1010,8 @@ async function dispatchAdmin(
       throw new ApiFault(400, 'INVALID_INPUT');
     const limit = boundedLimit(url.searchParams.get('limit'));
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_file_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer)',
-      [...context, cursor, limit],
+      'select * from private.admin_file_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer, $6::text)',
+      [...context, cursor, limit, url.searchParams.get('q')],
     );
     return {
       status: 200,
@@ -1203,8 +1207,8 @@ async function dispatchAdmin(
     const platformId = originsMatch[1]!;
     if (request.method === 'GET') {
       const rows = await transaction.unsafe<Row>(
-        'select * from private.admin_origin_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
-        [...context, platformId],
+        'select * from private.admin_origin_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text)',
+        [...context, platformId, url.searchParams.get('q')],
       );
       return { status: 200, data: rows };
     }
@@ -1235,10 +1239,11 @@ async function dispatchAdmin(
     request.method === 'GET'
   ) {
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_account_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer)',
+      'select * from private.admin_account_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::integer)',
       [
         ...context,
         accountsMatch[1],
+        url.searchParams.get('q'),
         boundedLimit(url.searchParams.get('limit')),
       ],
     );
@@ -1298,8 +1303,8 @@ async function dispatchAdmin(
     const platformId = keysMatch[1]!;
     if (request.method === 'GET') {
       const rows = await transaction.unsafe<Row>(
-        'select * from private.admin_platform_key_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
-        [...context, platformId],
+        'select * from private.admin_platform_key_list_v3(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text)',
+        [...context, platformId, url.searchParams.get('q')],
       );
       return { status: 200, data: rows };
     }

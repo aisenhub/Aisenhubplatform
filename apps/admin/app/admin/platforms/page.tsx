@@ -59,9 +59,13 @@ export default function PlatformsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [keys, setKeys] = useState<Key[]>([]);
   const [platformFilter, setPlatformFilter] = useState('');
+  const [platformQuery, setPlatformQuery] = useState('');
   const [originFilter, setOriginFilter] = useState('');
+  const [originQuery, setOriginQuery] = useState('');
   const [keyFilter, setKeyFilter] = useState('');
+  const [keyQuery, setKeyQuery] = useState('');
   const [accountFilter, setAccountFilter] = useState('');
+  const [accountQuery, setAccountQuery] = useState('');
   const [status, setStatus] = useState('正在读取平台…');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -70,9 +74,12 @@ export default function PlatformsPage() {
   const [accountReason, setAccountReason] = useState('');
 
   const loadPlatforms = useCallback(async () => {
-    const response = await fetch('/api/v1/admin/api/v1/platforms', {
-      cache: 'no-store',
-    });
+    const response = await fetch(
+      `/api/v1/admin/api/v1/platforms?limit=100${platformQuery.trim() ? `&q=${encodeURIComponent(platformQuery.trim())}` : ''}`,
+      {
+        cache: 'no-store',
+      },
+    );
     if (!response.ok) {
       setStatus('平台读取失败，请确认管理员会话。');
       return;
@@ -82,15 +89,24 @@ export default function PlatformsPage() {
     setPlatforms(next);
     setSelectedId((current) => current || next[0]?.platform_id || '');
     setStatus(`已读取 ${next.length} 个平台。`);
-  }, []);
+  }, [platformQuery]);
 
   const loadSelected = useCallback(async () => {
     if (!selectedId) return;
     const prefix = `/api/v1/admin/api/v1/platforms/${selectedId}`;
     const [originResponse, accountResponse, keyResponse] = await Promise.all([
-      fetch(`${prefix}/origins`, { cache: 'no-store' }),
-      fetch(`${prefix}/accounts`, { cache: 'no-store' }),
-      fetch(`${prefix}/keys`, { cache: 'no-store' }),
+      fetch(
+        `${prefix}/origins${originQuery.trim() ? `?q=${encodeURIComponent(originQuery.trim())}` : ''}`,
+        { cache: 'no-store' },
+      ),
+      fetch(
+        `${prefix}/accounts?limit=100${accountQuery.trim() ? `&q=${encodeURIComponent(accountQuery.trim())}` : ''}`,
+        { cache: 'no-store' },
+      ),
+      fetch(
+        `${prefix}/keys${keyQuery.trim() ? `?q=${encodeURIComponent(keyQuery.trim())}` : ''}`,
+        { cache: 'no-store' },
+      ),
     ]);
     if (!originResponse.ok || !accountResponse.ok || !keyResponse.ok) {
       setStatus('平台详情读取失败。');
@@ -103,7 +119,7 @@ export default function PlatformsPage() {
       ((await accountResponse.json()) as { data?: Account[] }).data ?? [],
     );
     setKeys(((await keyResponse.json()) as { data?: Key[] }).data ?? []);
-  }, [selectedId]);
+  }, [accountQuery, keyQuery, originQuery, selectedId]);
 
   useEffect(() => {
     void loadPlatforms();
@@ -303,6 +319,7 @@ export default function PlatformsPage() {
             label="筛选平台"
             value={platformFilter}
             onChange={setPlatformFilter}
+            onSubmit={() => setPlatformQuery(platformFilter)}
             placeholder="code、name 或 status"
           />
           <ul className="data-list">
@@ -344,6 +361,7 @@ export default function PlatformsPage() {
                 label="筛选 Origin"
                 value={originFilter}
                 onChange={setOriginFilter}
+                onSubmit={() => setOriginQuery(originFilter)}
                 placeholder="environment、origin 或 status"
               />
               <ul className="data-list">
@@ -370,6 +388,7 @@ export default function PlatformsPage() {
                 label="筛选 Key"
                 value={keyFilter}
                 onChange={setKeyFilter}
+                onSubmit={() => setKeyQuery(keyFilter)}
                 placeholder="name、status 或 suffix"
               />
               <ul className="data-list">
@@ -426,6 +445,7 @@ export default function PlatformsPage() {
           label="筛选账户"
           value={accountFilter}
           onChange={setAccountFilter}
+          onSubmit={() => setAccountQuery(accountFilter)}
           placeholder="user ID 或 status"
         />
         {visibleAccounts.length === 0 ? (
