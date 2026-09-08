@@ -80,6 +80,27 @@ try {
   await sql`insert into private.system_admin (user_id) values (${adminUser.user}) on conflict (singleton_id) do update set user_id = excluded.user_id`;
   await sql`grant account_executor to postgres`;
   await sql`grant admin_executor to postgres`;
+  const [januaryLeap] = await asRole(
+    'domain_owner',
+    (transaction) =>
+      transaction`select to_char(private.entitlement_calendar_end('2024-01-31 12:34:56+00'::timestamptz, 1, 'month') at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as value`,
+  );
+  const [januaryCommon] = await asRole(
+    'domain_owner',
+    (transaction) =>
+      transaction`select to_char(private.entitlement_calendar_end('2023-01-31 12:34:56+00'::timestamptz, 1, 'month') at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as value`,
+  );
+  const [februaryLeap] = await asRole(
+    'domain_owner',
+    (transaction) =>
+      transaction`select to_char(private.entitlement_calendar_end('2024-02-29 12:34:56+00'::timestamptz, 1, 'year') at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as value`,
+  );
+  assert(
+    januaryLeap.value === '2024-02-29 12:34:56' &&
+      januaryCommon.value === '2023-02-28 12:34:56' &&
+      februaryLeap.value === '2025-02-28 12:34:56',
+    'month and year durations clamp in UTC calendar space',
+  );
   const context = () =>
     sql`row(${targetUser.user}, ${targetUser.session}, ${platformId}, ${keyId}, ${crypto.randomUUID()})::private.account_context`;
   const adminContext = () =>
