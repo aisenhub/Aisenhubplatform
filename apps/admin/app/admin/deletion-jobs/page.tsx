@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
+import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
 
 type Job = {
   job_id: string;
@@ -23,24 +24,6 @@ function purgeReason(job: Job): string | null {
   return null;
 }
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
-function mutationHeaders(idempotencyKey: string): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    Origin: window.location.origin,
-    'X-CSRF-Token': csrfToken(),
-    'Idempotency-Key': idempotencyKey,
-  };
-}
-
 function requestUrl(path: string): string {
   return `/api/v1/admin/api/v1/${path}`;
 }
@@ -52,9 +35,15 @@ export default function AdminDeletionJobsPage() {
   const [status, setStatus] = useState('正在读取删除任务…');
 
   const load = useCallback(async () => {
-    const response = await fetch(requestUrl('deletion-jobs?limit=100'), {
-      cache: 'no-store',
-    });
+    let response: Response;
+    try {
+      response = await adminAuthSession.request(
+        requestUrl('deletion-jobs?limit=100'),
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     if (!response.ok) {
       setStatus('任务读取失败，请确认 AAL2 管理员会话。');
       return;
@@ -76,11 +65,24 @@ export default function AdminDeletionJobsPage() {
 
   async function start() {
     if (!requestId) return;
-    const response = await fetch(requestUrl('deletion-jobs'), {
-      method: 'POST',
-      headers: mutationHeaders(crypto.randomUUID()),
-      body: JSON.stringify({ request_id: requestId }),
-    });
+    let response: Response;
+    try {
+      response = await adminAuthSession.request(
+        requestUrl('deletion-jobs'),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: JSON.stringify({ request_id: requestId }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok
         ? '删除任务已批准并排队；provider 步骤仍需 worker 回报。'
@@ -93,11 +95,24 @@ export default function AdminDeletionJobsPage() {
   }
 
   async function retry(jobId: string) {
-    const response = await fetch(requestUrl(`deletion-jobs/${jobId}/retry`), {
-      method: 'POST',
-      headers: mutationHeaders(crypto.randomUUID()),
-      body: '{}',
-    });
+    let response: Response;
+    try {
+      response = await adminAuthSession.request(
+        requestUrl(`deletion-jobs/${jobId}/retry`),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: '{}',
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok
         ? '删除任务已重新排队。'

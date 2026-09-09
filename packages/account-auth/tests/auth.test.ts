@@ -29,6 +29,11 @@ describe('account auth boundary', () => {
     expect(createProviderIntent('google', '/callback').returnTo).toBe(
       '/callback',
     );
+    expect(safeReturnTo('/update-password?access_token=secret')).toBe('/');
+    expect(safeReturnTo('/reauth?code_verifier=secret')).toBe('/');
+    expect(() => requireSafeReturnTo('/callback?proof=secret')).toThrow(
+      'INVALID_RETURN_TO',
+    );
   });
 
   it('checks server-side session, revocation and expected user', async () => {

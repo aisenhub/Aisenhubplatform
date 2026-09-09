@@ -55,7 +55,9 @@ describe('AuthSessionManager', () => {
       manager.request('/api/v1/files'),
     ]);
 
-    expect(responses.map((response) => response.status)).toEqual([200, 200, 200]);
+    expect(responses.map((response) => response.status)).toEqual([
+      200, 200, 200,
+    ]);
     expect(fetcher).toHaveBeenCalledTimes(7);
     expect(
       fetcher.mock.calls.filter(([input]) =>
@@ -121,12 +123,14 @@ describe('AuthSessionManager', () => {
     installBrowser('aisenhub-admin-csrf=admin-csrf');
     vi.stubGlobal(
       'fetch',
-      vi.fn<typeof fetch>().mockResolvedValue(
-        new Response(
-          JSON.stringify({ error: { code: 'RECENT_MFA_REQUIRED' } }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } },
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({ error: { code: 'RECENT_MFA_REQUIRED' } }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } },
+          ),
         ),
-      ),
     );
     const manager = new AuthSessionManager({ ...config, scope: 'admin' });
     await manager.request('/api/v1/admin/subscriptions');
@@ -134,9 +138,7 @@ describe('AuthSessionManager', () => {
       state: 'mfa_required',
       stepUp: 'admin_recent_mfa',
     });
-    expect(fetch).toHaveBeenCalledWith(
-      expect.any(Request),
-    );
+    expect(fetch).toHaveBeenCalledWith(expect.any(Request));
     const request = vi.mocked(fetch).mock.calls[0]?.[0] as Request;
     expect(request.headers.get('X-CSRF-Token')).toBeNull();
   });
@@ -149,14 +151,19 @@ describe('AuthSessionManager', () => {
     vi.stubGlobal('fetch', fetcher);
     const expired = new AuthSessionManager(config);
     await expect(expired.refresh()).rejects.toBeInstanceOf(SessionExpiredError);
-    expect(expired.getSessionState()).toMatchObject({ state: 'expired', resolved: true });
+    expect(expired.getSessionState()).toMatchObject({
+      state: 'expired',
+      resolved: true,
+    });
 
     const outageFetcher = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(null, { status: 503 }));
     vi.stubGlobal('fetch', outageFetcher);
     const unavailable = new AuthSessionManager(config);
-    await expect(unavailable.refresh()).rejects.toBeInstanceOf(AuthorizationUnavailableError);
+    await expect(unavailable.refresh()).rejects.toBeInstanceOf(
+      AuthorizationUnavailableError,
+    );
     expect(unavailable.getSessionState()).toEqual({
       state: 'unauthenticated',
       resolved: false,

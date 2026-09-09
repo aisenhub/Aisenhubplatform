@@ -52,6 +52,9 @@ export class SessionReplayPolicyError extends Error {
 }
 
 type Listener = (snapshot: SessionSnapshot) => void;
+type TerminalHint =
+  | { readonly scope: AuthScope; readonly event: 'logged_out' }
+  | { readonly scope: AuthScope; readonly event: 'session_expired' };
 
 const DEFAULT_SNAPSHOT: SessionSnapshot = {
   state: 'unauthenticated',
@@ -72,11 +75,15 @@ function defaultReplay(method: string): ReplayPolicy {
 }
 
 function isAuthPath(pathname: string): boolean {
-  return /^\/api\/auth\/(?:login|refresh|logout|mfa|reauth|forgot-password|password|signup|callback)/u.test(pathname);
+  return /^\/api\/auth\/(?:login|refresh|logout|mfa|reauth|forgot-password|password|signup|callback)/u.test(
+    pathname,
+  );
 }
 
 function readCookie(name: string): string | null {
-  const browserDocument = (globalThis as unknown as { document?: { cookie: string } }).document;
+  const browserDocument = (
+    globalThis as unknown as { document?: { cookie: string } }
+  ).document;
   if (!browserDocument) return null;
   const entry = browserDocument.cookie
     .split('; ')
@@ -90,11 +97,22 @@ function csrfHeaders(headers: Headers, scope: AuthScope): void {
 }
 
 type ReplayableBody = string | URLSearchParams | FormData;
-type BrowserBody = ReplayableBody | Blob | ArrayBuffer | ArrayBufferView | ReadableStream<Uint8Array> | null | undefined;
+type BrowserBody =
+  | ReplayableBody
+  | Blob
+  | ArrayBuffer
+  | ArrayBufferView
+  | ReadableStream<Uint8Array>
+  | null
+  | undefined;
 
 function bodyCanBeReplayed(body: BrowserBody): boolean {
   if (body === null || body === undefined) return true;
-  return typeof body === 'string' || body instanceof URLSearchParams || body instanceof FormData;
+  return (
+    typeof body === 'string' ||
+    body instanceof URLSearchParams ||
+    body instanceof FormData
+  );
 }
 
 function isBinaryRequest(request: Request, body: BrowserBody): boolean {
@@ -110,7 +128,9 @@ function isBinaryRequest(request: Request, body: BrowserBody): boolean {
 }
 
 function sameSnapshot(a: SessionSnapshot, b: SessionSnapshot): boolean {
-  return a.state === b.state && a.resolved === b.resolved && a.stepUp === b.stepUp;
+  return (
+    a.state === b.state && a.resolved === b.resolved && a.stepUp === b.stepUp
+  );
 }
 
 async function responseErrorCode(response: Response): Promise<string | null> {
@@ -132,6 +152,7 @@ export class AuthSessionManager {
   private epoch = 0;
   private destroyed = false;
   private logoutPending = false;
+  private channel: BroadcastChannel | null = null;
 
   constructor(private readonly config: BrowserAuthConfig) {}
 
@@ -149,12 +170,39 @@ export class AuthSessionManager {
 
   subscribe(listener: Listener): () => void {
     if (this.destroyed) return () => undefined;
+    this.ensureBroadcastChannel();
     this.listeners.add(listener);
     listener(this.snapshot);
     return () => this.listeners.delete(listener);
   }
 
-  private transition(next: SessionState, resolved: boolean, stepUp = this.snapshot.stepUp): void {
+  private ensureBroadcastChannel(): void {
+    if (this.channel || typeof BroadcastChannel === 'undefined') return;
+    this.channel = new BroadcastChannel('aisenhub-auth-session');
+    this.channel.onmessage = (event: MessageEvent<unknown>) => {
+      const hint = event.data as Partial<TerminalHint> | null;
+      if (!hint || hint.scope !== this.config.scope || this.destroyed) return;
+      this.epoch += 1;
+      if (hint.event === 'logged_out')
+        this.transition('unauthenticated', true, null);
+      if (hint.event === 'session_expired')
+        this.transition('expired', true, this.snapshot.stepUp);
+    };
+  }
+
+  private broadcast(event: TerminalHint['event']): void {
+    this.ensureBroadcastChannel();
+    this.channel?.postMessage({
+      scope: this.config.scope,
+      event,
+    } satisfies TerminalHint);
+  }
+
+  private transition(
+    next: SessionState,
+    resolved: boolean,
+    stepUp = this.snapshot.stepUp,
+  ): void {
     const nextSnapshot: SessionSnapshot = { state: next, resolved, stepUp };
     if (sameSnapshot(this.snapshot, nextSnapshot)) return;
     this.snapshot = nextSnapshot;
@@ -162,19 +210,40 @@ export class AuthSessionManager {
   }
 
   private requestUrl(input: string | URL | Request): URL {
-    const browserWindow = (globalThis as unknown as { window?: { location: { origin: string } } }).window;
+    const browserWindow = (
+      globalThis as unknown as { window?: { location: { origin: string } } }
+    ).window;
     if (!browserWindow) throw new Error('BROWSER_SESSION_REQUIRES_WINDOW');
-    const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, browserWindow.location.origin);
-    if (url.origin !== browserWindow.location.origin) throw new SessionReplayPolicyError();
+    const url = new URL(
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url,
+      browserWindow.location.origin,
+    );
+    if (url.origin !== browserWindow.location.origin)
+      throw new SessionReplayPolicyError();
     return url;
   }
 
-  private prepareRequest(input: string | URL | Request, init?: RequestInit): { request: Request; replay: ReplayPolicy; body: BrowserBody; clone: Request | null } {
+  private prepareRequest(
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): {
+    request: Request;
+    replay: ReplayPolicy;
+    body: BrowserBody;
+    clone: Request | null;
+  } {
     const url = this.requestUrl(input);
     const body = init?.body;
-    const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
+    const method =
+      init?.method ?? (input instanceof Request ? input.method : 'GET');
     const replay = defaultReplay(method);
-    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    const headers = new Headers(
+      init?.headers ?? (input instanceof Request ? input.headers : undefined),
+    );
     if (isMutation(method)) csrfHeaders(headers, this.config.scope);
     const request = new Request(url, { ...init, headers, method });
     let clone: Request | null = null;
@@ -187,13 +256,22 @@ export class AuthSessionManager {
   }
 
   async login(init?: RequestInit): Promise<Response> {
+    this.ensureBroadcastChannel();
     this.epoch += 1;
     this.transition('authenticating', true, this.snapshot.stepUp);
     const headers = new Headers(init?.headers);
-    headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+    headers.set(
+      'Content-Type',
+      headers.get('Content-Type') ?? 'application/json',
+    );
     try {
-      const response = await fetch(this.requestUrl(this.config.loginUrl), { ...init, method: 'POST', headers });
-      if (response.ok) this.transition('authenticated', true, this.snapshot.stepUp);
+      const response = await fetch(this.requestUrl(this.config.loginUrl), {
+        ...init,
+        method: 'POST',
+        headers,
+      });
+      if (response.ok)
+        this.transition('authenticated', true, this.snapshot.stepUp);
       return response;
     } catch (error) {
       this.transition('unauthenticated', true, this.snapshot.stepUp);
@@ -203,6 +281,7 @@ export class AuthSessionManager {
 
   async refresh(): Promise<Response> {
     if (this.destroyed) throw new SessionExpiredError();
+    this.ensureBroadcastChannel();
     if (this.refreshPromise) {
       await this.refreshPromise;
       return new Response(null, { status: 204 });
@@ -214,22 +293,36 @@ export class AuthSessionManager {
       try {
         const headers = new Headers({ Accept: 'application/json' });
         csrfHeaders(headers, this.config.scope);
-        const response = await fetch(this.config.refreshUrl, { method: 'POST', headers, cache: 'no-store' });
+        const response = await fetch(this.config.refreshUrl, {
+          method: 'POST',
+          headers,
+          cache: 'no-store',
+        });
         if (this.destroyed || generation !== this.epoch) return false;
         if (response.ok) {
-          this.transition(prior.state === 'mfa_required' ? 'mfa_required' : 'authenticated', true, prior.stepUp);
+          this.transition(
+            prior.state === 'mfa_required' ? 'mfa_required' : 'authenticated',
+            true,
+            prior.stepUp,
+          );
           return true;
         }
         if (response.status === 401) {
           this.epoch += 1;
           this.transition('expired', true, prior.stepUp);
+          this.broadcast('session_expired');
           throw new SessionExpiredError();
         }
         this.transition(prior.state, prior.resolved, prior.stepUp);
         throw new AuthorizationUnavailableError();
       } catch (error) {
-        if (error instanceof SessionExpiredError || error instanceof AuthorizationUnavailableError) throw error;
-        if (!this.destroyed && generation === this.epoch) this.transition(prior.state, prior.resolved, prior.stepUp);
+        if (
+          error instanceof SessionExpiredError ||
+          error instanceof AuthorizationUnavailableError
+        )
+          throw error;
+        if (!this.destroyed && generation === this.epoch)
+          this.transition(prior.state, prior.resolved, prior.stepUp);
         throw new AuthorizationUnavailableError();
       }
     })();
@@ -244,15 +337,22 @@ export class AuthSessionManager {
 
   async logout(init?: RequestInit): Promise<Response> {
     if (this.destroyed) throw new SessionExpiredError();
+    this.ensureBroadcastChannel();
     this.logoutPending = true;
     this.epoch += 1;
     try {
       const headers = new Headers(init?.headers);
       csrfHeaders(headers, this.config.scope);
-      const response = await fetch(this.requestUrl(this.config.logoutUrl), { ...init, method: 'POST', headers, cache: 'no-store' });
+      const response = await fetch(this.requestUrl(this.config.logoutUrl), {
+        ...init,
+        method: 'POST',
+        headers,
+        cache: 'no-store',
+      });
       if (response.ok) {
         this.epoch += 1;
         this.transition('unauthenticated', true, null);
+        this.broadcast('logged_out');
       }
       return response;
     } finally {
@@ -260,29 +360,51 @@ export class AuthSessionManager {
     }
   }
 
-  async request(input: string | URL | Request, init?: RequestInit, options?: SessionRequestOptions): Promise<Response> {
+  async request(
+    input: string | URL | Request,
+    init?: RequestInit,
+    options?: SessionRequestOptions,
+  ): Promise<Response> {
     if (this.destroyed || this.logoutPending) throw new SessionExpiredError();
+    this.ensureBroadcastChannel();
     const prepared = this.prepareRequest(input, init);
     const url = this.requestUrl(input);
-    const replay = options?.replay ?? (isAuthPath(url.pathname) ? 'never' : prepared.replay);
+    const replay =
+      options?.replay ?? (isAuthPath(url.pathname) ? 'never' : prepared.replay);
     if (replay === 'idempotent-mutation') {
-      if (!isMutation(prepared.request.method) || isAuthPath(url.pathname) || !prepared.request.headers.has('Idempotency-Key') || !bodyCanBeReplayed(prepared.body) || isBinaryRequest(prepared.request, prepared.body) || !prepared.clone) throw new SessionReplayPolicyError();
+      if (
+        !isMutation(prepared.request.method) ||
+        isAuthPath(url.pathname) ||
+        !prepared.request.headers.has('Idempotency-Key') ||
+        !bodyCanBeReplayed(prepared.body) ||
+        isBinaryRequest(prepared.request, prepared.body) ||
+        !prepared.clone
+      )
+        throw new SessionReplayPolicyError();
     }
     const generation = this.epoch;
     const first = await fetch(prepared.request);
     const firstErrorCode = await responseErrorCode(first);
     if (firstErrorCode === 'MFA_REQUIRED') this.markStepUpRequired('admin_mfa');
-    if (firstErrorCode === 'RECENT_MFA_REQUIRED') this.markStepUpRequired('admin_recent_mfa');
+    if (firstErrorCode === 'RECENT_MFA_REQUIRED')
+      this.markStepUpRequired('admin_recent_mfa');
     if (first.status !== 401 || isAuthPath(url.pathname)) return first;
     if (!this.isCurrentEpoch(generation)) throw new SessionExpiredError();
     await this.refresh();
     if (replay === 'never') throw new SessionRetryRequiredError();
     if (!prepared.clone) throw new SessionReplayPolicyError();
     const replayResponse = await fetch(prepared.clone);
-    if (replayResponse.status === 401) throw new SessionExpiredError();
+    if (replayResponse.status === 401) {
+      this.epoch += 1;
+      this.transition('expired', true, this.snapshot.stepUp);
+      this.broadcast('session_expired');
+      throw new SessionExpiredError();
+    }
     const replayErrorCode = await responseErrorCode(replayResponse);
-    if (replayErrorCode === 'MFA_REQUIRED') this.markStepUpRequired('admin_mfa');
-    if (replayErrorCode === 'RECENT_MFA_REQUIRED') this.markStepUpRequired('admin_recent_mfa');
+    if (replayErrorCode === 'MFA_REQUIRED')
+      this.markStepUpRequired('admin_mfa');
+    if (replayErrorCode === 'RECENT_MFA_REQUIRED')
+      this.markStepUpRequired('admin_recent_mfa');
     return replayResponse;
   }
 
@@ -292,7 +414,8 @@ export class AuthSessionManager {
   }
 
   completeAuthentication(kind?: SessionStepUp): void {
-    const stepUp = kind && this.snapshot.stepUp === kind ? null : this.snapshot.stepUp;
+    const stepUp =
+      kind && this.snapshot.stepUp === kind ? null : this.snapshot.stepUp;
     this.epoch += 1;
     this.transition('authenticated', true, stepUp);
   }
@@ -305,10 +428,14 @@ export class AuthSessionManager {
     this.destroyed = true;
     this.epoch += 1;
     this.refreshPromise = null;
+    this.channel?.close();
+    this.channel = null;
     this.listeners.clear();
   }
 }
 
-export function createAuthSessionManager(config: BrowserAuthConfig): AuthSessionManager {
+export function createAuthSessionManager(
+  config: BrowserAuthConfig,
+): AuthSessionManager {
   return new AuthSessionManager(config);
 }

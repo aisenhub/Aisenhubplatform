@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
+import { adminAuthSession } from '../../_lib/auth-session';
 
 type Platform = { platform_id: string; code: string; name: string };
 type Policy = {
@@ -36,23 +37,6 @@ function fileBlockedReason(file: ConfigFile): string | null {
   return null;
 }
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
-function mutationHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    Origin: window.location.origin,
-    'X-CSRF-Token': csrfToken(),
-  };
-}
-
 function formatBytes(value: number): string {
   return value < 1024 ? `${value} B` : `${(value / 1024).toFixed(1)} KiB`;
 }
@@ -69,7 +53,7 @@ export default function AdminFilesPage() {
 
   const load = useCallback(
     async (cursor?: string) => {
-      const platformResponse = await fetch(
+      const platformResponse = await adminAuthSession.request(
         '/api/v1/admin/api/v1/platforms?limit=100',
         { cache: 'no-store' },
       );
@@ -89,10 +73,13 @@ export default function AdminFilesPage() {
         return;
       }
       const [policyResponse, filesResponse] = await Promise.all([
-        fetch(`/api/v1/admin/api/v1/platforms/${selected}/file-policy`, {
-          cache: 'no-store',
-        }),
-        fetch(
+        adminAuthSession.request(
+          `/api/v1/admin/api/v1/platforms/${selected}/file-policy`,
+          {
+            cache: 'no-store',
+          },
+        ),
+        adminAuthSession.request(
           `/api/v1/admin/api/v1/config-files?limit=20${fileQuery.trim() ? `&q=${encodeURIComponent(fileQuery.trim())}` : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
           {
             cache: 'no-store',
@@ -134,11 +121,11 @@ export default function AdminFilesPage() {
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!policy || !platformId) return;
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${platformId}/file-policy`,
       {
         method: 'PATCH',
-        headers: mutationHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(policy),
       },
     );
@@ -151,7 +138,7 @@ export default function AdminFilesPage() {
   }
 
   async function download(fileId: string, name: string | null) {
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/config-files/${fileId}/content`,
       { cache: 'no-store' },
     );
@@ -169,12 +156,12 @@ export default function AdminFilesPage() {
   }
 
   async function remove(fileId: string) {
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/config-files/${fileId}`,
       {
         method: 'DELETE',
         headers: {
-          ...mutationHeaders(),
+          'Content-Type': 'application/json',
           'Idempotency-Key': crypto.randomUUID(),
         },
       },

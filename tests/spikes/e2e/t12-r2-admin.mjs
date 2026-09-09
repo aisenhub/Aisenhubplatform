@@ -265,7 +265,7 @@ async function runBrowserFlow(secret) {
 
   const cookiesBeforeLogout = await context.cookies(appUrl);
   const proofCookie = cookiesBeforeLogout.find(
-    (cookie) => cookie.name === 'aisenhub-recent-auth-proof',
+    (cookie) => cookie.name === 'aisenhub-admin-recent-auth-proof',
   );
   assert.ok(proofCookie, 'MFA must issue the recent-auth proof cookie');
   assert.equal(proofCookie.httpOnly, true);
@@ -336,7 +336,7 @@ async function runBrowserFlow(secret) {
   );
   assert.equal(
     cookiesAfterLogout.some(
-      (cookie) => cookie.name === 'aisenhub-recent-auth-proof',
+      (cookie) => cookie.name === 'aisenhub-admin-recent-auth-proof',
     ),
     false,
   );

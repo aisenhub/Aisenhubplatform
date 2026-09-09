@@ -3,29 +3,14 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
+
 type Subscription = {
   status?: string;
   plan_code?: string | null;
   current_period_end?: string | null;
   [key: string]: unknown;
 };
-
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
-function mutationHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    Origin: window.location.origin,
-    'X-CSRF-Token': csrfToken(),
-  };
-}
 
 function requestCode(response: Response, payload: unknown): string {
   if (payload && typeof payload === 'object' && 'error' in payload) {
@@ -50,9 +35,8 @@ export default function AdminSubscriptionsPage() {
     setBusy(true);
     setStatus('正在读取订阅投影…');
     try {
-      const response = await fetch(
+      const response = await adminAuthSession.request(
         `/api/v1/admin/api/v1/subscriptions/${encodeURIComponent(accountId)}?platform_id=${encodeURIComponent(platformId)}`,
-        { cache: 'no-store' },
       );
       const payload = (await response.json().catch(() => null)) as {
         data?: Subscription;
@@ -64,8 +48,8 @@ export default function AdminSubscriptionsPage() {
       }
       setSubscription(payload?.data ?? null);
       setStatus('订阅投影已刷新；页面不直接编辑 Projection。');
-    } catch {
-      setStatus('读取失败：AUTHORIZATION_UNAVAILABLE。');
+    } catch (error) {
+      setStatus(`读取失败：${sessionErrorMessage(error)}`);
     } finally {
       setBusy(false);
     }
@@ -84,17 +68,18 @@ export default function AdminSubscriptionsPage() {
     const operationId = crypto.randomUUID();
     setStatus(`正在提交 ${command}…`);
     try {
-      const response = await fetch(
+      const response = await adminAuthSession.request(
         `/api/v1/admin/api/v1/subscriptions/${encodeURIComponent(accountId)}/commands?platform_id=${encodeURIComponent(platformId)}`,
         {
           method: 'POST',
-          headers: mutationHeaders(),
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: command,
             operation_id: operationId,
             reason: reason.trim(),
           }),
         },
+        { replay: 'never' },
       );
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
@@ -107,9 +92,16 @@ export default function AdminSubscriptionsPage() {
       }
       setStatus(`操作已完成（operation_id: ${operationId}）。`);
       await load();
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.name === 'SessionRetryRequiredError'
+      ) {
+        setStatus('会话已恢复，请重新确认后提交相同 operation_id。');
+        return;
+      }
       setStatus(
-        `网络失败；请使用相同 operation_id ${operationId} 重试，不要生成第二次业务操作。`,
+        `${sessionErrorMessage(error)}；请使用相同 operation_id ${operationId} 重试，不要生成第二次业务操作。`,
       );
     } finally {
       setBusy(false);

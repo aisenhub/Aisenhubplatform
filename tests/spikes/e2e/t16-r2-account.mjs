@@ -428,7 +428,7 @@ function csrfToken(page) {
     () =>
       document.cookie
         .split('; ')
-        .find((entry) => entry.startsWith('aisenhub-csrf='))
+        .find((entry) => entry.startsWith('aisenhub-consumer-csrf='))
         ?.split('=')[1] ?? '',
   );
 }
@@ -718,7 +718,7 @@ async function exerciseAccount(page, baseUrl) {
   assertStatus(verifiedResponse.status(), 200, 'consumer email reauth verify');
   const cookies = await page.context().cookies();
   const proof = cookies.find(
-    (cookie) => cookie.name === 'aisenhub-recent-auth-proof',
+    (cookie) => cookie.name === 'aisenhub-consumer-recent-auth-proof',
   );
   assert.ok(proof?.httpOnly, 'consumer proof must be HttpOnly');
   assert.equal(proof?.sameSite, 'Strict');

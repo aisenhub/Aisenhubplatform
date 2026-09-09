@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
+import { adminAuthSession } from '../../_lib/auth-session';
 
 type Platform = {
   platform_id: string;
@@ -35,20 +36,9 @@ type Key = {
   deployment_confirmed_at: string | null;
 };
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
 function mutationHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    Origin: window.location.origin,
-    'X-CSRF-Token': csrfToken(),
   };
 }
 
@@ -74,7 +64,7 @@ export default function PlatformsPage() {
   const [accountReason, setAccountReason] = useState('');
 
   const loadPlatforms = useCallback(async () => {
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms?limit=100${platformQuery.trim() ? `&q=${encodeURIComponent(platformQuery.trim())}` : ''}`,
       {
         cache: 'no-store',
@@ -95,15 +85,15 @@ export default function PlatformsPage() {
     if (!selectedId) return;
     const prefix = `/api/v1/admin/api/v1/platforms/${selectedId}`;
     const [originResponse, accountResponse, keyResponse] = await Promise.all([
-      fetch(
+      adminAuthSession.request(
         `${prefix}/origins${originQuery.trim() ? `?q=${encodeURIComponent(originQuery.trim())}` : ''}`,
         { cache: 'no-store' },
       ),
-      fetch(
+      adminAuthSession.request(
         `${prefix}/accounts?limit=100${accountQuery.trim() ? `&q=${encodeURIComponent(accountQuery.trim())}` : ''}`,
         { cache: 'no-store' },
       ),
-      fetch(
+      adminAuthSession.request(
         `${prefix}/keys${keyQuery.trim() ? `?q=${encodeURIComponent(keyQuery.trim())}` : ''}`,
         { cache: 'no-store' },
       ),
@@ -131,16 +121,19 @@ export default function PlatformsPage() {
 
   async function createPlatform(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const response = await fetch('/api/v1/admin/api/v1/platforms', {
-      method: 'POST',
-      headers: mutationHeaders(),
-      body: JSON.stringify({
-        code,
-        name,
-        status: 'active',
-        allow_activation: true,
-      }),
-    });
+    const response = await adminAuthSession.request(
+      '/api/v1/admin/api/v1/platforms',
+      {
+        method: 'POST',
+        headers: mutationHeaders(),
+        body: JSON.stringify({
+          code,
+          name,
+          status: 'active',
+          allow_activation: true,
+        }),
+      },
+    );
     setStatus(response.ok ? '平台已创建。' : '平台创建失败。');
     if (response.ok) {
       setCode('');
@@ -150,7 +143,7 @@ export default function PlatformsPage() {
   }
 
   async function patchPlatform(platform: Platform) {
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${platform.platform_id}`,
       {
         method: 'PATCH',
@@ -167,7 +160,7 @@ export default function PlatformsPage() {
 
   async function createOrigin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${selectedId}/origins`,
       {
         method: 'POST',
@@ -187,7 +180,7 @@ export default function PlatformsPage() {
 
   async function createKey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${selectedId}/keys`,
       {
         method: 'POST',
@@ -208,7 +201,7 @@ export default function PlatformsPage() {
 
   async function revokeKey(keyId: string) {
     if (!window.confirm('确认撤销该 Platform Key？撤销后不可恢复。')) return;
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${selectedId}/keys/${keyId}/revoke`,
       { method: 'POST', headers: mutationHeaders() },
     );
@@ -227,7 +220,7 @@ export default function PlatformsPage() {
       )
     )
       return;
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${selectedId}/keys/${keyId}/confirm-deployment`,
       { method: 'POST', headers: mutationHeaders() },
     );
@@ -247,7 +240,7 @@ export default function PlatformsPage() {
       setStatus('账户状态动作必须填写原因；原因不要包含个人信息。');
       return;
     }
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${selectedId}/accounts/${accountId}/${action}`,
       {
         method: 'POST',

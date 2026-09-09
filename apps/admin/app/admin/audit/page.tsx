@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
+import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
 
 type AuditEntry = {
   id?: string;
@@ -24,9 +25,8 @@ export default function AdminAuditPage() {
     async (cursor?: string) => {
       setStatus('正在读取审计日志…');
       try {
-        const response = await fetch(
+        const response = await adminAuthSession.request(
           `/api/v1/admin/api/v1/audit?limit=50${query.trim() ? `&q=${encodeURIComponent(query.trim())}` : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
-          { cache: 'no-store' },
         );
         const payload = (await response.json().catch(() => null)) as {
           data?: AuditEntry[];
@@ -43,8 +43,8 @@ export default function AdminAuditPage() {
         setEntries(payload?.data ?? []);
         setNextCursor(payload?.next_cursor ?? null);
         setStatus(`已读取 ${payload?.data?.length ?? 0} 条审计记录。`);
-      } catch {
-        setStatus('审计读取失败：AUTHORIZATION_UNAVAILABLE。');
+      } catch (error) {
+        setStatus(`审计读取失败：${sessionErrorMessage(error)}`);
       }
     },
     [query],

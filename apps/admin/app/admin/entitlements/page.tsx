@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
+import { adminAuthSession } from '../../_lib/auth-session';
 
 type Plan = {
   plan_id: string;
@@ -25,15 +26,6 @@ type Batch = {
   expires_at?: string;
 };
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
 export default function EntitlementsPage() {
   const [platformId, setPlatformId] = useState('');
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -54,10 +46,13 @@ export default function EntitlementsPage() {
     if (!platformId) return;
     setStatus('正在读取…');
     const [plansResponse, batchesResponse] = await Promise.all([
-      fetch(`/api/v1/admin/api/v1/platforms/${platformId}/plans`, {
-        cache: 'no-store',
-      }),
-      fetch(
+      adminAuthSession.request(
+        `/api/v1/admin/api/v1/platforms/${platformId}/plans`,
+        {
+          cache: 'no-store',
+        },
+      ),
+      adminAuthSession.request(
         `/api/v1/admin/api/v1/redemption-batches?platform_id=${encodeURIComponent(platformId)}`,
         {
           cache: 'no-store',
@@ -93,14 +88,12 @@ export default function EntitlementsPage() {
 
   async function createPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${platformId}/plans`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Origin: window.location.origin,
-          'X-CSRF-Token': csrfToken(),
         },
         body: JSON.stringify({
           code: planCode,
@@ -136,14 +129,12 @@ export default function EntitlementsPage() {
       !window.confirm(`确认归档 Plan ${plan.code}？历史权益不会被删除。`)
     )
       return;
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms/${platformId}/plans`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Origin: window.location.origin,
-          'X-CSRF-Token': csrfToken(),
         },
         body: JSON.stringify({
           plan_id: plan.plan_id,
@@ -169,25 +160,26 @@ export default function EntitlementsPage() {
   async function createBatch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!platformId || !batchPlanId) return;
-    const response = await fetch('/api/v1/admin/api/v1/redemption-batches', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: window.location.origin,
-        'X-CSRF-Token': csrfToken(),
+    const response = await adminAuthSession.request(
+      '/api/v1/admin/api/v1/redemption-batches',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          platform_id: platformId,
+          plan_id: batchPlanId,
+          name: batchName,
+          quantity: Number(batchQuantity),
+          duration_value: 30,
+          duration_unit: 'day',
+          expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+          delivery_deadline: new Date(Date.now() + 10 * 60_000).toISOString(),
+          creation_operation_id: crypto.randomUUID(),
+        }),
       },
-      body: JSON.stringify({
-        platform_id: platformId,
-        plan_id: batchPlanId,
-        name: batchName,
-        quantity: Number(batchQuantity),
-        duration_value: 30,
-        duration_unit: 'day',
-        expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
-        delivery_deadline: new Date(Date.now() + 10 * 60_000).toISOString(),
-        creation_operation_id: crypto.randomUUID(),
-      }),
-    });
+    );
     const payload = (await response.json().catch(() => null)) as {
       data?: { codes?: Array<{ code?: string }>; delivery_receipt?: string };
       error?: { code?: string };
@@ -216,14 +208,12 @@ export default function EntitlementsPage() {
       return;
     }
     if (!window.confirm('确认已安全保存本次明文兑换码，并激活该批次？')) return;
-    const response = await fetch(
+    const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/redemption-batches/${batchId}/confirm-delivery`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Origin: window.location.origin,
-          'X-CSRF-Token': csrfToken(),
         },
         body: JSON.stringify({
           platform_id: platformId,
@@ -242,13 +232,7 @@ export default function EntitlementsPage() {
   }
 
   async function logout() {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: {
-        Origin: window.location.origin,
-        'X-CSRF-Token': csrfToken(),
-      },
-    });
+    await adminAuthSession.logout();
     window.location.assign('/admin/login');
   }
 
