@@ -1,4 +1,8 @@
-import { createPerRequestClient } from '@kit/account-auth-nextjs';
+import {
+  authCookieNames,
+  authSessionGate,
+  createPerRequestClient,
+} from '@kit/account-auth-nextjs';
 import { AccountApiError, createAccountApiClient } from '@kit/account-server';
 import type { ApiErrorCode } from '@kit/account-server';
 import { NextRequest } from 'next/server';
@@ -64,7 +68,7 @@ function assertMutationSecurity(
   if (request.headers.get('origin') !== trustedOrigin) {
     throw new BffError(403, 'INVALID_INPUT');
   }
-  const csrfCookie = cookie(request, 'aisenhub-csrf');
+  const csrfCookie = cookie(request, authCookieNames('consumer').csrf);
   const csrfHeader = request.headers.get('x-csrf-token');
   if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
     throw new BffError(403, 'INVALID_INPUT');
@@ -72,7 +76,7 @@ function assertMutationSecurity(
 }
 
 function accessToken(request: NextRequest): string {
-  return cookie(request, 'aisenhub-session') ?? '';
+  return cookie(request, authCookieNames('consumer').access) ?? '';
 }
 
 async function jsonObject(
@@ -162,6 +166,18 @@ async function dispatch(
     const { path } = await context.params;
     const route = path.join('/');
     const runtimeConfig = config();
+    const names = authCookieNames('consumer');
+    const access = cookie(request, names.access);
+    const refresh = cookie(request, names.refresh);
+    if (route !== 'plans') {
+      const gate = authSessionGate({
+        accessToken: access,
+        refreshToken: refresh,
+        logoutFence: cookie(request, names.logoutFence),
+        loginAck: cookie(request, names.loginAck),
+      });
+      if (!access || !gate.ok) throw new BffError(401, 'UNAUTHORIZED');
+    }
     if (method !== 'GET') assertMutationSecurity(request, runtimeConfig.origin);
 
     const perRequest = createPerRequestClient(
@@ -202,7 +218,7 @@ async function dispatch(
       );
     }
     if (route === 'account/close' && method === 'POST') {
-      const proof = cookie(request, 'aisenhub-recent-auth-proof');
+      const proof = cookie(request, names.recentProof);
       if (!proof) throw new BffError(403, 'RECENT_MFA_REQUIRED');
       return jsonResponse(
         { data: await api.closeAccount(token, proof), request_id: id },
@@ -211,7 +227,7 @@ async function dispatch(
       );
     }
     if (route === 'identity/delete-request' && method === 'POST') {
-      const proof = cookie(request, 'aisenhub-recent-auth-proof');
+      const proof = cookie(request, names.recentProof);
       if (!proof) throw new BffError(403, 'RECENT_MFA_REQUIRED');
       return jsonResponse(
         {

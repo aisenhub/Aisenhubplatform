@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorBody, responseBody } from '../../../_lib';
 import {
   authCookieNames,
+  authSessionGate,
   createRequestAuthClient,
   setRequestAuthSession,
   writeAuthSessionCookies,
@@ -25,10 +27,12 @@ function config(): { url: string; publishableKey: string; origin: string } {
 }
 
 function result(data: unknown, status = 200): NextResponse {
-  return NextResponse.json(
-    { data },
-    { status, headers: { 'Cache-Control': 'no-store' } },
-  );
+  if (data && typeof data === 'object' && 'code' in data) {
+    const code = (data as { code: string }).code;
+    const mapped = code === 'RATE_LIMITED' ? 'RATE_LIMITED' : code === 'MFA_REQUIRED' ? 'MFA_REQUIRED' : code === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : 'AUTHORIZATION_UNAVAILABLE';
+    return errorBody(mapped, status);
+  }
+  return responseBody(data, status);
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -61,6 +65,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     const refreshToken = request.cookies.get(names.refresh)?.value;
     if (!accessToken || !refreshToken)
       return result({ code: 'UNAUTHORIZED' }, 401);
+    const gate = authSessionGate({
+      accessToken,
+      refreshToken,
+      logoutFence: request.cookies.get(names.logoutFence)?.value,
+      loginAck: request.cookies.get(names.loginAck)?.value,
+    });
+    if (!gate.ok) return result({ code: 'UNAUTHORIZED' }, 401);
 
     const client = createRequestAuthClient(runtimeConfig);
     const sessionResult = await setRequestAuthSession(client, {

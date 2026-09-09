@@ -51,6 +51,11 @@ export interface ApiErrorResponse {
   readonly request_id: string;
 }
 
+export interface LogoutResultDto {
+  readonly authenticated: false;
+  readonly remote_revocation: 'confirmed' | 'not_required' | 'unavailable';
+}
+
 export interface Page<T> {
   readonly data: readonly T[];
   readonly next_cursor: string | null;

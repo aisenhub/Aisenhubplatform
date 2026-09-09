@@ -8,6 +8,27 @@ export interface AuthSession {
   readonly authenticatedAt: string;
 }
 
+export type SessionState =
+  | 'unauthenticated'
+  | 'authenticating'
+  | 'authenticated'
+  | 'refreshing'
+  | 'mfa_required'
+  | 'expired';
+
+export type SessionStepUp =
+  | 'admin_mfa'
+  | 'admin_recent_mfa'
+  | 'consumer_recent_auth';
+
+export interface SessionSnapshot {
+  readonly state: SessionState;
+  readonly resolved: boolean;
+  readonly stepUp: SessionStepUp | null;
+}
+
+export type ReplayPolicy = 'never' | 'safe-read' | 'idempotent-mutation';
+
 export interface RecentAuthProof {
   readonly proofId: string;
   readonly userId: string;
@@ -79,11 +100,22 @@ export function safeReturnTo(value: string | null | undefined): string {
     !value.startsWith('/') ||
     value.startsWith('//') ||
     value.includes('\\') ||
-    hasControlCharacter
+    hasControlCharacter ||
+    containsSensitiveReturnTo(value)
   ) {
     return DEFAULT_RETURN_TO;
   }
   return value;
+}
+
+function containsSensitiveReturnTo(value: string): boolean {
+  try {
+    const url = new URL(value, 'https://return-to.invalid');
+    const sensitive = /(?:access|refresh)?_?token|csrf|proof|otp|secret|password|mutation|body|code_verifier|state/iu;
+    return [...url.searchParams.keys()].some((key) => sensitive.test(key));
+  } catch {
+    return true;
+  }
 }
 
 export function requireSafeReturnTo(value: string | null | undefined): string {

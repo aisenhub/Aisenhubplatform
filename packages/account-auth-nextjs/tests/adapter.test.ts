@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   assertSameOrigin,
+  authSessionGate,
   authCookieNames,
   clearAuthSessionCookies,
   createPerRequestClient,
@@ -10,13 +11,23 @@ import {
   requestEmailOtp,
   revokeSupabaseSession,
   requestReauthentication,
+  sessionIdFromAccessToken,
   setRequestAuthSession,
+  terminalClearAuthSessionCookies,
   verifyMfaFactor,
   verifyEmailOtpToken,
   verifyReauthenticationOtp,
+  writeLoginAcknowledgement,
   writeAuthSessionCookies,
 } from '../src/index.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+const accessToken = `eyJhbGciOiJub25lIn0.${Buffer.from(
+  JSON.stringify({
+    session_id: '00000000-0000-4000-8000-000000000001',
+    exp: Math.floor(Date.now() / 1000) + 60,
+  }),
+).toString('base64url')}.signature`;
 
 describe('SSR auth adapter', () => {
   it('creates a fresh client for each request and does not share headers', () => {
@@ -59,7 +70,9 @@ describe('SSR auth adapter', () => {
   it('revokes the upstream session before callers clear local cookies', async () => {
     const fetcher = vi.fn(
       async (input: string | Request | URL, init?: RequestInit) => {
-        expect(input).toBe('https://auth.example.test/auth/v1/logout');
+        expect(input).toBe(
+          'https://auth.example.test/auth/v1/logout?scope=local',
+        );
         expect(init?.method).toBe('POST');
         expect(init?.cache).toBe('no-store');
         expect(init?.headers).toEqual({
@@ -86,7 +99,7 @@ describe('SSR auth adapter', () => {
         accessToken: 'access-token',
         fetcher: async () => new Response(null, { status: 503 }),
       }),
-    ).rejects.toThrow('AUTH_LOGOUT_UNAVAILABLE');
+    ).resolves.toBe('unavailable');
   });
 
   it('writes a bounded, request-specific session cookie set', () => {
@@ -95,7 +108,7 @@ describe('SSR auth adapter', () => {
     writeAuthSessionCookies({
       writer,
       session: {
-        access_token: 'access-token',
+        access_token: accessToken,
         refresh_token: 'refresh-token',
         expires_in: 900,
         expires_at: 1_000,
@@ -115,7 +128,7 @@ describe('SSR auth adapter', () => {
     });
     expect(set).toHaveBeenCalledWith(
       'aisenhub-session',
-      'access-token',
+      accessToken,
       expect.objectContaining({ httpOnly: true, maxAge: 900 }),
     );
     expect(set).toHaveBeenCalledWith(
@@ -124,7 +137,7 @@ describe('SSR auth adapter', () => {
       expect.objectContaining({ httpOnly: true, maxAge: 2_592_000 }),
     );
     expect(set).toHaveBeenCalledWith(
-      'aisenhub-csrf',
+      'aisenhub-consumer-csrf',
       'csrf-token',
       expect.objectContaining({ httpOnly: false }),
     );
@@ -137,12 +150,61 @@ describe('SSR auth adapter', () => {
       authCookieNames('admin').access,
       authCookieNames('admin').refresh,
       authCookieNames('admin').csrf,
-      'aisenhub-recent-auth-proof',
+      authCookieNames('admin').recentProof,
+      authCookieNames('admin').loginAck,
+      authCookieNames('admin').authFlow,
     ]);
 
     clearAuthSessionCookies(writer, 'consumer');
     expect(writer.delete).toHaveBeenLastCalledWith(
-      'aisenhub-recent-auth-proof',
+      authCookieNames('consumer').authFlow,
+    );
+  });
+
+  it('binds acknowledgements to the logout fence and access-token session', () => {
+    const writer = { set: vi.fn(), delete: vi.fn() };
+    writeLoginAcknowledgement({
+      writer,
+      secure: true,
+      sessionId: '00000000-0000-4000-8000-000000000001',
+      loginFence: 'none',
+      prefix: 'consumer',
+    });
+    const acknowledgement = writer.set.mock.calls[0]?.[1] as string;
+    expect(sessionIdFromAccessToken(accessToken)).toBe(
+      '00000000-0000-4000-8000-000000000001',
+    );
+    expect(
+      authSessionGate({
+        accessToken,
+        logoutFence: undefined,
+        loginAck: acknowledgement,
+      }).ok,
+    ).toBe(true);
+    expect(
+      authSessionGate({
+        accessToken,
+        logoutFence: '00000000-0000-4000-8000-000000000002',
+        loginAck: acknowledgement,
+      }),
+    ).toEqual({ ok: false, reason: 'fence_mismatch' });
+  });
+
+  it('clears auth material and rotates the fence on terminal cleanup', () => {
+    const writer = { set: vi.fn(), delete: vi.fn() };
+    const fence = terminalClearAuthSessionCookies({
+      writer,
+      secure: true,
+      prefix: 'admin',
+    });
+    expect(fence).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(writer.set).toHaveBeenCalledWith(
+      authCookieNames('admin').logoutFence,
+      fence,
+      expect.objectContaining({ httpOnly: true, maxAge: 2_678_400 }),
+    );
+    expect(writer.delete).toHaveBeenCalledWith(
+      authCookieNames('admin').loginAck,
     );
   });
 
@@ -172,7 +234,7 @@ describe('SSR auth adapter', () => {
     const client = { auth } as unknown as SupabaseClient;
 
     await setRequestAuthSession(client, {
-      access_token: 'access-token',
+      access_token: accessToken,
       refresh_token: 'refresh-token',
     });
     await listMfaFactors(client);
@@ -186,7 +248,7 @@ describe('SSR auth adapter', () => {
     await verifyEmailOtpToken(client, 'token-hash');
 
     expect(client.auth.setSession).toHaveBeenCalledWith({
-      access_token: 'access-token',
+      access_token: accessToken,
       refresh_token: 'refresh-token',
     });
     expect(client.auth.mfa.challengeAndVerify).toHaveBeenCalledWith({

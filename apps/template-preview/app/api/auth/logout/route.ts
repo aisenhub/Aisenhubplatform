@@ -1,75 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { revokeSupabaseSession } from '@kit/account-auth-nextjs';
+import { NextRequest } from 'next/server';
+import {
+  authCookieNames,
+  revokeSupabaseSession,
+  terminalClearAuthSessionCookies,
+  type AuthCookieWriter,
+} from '@kit/account-auth-nextjs';
+import { config, errorBody, hasValidCsrf, hasValidOrigin, requestId, responseBody } from '../_lib';
 
 export const dynamic = 'force-dynamic';
 
-function authConfig(): { url: string; anonKey: string; origin: string } {
-  const url = (
-    process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
-  )?.replace(/\/$/u, '');
-  const anonKey =
-    process.env.SUPABASE_PUBLISHABLE_KEY ??
-    process.env.SUPABASE_ANON_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const origin = process.env.CONSUMER_ORIGIN;
-  if (!url || !anonKey || !origin) throw new Error('AUTH_NOT_CONFIGURED');
-  return { url, anonKey, origin };
-}
-
 export async function POST(request: NextRequest): Promise<Response> {
-  let config: ReturnType<typeof authConfig>;
+  const id = requestId();
+  const secure = process.env.NODE_ENV === 'production';
   try {
-    config = authConfig();
+    const runtimeConfig = config();
+    if (!hasValidOrigin(request, runtimeConfig.origin) || !hasValidCsrf(request)) return errorBody('INVALID_INPUT', 403, id);
+    const names = authCookieNames('consumer');
+    const accessToken = request.cookies.get(names.access)?.value;
+    const refreshToken = request.cookies.get(names.refresh)?.value;
+    let remoteRevocation: 'confirmed' | 'not_required' | 'unavailable';
+    if (!accessToken && !refreshToken) remoteRevocation = 'not_required';
+    else if (!accessToken) remoteRevocation = 'unavailable';
+    else remoteRevocation = await revokeSupabaseSession({ url: runtimeConfig.url, publishableKey: runtimeConfig.publishableKey, accessToken, timeoutMs: 5_000 });
+    const response = responseBody({ authenticated: false, remote_revocation: remoteRevocation }, 200, id);
+    terminalClearAuthSessionCookies({ writer: response.cookies as unknown as AuthCookieWriter, secure, prefix: 'consumer' });
+    return response;
   } catch {
-    return NextResponse.json(
-      {
-        error: {
-          code: 'AUTHORIZATION_UNAVAILABLE',
-          message: 'AUTHORIZATION_UNAVAILABLE',
-        },
-      },
-      { status: 503, headers: { 'Cache-Control': 'no-store' } },
-    );
+    return errorBody('AUTHORIZATION_UNAVAILABLE', 503, id);
   }
-  const csrf = request.cookies.get('aisenhub-csrf')?.value;
-  if (
-    request.headers.get('origin') !== config.origin ||
-    !csrf ||
-    request.headers.get('x-csrf-token') !== csrf
-  ) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_INPUT', message: 'INVALID_INPUT' } },
-      { status: 403, headers: { 'Cache-Control': 'no-store' } },
-    );
-  }
-  const accessToken = request.cookies.get('aisenhub-session')?.value;
-  if (accessToken) {
-    try {
-      await revokeSupabaseSession({
-        url: config.url,
-        publishableKey: config.anonKey,
-        accessToken,
-      });
-    } catch {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'AUTHORIZATION_UNAVAILABLE',
-            message: 'AUTHORIZATION_UNAVAILABLE',
-          },
-        },
-        { status: 503, headers: { 'Cache-Control': 'no-store' } },
-      );
-    }
-  }
-  const response = NextResponse.json(
-    { data: { authenticated: false } },
-    { headers: { 'Cache-Control': 'no-store' } },
-  );
-  response.cookies.delete('aisenhub-session');
-  response.cookies.delete('aisenhub-refresh-token');
-  response.cookies.delete('aisenhub-csrf');
-  response.cookies.delete('aisenhub-recent-auth-proof');
-  return response;
 }

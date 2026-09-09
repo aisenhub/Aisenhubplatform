@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,7 @@ async function dispatch(
     if (mutation) {
       if (request.headers.get('origin') !== origin)
         return errorResponse(403, 'INVALID_INPUT', id);
-      const csrfCookie = cookie(request, 'aisenhub-csrf');
+      const csrfCookie = cookie(request, authCookieNames('admin').csrf);
       if (!csrfCookie || csrfCookie !== request.headers.get('x-csrf-token'))
         return errorResponse(403, 'INVALID_INPUT', id);
     }
@@ -49,8 +50,17 @@ async function dispatch(
       Accept: binaryDownload ? 'application/octet-stream' : 'application/json',
       'Cache-Control': 'no-store',
     };
-    const token = cookie(request, 'aisenhub-admin-session');
-    const proof = cookie(request, 'aisenhub-recent-auth-proof');
+    const names = authCookieNames('admin');
+    const token = cookie(request, names.access);
+    const refresh = cookie(request, names.refresh);
+    const gate = authSessionGate({
+      accessToken: token,
+      refreshToken: refresh,
+      logoutFence: cookie(request, names.logoutFence),
+      loginAck: cookie(request, names.loginAck),
+    });
+    if (!token || !gate.ok) return errorResponse(401, 'UNAUTHORIZED', id);
+    const proof = cookie(request, names.recentProof);
     if (token) headers.Authorization = `Bearer ${token}`;
     if (proof) headers['X-Recent-Auth-Proof'] = proof;
     const contentType = request.headers.get('content-type');

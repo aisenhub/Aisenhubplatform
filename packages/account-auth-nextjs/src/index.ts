@@ -5,6 +5,9 @@ import {
   type Session,
   type SupabaseClient,
 } from '@supabase/supabase-js';
+import { authCookieNames } from './cookie-policy.ts';
+
+export { authCookieNames } from './cookie-policy.ts';
 
 export interface CookiePolicy {
   readonly name: string;
@@ -90,18 +93,229 @@ export function createRequestAuthClient(
   });
 }
 
-export function authCookieNames(prefix: 'consumer' | 'admin' = 'consumer') {
-  return prefix === 'admin'
-    ? {
-        access: 'aisenhub-admin-session',
-        refresh: 'aisenhub-admin-refresh-token',
-        csrf: 'aisenhub-csrf',
-      }
-    : {
-        access: 'aisenhub-session',
-        refresh: 'aisenhub-refresh-token',
-        csrf: 'aisenhub-csrf',
-      };
+export const AUTH_COOKIE_MAX_AGE = {
+  refresh: 60 * 60 * 24 * 30,
+  csrf: 60 * 60 * 24 * 30,
+  logoutFence: 60 * 60 * 24 * 31,
+  loginAck: 60 * 60 * 24 * 30,
+  authFlow: 15 * 60,
+  recentProof: 5 * 60,
+} as const;
+
+export const NO_LOGOUT_FENCE = 'none';
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_PATTERN.test(value);
+}
+
+function baseCookieOptions(input: {
+  readonly secure: boolean;
+  readonly sameSite?: 'lax' | 'strict';
+  readonly maxAge: number;
+}) {
+  return {
+    secure: input.secure,
+    sameSite: input.sameSite ?? ('lax' as const),
+    path: '/' as const,
+    maxAge: input.maxAge,
+  };
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const part = token.split('.')[1];
+  if (!part) return null;
+  try {
+    const normalized =
+      part.replace(/-/gu, '+').replace(/_/gu, '/') +
+      '='.repeat((4 - (part.length % 4)) % 4);
+    const binary = atob(normalized);
+    const bytes = Uint8Array.from(binary, (character) =>
+      character.charCodeAt(0),
+    );
+    const payload = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+    return payload && typeof payload === 'object'
+      ? (payload as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function sessionIdFromAccessToken(token: string): string | null {
+  const payload = decodeJwtPayload(token);
+  return isUuid(payload?.session_id) ? payload.session_id : null;
+}
+
+export function accessTokenIsUsable(token: string, now = Date.now()): boolean {
+  const payload = decodeJwtPayload(token);
+  return typeof payload?.exp === 'number' && payload.exp * 1000 > now;
+}
+
+export function currentLogoutFence(value: string | undefined): string {
+  return isUuid(value) ? value : NO_LOGOUT_FENCE;
+}
+
+export interface AuthSessionAcknowledgement {
+  readonly fence: string;
+  readonly session_id: string;
+}
+
+function encodeOpaqueJson(value: object): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary)
+    .replace(/\+/gu, '-')
+    .replace(/\//gu, '_')
+    .replace(/=+$/u, '');
+}
+
+function decodeOpaqueJson(value: string): unknown {
+  try {
+    const normalized =
+      value.replace(/-/gu, '+').replace(/_/gu, '/') +
+      '='.repeat((4 - (value.length % 4)) % 4);
+    const binary = atob(normalized);
+    const bytes = Uint8Array.from(binary, (character) =>
+      character.charCodeAt(0),
+    );
+    return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+export function encodeAuthSessionAcknowledgement(
+  value: AuthSessionAcknowledgement,
+): string {
+  return encodeOpaqueJson(value);
+}
+
+export function decodeAuthSessionAcknowledgement(
+  value: string | undefined,
+): AuthSessionAcknowledgement | null {
+  const decoded = value ? decodeOpaqueJson(value) : null;
+  if (!decoded || typeof decoded !== 'object') return null;
+  const candidate = decoded as Record<string, unknown>;
+  if (
+    typeof candidate.fence !== 'string' ||
+    (candidate.fence !== NO_LOGOUT_FENCE && !isUuid(candidate.fence)) ||
+    !isUuid(candidate.session_id)
+  )
+    return null;
+  return { fence: candidate.fence, session_id: candidate.session_id };
+}
+
+export function authSessionGate(input: {
+  readonly accessToken?: string;
+  readonly refreshToken?: string;
+  readonly logoutFence?: string;
+  readonly loginAck?: string;
+}):
+  | { readonly ok: true; readonly acknowledgement: AuthSessionAcknowledgement }
+  | {
+      readonly ok: false;
+      readonly reason: 'missing_ack' | 'fence_mismatch' | 'session_mismatch';
+    } {
+  const acknowledgement = decodeAuthSessionAcknowledgement(input.loginAck);
+  if (!acknowledgement) return { ok: false, reason: 'missing_ack' };
+  if (acknowledgement.fence !== currentLogoutFence(input.logoutFence))
+    return { ok: false, reason: 'fence_mismatch' };
+  if (input.accessToken) {
+    const sessionId = sessionIdFromAccessToken(input.accessToken);
+    if (!sessionId || sessionId !== acknowledgement.session_id)
+      return { ok: false, reason: 'session_mismatch' };
+  } else if (!input.refreshToken) {
+    return { ok: false, reason: 'missing_ack' };
+  }
+  return { ok: true, acknowledgement };
+}
+
+export function readLoginFlowFence(value: string | undefined): string | null {
+  return value === undefined ? null : currentLogoutFence(value);
+}
+
+function deleteAuthMaterial(
+  writer: Pick<AuthCookieWriter, 'delete'>,
+  prefix: 'consumer' | 'admin',
+): void {
+  const names = authCookieNames(prefix);
+  writer.delete(names.access);
+  writer.delete(names.refresh);
+  writer.delete(names.csrf);
+  writer.delete(names.recentProof);
+  writer.delete(names.loginAck);
+  writer.delete(names.authFlow);
+}
+
+export function writeLogoutFence(input: {
+  readonly writer: AuthCookieWriter;
+  readonly secure: boolean;
+  readonly prefix?: 'consumer' | 'admin';
+}): string {
+  const fence = crypto.randomUUID();
+  input.writer.set(
+    authCookieNames(input.prefix).logoutFence,
+    fence,
+    {
+      ...baseCookieOptions({
+        secure: input.secure,
+        maxAge: AUTH_COOKIE_MAX_AGE.logoutFence,
+      }),
+      httpOnly: true,
+    },
+  );
+  return fence;
+}
+
+export function writeLoginAcknowledgement(input: {
+  readonly writer: AuthCookieWriter;
+  readonly secure: boolean;
+  readonly sessionId: string;
+  readonly loginFence: string;
+  readonly prefix?: 'consumer' | 'admin';
+}): void {
+  if (!isUuid(input.sessionId)) throw new Error('AUTH_SESSION_ID_INVALID');
+  if (input.loginFence !== NO_LOGOUT_FENCE && !isUuid(input.loginFence))
+    throw new Error('AUTH_LOGOUT_FENCE_INVALID');
+  input.writer.set(
+    authCookieNames(input.prefix).loginAck,
+    encodeAuthSessionAcknowledgement({
+      fence: input.loginFence,
+      session_id: input.sessionId,
+    }),
+    {
+      ...baseCookieOptions({
+        secure: input.secure,
+        maxAge: AUTH_COOKIE_MAX_AGE.loginAck,
+      }),
+      httpOnly: true,
+    },
+  );
+}
+
+export function writeAuthFlowFence(input: {
+  readonly writer: AuthCookieWriter;
+  readonly secure: boolean;
+  readonly fence: string;
+  readonly prefix?: 'consumer' | 'admin';
+}): void {
+  if (input.fence !== NO_LOGOUT_FENCE && !isUuid(input.fence))
+    throw new Error('AUTH_LOGOUT_FENCE_INVALID');
+  input.writer.set(
+    authCookieNames(input.prefix).authFlow,
+    input.fence,
+    {
+      ...baseCookieOptions({
+        secure: input.secure,
+        maxAge: AUTH_COOKIE_MAX_AGE.authFlow,
+      }),
+      httpOnly: true,
+    },
+  );
 }
 
 export interface AuthCookieWriter {
@@ -128,12 +342,7 @@ export function writeAuthSessionCookies(input: {
 }): string {
   const names = authCookieNames(input.prefix);
   const maxAge = Math.max(60, input.session.expires_in);
-  const base = {
-    secure: input.secure,
-    sameSite: 'lax' as const,
-    path: '/' as const,
-    maxAge,
-  };
+  const base = baseCookieOptions({ secure: input.secure, maxAge });
   input.writer.set(names.access, input.session.access_token, {
     ...base,
     httpOnly: true,
@@ -141,11 +350,14 @@ export function writeAuthSessionCookies(input: {
   input.writer.set(names.refresh, input.session.refresh_token, {
     ...base,
     httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: AUTH_COOKIE_MAX_AGE.refresh,
   });
   const csrfToken = input.csrfToken ?? crypto.randomUUID();
   input.writer.set(names.csrf, csrfToken, {
-    ...base,
+    ...baseCookieOptions({
+      secure: input.secure,
+      maxAge: AUTH_COOKIE_MAX_AGE.csrf,
+    }),
     httpOnly: false,
   });
   return csrfToken;
@@ -155,11 +367,16 @@ export function clearAuthSessionCookies(
   writer: Pick<AuthCookieWriter, 'delete'>,
   prefix: 'consumer' | 'admin' = 'consumer',
 ): void {
-  const names = authCookieNames(prefix);
-  writer.delete(names.access);
-  writer.delete(names.refresh);
-  writer.delete(names.csrf);
-  writer.delete('aisenhub-recent-auth-proof');
+  deleteAuthMaterial(writer, prefix);
+}
+
+export function terminalClearAuthSessionCookies(input: {
+  readonly writer: AuthCookieWriter;
+  readonly secure: boolean;
+  readonly prefix?: 'consumer' | 'admin';
+}): string {
+  deleteAuthMaterial(input.writer, input.prefix ?? 'consumer');
+  return writeLogoutFence(input);
 }
 
 export async function signInWithPassword(
@@ -180,6 +397,16 @@ export async function setRequestAuthSession(
   client: SupabaseClient,
   tokens: { readonly access_token: string; readonly refresh_token: string },
 ) {
+  if (!accessTokenIsUsable(tokens.access_token)) {
+    return {
+      data: { session: null },
+      error: {
+        name: 'AuthSessionExpiredError',
+        message: 'SESSION_EXPIRED',
+        status: 401,
+      },
+    } as const;
+  }
   return client.auth.setSession(tokens);
 }
 
@@ -295,22 +522,28 @@ export async function revokeSupabaseSession(input: {
   readonly publishableKey: string;
   readonly accessToken: string;
   readonly fetcher?: typeof fetch;
-}): Promise<void> {
+  readonly timeoutMs?: number;
+}): Promise<'confirmed' | 'unavailable'> {
   const fetcher = input.fetcher ?? fetch;
-  const response = await fetcher(
-    `${input.url.replace(/\/$/u, '')}/auth/v1/logout`,
-    {
-      method: 'POST',
-      headers: {
-        apikey: input.publishableKey,
-        Authorization: `Bearer ${input.accessToken}`,
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? 5_000);
+  try {
+    const response = await fetcher(
+      `${input.url.replace(/\/$/u, '')}/auth/v1/logout?scope=local`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: input.publishableKey,
+          Authorization: `Bearer ${input.accessToken}`,
+        },
+        cache: 'no-store',
+        signal: controller.signal,
       },
-      cache: 'no-store',
-    },
-  );
-  // A missing or already-revoked session is terminally safe: no usable
-  // server session remains. Infrastructure errors must not masquerade as a
-  // successful logout, so the caller can retain cookies and allow a retry.
-  if (response.ok || response.status === 401 || response.status === 403) return;
-  throw new Error('AUTH_LOGOUT_UNAVAILABLE');
+    );
+    return response.ok ? 'confirmed' : 'unavailable';
+  } catch {
+    return 'unavailable';
+  } finally {
+    clearTimeout(timer);
+  }
 }

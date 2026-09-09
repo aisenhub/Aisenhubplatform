@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import {
   authCookieNames,
   createRequestAuthClient,
+  authSessionGate,
   setRequestAuthSession,
   writeAuthSessionCookies,
   type AuthCookieWriter,
@@ -29,6 +30,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     const accessToken = request.cookies.get(names.access)?.value;
     const refreshToken = request.cookies.get(names.refresh)?.value;
     if (!accessToken || !refreshToken) return errorBody('UNAUTHORIZED', 401);
+    const gate = authSessionGate({
+      accessToken,
+      refreshToken,
+      logoutFence: request.cookies.get(names.logoutFence)?.value,
+      loginAck: request.cookies.get(names.loginAck)?.value,
+    });
+    if (!gate.ok) return errorBody('UNAUTHORIZED', 401);
     const client = createRequestAuthClient(runtimeConfig);
     const sessionResult = await setRequestAuthSession(client, {
       access_token: accessToken,

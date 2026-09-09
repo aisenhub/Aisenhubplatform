@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AccountApiError, createAccountApiClient } from '@kit/account-server';
 import {
   authCookieNames,
+  authSessionGate,
   createRequestAuthClient,
   setRequestAuthSession,
   verifyEmailOtpToken,
 } from '@kit/account-auth-nextjs';
+import { errorBody, responseBody } from '../../_lib';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +35,14 @@ function config(): {
 }
 
 function result(data: unknown, status = 200): NextResponse {
-  return NextResponse.json(
-    { data },
-    { status, headers: { 'Cache-Control': 'no-store' } },
-  );
+  if (data && typeof data === 'object' && 'code' in data) {
+    const code = (data as { code: string }).code;
+    return errorBody(
+      code === 'RECENT_MFA_REQUIRED' ? 'RECENT_MFA_REQUIRED' : code === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : 'AUTHORIZATION_UNAVAILABLE',
+      status,
+    );
+  }
+  return responseBody(data, status);
 }
 
 function isTokenHash(value: unknown): value is string {
@@ -84,6 +90,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     const refreshToken = request.cookies.get(names.refresh)?.value;
     if (!accessToken || !refreshToken)
       return result({ code: 'UNAUTHORIZED' }, 401);
+    const gate = authSessionGate({
+      accessToken,
+      refreshToken,
+      logoutFence: request.cookies.get(names.logoutFence)?.value,
+      loginAck: request.cookies.get(names.loginAck)?.value,
+    });
+    if (!gate.ok) return result({ code: 'UNAUTHORIZED' }, 401);
 
     const currentClient = createRequestAuthClient(runtimeConfig);
     const currentSession = await setRequestAuthSession(currentClient, {
@@ -128,7 +141,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       temporarySession.access_token,
     );
     const response = result({ verified: true, expires_at: proof.expires_at });
-    response.cookies.set('aisenhub-recent-auth-proof', proof.proof_id, {
+    response.cookies.set(names.recentProof, proof.proof_id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',

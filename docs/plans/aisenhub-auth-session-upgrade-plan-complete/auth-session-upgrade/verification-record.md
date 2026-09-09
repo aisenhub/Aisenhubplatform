@@ -30,21 +30,21 @@
 
 | 字段 | 实际值 | 状态/备注 |
 |---|---|---|
-| 项目绝对路径 | 未填写 | 未验证 |
-| GitHub remote URL | 未填写 | 未验证 |
-| 工作分支 | 未填写 | 未验证 |
-| 起始 commit SHA | 未填写 | 未验证 |
-| 起始 remote SHA | 未填写 | 未验证 |
-| 初始 `git status --short` | 未填写 | 未验证 |
-| 已有未提交修改及归属 | 未填写 | 未验证 |
-| Node version | 未填写 | 未验证 |
-| pnpm version | 未填写 | 未验证 |
-| Next.js locked/installed version | 未填写 | 未验证 |
-| Supabase CLI version | 未填写 | 未验证 |
-| Supabase JS / SSR locked version | 未填写 | 未验证 |
-| Deno path/version（若 E2E 需要） | 未填写 | 未验证 |
-| Playwright availability/version（若 E2E 需要） | 未填写 | 未验证 |
-| Local Supabase status | 未填写 | 未验证 |
+| 项目绝对路径 | `E:\Projects\Aisenhubplatform` | 已核对 |
+| GitHub remote URL | `https://github.com/aisenhub/Aisenhubplatform.git` | 已核对 |
+| 工作分支 | `codex/auth-session-upgrade` | 从 R1 文档基线新建 |
+| 起始 commit SHA | `365691b49bac1f247505b1b2872b9ed6ac56c4a6` | 执行前核对 |
+| 起始 remote SHA | `365691b49bac1f247505b1b2872b9ed6ac56c4a6` | `origin/codex/auth-session-plan-r1`；实施分支尚未推送 |
+| 初始 `git status --short` | `?? docs/plans/aisenhub-frontend-experience-state-upgrade-plan/` | 用户提供的独立 Frontend 计划，保留，不属于本期 |
+| 已有未提交修改及归属 | 同上 | 不覆盖、不暂存 |
+| Node version | `v24.19.0` | 已核对 |
+| pnpm version | `11.18.0` | 已核对 |
+| Next.js locked/installed version | `16.3.0` | 已核对；Admin 已安装 |
+| Supabase CLI version | `2.111.0` | `pnpm exec supabase --version` |
+| Supabase JS / SSR locked version | `@supabase/supabase-js 2.111.0` / `@supabase/ssr 0.12.6` | `pnpm-lock.yaml` |
+| Deno path/version（若 E2E 需要） | `D:\APP\Codex\Deno\bin\deno.exe` / `2.9.6` | 已核对 |
+| Playwright availability/version（若 E2E 需要） | `@playwright/test 1.62.1` 已锁定；当前根 Node require 不可用 | 需按阶段脚本实际核对 |
+| Local Supabase status | 已安装但服务停止 | `pnpm exec supabase status`；未启动，未执行数据库测试 |
 
 ## 1.4 已知研究期风险 / 基线待核对
 

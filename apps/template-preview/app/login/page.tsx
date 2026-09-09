@@ -15,16 +15,15 @@ export default function ConsumerLoginPage() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Origin: window.location.origin,
       },
       body: JSON.stringify({ email, password }),
     });
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as {
-        data?: { code?: string };
+        error?: { code?: string };
       } | null;
       setStatus(
-        `登录失败：${payload?.data?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+        `登录失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
       );
       return;
     }

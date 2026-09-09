@@ -41,6 +41,7 @@ export type {
   JobSqlContext,
   AdminSqlContext,
   NoStoreHeaders,
+  LogoutResultDto,
   Page,
   PlanDto,
   PreferencesDto,

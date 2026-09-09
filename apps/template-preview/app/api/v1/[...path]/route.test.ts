@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { encodeAuthSessionAcknowledgement } from '@kit/account-auth-nextjs';
 import { DELETE, GET, PATCH, POST, PUT } from './route';
 
 const originalFetch = globalThis.fetch;
@@ -9,6 +10,17 @@ const originalEnv = {
   PLATFORM_KEY: process.env.PLATFORM_KEY,
   CONSUMER_ORIGIN: process.env.CONSUMER_ORIGIN,
 };
+const sessionToken = `eyJhbGciOiJub25lIn0.${Buffer.from(
+  JSON.stringify({
+    session_id: '00000000-0000-4000-8000-000000000001',
+    exp: Math.floor(Date.now() / 1000) + 60,
+  }),
+).toString('base64url')}.signature`;
+const sessionAck = encodeAuthSessionAcknowledgement({
+  fence: 'none',
+  session_id: '00000000-0000-4000-8000-000000000001',
+});
+const sessionCookies = `aisenhub-session=${sessionToken}; aisenhub-consumer-login-ack=${sessionAck}; aisenhub-consumer-csrf=csrf-1`;
 
 function request(
   path: string,
@@ -66,7 +78,7 @@ describe('template consumer BFF', () => {
         method: 'PATCH',
         headers: {
           origin: 'https://evil.example.test',
-          cookie: 'aisenhub-session=session-1',
+          cookie: sessionCookies,
         },
         body: JSON.stringify({ display_name: 'blocked' }),
       }),
@@ -85,7 +97,7 @@ describe('template consumer BFF', () => {
     process.env.CONSUMER_ORIGIN = 'https://consumer-a.example.test';
     globalThis.fetch = vi.fn(async (_input: string, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({
-        Authorization: 'Bearer session-1',
+        Authorization: `Bearer ${sessionToken}`,
       });
       return new Response(
         JSON.stringify({ data: { row_version: 7 }, request_id: 'account-2' }),
@@ -94,7 +106,7 @@ describe('template consumer BFF', () => {
     }) as typeof fetch;
 
     const response = await GET(
-      request('profile', { headers: { cookie: 'aisenhub-session=session-1' } }),
+      request('profile', { headers: { cookie: sessionCookies } }),
       { params: Promise.resolve({ path: ['profile'] }) },
     );
     expect(response.status).toBe(200);
@@ -129,7 +141,7 @@ describe('template consumer BFF', () => {
 
     const list = await GET(
       request('config-files?limit=20', {
-        headers: { cookie: 'aisenhub-session=session-1' },
+        headers: { cookie: sessionCookies },
       }),
       { params: Promise.resolve({ path: ['config-files'] }) },
     );
@@ -137,7 +149,7 @@ describe('template consumer BFF', () => {
     expect(await list.json()).toMatchObject({ data: { items: [] } });
     const download = await GET(
       request('config-files/file-1/content', {
-        headers: { cookie: 'aisenhub-session=session-1' },
+        headers: { cookie: sessionCookies },
       }),
       {
         params: Promise.resolve({
@@ -158,7 +170,7 @@ describe('template consumer BFF', () => {
     const fetchMock = vi.fn(async (_input: string, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({
         'Idempotency-Key': 'redeem-1',
-        Authorization: 'Bearer session-1',
+        Authorization: `Bearer ${sessionToken}`,
       });
       return new Response(
         JSON.stringify({
@@ -175,7 +187,7 @@ describe('template consumer BFF', () => {
         method: 'POST',
         headers: {
           origin: 'https://consumer-a.example.test',
-          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          cookie: sessionCookies,
           'x-csrf-token': 'csrf-1',
           'idempotency-key': 'redeem-1',
           'content-type': 'application/json',
@@ -203,7 +215,7 @@ describe('template consumer BFF', () => {
         method: 'POST',
         headers: {
           origin: 'https://consumer-a.example.test',
-          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          cookie: sessionCookies,
           'x-csrf-token': 'csrf-1',
         },
       }),
@@ -241,7 +253,7 @@ describe('template consumer BFF', () => {
         method: 'PUT',
         headers: {
           origin: 'https://consumer-a.example.test',
-          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          cookie: sessionCookies,
           'x-csrf-token': 'csrf-1',
           'idempotency-key': 'content-1',
           'content-type': 'application/octet-stream',
@@ -258,7 +270,7 @@ describe('template consumer BFF', () => {
     expect(calls).toHaveLength(2);
     expect(calls[1]?.headers).toMatchObject({
       'X-Platform-Key': 'phk_server_only_fixture',
-      Authorization: 'Bearer session-1',
+      Authorization: `Bearer ${sessionToken}`,
       'Content-Type': 'application/octet-stream',
       'Idempotency-Key': 'content-1',
     });
@@ -287,7 +299,7 @@ describe('template consumer BFF', () => {
         method: 'PUT',
         headers: {
           origin: 'https://consumer-a.example.test',
-          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          cookie: sessionCookies,
           'x-csrf-token': 'csrf-1',
           'idempotency-key': 'content-2',
           'content-encoding': 'gzip',
@@ -329,7 +341,7 @@ describe('template consumer BFF', () => {
         method: 'DELETE',
         headers: {
           origin: 'https://consumer-a.example.test',
-          cookie: 'aisenhub-session=session-1; aisenhub-csrf=csrf-1',
+          cookie: sessionCookies,
           'x-csrf-token': 'csrf-1',
           'idempotency-key': 'delete-1',
         },
@@ -340,7 +352,7 @@ describe('template consumer BFF', () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.headers).toMatchObject({
       'X-Platform-Key': 'phk_server_only_fixture',
-      Authorization: 'Bearer session-1',
+      Authorization: `Bearer ${sessionToken}`,
       'Idempotency-Key': 'delete-1',
     });
   });

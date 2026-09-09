@@ -1,7 +1,12 @@
 import { NextRequest } from 'next/server';
 import {
+  authCookieNames,
+  currentLogoutFence,
   createRequestAuthClient,
   signUpWithPassword,
+  sessionIdFromAccessToken,
+  writeLoginAcknowledgement,
+  writeAuthFlowFence,
   writeAuthSessionCookies,
   type AuthCookieWriter,
 } from '@kit/account-auth-nextjs';
@@ -12,6 +17,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     const runtimeConfig = config();
     if (!hasValidOrigin(request, runtimeConfig.origin))
       return errorBody('INVALID_INPUT', 403);
+    const loginFence = currentLogoutFence(
+      request.cookies.get(authCookieNames('consumer').logoutFence)?.value,
+    );
     const body = (await request.json()) as {
       email?: unknown;
       password?: unknown;
@@ -36,10 +44,27 @@ export async function POST(request: NextRequest): Promise<Response> {
       201,
     );
     if (data.session) {
+      const sessionId = sessionIdFromAccessToken(data.session.access_token);
+      if (!sessionId) return errorBody('AUTHORIZATION_UNAVAILABLE', 503);
       writeAuthSessionCookies({
         writer: response.cookies as unknown as AuthCookieWriter,
         session: data.session,
         secure: process.env.NODE_ENV === 'production',
+      });
+      writeLoginAcknowledgement({
+        writer: response.cookies as unknown as AuthCookieWriter,
+        secure: process.env.NODE_ENV === 'production',
+        sessionId,
+        loginFence,
+        prefix: 'consumer',
+      });
+    } else {
+      const flowResponse = response;
+      writeAuthFlowFence({
+        writer: flowResponse.cookies as unknown as AuthCookieWriter,
+        secure: process.env.NODE_ENV === 'production',
+        fence: loginFence,
+        prefix: 'consumer',
       });
     }
     return response;
