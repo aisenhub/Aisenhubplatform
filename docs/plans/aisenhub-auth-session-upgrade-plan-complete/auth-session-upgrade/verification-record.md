@@ -605,11 +605,11 @@ idempotent-mutation
 
 | 阶段 | Branch | 代码 commit SHA | 记录 commit SHA | Push 是否成功 | Remote 已包含代码 SHA | GitHub 链接 | 备注 |
 |---|---|---|---|---|---|---|---|
-| 01 | `codex/auth-session-upgrade` | `93757480c3516f497304c9abe09c78f50fa6d9b8` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
-| 02 | `codex/auth-session-upgrade` | `2514708530867bef9949866bf06ce3a7b19dad20` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
-| 03 | `codex/auth-session-upgrade` | `fa21e10d2fa4e57ec81e57a6c06176d8f36d716b` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
-| 04 | `codex/auth-session-upgrade` | `4666792fd574917aba247b4d2d879ad3813d4597` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
-| 05 | `codex/auth-session-upgrade` | `43374253ca6724eb9d4f4ee38f911bf50ac8e617` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付（wrapper E2E 保留 NOT_RUN） |
+| 01 | `codex/auth-session-upgrade` | `93757480c3516f497304c9abe09c78f50fa6d9b8` | `d0c1ad69d0cc41e423fac37657c771b903f0500d` | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 02 | `codex/auth-session-upgrade` | `2514708530867bef9949866bf06ce3a7b19dad20` | `d0c1ad69d0cc41e423fac37657c771b903f0500d` | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 03 | `codex/auth-session-upgrade` | `fa21e10d2fa4e57ec81e57a6c06176d8f36d716b` | `d0c1ad69d0cc41e423fac37657c771b903f0500d` | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 04 | `codex/auth-session-upgrade` | `4666792fd574917aba247b4d2d879ad3813d4597` | `d0c1ad69d0cc41e423fac37657c771b903f0500d` | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 05 | `codex/auth-session-upgrade` | `43374253ca6724eb9d4f4ee38f911bf50ac8e617` | `d0c1ad69d0cc41e423fac37657c771b903f0500d` | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付（wrapper E2E 保留 NOT_RUN） |
 
 ## 8.3 Push 失败记录
 
