@@ -596,3 +596,10 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 - 首次组合检查命令因PowerShell不支持所用花括号路径表达式而未执行；改为逐路径/目录检查后以上静态检查通过。没有将命令解析失败记为产品失败或PASS。
 - 本轮不安装软件、不修改产品代码、不运行产品单测/API/浏览器/数据库/Staging/生产验证；FE-D01～03与FE-V01～16保持NOT_STARTED/NOT_RUN。
 - 文档分支：`codex/frontend-plan-r1`；文档commit/push以随后Git交付记录为准，不填入产品阶段代码SHA栏。
+
+## FE-R1 文档交付记录
+
+- 修订提交：`8a0b81bba716e90c5a3dd05a0130993da1223ba3`。
+- 已push至`origin/codex/frontend-plan-r1`，`git ls-remote origin refs/heads/codex/frontend-plan-r1`返回同一完整SHA，已核对远端包含修订。
+- [GitHub文档提交](https://github.com/aisenhub/Aisenhubplatform/commit/8a0b81bba716e90c5a3dd05a0130993da1223ba3)。本段由后续独立记录提交维护，不反复amend。
+- 下一项满足派发条件：Phase01基础合同/中文视觉样例与FE-D03最小独立安装验证；尚未派发产品实施。main未合并，未Release/部署。
