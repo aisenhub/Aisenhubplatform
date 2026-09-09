@@ -20,3 +20,6 @@ export function createBrowserSupabaseClient(
       : {}),
   });
 }
+
+export * from './browser-session.ts';
+export { authCookieNames } from './cookie-policy.ts';
