@@ -20,7 +20,7 @@ T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），�
 
 T17-R1本轮已完成可独立的网关合同配置与 Account/Admin 独立数据库 URL 选择；根据当前 Supabase 官方连接、SSL 与 Edge Functions 指南补充了 hosted 配置及验收矩阵。实际独立 executor、TLS、CA、pooler 和重新部署请求矩阵因受控 Staging 输入未提供而保持 BLOCKED/NOT_RUN，详见`evidence/T17-R1.md`；不改变远端部署，不把历史默认 `SUPABASE_DB_URL` 证据升级为通过。
 
-M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；M5-02已完成四个本地tarball的可重复构建、边界扫描、独立消费者类型检查及Node/Edge导入回归（见 `evidence/M5-02.md`）。这些产物尚未发布到npm/Registry；M5-03 Local Admin页面、受控资源搜索、审计查询、状态动作和失败原因展示已完成（见 `evidence/M5-03.md`）；M5-04 Local Registry manifest与完整Auth/用户模板已完成（见 `evidence/M5-04.md`）；M5-05已完成Local独立Consumer安装/typecheck/build，但Hosted双Origin/Platform E2E仍未运行（见 `evidence/M5-05.md`）。
+M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；M5-02已完成四个本地tarball的可重复构建、边界扫描、独立消费者类型检查及Node/Edge导入回归（见 `evidence/M5-02.md`）。这些产物尚未发布到npm/Registry；M5-03 Local Admin页面、受控资源搜索、审计查询、状态动作和失败原因展示已完成（见 `evidence/M5-03.md`）；M5-04 Local Registry manifest与完整Auth/用户模板已完成（见 `evidence/M5-04.md`）；M5-05已完成Local G5-L：独立Consumer从tarball安装、typecheck/build，并通过双Origin/Platform Auth/刷新/激活/Profile/兑换/文件/停用浏览器链路；Hosted双Origin/Platform E2E仍未运行（见 `evidence/M5-05.md`）。
 
 M6-01已完成环境、Secret、联合备份屏障、manifest、墓碑和告警运维协议设计（见 `m6-operations-protocol.md`）；X02/X04/X05/X06未确认，M6-02～04的真实运维/恢复/容量验证仍未开始。
 
@@ -31,7 +31,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
-- 当前下一项：在 X05/托管后端到位后补 M5-05 Hosted 双 Origin/Platform 验收；Local Consumer install/typecheck/build 已完成。M5-03/M5-04 的 Local 开发和验证已完成。M4-11 的实际host G4-S仍依赖 T18-S 与受控托管输入。Close 30 天候选调度、Storage cleanup、Auth provider boundary 与 backup barrier guard 已接入 Local maintenance。M5-06正式发布仍依赖X05和明确发布授权。
+- 当前下一项：在 X05/托管后端到位后补 M5-05 Hosted 双 Origin/Platform 验收；Local G5-L 已完成。M5-03/M5-04 的 Local 开发和验证已完成。M4-11 的实际host G4-S仍依赖 T18-S 与受控托管输入。Close 30 天候选调度、Storage cleanup、Auth provider boundary 与 backup barrier guard 已接入 Local maintenance。M5-06正式发布仍依赖X05和明确发布授权。
 - 本轮已在独立任务分支执行T12-R2普通proof合同/issuer、Admin MFA与真实Local浏览器子集、M4-01和M3-R1完整Local SQL/API范围内验证；未执行的托管、Storage及生产项仍保持BLOCKED/NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实

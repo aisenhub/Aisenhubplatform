@@ -111,7 +111,7 @@ export default function FilesPage() {
         setStatus('预约失败：配额不足、策略关闭或文件输入不符合限制。');
         return;
       }
-      const uploadResponse = await fetch(`/api/v1${intent.data.upload_path}`, {
+      const uploadResponse = await fetch(`/api${intent.data.upload_path}`, {
         method: 'PUT',
         headers: {
           ...mutationHeaders('application/octet-stream'),

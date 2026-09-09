@@ -85,6 +85,7 @@ const packageJson = {
   type: 'module',
   scripts: {
     build: 'next build --webpack',
+    start: 'next start',
     typecheck: 'tsc --noEmit',
   },
   dependencies: {
@@ -147,6 +148,12 @@ run(
 );
 run(packageManager(), ['run', 'typecheck'], consumerDirectory);
 run(packageManager(), ['run', 'build'], consumerDirectory);
+run(
+  process.execPath,
+  [join(repositoryRoot, 'tests', 'spikes', 'e2e', 't16-r2-account.mjs')],
+  repositoryRoot,
+  { T16_CONSUMER_DIR: consumerDirectory },
+);
 
 const consumerPackage = JSON.parse(
   readFileSync(join(consumerDirectory, 'package.json'), 'utf8'),
@@ -164,6 +171,7 @@ console.log(
       typecheck: 'PASS',
       build: 'PASS',
       workspaceLinks: 'ABSENT',
+      localDualOriginPlatformE2E: 'PASS',
       hostedDualPlatformE2E: 'NOT_RUN (X05/hosted backend unavailable)',
     },
     null,

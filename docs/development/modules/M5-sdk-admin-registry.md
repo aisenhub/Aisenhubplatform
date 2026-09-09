@@ -1,6 +1,6 @@
 # M5 SDK、Admin与Registry成品实施规格
 
-状态：IN_PROGRESS；M5-02已完成Local tarball打包、浏览器/服务端边界、独立消费者类型检查和Node/Edge导入验收；M5-03 Local Admin资源导航、审计、服务端筛选、状态动作和Replace/purge blocked原因展示已完成，M5-04 Local Registry/完整模板已完成，M5-05 Hosted联合验收与M5-06正式发布仍未完成。依赖M2～M4合同与纵向链路，完成一致性、交互、打包和复用验收。DP2已列出[M5-01～06任务与资源覆盖表](../roadmap-dp2.md)，盘点可提前，M4-10后冻结文件集成细节。
+状态：IN_PROGRESS；M5-02已完成Local tarball打包、浏览器/服务端边界、独立消费者类型检查和Node/Edge导入验收；M5-03 Local Admin资源导航、审计、服务端筛选、状态动作和Replace/purge blocked原因展示已完成，M5-04 Local Registry/完整模板已完成，M5-05 G5-L Local 独立 Consumer 双 Origin/Platform 联合验收已完成，Hosted联合验收与M5-06正式发布仍未完成。依赖M2～M4合同与纵向链路，完成一致性、交互、打包和复用验收。DP2已列出[M5-01～06任务与资源覆盖表](../roadmap-dp2.md)，盘点可提前，M4-10后冻结文件集成细节。
 
 ## 1. 范围
 

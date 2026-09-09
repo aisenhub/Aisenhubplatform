@@ -49,6 +49,6 @@
 |---|---|---|
 | V-SDK-01/02 | PASS（Local tarball） | M5-05继续做全新Consumer与Registry联合安装；M5-06仍需正式发布 |
 | V-UI-01 | PARTIAL（Local页面与关键浏览器路径已验证） | M5-05补全新Consumer联合浏览器路径 |
-| V-INTEGRATION-01 | PARTIAL（Local独立安装/typecheck/build） | M5-05补Hosted双Origin/Platform E2E |
-| G5-L | NOT_RUN | M5-05 |
+| V-INTEGRATION-01 | PASS（Local tarball独立安装 + 双Origin/Platform浏览器业务链路） | Hosted双Origin/Platform E2E仍待X05 |
+| G5-L | PASS（Local） | Hosted补充待X05；M5-06另行完成G5-P |
 | G5-P | NOT_RUN | M5-06，依赖X05和发布授权 |

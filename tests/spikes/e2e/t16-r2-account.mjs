@@ -47,6 +47,9 @@ const databaseUrl = localStatus.DB_URL;
 const platformSecret =
   process.env.T16_PLATFORM_KEY_HMAC_SECRET ??
   'local-fixture-only-t16-r2-not-a-credential';
+const redemptionSecret =
+  process.env.T16_REDEMPTION_HMAC_SECRET ??
+  'local-fixture-only-t16-r2-redemption-not-a-credential';
 const mailpitContainer =
   process.env.SUPABASE_MAILPIT_CONTAINER ??
   'supabase_inbucket_aisenhub-platform-auth-local';
@@ -55,6 +58,7 @@ const consumerAUrl = 'http://127.0.0.1:3110';
 const consumerBUrl = 'http://127.0.0.1:3111';
 const adminUrl = 'http://127.0.0.1:3112';
 const denoPath = 'D:\\APP\\Codex\\Deno\\bin\\deno.exe';
+const consumerDirectory = process.env.T16_CONSUMER_DIR?.trim() ?? '';
 
 if (!authUrl || !anonKey || !publishableKey || !databaseUrl)
   throw new Error(
@@ -74,15 +78,29 @@ const platformAId = crypto.randomUUID();
 const platformBId = crypto.randomUUID();
 const planAId = crypto.randomUUID();
 const planBId = crypto.randomUUID();
+const paidPlanAId = crypto.randomUUID();
+const paidPlanBId = crypto.randomUUID();
+const batchAId = crypto.randomUUID();
+const batchBId = crypto.randomUUID();
+const codeAId = crypto.randomUUID();
+const codeBId = crypto.randomUUID();
 const keyAId = crypto.randomUUID();
 const keyBId = crypto.randomUUID();
 const platformACode = `t16-r2-a-${platformAId.slice(0, 8)}`;
 const platformBCode = `t16-r2-b-${platformBId.slice(0, 8)}`;
 const presentedKeyA = `phk_v1_${keyAId}_t16-r2-a`;
 const presentedKeyB = `phk_v1_${keyBId}_t16-r2-b`;
+const redemptionCodeA = 'T6R2A23456789';
+const redemptionCodeB = 'T6R2B23456789';
 const keyHmac = (keyId, presentedKey) =>
   createHmac('sha256', platformSecret)
     .update(`1:platform-key:${keyId}:${presentedKey}`)
+    .digest('hex');
+const redemptionHmac = (platformId, code) =>
+  createHmac('sha256', redemptionSecret)
+    .update(
+      `redeem:v1:platform:${platformId}:key:1:code:${code.replaceAll('-', '')}`,
+    )
     .digest('hex');
 let userId;
 let adminId;
@@ -200,8 +218,11 @@ async function startLocalServices() {
     {
       SUPABASE_URL: authUrl,
       SUPABASE_PUBLISHABLE_KEY: publishableKey,
+      SUPABASE_SECRET_KEY: localStatus.SERVICE_ROLE_KEY,
       ACCOUNT_API_DB_URL: databaseUrl,
       PLATFORM_KEY_HMAC_SECRET: platformSecret,
+      REDEMPTION_HMAC_SECRET: redemptionSecret,
+      REDEMPTION_HMAC_KEY_VERSION: '1',
       ACCOUNT_API_PORT: '8789',
     },
     'Account API',
@@ -217,9 +238,12 @@ async function startLocalServices() {
     ACCOUNT_API_URL: centralUrl,
     NODE_ENV: 'production',
   };
+  const consumerStartArgs = consumerDirectory
+    ? ['--dir', consumerDirectory, 'start']
+    : ['--filter', 'template-preview', 'start'];
   startProcess(
     'pnpm.cmd',
-    ['--filter', 'template-preview', 'start'],
+    consumerStartArgs,
     {
       ...appEnv,
       PORT: '3110',
@@ -230,7 +254,7 @@ async function startLocalServices() {
   );
   startProcess(
     'pnpm.cmd',
-    ['--filter', 'template-preview', 'start'],
+    consumerStartArgs,
     {
       ...appEnv,
       PORT: '3111',
@@ -315,9 +339,42 @@ async function createFixtures() {
     values (${adminId})
     on conflict (singleton_id) do update set user_id = excluded.user_id
   `;
-  for (const [id, code, planId, keyId, presentedKey, name] of [
-    [platformAId, platformACode, planAId, keyAId, presentedKeyA, 'T16 R2 A'],
-    [platformBId, platformBCode, planBId, keyBId, presentedKeyB, 'T16 R2 B'],
+  for (const [
+    id,
+    code,
+    planId,
+    paidPlanId,
+    keyId,
+    presentedKey,
+    name,
+    batchId,
+    redemptionCode,
+    redemptionCodeId,
+  ] of [
+    [
+      platformAId,
+      platformACode,
+      planAId,
+      paidPlanAId,
+      keyAId,
+      presentedKeyA,
+      'T16 R2 A',
+      batchAId,
+      redemptionCodeA,
+      codeAId,
+    ],
+    [
+      platformBId,
+      platformBCode,
+      planBId,
+      paidPlanBId,
+      keyBId,
+      presentedKeyB,
+      'T16 R2 B',
+      batchBId,
+      redemptionCodeB,
+      codeBId,
+    ],
   ]) {
     await sql`
       insert into public.platforms (id, code, name, status, allow_activation)
@@ -325,7 +382,9 @@ async function createFixtures() {
     `;
     await sql`
       insert into public.plans (id, platform_id, code, name, kind, features)
-      values (${planId}, ${id}, 'free', 'Free', 'free', ${sql.json({})})
+      values
+        (${planId}, ${id}, 'free', 'Free', 'free', ${sql.json({})}),
+        (${paidPlanId}, ${id}, 'pro', 'Pro', 'paid', ${sql.json({ quota: 10 })})
     `;
     await sql`update public.platforms set default_plan_id = ${planId} where id = ${id}`;
     await sql`
@@ -333,6 +392,32 @@ async function createFixtures() {
         (id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix, creation_operation_id)
       values
         (${keyId}, ${id}, ${name}, ${keyHmac(keyId, presentedKey)}, 1, 'phk_v1', ${presentedKey.slice(-8)}, ${crypto.randomUUID()})
+    `;
+    await sql`
+      insert into public.redemption_code_batches
+        (id, platform_id, plan_id, name, quantity, duration_value, duration_unit,
+         expires_at, status, delivery_deadline, delivered_at, delivery_session_id,
+         delivery_receipt_hmac, created_by, creation_operation_id)
+      values
+        (${batchId}, ${id}, ${paidPlanId}, 'T16 R2 browser fixture', 1, 30, 'day',
+         now() + interval '30 days', 'active', now() + interval '1 day', now(),
+         ${crypto.randomUUID()}, ${createHmac('sha256', redemptionSecret)
+           .update(`delivery:v1:platform:${id}:receipt:${batchId}`)
+           .digest('hex')}, ${adminId}, ${crypto.randomUUID()})
+    `;
+    await sql`
+      insert into public.redemption_codes
+        (id, platform_id, batch_id, plan_id, code_hmac, hmac_key_version,
+         code_prefix, code_suffix)
+      values
+        (${redemptionCodeId}, ${id}, ${batchId}, ${paidPlanId},
+         ${redemptionHmac(id, redemptionCode)}, 1,
+         ${redemptionCode.slice(0, 8)}, ${redemptionCode.slice(-4)})
+    `;
+    await sql`
+      insert into public.platform_file_policies
+        (platform_id, max_file_bytes, max_files, max_total_bytes)
+      values (${id}, 64, 10, 640)
     `;
   }
   return adminTotp;
@@ -436,6 +521,93 @@ async function readMailpitToken(email) {
   throw new Error(
     `Local Mailpit did not produce an email token_hash for ${email}`,
   );
+}
+
+async function exerciseSubscriptionAndFiles(page, baseUrl, redemptionCode) {
+  const csrf = await csrfToken(page);
+  const beforeRedeem = await browserRequest(page, '/api/v1/subscription');
+  assertStatus(beforeRedeem.status, 200, 'subscription read');
+  assert.equal(beforeRedeem.payload?.data?.plan?.code, 'free');
+
+  const redeemed = await browserRequest(page, '/api/v1/subscription/redeem', {
+    method: 'POST',
+    headers: {
+      Origin: baseUrl,
+      'X-CSRF-Token': csrf,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+    body: JSON.stringify({ code: redemptionCode }),
+  });
+  assertStatus(redeemed.status, 200, 'subscription redeem');
+  assert.equal(redeemed.payload?.data?.plan?.code, 'pro');
+
+  const content = 't16-r2 browser file';
+  const intent = await browserRequest(
+    page,
+    '/api/v1/config-files/upload-intent',
+    {
+      method: 'POST',
+      headers: {
+        Origin: baseUrl,
+        'X-CSRF-Token': csrf,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        name: 't16-r2.ini',
+        size: content.length,
+        content_type: 'text/plain',
+        purpose: 'config',
+      }),
+    },
+  );
+  assertStatus(intent.status, 201, 'file upload intent');
+  const fileId = intent.payload?.data?.file_id;
+  const uploadPath = intent.payload?.data?.upload_path;
+  assert.ok(
+    fileId && uploadPath,
+    'file upload intent returns private file path',
+  );
+
+  const upload = await browserRequest(page, `/api${uploadPath}`, {
+    method: 'PUT',
+    headers: {
+      Origin: baseUrl,
+      'X-CSRF-Token': csrf,
+      'Content-Type': 'application/octet-stream',
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+    body: content,
+  });
+  assertStatus(upload.status, 202, 'file content upload');
+  assert.equal(upload.payload?.data?.write_outcome, 'confirmed');
+  assert.equal(upload.payload?.data?.status, 'active');
+
+  const listed = await browserRequest(page, '/api/v1/config-files?limit=20');
+  assertStatus(listed.status, 200, 'file list');
+  assert.ok(
+    listed.payload?.data?.items?.some((item) => item.file_id === fileId),
+    'uploaded file is listed through the BFF',
+  );
+  const downloaded = await browserRequest(
+    page,
+    `/api/v1/config-files/${fileId}/content`,
+  );
+  assertStatus(downloaded.status, 200, 'file download');
+  assert.equal(downloaded.payload?.raw, content);
+
+  const removed = await browserRequest(page, `/api/v1/config-files/${fileId}`, {
+    method: 'DELETE',
+    headers: {
+      Origin: baseUrl,
+      'X-CSRF-Token': csrf,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+    body: '{}',
+  });
+  assertStatus(removed.status, 202, 'file delete request');
 }
 
 async function exerciseAccount(page, baseUrl) {
@@ -591,7 +763,10 @@ async function exerciseAdmin(page, adminTotp) {
 async function scanBrowserBundles() {
   const forbidden =
     /PLATFORM_KEY|PLATFORM_KEY_HMAC_SECRET|ACCOUNT_API_DB_URL|SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/iu;
-  for (const app of ['apps/template-preview', 'apps/admin']) {
+  for (const app of [
+    consumerDirectory || 'apps/template-preview',
+    'apps/admin',
+  ]) {
     const root = resolve(repositoryRoot, app, '.next', 'static');
     const stack = [root];
     while (stack.length) {
@@ -611,6 +786,30 @@ async function scanBrowserBundles() {
 async function cleanup() {
   cleaningUp = true;
   await sql`delete from public.audit_logs where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.subscription_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.subscription_grants where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.redemption_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.redemption_codes where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.redemption_code_batches where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from storage.objects where bucket_id = 'platform-config-files' and (name like ${`${platformAId}/%`} or name like ${`${platformBId}/%`})`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.platform_config_files where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.platform_file_policies where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => undefined,
   );
   await sql`delete from public.platform_accounts where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
@@ -709,6 +908,8 @@ try {
 
   await loginConsumer(pageA, consumerAUrl, platformAId);
   await loginConsumer(pageB, consumerBUrl, platformBId);
+  await exerciseSubscriptionAndFiles(pageA, consumerAUrl, redemptionCodeA);
+  await exerciseSubscriptionAndFiles(pageB, consumerBUrl, redemptionCodeB);
   const userCookiesA = await contextA.cookies();
   const userCookiesB = await contextB.cookies();
   const sessionA = userCookiesA.find(
@@ -767,6 +968,8 @@ try {
     JSON.stringify({
       independentContexts: 'PASS',
       platformKeyIsolation: 'PASS',
+      subscriptionRedemption: 'PASS',
+      fileUploadDownloadDelete: 'PASS',
       profilePreferences: 'PASS',
       csrfAndEtag: 'PASS',
       adminAal1AndSuspend: 'PASS',
