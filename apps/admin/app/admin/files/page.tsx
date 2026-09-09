@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
-import { AdminNav } from '../components/admin-nav';
 import {
   adminAuthSession,
   useAdminSessionSnapshot,
@@ -196,7 +195,6 @@ export default function AdminFilesPage() {
 
   return (
     <main className="shell wide-shell">
-      <AdminNav />
       <p className="eyebrow">Aisenhub Admin · M4</p>
       <h1>File operations</h1>
       <p className="muted">

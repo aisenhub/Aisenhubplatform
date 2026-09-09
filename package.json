@@ -36,6 +36,7 @@
     "test:sdk:m5-02": "node tests/spikes/sdk/m5-02-packages.mjs",
     "test:registry:m5-04": "node tests/spikes/registry/m5-04-template.mjs",
     "test:consumer:m5-05": "node tests/spikes/consumer/m5-05-install.mjs",
+    "test:consumer:fe-r1-ui": "node tests/spikes/consumer/fe-r1-ui-ui-install.mjs",
     "test:maintenance": "D:\\APP\\Codex\\Deno\\bin\\deno.exe test --allow-env --allow-net --allow-read --allow-import supabase/functions/maintenance/index.test.ts",
     "test:e2e": "node tests/spikes/e2e/t16-r2-account.mjs",
     "runtime:probe": "pnpm run --filter scripts runtime:probe",

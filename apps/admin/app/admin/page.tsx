@@ -1,58 +1,79 @@
-import { AdminNav } from './components/admin-nav';
+import Link from 'next/link';
+
+import { ArrowUpRightIcon } from 'lucide-react';
+
+import { AdminPageHeader } from '../../components/shell/admin-page-header';
+
+const overviewLinks = [
+  {
+    title: '平台管理',
+    description: '管理平台、Origin、账户状态和 API 密钥生命周期。',
+    href: '/admin/platforms',
+  },
+  {
+    title: '权益与套餐',
+    description: '管理套餐、权益和兑换码批次；不直接修改权益投影。',
+    href: '/admin/entitlements',
+  },
+  {
+    title: '订阅操作',
+    description: '在明确账户上下文中读取订阅并提交受控命令。',
+    href: '/admin/subscriptions',
+  },
+  {
+    title: '配置文件',
+    description: '查看文件策略、状态和需要 worker 继续处理的任务。',
+    href: '/admin/files',
+  },
+  {
+    title: '运维任务',
+    description: '跟踪删除任务的真实 checkpoint、重试和阻塞原因。',
+    href: '/admin/deletion-jobs',
+  },
+  {
+    title: '审计记录',
+    description: '只读查看脱敏事件、请求 ID 和安全技术详情。',
+    href: '/admin/audit',
+  },
+] as const;
 
 export default function AdminHomePage() {
   return (
-    <main className="shell">
-      <AdminNav />
-      <p className="eyebrow">Aisenhub Admin</p>
-      <h1>Admin control center</h1>
-      <p className="muted">
-        M3 的计划、权益和兑换批次通过中央 Account API 进入受控数据库领域函数。
-      </p>
-      <div className="panel">
-        <strong>继续到权益控制台</strong>
-        <span>需要有效管理员会话、AAL2 和敏感操作的近期认证证明。</span>
-        <a className="link" href="/admin/entitlements">
-          打开 M3 Entitlements
-        </a>
-      </div>
-      <div className="panel">
-        <strong>继续到文件运维</strong>
-        <span>查看策略、文件状态并通过近期 MFA 证明代理下载。</span>
-        <a className="link" href="/admin/files">
-          打开 M4 File Operations
-        </a>
-      </div>
-      <div className="panel">
-        <strong>继续到删除任务</strong>
-        <span>近期 MFA 批准 Global Delete，并查看可恢复 checkpoint。</span>
-        <a className="link" href="/admin/deletion-jobs">
-          打开 M4 Deletion Jobs
-        </a>
-      </div>
-      <div className="panel">
-        <strong>继续到平台运维</strong>
-        <span>平台、Origin、账户状态和 Key 生命周期均经 Admin API。</span>
-        <a className="link" href="/admin/platforms">
-          打开 M2 Platform Operations
-        </a>
-      </div>
-      <div className="panel">
-        <strong>继续到订阅</strong>
-        <span>
-          读取订阅投影并提交带原因、operation_id 和近期 MFA 的受控命令。
-        </span>
-        <a className="link" href="/admin/subscriptions">
-          打开 Subscription Operations
-        </a>
-      </div>
-      <div className="panel">
-        <strong>查看审计</strong>
-        <span>只读筛选审计记录；查询失败时显示稳定错误码，不伪造空结果。</span>
-        <a className="link" href="/admin/audit">
-          打开 Audit Log
-        </a>
-      </div>
+    <main className="shell wide-shell" data-test="admin-overview">
+      <AdminPageHeader
+        title="管理员总览"
+        description="集中管理 Aisenhub 平台资源。所有敏感写操作仍由 Admin API、近期 MFA 和领域状态机共同约束。"
+      />
+
+      <section className="panel gap-5" aria-labelledby="overview-entry-heading">
+        <div className="flex flex-col gap-1">
+          <h2 id="overview-entry-heading">工作入口</h2>
+          <p className="text-sm text-muted-foreground">
+            从资源页开始操作；系统状态页将在具备真实数据源后启用。
+          </p>
+        </div>
+        <ul className="grid gap-2 p-0 sm:grid-cols-2" role="list">
+          {overviewLinks.map((item) => (
+            <li key={item.href} className="list-none">
+              <Link
+                href={item.href}
+                data-test={`overview-link-${item.href.split('/').pop()}`}
+                className="group flex h-full items-start justify-between gap-4 rounded-lg border border-border/80 bg-background p-4 outline-none transition-colors hover:border-primary/40 hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                <span className="min-w-0">
+                  <span className="block font-medium text-foreground">
+                    {item.title}
+                  </span>
+                  <span className="mt-1 block text-sm leading-5 text-muted-foreground">
+                    {item.description}
+                  </span>
+                </span>
+                <ArrowUpRightIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }

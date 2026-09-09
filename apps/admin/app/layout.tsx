@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+
+import { Toaster } from '@kit/ui/sonner';
+
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,7 +14,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster position="bottom-right" />
+      </body>
     </html>
   );
 }

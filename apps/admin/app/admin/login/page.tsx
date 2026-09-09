@@ -36,13 +36,16 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="shell">
-      <p className="eyebrow">Aisenhub Admin</p>
-      <h1>Sign in to the admin console</h1>
+    <main className="shell" data-test="admin-login-page">
+      <h1>登录管理员控制台</h1>
       <p className="muted">
         登录会建立管理员会话；计划和兑换写操作仍需要 AAL2 与近期认证证明。
       </p>
-      <form className="panel stack-form" onSubmit={submit}>
+      <form
+        className="panel stack-form"
+        onSubmit={submit}
+        data-test="admin-login-form"
+      >
         <label htmlFor="email">管理员邮箱</label>
         <input
           id="email"
@@ -64,7 +67,9 @@ export default function AdminLoginPage() {
           autoComplete="current-password"
           required
         />
-        <button type="submit">登录</button>
+        <button type="submit" data-test="admin-login-submit">
+          登录
+        </button>
         <span className="muted" role="status">
           {status}
         </span>

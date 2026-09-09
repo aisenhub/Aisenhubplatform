@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
-import { AdminNav } from '../components/admin-nav';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -141,7 +140,6 @@ export default function AdminDeletionJobsPage() {
 
   return (
     <main className="shell wide-shell">
-      <AdminNav />
       <p className="eyebrow">Aisenhub Admin · M4</p>
       <h1>Deletion jobs</h1>
       <p className="muted">

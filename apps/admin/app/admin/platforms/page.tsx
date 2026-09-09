@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
-import { AdminNav } from '../components/admin-nav';
 import {
   adminAuthSession,
   useAdminSessionSnapshot,
@@ -301,7 +300,6 @@ export default function PlatformsPage() {
 
   return (
     <main className="shell wide-shell">
-      <AdminNav />
       <p className="eyebrow">Aisenhub Admin · M2</p>
       <h1>Platform operations</h1>
       <p className="muted">
