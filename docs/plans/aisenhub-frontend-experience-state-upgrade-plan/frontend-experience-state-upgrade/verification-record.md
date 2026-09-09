@@ -1,10 +1,10 @@
 # Frontend Experience & State Upgrade — Verification Record
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01 已开始并完成代码实现与 FE-D03 独立安装探针，但尚未满足全部阶段交付门槛。
+> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01 与 Phase 02 已完成当前代码批次并推送，但均尚未满足全部阶段交付门槛。
 
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
-> 计划创建状态：Phase 01 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 02–08 仍为 **未开始 / 未验证 / 未记录**。  
+> 计划创建状态：Phase 01 与 Phase 02 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 03–08 仍为 **未开始 / 未验证 / 未记录**。  
 > 禁止把 `references/`、`docs/development/status.md`、历史 evidence、研究快照或别的分支的 PASS 直接复制为本任务验证结果。
 
 ---
@@ -31,7 +31,7 @@
 ## 1.1 本次目标与实施范围
 
 - 目标：按 `00-master-plan.md` 将 Frontend Experience & State 架构实施到 Admin、Consumer/Registry，并完成 Phase 01–08。
-- 本期范围：**Phase 01 进行中；Phase 02–08 未开始**。
+- 本期范围：**Phase 01、Phase 02 进行中；Phase 03–08 未开始**。
 - Future/第二期：`future/01-diagnostics-search-alerts.md`，本期 **不实施**。
 - 计划目录：`docs/plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/`（执行时确认实际放置位置）。
 
@@ -44,7 +44,7 @@
 | 工作分支 | `codex/frontend-plan-r1` | 已验证 | 任务分支 |
 | upstream branch | `origin/codex/frontend-plan-r1` | 已验证 | `git rev-parse @{u}` |
 | 起始 commit | `5e408286c36ed5b2708e5be55415fb80be51602e` | 已验证 | 阶段开始 HEAD |
-| 当前 HEAD | `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee` | 已验证 | Phase 01 code commit |
+| 当前 HEAD | `e9c5c9fa096b9a193c59e08e233923f8908c75a2` | 已验证 | Phase 02 code commit |
 | 初始工作区状态 | clean | 已验证 | 阶段开始 `git status --short` 为空 |
 | 初始已有修改 | 无 | 已验证 | 未覆盖归属不明修改 |
 | 远程是否含起始 commit | 是 | 已验证 | code push 后 `git ls-remote` 核对 |
@@ -59,8 +59,8 @@ pwd                              -> `E:\Projects\Aisenhubplatform`
 git remote -v                    -> origin fetch/push `https://github.com/aisenhub/Aisenhubplatform.git`
 git branch --show-current        -> `codex/frontend-plan-r1`
 git status --short               -> 初始 clean；阶段结束 clean
-git rev-parse HEAD               -> 起始 `5e40828`；结束 `7b3f64d`
-git log -1 --oneline             -> `7b3f64d frontend: establish phase 01 experience foundation`
+git rev-parse HEAD               -> 起始 `5e40828`；当前 `e9c5c9f`
+git log -1 --oneline             -> `e9c5c9f feat(admin): add platform directory and workspace context`
 git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 ```
 
@@ -105,7 +105,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | 阶段 | 名称 | 状态 | 已完成内容 | 剩余内容 | 前置依赖 | 代码 commit | Push | GitHub 链接 |
 |---|---|---|---|---|---|---|---|---|
 | 01 | Experience Foundation + Admin Shell + Audit vertical slice | 进行中 | UI toolchain、shared state primitives、AdminShell、导航命令面板、Audit URL/state/inspector 代码、FE-D03 独立安装探针 | 真实 Admin session、Audit success/empty/inspector 正向数据、390px 实机验收 | 无 | `7b3f64d` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) |
-| 02 | Platform Context + Workspace | 未开始 | 无 | 全部 | Phase 01 已交付 | 未记录 | 未验证 | 未记录 |
+| 02 | Platform Context + Workspace | 进行中 | Platform Directory、URL 平台上下文、Switcher、Header、Overview、嵌套路由骨架、legacy settings 兼容入口 | 真实 Admin session 下的成功/403/404/disabled/切换正向数据、390px 与最终阶段门槛 | Phase 01 必要基础已存在；Phase 01 正向 session/390px 仍待补齐 | `e9c5c9f` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/e9c5c9fa096b9a193c59e08e233923f8908c75a2) |
 | 03 | High-risk State & Interactions | 未开始 | 无 | 全部 | Phase 02 已交付；Auth 依赖按实际核对 | 未记录 | 未验证 | 未记录 |
 | 04 | Accounts & Entitlements Resource Pages | 未开始 | 无 | 全部 | Phase 03 已交付 | 未记录 | 未验证 | 未记录 |
 | 05 | Files & Platform Settings | 未开始 | 无 | 全部 | Phase 03 已交付 | 未记录 | 未验证 | 未记录 |
@@ -200,7 +200,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - Phase 02 可复用接口/组件：`@kit/ui/styles.css`、`AsyncState`、`StatusBadge`、`ResourceId`、`SupportErrorId`、`AdminShell`、`adminNavigation` 与 Audit URL/query 状态实现。
 - 未完成/未验证：真实 Admin session 下 Audit success/empty/inspector 正向数据；390px mobile 视口；FE-V01～04、FE-V13、FE-V15 的完整用例仍未全部运行。
 - 当前未提交修改：无；code commit 已 push，verification record 待 docs-only commit。
-- 必须先解决：补齐真实 session/后端可用环境、390px viewport smoke；完成后才能把 Phase 01 标记 `验收通过待推送` 或 `已交付` 并进入 Phase 02。
+- 必须先解决：补齐真实 session/后端可用环境、390px viewport smoke；完成后才能把 Phase 01 标记 `验收通过待推送` 或 `已交付`。Phase 02 代码已独立推送，但进入 Phase 03 前仍需补齐同类正向验收。
 - 需要用户决定：无（执行中若出现实质冲突再据实填写）。
 
 ---
@@ -209,38 +209,45 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 ## 4.1 阶段元数据
 
-- 状态：**未开始**
-- 开始/结束日期：未记录
-- 开始 HEAD：未记录
-- 代码 commit：未记录
-- Push：未验证
+- 状态：**进行中**
+- 开始日期：2026-09-09
+- 结束日期：未记录（真实 session/390px 阶段门槛仍未完成）
+- 开始 HEAD：`8dfb1ce591d16d47115dec48f02c6ab3e529fca3`
+- 验证代码版本：`e9c5c9fa096b9a193c59e08e233923f8908c75a2`
+- 代码 commit：`e9c5c9fa096b9a193c59e08e233923f8908c75a2`
+- Push：已验证；远程分支 SHA 一致
 
 ## 4.2 实施与契约
 
-- `/admin/platforms/[platformId]` URL authority：未开始。
-- Platform Directory / Switcher：未开始。
-- Platform Header / disabled banner：未开始。
-- Platform Overview：未开始。
-- manual Platform ID / selectedId 主路径退出：未开始。
-- 目标 route/redirect 与当前代码偏差：未记录。
+- `/admin/platforms/[platformId]` URL authority：已实现；工作区详情请求只使用当前路由 ID，不回退到第一平台。
+- Platform Directory / Switcher：已实现；目录只使用合同支持的 `q/limit`，Switcher 使用有界 `limit=100` 列表并保留同一子路由后缀。
+- Platform Header / disabled banner：已实现；显示面包屑、名称、Code、状态、平台 ID 复制和停用诊断提示。
+- Platform Overview：已实现；只展示平台真实状态、激活策略、稳定 ID 与快捷入口，不生成虚构指标。
+- manual Platform ID / selectedId 主路径退出：已实现；旧 mega-page 已替换为目录，设置兼容入口从 context 读取 platform ID。
+- 目标 route/redirect 与当前代码偏差：嵌套路由已建立；Accounts/Plans/Subscriptions/Redemption batches/Files/Origins/Keys 当前为诚实 skeleton，真实资源纵切留给 Phase 04–06。
 
 ## 4.3 验证记录
 
 | 日期 | 代码版本 | 命令/场景 | 退出码/结果 | 摘要 |
 |---|---|---|---|---|
-| 未记录 | 未记录 | `pnpm --filter admin typecheck` | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter admin build` | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm format:check && pnpm lint && pnpm typecheck` | 未执行 | 未记录 |
-| 未记录 | 未记录 | Platform deep-link / refresh / back / switch / invalid id / disabled | 未验证 | 未记录 |
-| 未记录 | 未记录 | 相关 API/contract test（按实际影响） | 未执行 | 未记录 |
+| 2026-09-09 | `e9c5c9f` | `pnpm --filter admin typecheck` | 0 / PASS | 新增动态路由、workspace context、directory 与设置兼容入口类型检查通过 |
+| 2026-09-09 | `e9c5c9f` | `pnpm --filter admin build` | 0 / PASS | Next 16.3.0 webpack 构建通过；平台目录与 9 个动态嵌套路由被识别 |
+| 2026-09-09 | `e9c5c9f` | `pnpm contracts:check` | 0 / PASS | Admin 36 operations 合同检查通过；未新增公共 API |
+| 2026-09-09 | `e9c5c9f` | `pnpm lint` | 0 / PASS with existing warning | 仅 MFA 旧二维码 `<img>` 的 next/no-img-element warning；本阶段无新增 lint error |
+| 2026-09-09 | `e9c5c9f` | changed-file `oxfmt --check` + `git diff --check` | 0 / PASS | 19 个 Phase 02 文件格式与差异检查通过 |
+| 2026-09-09 | `e9c5c9f` | `node .../impeccable/scripts/detect.mjs --json` changed targets | 0 / PASS | detector 0 findings |
+| 2026-09-09 | `e9c5c9f` | Admin production browser：Platform Directory、Create Dialog、`?q=platform` | PASS | 目录视觉层级、创建表单、URL 查询和错误≠empty 状态可见；浏览器日志为空 |
+| 2026-09-09 | `e9c5c9f` | Admin production browser：invalid platform URL | PASS（loading boundary） | `/admin/platforms/not-a-real-platform` 首屏只显示 URL context loading，不显示旧平台数据；无 console error/warning |
+| 未记录 | 未记录 | Platform valid success / 403 / 404 / disabled / A→B switch / refresh / back | NOT_RUN | 当前无真实 Admin session 与正向平台数据；代码路径已实现，需凭据/后端环境复验 |
+| 未记录 | 未记录 | Platform workspace 390px / keyboard full matrix | NOT_RUN | 当前 CUA 未提供 viewport override；键盘基础 Dialog 操作已在本阶段观察，完整矩阵待 Phase 08 |
 
 ## 4.4 GitHub / 交接
 
-- code commit：未记录
-- push：未验证
-- remote confirmation：未验证
-- Phase 03 输入：未记录
-- 未提交修改：未记录
+- code commit：`e9c5c9fa096b9a193c59e08e233923f8908c75a2`
+- push：PASS
+- remote confirmation：PASS；`git rev-parse HEAD` 与 `git rev-parse '@{u}'` 一致
+- Phase 03 输入：平台上下文 `usePlatformContext`、Status/ID/Error shared primitives、设置兼容 API 路径；Phase 03 接管 Key/账户高风险确认和 mutation 状态
+- 未提交修改：verification record 待 docs-only commit
 - 需要用户决定：无
 
 ---
@@ -572,6 +579,20 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 复测：FE-D03 install/typecheck/build/browser 全部 PASS；Admin build/browser 复测 PASS。
 - 该结果是否仍覆盖当前代码：是；之后仅修改 verification record。
 
+## VR-0003 — Phase 02 platform context and directory
+
+- 日期：2026-09-09
+- 阶段：Phase 02
+- 被验证 commit：`e9c5c9fa096b9a193c59e08e233923f8908c75a2`
+- 工作区是否 clean：是（code commit 后、docs-only record commit 前）
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Codex In-app Browser；Admin production server `http://localhost:3000`
+- 命令/操作：Admin typecheck/build、contracts、lint、目标文件 oxfmt/diff、impeccable detector；目录页面、`?q=platform`、创建平台 Dialog/客户端校验、无效平台 URL loading boundary 浏览器检查。
+- Exit code / 浏览器结果：typecheck/build/contracts/目标格式/diff/detector PASS；lint 0 with existing warning；目录/Dialog/query/loading boundary PASS；浏览器日志为空。
+- stdout/stderr/截图/日志位置：本次 agent tool 输出与浏览器截图；未写入仓库，未包含敏感数据。
+- 结果摘要：目录移除 state-only selected platform；`[platformId]` 成为唯一平台上下文权威；Switcher 不持久化秘密或手工 ID；目录、概览、停用提示和嵌套路由骨架已推送；legacy settings 保留 Origin、账户动作、Key 生命周期 API 入口。
+- 未运行项：真实 Admin session 下 valid success、403/404/disabled、A→B switch、refresh/back、390px；这些不伪造为 PASS。
+- 该结果是否仍覆盖当前代码：是；之后仅追加 verification record docs 变更。
+
 ---
 
 # 12. GitHub 交付记录追加区
@@ -586,13 +607,13 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 01 代码实现与 FE-D03 探针；阶段仍进行中**。
-- 下一阶段从哪里开始：先补齐 Phase 01 的真实 Admin session、Audit 正向 success/empty/inspector 与 390px viewport，再按 Phase 02 的 Platform Context + Workspace 实施。
+- 当前最后完成阶段：**Phase 02 代码实现与推送；Phase 01、Phase 02 均仍进行中**。
+- 下一阶段从哪里开始：补齐可用 Admin session 后复验 Phase 01/02 正向场景；随后进入 Phase 03 的高风险 mutation/确认状态，使用本阶段的 `usePlatformContext` 与 settings 兼容 API。
 - 必须先处理：FE-D02 在 Phase 03 核验批次重复创建；FE-D01 在 Phase 05 平台 Files 前通过。FE-D03 最小验证已 PASS，完整 Consumer/Registry 安装仍留给 Phase 07。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
 - 当前未提交修改及归属：verification record 待 docs-only commit；产品代码无未提交修改。
-- 当前 branch / HEAD：`codex/frontend-plan-r1` / `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee`。
+- 当前 branch / HEAD：`codex/frontend-plan-r1` / `e9c5c9fa096b9a193c59e08e233923f8908c75a2`。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -632,4 +653,4 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 修订提交：`8a0b81bba716e90c5a3dd05a0130993da1223ba3`。
 - 已push至`origin/codex/frontend-plan-r1`，`git ls-remote origin refs/heads/codex/frontend-plan-r1`返回同一完整SHA，已核对远端包含修订。
 - [GitHub文档提交](https://github.com/aisenhub/Aisenhubplatform/commit/8a0b81bba716e90c5a3dd05a0130993da1223ba3)。本段由后续独立记录提交维护，不反复amend。
-- 下一项满足派发条件：补齐 Phase01 真实 session/390px/正向 Audit 验收后再派发 Phase02；main未合并，未Release/部署。
+- 下一项满足派发条件：补齐 Phase01/02 真实 session、正向资源数据和 390px 验收后，再推进 Phase03；Phase02 代码已独立推送，main未合并，未Release/部署。
