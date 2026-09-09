@@ -2,7 +2,7 @@
 
 本文件从属于 [架构基线](architecture.md)。身份是全局共享的，业务状态是平台本地的，两者不能互相替代。
 
-**ASU-R1 设计变更登记（2026-09-09，尚未实施）：** [Auth 优化计划 §2.10](plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md) 冻结 scoped CSRF/proof、CSRF 刷新窗口、local revoke 结果分类、退出 fence/ack、迟到响应隔离、显式刷新所有权与 MFA 部分成功协议。ASU-01～05 实施并验收后更新本文对应实现描述；不能把本设计登记当作已完成的安全能力。现有中央 JWT/session/AAL2/proof 和领域授权要求不变。
+**ASU-R1 实现登记（2026-09-09）：** [Auth 优化计划 §2.10](plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md) 已落实 scoped CSRF/proof、CSRF 刷新窗口、local revoke 结果分类、退出 fence/ack、迟到响应隔离、显式刷新所有权与 MFA 部分成功协议。实现代码与阶段验证记录见 [verification-record.md](plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/verification-record.md)；真实 Supabase/Auth、浏览器双 Tab、响应式回归和生产观察仍需在对应环境执行。现有中央 JWT/session/AAL2/proof 和领域授权要求不变。
 
 ## 1. 平台信任边界
 
@@ -24,7 +24,7 @@ V1 用户 access token 默认15分钟；每次构造 Principal 还通过只读�
 
 退出默认撤销当前平台所用当前会话（local scope）；“退出所有设备”是单独明确的全局操作。已删除会话的旧 JWT 在后续 Principal 检查时拒绝。仍在执行中的跨服务请求不承诺即时中断。
 
-Next.js adapter 统一处理 Secure/SameSite Cookie、session refresh、PKCE、OAuth callback、email confirmation 和 password reset。登录及刷新响应禁止共享缓存/ISR；每请求独立用户 client，禁止全局 singleton 混入不同用户 token。
+Next.js adapter 统一处理 Secure/SameSite Cookie、session refresh、PKCE、OAuth callback、email confirmation 和 password reset。当前 ASU 实现另外使用 Consumer/Admin scoped access、refresh、CSRF、recent-proof、login-ack、auth-flow 与 logout-fence cookies；登录及刷新响应禁止共享缓存/ISR，每请求独立用户 client，禁止全局 singleton 混入不同用户 token。浏览器端只持有会话状态，不暴露 access/refresh/proof token。
 
 Cookie 模型遵循所固定 SSR SDK 实际需要，不虚假承诺所有富客户端 Cookie 均可 HttpOnly。业务 BFF 的写入口严格检查同源 Origin、CSRF token 和 HTTP method；CORS 不是授权。回调 returnTo 仅允许同源相对路径，不接受任意 URL。
 
