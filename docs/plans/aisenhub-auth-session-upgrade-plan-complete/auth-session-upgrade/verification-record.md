@@ -225,7 +225,7 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- Staging/生产及真实 Supabase Auth 流程未运行；浏览器 E2E 仍受本地 Supabase 停止和 Windows 脚本回收问题影响。
+- hosted/Staging/生产及真实外部 Provider 流程未运行；Local Supabase/Chromium 与 Windows 独立安装回归已在最新实施复核中通过。
 
 ### 阶段交接
 
@@ -242,7 +242,7 @@ idempotent-mutation
 
 ### Frontend consumption 实际结论
 
-- resolved/refreshing/mfa/expired machine semantics：本地单测覆盖；真实浏览器未运行。
+- resolved/refreshing/mfa/expired machine semantics：本地单测覆盖；真实应用回归已通过，故障注入 race 仍列发布前观察。
 - RetryRequired 是否不携带 request body/credential：实现仅返回固定错误，不携带请求内容；本地单测覆盖。
 - safe returnTo path/query/deep-link 行为：本地 Domain 单测覆盖 path、external 和敏感 query；真实浏览器未运行。
 - shared runtime 是否保持无 React/`@kit/ui` 依赖：已通过独立 SDK 打包与消费者导入验证。
@@ -274,7 +274,7 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 真实浏览器 viewport 与生产环境会话仍未运行。
+- 生产环境会话与 hosted Provider 仍未运行；Local 浏览器 viewport 基础回归已通过。
 
 ### 阶段交接
 
@@ -291,8 +291,8 @@ idempotent-mutation
 
 ### Frontend integration 实际结论
 
-- Consumer 页面已统一 manager；本地类型检查和 BFF/unit 验证通过，真实浏览器状态转场未运行。
-- safe returnTo、remote revoke unavailable 文案和二进制不重放已落实；响应式/键盘回归未运行。
+- Consumer 页面已统一 manager；本地类型检查、BFF/unit 与真实浏览器路径回归通过。
+- safe returnTo、remote revoke unavailable 文案和二进制不重放已落实；基础响应式/键盘回归通过，完整屏幕阅读器审计仍未运行。
 
 ### 状态
 
@@ -320,7 +320,7 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 真实邮件、Storage 和浏览器 E2E 未运行。
+- 真实外部邮件/Storage、自然 access 到期与延迟故障注入仍未运行；Local Mailpit/Storage/浏览器 E2E 已通过。
 
 ### 阶段交接
 
@@ -337,7 +337,7 @@ idempotent-mutation
 
 ### Frontend integration 实际结论
 
-- 因子空列表与错误、MFA one-time secret、partial proof failure 已落地；真实浏览器状态转场与响应式/键盘回归未运行。
+- 因子空列表与错误、MFA one-time secret、partial proof failure 已落地；真实 Admin 浏览器及基础响应式/键盘回归已通过。
 - 授权仍由 Admin API/session gate 决定，UI indicator 未作为 authority。
 
 ### 状态
@@ -367,7 +367,7 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 真实 AAL2/远程 proof API 与浏览器响应式验证未运行。
+- hosted AAL2/远程 proof API、外部 MFA provider 与故障注入恢复未运行；Local Auth/MFA/浏览器回归已通过。
 
 ### 阶段交接
 
@@ -384,7 +384,7 @@ idempotent-mutation
 
 ### Frontend integration 最终收口
 
-- manager 单测、类型检查、独立消费者构建通过；真实浏览器 unresolved/refreshing/expired、双 Tab 与响应式回归未运行。
+- manager 单测、类型检查、独立消费者构建和真实浏览器基础回归通过；真实双 Tab race、unresolved/refreshing/expired 故障注入仍列发布前观察。
 - Domain safe returnTo 负向测试通过；mutation 不自动 replay，文件状态保留 unknown-outcome 语义。
 
 ### 状态
@@ -413,7 +413,7 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- `m5-05-install` 自动脚本的 Windows `next build` 子进程未正常回收，需后续单独修复测试 harness；不将其记为 PASS。
+- hosted backend、自然到期、外部 Provider 与延迟 race 尚未运行；`m5-05-install` Windows harness 已通过直接调用 Next CLI 的复测。
 
 ### 最终交接
 
