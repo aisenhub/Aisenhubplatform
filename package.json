@@ -29,6 +29,7 @@
     "test:api:m4-10-g4-l": "node tests/spikes/api/m4-10-g4-l.mjs",
     "test:api:m4-05-maintenance": "node tests/spikes/api/m4-05-maintenance.mjs",
     "test:api:m4-04-upload": "node tests/spikes/api/m4-04-upload.mjs",
+    "test:ops:m6-02-local": "node tests/spikes/ops/m6-02-local-backup.mjs",
     "sdk:pack": "node tooling/scripts/src/sdk-pack.mjs",
     "test:sdk:m5-02": "node tests/spikes/sdk/m5-02-packages.mjs",
     "test:registry:m5-04": "node tests/spikes/registry/m5-04-template.mjs",

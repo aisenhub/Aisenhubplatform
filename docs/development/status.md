@@ -22,7 +22,7 @@ T17-R1本轮已完成可独立的网关合同配置与 Account/Admin 独立数�
 
 M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；M5-02已完成四个本地tarball的可重复构建、边界扫描、独立消费者类型检查及Node/Edge导入回归（见 `evidence/M5-02.md`）。这些产物尚未发布到npm/Registry；M5-03 Local Admin页面、受控资源搜索、审计查询、状态动作和失败原因展示已完成（见 `evidence/M5-03.md`）；M5-04 Local Registry manifest与完整Auth/用户模板已完成（见 `evidence/M5-04.md`）；M5-05已完成Local G5-L：独立Consumer从tarball安装、typecheck/build，并通过双Origin/Platform Auth/刷新/激活/Profile/兑换/文件/停用浏览器链路；Hosted双Origin/Platform E2E仍未运行（见 `evidence/M5-05.md`）。
 
-M6-01已完成环境、Secret、联合备份屏障、manifest、墓碑和告警运维协议设计（见 `m6-operations-protocol.md`）；X02/X04/X05/X06未确认，M6-02～04的真实运维/恢复/容量验证仍未开始。
+M6-01已完成环境、Secret、联合备份屏障、manifest、墓碑和告警运维协议设计（见 `m6-operations-protocol.md`）；M6-02已补齐Local job lease/fence屏障收口、对象manifest/hash和隔离墓碑模拟（见 `evidence/M6-02.md`），但X04独立备份目标未确认，真实外部备份仍未验收；M6-03～04的真实恢复/轮换/容量告警验证仍未开始。X02/X05/X06也未确认。
 
 T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务列出的全部HTTP/Admin/Consumer体验均完成；缺失链路由T16-R1承接，完整体验由M5完善。T04的普通用户reauth、SSR与真实Provider仍有未完成项，不能从Admin proof通过推断普通用户proof通过。
 
