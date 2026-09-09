@@ -3,19 +3,13 @@ import {
   authCookieNames,
   createRequestAuthClient,
   setRequestAuthSession,
-  verifyMfaFactor,
   writeAuthSessionCookies,
   type AuthCookieWriter,
 } from '@kit/account-auth-nextjs';
 
 export const dynamic = 'force-dynamic';
 
-function config(): {
-  url: string;
-  publishableKey: string;
-  origin: string;
-  accountApiUrl: string;
-} {
+function config(): { url: string; publishableKey: string; origin: string } {
   const url = (
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
   )?.replace(/\/$/u, '');
@@ -25,10 +19,9 @@ function config(): {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const origin = process.env.ADMIN_ORIGIN;
-  const accountApiUrl = process.env.ACCOUNT_API_URL?.replace(/\/$/u, '');
-  if (!url || !publishableKey || !origin || !accountApiUrl)
+  if (!url || !publishableKey || !origin)
     throw new Error('AUTH_NOT_CONFIGURED');
-  return { url, publishableKey, origin, accountApiUrl };
+  return { url, publishableKey, origin };
 }
 
 function result(data: unknown, status = 200): NextResponse {
@@ -36,15 +29,6 @@ function result(data: unknown, status = 200): NextResponse {
     { data },
     { status, headers: { 'Cache-Control': 'no-store' } },
   );
-}
-
-function authFailure(status: number): NextResponse {
-  if (status === 401 || status === 403)
-    return result(
-      { code: status === 401 ? 'UNAUTHORIZED' : 'MFA_REQUIRED' },
-      status,
-    );
-  return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -85,69 +69,39 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
     if (sessionResult.error) return result({ code: 'UNAUTHORIZED' }, 401);
 
-    const { data: mfaData, error: mfaError } = await verifyMfaFactor(client, {
+    const { data, error } = await client.auth.mfa.challengeAndVerify({
       factorId: input.factor_id,
       code: input.code,
     });
-    if (mfaError || !mfaData.access_token || !mfaData.refresh_token)
+    if (error || !data?.access_token || !data.refresh_token)
       return result(
         {
           code:
-            mfaError?.status && mfaError.status >= 500
+            error?.status && error.status >= 500
               ? 'AUTHORIZATION_UNAVAILABLE'
               : 'MFA_REQUIRED',
         },
-        mfaError?.status && mfaError.status >= 500 ? 503 : 403,
+        error?.status && error.status >= 500 ? 503 : 403,
       );
 
     const elevatedSessionResult = await setRequestAuthSession(client, {
-      access_token: mfaData.access_token,
-      refresh_token: mfaData.refresh_token,
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
     });
     const elevatedSession = elevatedSessionResult.data.session;
     if (elevatedSessionResult.error || !elevatedSession)
       return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
 
-    const proofResponse = await fetch(
-      `${runtimeConfig.accountApiUrl}/admin/api/v1/auth/recent-proof`,
-      {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${elevatedSession.access_token}`,
-          'Cache-Control': 'no-store',
-          'X-Mfa-Factor-Id': input.factor_id,
-        },
-        cache: 'no-store',
-      },
-    );
-    const proofPayload = (await proofResponse.json().catch(() => null)) as {
-      data?: { proof_id?: unknown };
-    } | null;
-    const proofId = proofPayload?.data?.proof_id;
-    if (
-      !proofResponse.ok ||
-      typeof proofId !== 'string' ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
-        proofId,
-      )
-    )
-      return authFailure(proofResponse.status);
-
-    const response = result({ authenticated: true, proof: 'issued' });
+    const response = result({
+      authenticated: true,
+      factor_id: input.factor_id,
+    });
     writeAuthSessionCookies({
       writer: response.cookies as unknown as AuthCookieWriter,
       session: elevatedSession,
       secure: process.env.NODE_ENV === 'production',
       prefix: 'admin',
       csrfToken: csrf,
-    });
-    response.cookies.set('aisenhub-recent-auth-proof', proofId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 5 * 60,
     });
     return response;
   } catch {

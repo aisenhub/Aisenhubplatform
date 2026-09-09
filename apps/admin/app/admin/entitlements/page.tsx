@@ -202,10 +202,10 @@ export default function EntitlementsPage() {
         .filter((code): code is string => Boolean(code)) ?? [],
     );
     setBatchReceipt(payload?.data?.delivery_receipt ?? '');
+    await load();
     setStatus(
       '批次已创建为 pending_delivery；明文码仅在当前响应显示，先保存再确认交付。',
     );
-    await load();
   }
 
   async function confirmBatch(batchId: string) {
@@ -237,8 +237,8 @@ export default function EntitlementsPage() {
     }
     setBatchCodes([]);
     setBatchReceipt('');
-    setStatus('批次已确认交付；页面已清除本次明文码和 receipt。');
     await load();
+    setStatus('批次已确认交付；页面已清除本次明文码和 receipt。');
   }
 
   async function logout() {

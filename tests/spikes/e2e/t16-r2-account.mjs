@@ -627,6 +627,15 @@ async function exerciseSubscriptionAndFiles(page, baseUrl, redemptionCode) {
     listed.payload?.data?.items?.some((item) => item.file_id === fileId),
     'uploaded file is listed through the BFF',
   );
+  await page.goto(`${baseUrl}/files`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: 'Configuration files' }).waitFor();
+  await page.getByRole('heading', { name: 'Budget status' }).waitFor();
+  await page
+    .getByText(/已占用 · .*可用/u)
+    .first()
+    .waitFor();
+  const fileRow = page.locator('.file-row').filter({ hasText: 't16-r2.ini' });
+  await fileRow.getByRole('button', { name: '删除', exact: true }).waitFor();
   const downloaded = await browserRequest(
     page,
     `/api/v1/config-files/${fileId}/content`,
@@ -634,17 +643,19 @@ async function exerciseSubscriptionAndFiles(page, baseUrl, redemptionCode) {
   assertStatus(downloaded.status, 200, 'file download');
   assert.equal(downloaded.payload?.raw, content);
 
-  const removed = await browserRequest(page, `/api/v1/config-files/${fileId}`, {
-    method: 'DELETE',
-    headers: {
-      Origin: baseUrl,
-      'X-CSRF-Token': csrf,
-      'Content-Type': 'application/json',
-      'Idempotency-Key': crypto.randomUUID(),
-    },
-    body: '{}',
-  });
-  assertStatus(removed.status, 202, 'file delete request');
+  const [removed] = await Promise.all([
+    page.waitForResponse((item) =>
+      item.url().endsWith(`/api/v1/config-files/${fileId}`),
+    ),
+    fileRow.getByRole('button', { name: '删除', exact: true }).click(),
+  ]);
+  assertStatus(removed.status(), 202, 'file delete request');
+  await page
+    .getByText(
+      '删除请求已接受；deleting 期间预算仍占用，确认完成前不会显示为已释放。',
+      { exact: true },
+    )
+    .waitFor();
 }
 
 async function exerciseAccount(page, baseUrl) {
@@ -793,6 +804,48 @@ async function exerciseAdmin(page, adminTotp) {
     audit.payload?.data?.some((entry) => entry.action === 'account.suspend'),
     'Admin audit must expose the suspended account event without raw metadata',
   );
+  await page.goto(`${adminUrl}/admin/entitlements`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.getByRole('heading', { name: 'Entitlements console' }).waitFor();
+  await page.getByLabel('Platform ID').fill(platformAId);
+  await page.getByRole('button', { name: '加载', exact: true }).click();
+  await page.locator('#batch-plan').waitFor();
+  await page.locator('#batch-plan').selectOption(paidPlanAId);
+  await page.getByLabel('Batch name').fill('T16 R2 UI batch');
+  await page.getByLabel('Batch quantity').fill('1');
+  const [createBatchResponse] = await Promise.all([
+    page.waitForResponse((item) =>
+      item.url().endsWith('/api/v1/admin/api/v1/redemption-batches'),
+    ),
+    page
+      .getByRole('button', { name: '生成 pending 批次（需近期 MFA）' })
+      .click(),
+  ]);
+  assertStatus(createBatchResponse.status(), 201, 'Admin batch create UI');
+  await page.getByText('仅本次响应显示的明文码', { exact: true }).waitFor();
+  await page
+    .getByText(
+      '批次已创建为 pending_delivery；明文码仅在当前响应显示，先保存再确认交付。',
+      { exact: true },
+    )
+    .waitFor();
+  page.once('dialog', (dialog) => dialog.accept());
+  const [confirmBatchResponse] = await Promise.all([
+    page.waitForResponse((item) => item.url().includes('/confirm-delivery')),
+    page
+      .getByRole('button', { name: '确认 T16 R2 UI batch 已保存并交付' })
+      .click(),
+  ]);
+  assertStatus(confirmBatchResponse.status(), 200, 'Admin batch confirm UI');
+  await page
+    .getByText('批次已确认交付；页面已清除本次明文码和 receipt。', {
+      exact: true,
+    })
+    .waitFor();
+  await page.getByText('仅本次响应显示的明文码', { exact: true }).waitFor({
+    state: 'detached',
+  });
   await page.waitForTimeout(250);
   return accountRow;
 }
@@ -1010,9 +1063,11 @@ try {
       templateRoutes: 'PASS',
       subscriptionRedemption: 'PASS',
       fileUploadDownloadDelete: 'PASS',
+      fileBudgetUi: 'PASS',
       profilePreferences: 'PASS',
       csrfAndEtag: 'PASS',
       adminAal1AndSuspend: 'PASS',
+      adminBatchConfirmationUi: 'PASS',
       ordinaryProof: 'PASS',
       closeDelete: 'PASS',
       browserBundleCredentials: 'PASS',

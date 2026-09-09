@@ -192,6 +192,18 @@ h3 {
   overflow-wrap: anywhere;
   font-size: 0.95rem;
 }
+.totp-qr {
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  border-radius: 0.65rem;
+  background: #fff;
+}
+.totp-qr img {
+  width: min(16rem, 100%);
+  height: auto;
+  image-rendering: pixelated;
+}
 .section-heading,
 .file-row {
   display: flex;
