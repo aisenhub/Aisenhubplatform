@@ -1,7 +1,7 @@
 # Authentication & Session ↔ Frontend Experience Integration Contract
 
 > 用途：冻结 Authentication & Session 与 Frontend Experience & State 之间的产品消费边界。  
-> 状态：**仅计划，未实施、未验证**。  
+> 状态：**消费合同已实施；响应式与 Staging/生产观察按 verification-record.md 单列**。  
 > 权威关系：本文件补充 `00-master-plan.md`，不取代 Auth 的安全合同，也不把 Frontend UI 变成授权权威。  
 > 参考：`references/Aisenhub_Frontend_Experience_State_Architecture.md`。
 

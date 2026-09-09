@@ -2,7 +2,7 @@
 
 > 上游：[00-master-plan.md](./00-master-plan.md)  
 > 跨阶段消费合同：[frontend-integration-contract.md](./frontend-integration-contract.md)（本阶段只冻结 logout/错误输出供后续 UI 消费，不实施完整 UI）  
-> 状态：**未开始**  
+> 状态：**已实施；验证结果见 verification-record.md**  
 > 本阶段是第一批真实功能闭环，不允许只交文档或静态 UI。
 
 ## 1. 目标

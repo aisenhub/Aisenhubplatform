@@ -4,7 +4,7 @@
 > 跨阶段消费合同：[frontend-integration-contract.md](./frontend-integration-contract.md)  
 > 可与 Phase 03 并行  
 > 文件所有权：`apps/admin/**` + Admin 对应测试片段  
-> 状态：**未开始**
+> 状态：**已实施；Admin MFA/session adoption 与浏览器回归见 verification-record.md**
 
 ## 1. 目标
 

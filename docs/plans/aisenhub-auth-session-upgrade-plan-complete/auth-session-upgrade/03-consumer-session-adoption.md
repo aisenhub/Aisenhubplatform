@@ -4,7 +4,7 @@
 > 跨阶段消费合同：[frontend-integration-contract.md](./frontend-integration-contract.md)  
 > 可与 Phase 04 并行  
 > 文件所有权：`apps/template-preview/**` + Consumer 对应测试片段  
-> 状态：**未开始**
+> 状态：**已实施；Consumer 页面与浏览器回归见 verification-record.md**
 
 ## 1. 目标
 

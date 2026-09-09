@@ -2,7 +2,7 @@
 
 > 上游：[01-contract-and-logout-foundation.md](./01-contract-and-logout-foundation.md)  
 > 跨阶段消费合同：[frontend-integration-contract.md](./frontend-integration-contract.md)  
-> 状态：**未开始**
+> 状态：**已实施；Browser manager 单测与应用回归见 verification-record.md**
 
 ## 1. 目标
 

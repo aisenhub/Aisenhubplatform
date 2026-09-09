@@ -2,7 +2,7 @@
 
 > 当前计划目录：`docs/plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/`  
 > 目标模块：`01. Authentication & Session`  
-> 本文状态：**计划修订 R1；产品代码未实施、运行验证 NOT_RUN；文档提交与产品交付分开记录**  
+> 本文状态：**产品代码已按 Phase 01–05 实施；Local 单测、类型、合同、SDK 与真实 Supabase 浏览器回归见 verification-record.md；Staging/生产仍单列**  
 > 研究仓库：`https://github.com/aisenhub/Aisenhubplatform`  
 > 远端产品代码研究快照：`main@362db831d49308d0e5ca84965af80d86e944f56c`（2026-09-09）  
 > 最新文档决定核对：`main@0d42b4cd44a2c17777c33f616bd393c22ee78f16`；该提交相对上述代码快照仅修改文档，没有实施本计划产品代码。  

@@ -147,7 +147,17 @@ run(
   consumerDirectory,
 );
 run(packageManager(), ['run', 'typecheck'], consumerDirectory);
-run(packageManager(), ['run', 'build'], consumerDirectory);
+// Invoke Next directly so Windows does not leave a nested pnpm.cmd shell
+// holding the build process open after Next's worker pool has exited.
+run(
+  process.execPath,
+  [
+    join(consumerDirectory, 'node_modules', 'next', 'dist', 'bin', 'next'),
+    'build',
+    '--webpack',
+  ],
+  consumerDirectory,
+);
 run(
   process.execPath,
   [join(repositoryRoot, 'tests', 'spikes', 'e2e', 't16-r2-account.mjs')],

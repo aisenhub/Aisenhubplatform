@@ -53,8 +53,28 @@ export class SessionReplayPolicyError extends Error {
 
 type Listener = (snapshot: SessionSnapshot) => void;
 type TerminalHint =
-  | { readonly scope: AuthScope; readonly event: 'logged_out' }
-  | { readonly scope: AuthScope; readonly event: 'session_expired' };
+  | {
+      readonly version: 1;
+      readonly scope: AuthScope;
+      readonly type: 'logged_out';
+      readonly sourceId: string;
+    }
+  | {
+      readonly version: 1;
+      readonly scope: AuthScope;
+      readonly type: 'session_expired';
+      readonly sourceId: string;
+    };
+
+function createSourceId(): string {
+  const cryptoApi = (
+    globalThis as unknown as { crypto?: { randomUUID?: () => string } }
+  ).crypto;
+  return (
+    cryptoApi?.randomUUID?.() ??
+    `session-${Math.random().toString(36).slice(2)}`
+  );
+}
 
 const DEFAULT_SNAPSHOT: SessionSnapshot = {
   state: 'unauthenticated',
@@ -153,6 +173,7 @@ export class AuthSessionManager {
   private destroyed = false;
   private logoutPending = false;
   private channel: BroadcastChannel | null = null;
+  private readonly sourceId = createSourceId();
 
   constructor(private readonly config: BrowserAuthConfig) {}
 
@@ -178,24 +199,35 @@ export class AuthSessionManager {
 
   private ensureBroadcastChannel(): void {
     if (this.channel || typeof BroadcastChannel === 'undefined') return;
-    this.channel = new BroadcastChannel('aisenhub-auth-session');
+    this.channel = new BroadcastChannel('aisenhub-auth-session-v1');
     this.channel.onmessage = (event: MessageEvent<unknown>) => {
       const hint = event.data as Partial<TerminalHint> | null;
-      if (!hint || hint.scope !== this.config.scope || this.destroyed) return;
+      if (
+        !hint ||
+        hint.version !== 1 ||
+        hint.scope !== this.config.scope ||
+        typeof hint.sourceId !== 'string' ||
+        hint.sourceId === this.sourceId ||
+        (hint.type !== 'logged_out' && hint.type !== 'session_expired') ||
+        this.destroyed
+      )
+        return;
       this.epoch += 1;
-      if (hint.event === 'logged_out')
+      if (hint.type === 'logged_out')
         this.transition('unauthenticated', true, null);
-      if (hint.event === 'session_expired')
+      if (hint.type === 'session_expired')
         this.transition('expired', true, this.snapshot.stepUp);
     };
   }
 
-  private broadcast(event: TerminalHint['event']): void {
+  private broadcast(type: TerminalHint['type']): void {
     this.ensureBroadcastChannel();
     this.channel?.postMessage({
+      version: 1,
       scope: this.config.scope,
-      event,
-    } satisfies TerminalHint);
+      type,
+      sourceId: this.sourceId,
+    });
   }
 
   private transition(

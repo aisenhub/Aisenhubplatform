@@ -2,7 +2,7 @@
 
 > 本阶段是本期 Authentication & Session 优化的集成收尾阶段。必须等待 Phase 03 与 Phase 04 的必要代码、验证记录和 GitHub 推送均完成后再进入。  
 > 跨阶段消费合同：[frontend-integration-contract.md](./frontend-integration-contract.md)。  
-> 状态：**未开始**。  
+> 状态：**已实施；Local integration/SDK/browser 回归见 verification-record.md**。
 > 本阶段不部署、不合并主分支、不创建 Release；完成标准是：本分支上的本期 Auth/Session 改造形成单一运行路径，并通过与风险匹配的本地/CI 可执行验证。
 
 ## 1. 目标与前置条件

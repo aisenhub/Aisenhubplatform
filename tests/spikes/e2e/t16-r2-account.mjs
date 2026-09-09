@@ -236,7 +236,7 @@ async function startLocalServices() {
     SUPABASE_URL: authUrl,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     ACCOUNT_API_URL: centralUrl,
-    NODE_ENV: 'production',
+    NODE_ENV: process.env.T16_NODE_ENV ?? 'development',
   };
   const consumerStartArgs = consumerDirectory
     ? ['--dir', consumerDirectory, 'start']
@@ -1046,12 +1046,33 @@ try {
   assertStatus(suspended.status, 403, 'suspended account protected route');
   assert.equal(suspended.payload?.error?.code, 'ACCOUNT_SUSPENDED');
 
-  // Restore before the consumer reauth/close flow so the proof is tested on a usable account.
-  await adminPage.getByRole('button', { name: '恢复', exact: true }).click();
-  await adminPage.waitForResponse(
-    (item) =>
-      item.url().includes(`/accounts/`) && item.url().endsWith('/restore'),
-  );
+  // Reload the detail view so the restore assertion observes the persisted state,
+  // even if the page's parallel detail refresh is still settling.
+  await adminPage.goto(`${adminUrl}/admin/platforms`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await adminPage
+    .getByRole('heading', { name: 'Platform operations' })
+    .waitFor();
+  await adminPage
+    .getByRole('button', { name: platformACode, exact: true })
+    .click();
+  await adminPage
+    .getByLabel('账户状态操作原因（必填，勿含个人信息）')
+    .fill('T16 R2 browser restore');
+  const suspendedAccountRow = adminPage
+    .locator('li')
+    .filter({ hasText: userId });
+  await suspendedAccountRow
+    .getByRole('button', { name: '恢复', exact: true })
+    .waitFor();
+  const [restoreResponse] = await Promise.all([
+    adminPage.waitForResponse((item) => item.url().includes('/restore')),
+    suspendedAccountRow
+      .getByRole('button', { name: '恢复', exact: true })
+      .click(),
+  ]);
+  assertStatus(restoreResponse.status(), 200, 'Admin account restore');
   await pageA.reload({ waitUntil: 'domcontentloaded' });
   await exerciseAccount(pageA, consumerAUrl);
   await scanBrowserBundles();

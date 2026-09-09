@@ -2,7 +2,7 @@
 
 > 本压缩包用于 `Aisenhubplatform` 的 `01. Authentication & Session` 完整改造计划。  
 > 本版已吸收后续 `Frontend Experience & State` 架构对 Auth 消费层提出的补充要求。  
-> 所有实施状态仍为**未开始/未验证**。
+> 产品实施状态：**Phase 01–05 已完成代码交付；验证结果以 verification-record.md 最新复核区为准**。
 
 本次已核对的计划根目录为（无需再次搬移）：
 
@@ -81,7 +81,7 @@ Phase 05 Integration + Multi-tab + Regression + Cleanup
 - [`agent-handoff.md`](./agent-handoff.md) — 稳定执行入口、可直接复制给 coding agent 的完整提示词、多 agent 文件所有权、阶段 Git commit/push 规则。
 - [`verification-record.md`](./verification-record.md) — 实际实施期间据实填写的进度、测试、浏览器、失败、恢复、GitHub push 与交接记录模板。
 
-`verification-record.md` 当前没有预填任何测试通过、commit SHA、push 成功或阶段完成结果。
+`verification-record.md` 记录实际测试结果、commit SHA、push 成功与阶段交接；历史 R1 模板中的 NOT_RUN 仅代表实施前基线。
 
 ## 5. 参考架构
 
@@ -104,7 +104,7 @@ main@0d42b4cd44a2c17777c33f616bd393c22ee78f16
 
 ## 6. 本包生成状态
 
-本包生成期间：
+本包生成期间（历史 R1 计划生成快照）：
 
 - 未修改产品仓库代码；
 - 未安装依赖；
@@ -117,7 +117,7 @@ main@0d42b4cd44a2c17777c33f616bd393c22ee78f16
 
 ## 7. R1 交付说明（2026-09-09）
 
-此目录就是本地计划入口，无需搬移或建立第二份。修订任务 ASU-R1 已把审查意见落实到原文与各阶段 R1 部分；产品任务 ASU-01～05 仍未开始，ASU-V01～16 运行结果 NOT_RUN。
+此目录就是本地计划入口，无需搬移或建立第二份。修订任务 ASU-R1 是实施前文档基线；产品任务 ASU-01～05 已在实施分支交付，当前运行结果与未完成项以 verification-record.md 最新复核区为准。
 
 执行前先读 master §2.10、coverage §9 和当前阶段 R1 小节，再按 agent-handoff 开始。完整 Frontend 独立计划已由用户准备，待 Auth 完成后承接；本轮不修改或执行该独立包。
 

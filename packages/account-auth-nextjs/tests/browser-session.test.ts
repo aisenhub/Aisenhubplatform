@@ -16,6 +16,8 @@ const config = {
 };
 
 afterEach(() => {
+  FakeBroadcastChannel.channels.clear();
+  FakeBroadcastChannel.messages.length = 0;
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -23,6 +25,30 @@ afterEach(() => {
 function installBrowser(cookie = 'aisenhub-consumer-csrf=csrf-token') {
   vi.stubGlobal('window', { location: { origin: 'https://app.test' } });
   vi.stubGlobal('document', { cookie });
+}
+
+class FakeBroadcastChannel {
+  static readonly channels = new Set<FakeBroadcastChannel>();
+  static readonly messages: unknown[] = [];
+  readonly name: string;
+  onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
+
+  constructor(name: string) {
+    this.name = name;
+    FakeBroadcastChannel.channels.add(this);
+  }
+
+  postMessage(data: unknown): void {
+    FakeBroadcastChannel.messages.push(data);
+    for (const channel of FakeBroadcastChannel.channels) {
+      if (channel !== this && channel.name === this.name)
+        channel.onmessage?.({ data } as MessageEvent<unknown>);
+    }
+  }
+
+  close(): void {
+    FakeBroadcastChannel.channels.delete(this);
+  }
 }
 
 describe('AuthSessionManager', () => {
@@ -81,6 +107,25 @@ describe('AuthSessionManager', () => {
         method: 'POST',
         body: JSON.stringify({ display_name: 'Ada' }),
         headers: { 'Content-Type': 'application/json' },
+      }),
+    ).rejects.toBeInstanceOf(SessionRetryRequiredError);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not promote an If-Match mutation into an automatic replay', async () => {
+    installBrowser();
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetcher);
+    const manager = new AuthSessionManager(config);
+
+    await expect(
+      manager.request('/api/v1/account', {
+        method: 'PATCH',
+        headers: { 'If-Match': 'etag-1' },
+        body: JSON.stringify({ display_name: 'Ada' }),
       }),
     ).rejects.toBeInstanceOf(SessionRetryRequiredError);
     expect(fetcher).toHaveBeenCalledTimes(2);
@@ -169,5 +214,67 @@ describe('AuthSessionManager', () => {
       resolved: false,
       stepUp: null,
     });
+  });
+
+  it('allows a new refresh after the prior single-flight operation settles', async () => {
+    installBrowser();
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetcher);
+    const manager = new AuthSessionManager(config);
+
+    await manager.refresh();
+    await manager.refresh();
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses versioned, scoped terminal hints without echoing to the sender', async () => {
+    installBrowser();
+    vi.stubGlobal('BroadcastChannel', FakeBroadcastChannel);
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(null, { status: 200 })),
+    );
+    const consumerA = new AuthSessionManager(config);
+    const consumerB = new AuthSessionManager(config);
+    const admin = new AuthSessionManager({ ...config, scope: 'admin' });
+    const consumerAStates: string[] = [];
+    const consumerBStates: string[] = [];
+    const adminStates: string[] = [];
+    consumerA.subscribe((snapshot) => consumerAStates.push(snapshot.state));
+    consumerB.subscribe((snapshot) => consumerBStates.push(snapshot.state));
+    admin.subscribe((snapshot) => adminStates.push(snapshot.state));
+    consumerA.completeAuthentication();
+    consumerB.completeAuthentication();
+    admin.completeAuthentication();
+
+    await consumerA.logout();
+
+    expect(consumerAStates).toEqual([
+      'unauthenticated',
+      'authenticated',
+      'unauthenticated',
+    ]);
+    expect(consumerBStates).toEqual([
+      'unauthenticated',
+      'authenticated',
+      'unauthenticated',
+    ]);
+    expect(adminStates).toEqual(['unauthenticated', 'authenticated']);
+    expect(FakeBroadcastChannel.channels.size).toBe(3);
+    expect(FakeBroadcastChannel.messages[0]).toMatchObject({
+      version: 1,
+      scope: 'consumer',
+      type: 'logged_out',
+    });
+    expect(
+      typeof (FakeBroadcastChannel.messages[0] as { sourceId?: unknown })
+        .sourceId,
+    ).toBe('string');
   });
 });
