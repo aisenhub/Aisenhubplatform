@@ -10,8 +10,10 @@
   "sideEffects": false,
   "scripts": {
     "preinstall": "pnpm run --filter scripts requirements",
+    "prebuild": "pnpm run sdk:pack",
     "build": "turbo build --cache-dir=.turbo",
     "dev": "cross-env FORCE_COLOR=1 turbo dev --parallel",
+    "pretypecheck": "pnpm run sdk:pack",
     "typecheck": "turbo typecheck --cache-dir=.turbo",
     "test": "pnpm run test:unit",
     "test:unit": "turbo test:unit --cache-dir=.turbo",
