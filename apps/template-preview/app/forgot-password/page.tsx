@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { consumerAuthSession, sessionErrorMessage } from '../_lib/auth-session';
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('');
@@ -10,14 +12,21 @@ export default function ForgotPasswordPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('正在发送重置邮件…');
-    const response = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: window.location.origin,
-      },
-      body: JSON.stringify({ email }),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/auth/forgot-password',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok
         ? '如果邮箱可用，重置链接将发送到邮箱。'

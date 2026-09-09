@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import {
+  consumerAuthSession,
+  responseErrorCode,
+  sessionErrorMessage,
+} from '../_lib/auth-session';
+
 type Profile = {
   display_name: string | null;
   bio: string | null;
@@ -16,23 +22,6 @@ type Preferences = {
   row_version: number;
 };
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
-function mutationHeaders(): Record<string, string> {
-  return {
-    Origin: window.location.origin,
-    'X-CSRF-Token': csrfToken(),
-    'Content-Type': 'application/json',
-  };
-}
-
 export default function AccountPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [preferences, setPreferences] = useState<Preferences | null>(null);
@@ -43,14 +32,25 @@ export default function AccountPage() {
   const [status, setStatus] = useState('正在读取账户资料…');
 
   async function load() {
-    const [profileResponse, preferencesResponse] = await Promise.all([
-      fetch('/api/v1/profile', { cache: 'no-store' }),
-      fetch('/api/v1/preferences', { cache: 'no-store' }),
-    ]);
-    if (!profileResponse.ok || !preferencesResponse.ok) {
-      setStatus('请先登录并激活平台账户。');
+    const epoch = consumerAuthSession.getEpoch();
+    let profileResponse: Response;
+    let preferencesResponse: Response;
+    try {
+      [profileResponse, preferencesResponse] = await Promise.all([
+        consumerAuthSession.request('/api/v1/profile'),
+        consumerAuthSession.request('/api/v1/preferences'),
+      ]);
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
       return;
     }
+    if (!profileResponse.ok || !preferencesResponse.ok) {
+      setStatus(
+        `账户资料读取失败：${await responseErrorCode(profileResponse)}`,
+      );
+      return;
+    }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     const nextProfile = (await profileResponse.json()).data as Profile;
     const nextPreferences = (await preferencesResponse.json())
       .data as Preferences;
@@ -69,14 +69,24 @@ export default function AccountPage() {
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!profile) return;
-    const response = await fetch('/api/v1/profile', {
-      method: 'PATCH',
-      headers: {
-        ...mutationHeaders(),
-        'If-Match': `W/"${profile.row_version}"`,
-      },
-      body: JSON.stringify({ display_name: displayName, bio }),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/v1/profile',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'If-Match': `W/"${profile.row_version}"`,
+          },
+          body: JSON.stringify({ display_name: displayName, bio }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok ? '资料已保存。' : '资料保存失败，可能需要刷新版本。',
     );
@@ -97,14 +107,24 @@ export default function AccountPage() {
       setStatus('偏好必须是 JSON 对象。');
       return;
     }
-    const response = await fetch('/api/v1/preferences', {
-      method: 'PATCH',
-      headers: {
-        ...mutationHeaders(),
-        'If-Match': `W/"${preferences.row_version}"`,
-      },
-      body: JSON.stringify(value),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/v1/preferences',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'If-Match': `W/"${preferences.row_version}"`,
+          },
+          body: JSON.stringify(value),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok ? '偏好已保存。' : '偏好保存失败，可能需要刷新版本。',
     );
@@ -112,10 +132,17 @@ export default function AccountPage() {
   }
 
   async function requestReauth() {
-    const response = await fetch('/api/auth/reauth/start', {
-      method: 'POST',
-      headers: mutationHeaders(),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/auth/reauth/start',
+        { method: 'POST' },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok
         ? '验证邮件已发送，请粘贴邮件链接中的 token_hash。'
@@ -124,11 +151,21 @@ export default function AccountPage() {
   }
 
   async function verifyReauth() {
-    const response = await fetch('/api/auth/reauth/verify', {
-      method: 'POST',
-      headers: mutationHeaders(),
-      body: JSON.stringify({ token_hash: tokenHash }),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/auth/reauth/verify',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token_hash: tokenHash }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok ? '近期认证已完成，可执行敏感账户操作。' : '近期认证未通过。',
     );
@@ -136,11 +173,21 @@ export default function AccountPage() {
   }
 
   async function sensitiveAction(path: string) {
-    const response = await fetch(path, {
-      method: 'POST',
-      headers: mutationHeaders(),
-      body: '{}',
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        path,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(
       response.ok ? '敏感操作已提交。' : '敏感操作被拒绝，请先完成近期认证。',
     );

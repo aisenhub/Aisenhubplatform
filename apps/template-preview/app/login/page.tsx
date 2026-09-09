@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
+import {
+  consumerAuthSession,
+  responseErrorCode,
+  sessionErrorMessage,
+} from '../_lib/auth-session';
+
 export default function ConsumerLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,20 +17,18 @@ export default function ConsumerLoginPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('正在登录…');
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.login({
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as {
-        error?: { code?: string };
-      } | null;
-      setStatus(
-        `登录失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
-      );
+      setStatus(`登录失败：${await responseErrorCode(response)}`);
       return;
     }
     window.location.assign('/subscription');

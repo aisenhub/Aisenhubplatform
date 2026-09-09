@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import {
+  consumerAuthSession,
+  responseErrorCode,
+  sessionErrorMessage,
+} from '../_lib/auth-session';
+
 type Entitlement = {
   effective_status: string;
   entitlement_kind: string;
@@ -11,24 +17,21 @@ type Entitlement = {
   current_period_end: string | null;
 };
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
 export default function SubscriptionPage() {
   const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
   const [code, setCode] = useState('');
   const [status, setStatus] = useState('正在读取账户权益…');
 
   async function load() {
-    const response = await fetch('/api/v1/subscription', { cache: 'no-store' });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request('/api/v1/subscription');
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     if (!response.ok) {
-      setStatus('请先登录并激活平台账户。');
+      setStatus(`权益读取失败：${await responseErrorCode(response)}`);
       return;
     }
     const payload = (await response.json()) as { data: Entitlement };
@@ -44,23 +47,26 @@ export default function SubscriptionPage() {
     event.preventDefault();
     if (!code.trim()) return;
     setStatus('正在提交兑换…');
-    const response = await fetch('/api/v1/subscription/redeem', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: window.location.origin,
-        'X-CSRF-Token': csrfToken(),
-        'Idempotency-Key': crypto.randomUUID(),
-      },
-      body: JSON.stringify({ code }),
-    });
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as {
-        error?: { code?: string };
-      } | null;
-      setStatus(
-        `兑换未完成：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/v1/subscription/redeem',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: JSON.stringify({ code }),
+        },
+        { replay: 'never' },
       );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
+    if (!response.ok) {
+      setStatus(`兑换未完成：${await responseErrorCode(response)}`);
       return;
     }
     setCode('');
@@ -69,13 +75,12 @@ export default function SubscriptionPage() {
   }
 
   async function logout() {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: {
-        Origin: window.location.origin,
-        'X-CSRF-Token': csrfToken(),
-      },
-    });
+    try {
+      await consumerAuthSession.logout();
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     window.location.assign('/login');
   }
 

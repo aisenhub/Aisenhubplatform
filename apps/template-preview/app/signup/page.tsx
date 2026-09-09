@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
+import {
+  consumerAuthSession,
+  responseErrorCode,
+  sessionErrorMessage,
+} from '../_lib/auth-session';
+
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,20 +17,29 @@ export default function SignupPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('正在创建账户…');
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: window.location.origin,
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/auth/signup',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     const payload = (await response.json().catch(() => null)) as {
       data?: { needs_email_confirmation?: boolean };
       error?: { code?: string };
     } | null;
     if (!response.ok) {
-      setStatus(`注册失败：${payload?.error?.code ?? response.status}`);
+      setStatus(
+        `注册失败：${payload?.error?.code ?? (await responseErrorCode(response))}`,
+      );
       return;
     }
     setStatus(
@@ -32,6 +47,8 @@ export default function SignupPage() {
         ? '注册成功，请检查邮箱完成确认。'
         : '注册成功，正在进入账户…',
     );
+    if (!payload?.data?.needs_email_confirmation)
+      consumerAuthSession.completeAuthentication();
     if (!payload?.data?.needs_email_confirmation)
       window.location.assign('/subscription');
   }

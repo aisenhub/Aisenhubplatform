@@ -3,14 +3,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
+import { consumerAuthSession, sessionErrorMessage } from '../_lib/auth-session';
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
@@ -19,15 +12,21 @@ export default function UpdatePasswordPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('正在更新密码…');
-    const response = await fetch('/api/auth/password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: window.location.origin,
-        'X-CSRF-Token': csrfToken(),
-      },
-      body: JSON.stringify({ password }),
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/auth/password',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     setStatus(response.ok ? '密码已更新。' : '更新失败，请重新获取重置链接。');
     if (response.ok) window.location.assign('/login');
   }

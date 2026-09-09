@@ -2,6 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import {
+  consumerAuthSession,
+  responseErrorCode,
+  sessionErrorMessage,
+} from '../_lib/auth-session';
+
 type ConfigFile = {
   file_id: string;
   original_name: string | null;
@@ -29,23 +35,6 @@ type Budget = {
   over_quota: boolean;
 };
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
-function mutationHeaders(contentType?: string): Record<string, string> {
-  return {
-    Origin: window.location.origin,
-    'X-CSRF-Token': csrfToken(),
-    ...(contentType ? { 'Content-Type': contentType } : {}),
-  };
-}
-
 function formatBytes(value: number): string {
   if (value < 1024) return `${value} B`;
   return `${(value / 1024).toFixed(1)} KiB`;
@@ -66,16 +55,24 @@ export default function FilesPage() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const response = await fetch('/api/v1/config-files?limit=20', {
-      cache: 'no-store',
-    });
+    const epoch = consumerAuthSession.getEpoch();
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        '/api/v1/config-files?limit=20',
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     if (!response.ok) {
-      setStatus('文件状态读取失败，请先登录并激活平台账户。');
+      setStatus(`文件状态读取失败：${await responseErrorCode(response)}`);
       return;
     }
     const payload = (await response.json()) as {
       data?: { items?: ConfigFile[]; budget?: Budget };
     };
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setFiles(payload.data?.items ?? []);
     setBudget(payload.data?.budget ?? null);
     setStatus('状态已从 Account API 刷新；页面不会自动重试未完成上传。');
@@ -90,20 +87,24 @@ export default function FilesPage() {
     setBusy(true);
     setStatus('正在预约并上传…');
     try {
-      const intentResponse = await fetch('/api/v1/config-files/upload-intent', {
-        method: 'POST',
-        headers: {
-          ...mutationHeaders('application/json'),
-          'Idempotency-Key': crypto.randomUUID(),
+      const intentResponse = await consumerAuthSession.request(
+        '/api/v1/config-files/upload-intent',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            name: selectedFile.name,
+            size: selectedFile.size,
+            content_type: selectedFile.type || 'application/octet-stream',
+            purpose: 'config',
+            replaces_file_id: selectedReplace || null,
+          }),
         },
-        body: JSON.stringify({
-          name: selectedFile.name,
-          size: selectedFile.size,
-          content_type: selectedFile.type || 'application/octet-stream',
-          purpose: 'config',
-          replaces_file_id: selectedReplace || null,
-        }),
-      });
+        { replay: 'never' },
+      );
       const intent = (await intentResponse.json().catch(() => null)) as {
         data?: { upload_path?: string };
       } | null;
@@ -111,14 +112,18 @@ export default function FilesPage() {
         setStatus('预约失败：配额不足、策略关闭或文件输入不符合限制。');
         return;
       }
-      const uploadResponse = await fetch(`/api${intent.data.upload_path}`, {
-        method: 'PUT',
-        headers: {
-          ...mutationHeaders('application/octet-stream'),
-          'Idempotency-Key': crypto.randomUUID(),
+      const uploadResponse = await consumerAuthSession.request(
+        `/api${intent.data.upload_path}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: selectedFile,
         },
-        body: selectedFile,
-      });
+        { replay: 'never' },
+      );
       setStatus(
         uploadResponse.ok
           ? '上传已结算；请以文件状态和预算占用为准。'
@@ -129,6 +134,8 @@ export default function FilesPage() {
         setSelectedReplace('');
         await load();
       }
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -136,14 +143,25 @@ export default function FilesPage() {
 
   async function remove(fileId: string) {
     setBusy(true);
-    const response = await fetch(`/api/v1/config-files/${fileId}`, {
-      method: 'DELETE',
-      headers: {
-        ...mutationHeaders('application/json'),
-        'Idempotency-Key': crypto.randomUUID(),
-      },
-      body: '{}',
-    });
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        `/api/v1/config-files/${fileId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: '{}',
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      setBusy(false);
+      return;
+    }
     setStatus(
       response.ok
         ? '删除请求已接受；deleting 期间预算仍占用，确认完成前不会显示为已释放。'
@@ -154,17 +172,22 @@ export default function FilesPage() {
   }
 
   async function download(file: ConfigFile) {
-    const response = await fetch(
-      `/api/v1/config-files/${file.file_id}/content`,
-      {
-        cache: 'no-store',
-      },
-    );
+    const epoch = consumerAuthSession.getEpoch();
+    let response: Response;
+    try {
+      response = await consumerAuthSession.request(
+        `/api/v1/config-files/${file.file_id}/content`,
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     if (!response.ok) {
       setStatus('下载失败：文件可能正在删除、账户已暂停或对象需要恢复。');
       return;
     }
     const blob = await response.blob();
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
