@@ -1,10 +1,10 @@
 # Frontend Experience & State Upgrade — Verification Record
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01 已开始并完成代码实现与 FE-D03 独立安装探针，但尚未满足全部阶段交付门槛。
 
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
-> 计划创建状态：所有实施、测试、commit、push、浏览器验收均为 **未开始 / 未验证 / 未记录**。  
+> 计划创建状态：Phase 01 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 02–08 仍为 **未开始 / 未验证 / 未记录**。  
 > 禁止把 `references/`、`docs/development/status.md`、历史 evidence、研究快照或别的分支的 PASS 直接复制为本任务验证结果。
 
 ---
@@ -31,7 +31,7 @@
 ## 1.1 本次目标与实施范围
 
 - 目标：按 `00-master-plan.md` 将 Frontend Experience & State 架构实施到 Admin、Consumer/Registry，并完成 Phase 01–08。
-- 本期范围：**未开始**。
+- 本期范围：**Phase 01 进行中；Phase 02–08 未开始**。
 - Future/第二期：`future/01-diagnostics-search-alerts.md`，本期 **不实施**。
 - 计划目录：`docs/plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/`（执行时确认实际放置位置）。
 
@@ -39,45 +39,45 @@
 
 | 项目 | 实际值 | 状态 | 备注 |
 |---|---|---|---|
-| 项目绝对路径 | 未记录 | 未验证 | 执行 agent 填写 `pwd` |
-| GitHub remote | 未记录 | 未验证 | 执行 agent 运行 `git remote -v` |
-| 工作分支 | 未记录 | 未验证 | 沿用任务分支；没有时按仓库规范创建 |
-| upstream branch | 未记录 | 未验证 | 若已配置，记录 `git rev-parse @{u}` |
-| 起始 commit | 未记录 | 未验证 | 不使用研究快照代替实际起始 SHA |
-| 当前 HEAD | 未记录 | 未验证 | 每阶段开始/结束更新 |
-| 初始工作区状态 | 未记录 | 未验证 | `git status --short` |
-| 初始已有修改 | 未记录 | 未验证 | 逐项注明文件与归属；不得覆盖归属不明修改 |
-| 远程是否含起始 commit | 未记录 | 未验证 | 实际 Git/GitHub 核对 |
+| 项目绝对路径 | `E:\Projects\Aisenhubplatform` | 已验证 | 执行时 `Get-Location` |
+| GitHub remote | `https://github.com/aisenhub/Aisenhubplatform.git` | 已验证 | `git remote -v` |
+| 工作分支 | `codex/frontend-plan-r1` | 已验证 | 任务分支 |
+| upstream branch | `origin/codex/frontend-plan-r1` | 已验证 | `git rev-parse @{u}` |
+| 起始 commit | `5e408286c36ed5b2708e5be55415fb80be51602e` | 已验证 | 阶段开始 HEAD |
+| 当前 HEAD | `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee` | 已验证 | Phase 01 code commit |
+| 初始工作区状态 | clean | 已验证 | 阶段开始 `git status --short` 为空 |
+| 初始已有修改 | 无 | 已验证 | 未覆盖归属不明修改 |
+| 远程是否含起始 commit | 是 | 已验证 | code push 后 `git ls-remote` 核对 |
 
 ### 基线命令记录
 
 ```text
-执行日期：未记录
-执行人/Agent：未记录
+执行日期：2026-09-09
+执行人/Agent：Codex
 
-pwd                              -> 未执行
-git remote -v                    -> 未执行
-git branch --show-current        -> 未执行
-git status --short               -> 未执行
-git rev-parse HEAD               -> 未执行
-git log -1 --oneline             -> 未执行
-git rev-parse @{u}               -> 未执行/不适用待确认
+pwd                              -> `E:\Projects\Aisenhubplatform`
+git remote -v                    -> origin fetch/push `https://github.com/aisenhub/Aisenhubplatform.git`
+git branch --show-current        -> `codex/frontend-plan-r1`
+git status --short               -> 初始 clean；阶段结束 clean
+git rev-parse HEAD               -> 起始 `5e40828`；结束 `7b3f64d`
+git log -1 --oneline             -> `7b3f64d frontend: establish phase 01 experience foundation`
+git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 ```
 
 ## 1.3 运行环境
 
 | 项目 | 实际值 | 状态 | 备注 |
 |---|---|---|---|
-| OS | 未记录 | 未验证 |  |
-| Node | 未记录 | 未验证 | 根 package 要求需按实际仓库核对 |
-| pnpm | 未记录 | 未验证 |  |
-| Next.js | 未记录 | 未验证 | 写 Next 代码前读取本地 `node_modules/next/dist/docs/` |
-| React | 未记录 | 未验证 |  |
-| Tailwind / CSS pipeline | 未记录 | 未验证 | Phase 01 硬门槛 |
-| `@kit/ui` 当前版本/可解析性 | 未记录 | 未验证 | Phase 01 硬门槛 |
-| Browser / Chromium | 未记录 | 未验证 |  |
+| OS | Microsoft Windows 10 家庭中文版 | 已验证 | `Get-CimInstance Win32_OperatingSystem` |
+| Node | v24.19.0 | 已验证 | `node --version` |
+| pnpm | 11.18.0 | 已验证 | `pnpm --version` |
+| Next.js | 16.3.0 | 已验证 | `apps/admin/node_modules/next/package.json` |
+| React | 19.2.8 | 已验证 | `apps/admin/node_modules/react/package.json` |
+| Tailwind / CSS pipeline | Tailwind 4.3.3 + `@tailwindcss/postcss` 4.3.3；共享 `@kit/ui/styles.css` | 已验证 | Admin build + FE-D03 consumer build |
+| `@kit/ui` 当前版本/可解析性 | 0.1.0；workspace 与独立 tarball 均可解析 | 已验证 | typecheck/build/consumer probe |
+| Browser / Chromium | Codex In-app Browser | 已验证 | Admin production server 与 FE-D03 consumer |
 | Supabase / Deno（若阶段测试需要） | 未记录 | 未验证 | 只记录实际需要和实际版本 |
-| Admin local URL | 未记录 | 未验证 |  |
+| Admin local URL | `http://localhost:3000` | 已验证 | production server browser smoke |
 | Consumer local URL | 未记录 | 未验证 |  |
 | Account API / Supabase local | 未记录 | 未验证 |  |
 
@@ -104,7 +104,7 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 
 | 阶段 | 名称 | 状态 | 已完成内容 | 剩余内容 | 前置依赖 | 代码 commit | Push | GitHub 链接 |
 |---|---|---|---|---|---|---|---|---|
-| 01 | Experience Foundation + Admin Shell + Audit vertical slice | 未开始 | 无 | 全部 | 无 | 未记录 | 未验证 | 未记录 |
+| 01 | Experience Foundation + Admin Shell + Audit vertical slice | 进行中 | UI toolchain、shared state primitives、AdminShell、导航命令面板、Audit URL/state/inspector 代码、FE-D03 独立安装探针 | 真实 Admin session、Audit success/empty/inspector 正向数据、390px 实机验收 | 无 | `7b3f64d` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) |
 | 02 | Platform Context + Workspace | 未开始 | 无 | 全部 | Phase 01 已交付 | 未记录 | 未验证 | 未记录 |
 | 03 | High-risk State & Interactions | 未开始 | 无 | 全部 | Phase 02 已交付；Auth 依赖按实际核对 | 未记录 | 未验证 | 未记录 |
 | 04 | Accounts & Entitlements Resource Pages | 未开始 | 无 | 全部 | Phase 03 已交付 | 未记录 | 未验证 | 未记录 |
@@ -126,67 +126,81 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 
 ## 3.1 阶段元数据
 
-- 状态：**未开始**
-- 开始日期：未记录
-- 结束日期：未记录
-- 开始 HEAD：未记录
-- 验证代码版本：未记录
-- 完成代码 commit：未记录
-- Push：未验证
+- 状态：**进行中**
+- 开始日期：2026-09-09
+- 结束日期：未记录（剩余阶段门槛未完成）
+- 开始 HEAD：`5e408286c36ed5b2708e5be55415fb80be51602e`
+- 验证代码版本：`7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee`
+- 完成代码 commit：`7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee`
+- Push：已验证；远端分支 SHA 一致
 
 ## 3.2 实际修改文件及职责
 
 | 文件 | 修改/新增 | 实际职责 | 状态 |
 |---|---|---|---|
-| 未记录 | 未记录 | 未记录 | 未开始 |
+| `apps/admin/app/admin/layout.tsx`、`apps/admin/components/shell/*` | 新 AdminShell、侧栏、Topbar、PageHeader；登录/MFA 保持独立认证布局 | 已实现 |
+| `apps/admin/components/navigation/*` | 中文导航配置与仅导航/快捷动作的 Command Menu | 已实现 |
+| `apps/admin/app/globals.css`、`apps/admin/app/layout.tsx`、`apps/admin/next.config.mjs`、`apps/admin/postcss.config.mjs` | semantic tokens、Tailwind/PostCSS、UI transpile 与 Toast 入口 | 已实现 |
+| `apps/admin/app/admin/audit/page.tsx` | URL q/cursor、RemoteData 状态、刷新隔离、表格、Inspector、request ID/technical details | 已实现；正向真实数据未验证 |
+| `apps/admin/app/admin/page.tsx`、`platforms/page.tsx`、`entitlements/page.tsx`、`files/page.tsx`、`deletion-jobs/page.tsx`、`login/page.tsx`、`mfa/page.tsx` | 迁移到新 shell 入口并统一中文基础文案 | 已实现 |
+| `packages/ui/src/makerkit/{async-state,resource-id,status-badge,support-error-id}.tsx`、`copy-to-clipboard.tsx`、`styles.css`、`package.json` | Shared loading/error/access/status/ID 组件与独立 CSS entry | 已实现 |
+| `apps/admin/package.json`、根 `package.json`、`pnpm-lock.yaml` | Admin UI runtime/dev dependencies 与 FE-D03 命令 | 已实现 |
+| `tests/spikes/consumer/fe-r1-ui-ui-install.mjs` | 仓库外本地 tarball consumer 安装/typecheck/build 探针 | 已实现；脚本不自动启动浏览器 |
 
 ## 3.3 已实现行为
 
-- `@kit/ui` / CSS toolchain probe：未开始。
-- Shared RemoteData / Error / Empty / Status foundation：未开始。
-- AdminShell / Sidebar / Topbar / PageHeader：未开始。
-- Navigation-only Command Palette：未开始。
-- Audit URL state / DataTable / Error≠Empty / Inspector 真实闭环：未开始。
-- desktop/390 基础浏览器行为：未验证。
+- `@kit/ui` / CSS toolchain probe：PASS；Admin workspace 与 FE-D03 独立 tarball 均可 build。
+- Shared RemoteData / Error / Empty / Status foundation：已实现；Audit 保持 error 与 empty 分离，刷新失败保留已知数据。
+- AdminShell / Sidebar / Topbar / PageHeader：已实现并接入 `/admin/*`；登录/MFA 未进入数据加载布局。
+- Navigation-only Command Palette：已实现；只包含真实站内导航与安全设置快捷动作，无伪搜索结果。
+- Audit URL state / DataTable / Error≠Empty / Inspector 真实闭环：代码已实现；未登录错误态与 URL q 已验证，真实成功/空数据/Inspector 正向路径待验证。
+- desktop 基础浏览器行为：PASS；390px mobile：NOT_RUN（当前 CUA 仅提供固定视口）。
 
 ## 3.4 冻结契约及偏差
 
-- Phase 01 实际落地的 shared component export：未记录。
-- `@kit/ui` 接入方式：未验证。
-- CSS/Tailwind pipeline 决定：未验证。
-- 与阶段计划偏差：无记录。
-- 新增依赖：未记录；默认不新增外部依赖。
+- Phase 01 实际落地的 shared component export：`@kit/ui/async-state`、`resource-id`、`status-badge`、`support-error-id`、`styles.css`。
+- `@kit/ui` 接入方式：Admin 使用 workspace dependency + `transpilePackages: ['@kit/ui', '@kit/shared']`；独立 consumer 使用本地 tarball + transpile `@kit/ui`。
+- CSS/Tailwind pipeline 决定：共享 `packages/ui/src/styles.css` 提供 `@import 'tailwindcss'` 与 `@source './'`；各 consumer 定义自己的 semantic token values。
+- 与阶段计划偏差：FE-D03 采用本地 tarball 探针，不做正式 npm 发布；真实 Admin session、正向 Audit data、390px 仍待运行，因此 Phase 01 不标 `已交付`。
+- 新增依赖：Admin 增加 `@kit/ui`、`lucide-react`、Tailwind/PostCSS；`class-variance-authority` 从 `@kit/ui` devDependency 修正为 runtime dependency。
 
 ## 3.5 验证记录
 
 | 日期 | 代码版本 | 命令/浏览器场景 | 环境 | 退出码/结果 | 摘要/日志 |
 |---|---|---|---|---|---|
-| 未记录 | 未记录 | `pnpm --filter admin typecheck` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter admin build` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter @kit/ui typecheck`（若本阶段改 UI package） | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter @kit/ui test:unit`（若本阶段改 UI package） | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm format:check` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm lint` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm typecheck` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | Audit loading/success/empty/error/permission/background refresh | 未记录 | 未验证 | 未记录 |
-| 未记录 | 未记录 | Admin Shell desktop + 390px + keyboard/focus | 未记录 | 未验证 | 未记录 |
+| 2026-09-09 | `7b3f64d` | `pnpm --filter admin typecheck` | Windows 10 / Node 24.19.0 | 0 / PASS | Admin 类型检查通过 |
+| 2026-09-09 | `7b3f64d` | `pnpm --filter admin build` | Next 16.3.0 / webpack | 0 / PASS | 编译成功，12/12 静态页面生成 |
+| 2026-09-09 | `7b3f64d` | `pnpm --filter @kit/ui typecheck` | Node 24.19.0 | 0 / PASS | Shared UI 类型检查通过 |
+| 2026-09-09 | `7b3f64d` | `pnpm --filter @kit/ui test:unit` | Vitest 4.1.10 | 0 / PASS | 2 files、35 tests 全部通过 |
+| 2026-09-09 | `7b3f64d` | `pnpm typecheck` | Turbo 2.10.8 | 0 / PASS | SDK pack 后 9 个 typecheck task 成功 |
+| 2026-09-09 | `7b3f64d` | `pnpm test:unit` | Turbo 2.10.8 | 0 / PASS | 6 个实际/缓存任务成功；包含全仓 unit |
+| 2026-09-09 | `7b3f64d` | `pnpm contracts:check` | Node 24.19.0 | 0 / PASS | account 18、admin 36 operations 合同检查通过 |
+| 2026-09-09 | `7b3f64d` | `pnpm lint` | oxlint | 0 / PASS with warning | 仅 MFA 旧二维码 `<img>` 的 next/no-img-element 性能 warning |
+| 2026-09-09 | `7b3f64d` | changed-file `oxfmt --check` + `git diff --check` | oxfmt 0.61.0 | 0 / PASS | 25 个本次文件格式通过；差异无空白错误 |
+| 2026-09-09 | `7b3f64d` | `pnpm format:check` | 全仓 | 1 / FAIL (baseline) | 全仓报告 63 个格式问题；本次目标文件已单独通过，未改动范围外文件 |
+| 2026-09-09 | pre-commit working tree | `pnpm test:consumer:fe-r1-ui` 首次独立安装 | E:\AppData consumer | 1 / FAIL (fixed) | 暴露 `@kit/shared@0.1.0` 被错误解析到 registry；保留失败证据并补 override |
+| 2026-09-09 | `7b3f64d` | `pnpm test:consumer:fe-r1-ui` 复测 | E:\AppData consumer / Next 16.3.0 | 0 / PASS | 独立 install/typecheck/build、workspaceLinks ABSENT、shared CSS entry PASS |
+| 2026-09-09 | `7b3f64d` | FE-D03 consumer browser：Button/StatusBadge 样式、Dialog 打开/关闭、console | Codex In-app Browser / localhost:3001 | PASS | 中文样例可见，Dialog 可交互，浏览器 error/warn 为空 |
+| 2026-09-09 | `7b3f64d` | Admin production browser：Shell、Audit error≠empty、`?q=platform`、Command Menu/Ctrl+K | Codex In-app Browser / localhost:3000 | PASS | production server 运行；菜单实例数 1；浏览器 error/warn 为空 |
+| 2026-09-09 | `7b3f64d` | Audit loading/success/empty/permission/background refresh 正向数据 | 未配置真实 Admin session | NOT_RUN | 当前仅验证未登录可恢复错误态、URL q 与不误显 empty；正向数据需凭据/后端环境 |
+| 2026-09-09 | `7b3f64d` | Admin Shell 390px mobile | Codex CUA 固定视口 | NOT_RUN | 当前浏览器控制面未提供 viewport override；代码已包含响应式规则 |
 
 ## 3.6 GitHub 交付
 
-- diff review：未验证
-- `git diff --check`：未执行
-- code commit SHA：未记录
-- branch：未记录
-- push：未验证
-- remote contains commit：未验证
-- GitHub URL：未记录
+- diff review：已验证；仅暂存本阶段 30 个明确文件
+- `git diff --check`：PASS
+- code commit SHA：`7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee`
+- branch：`codex/frontend-plan-r1`
+- push：PASS
+- remote contains commit：PASS；`git ls-remote` 返回同一 SHA
+- GitHub URL：[frontend Phase 01 code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee)
 
 ## 3.7 交接
 
-- Phase 02 可复用接口/组件：未记录。
-- 未完成/未验证：全部。
-- 当前未提交修改：未记录。
-- 必须先解决：无记录。
+- Phase 02 可复用接口/组件：`@kit/ui/styles.css`、`AsyncState`、`StatusBadge`、`ResourceId`、`SupportErrorId`、`AdminShell`、`adminNavigation` 与 Audit URL/query 状态实现。
+- 未完成/未验证：真实 Admin session 下 Audit success/empty/inspector 正向数据；390px mobile 视口；FE-V01～04、FE-V13、FE-V15 的完整用例仍未全部运行。
+- 当前未提交修改：无；code commit 已 push，verification record 待 docs-only commit。
+- 必须先解决：补齐真实 session/后端可用环境、390px viewport smoke；完成后才能把 Phase 01 标记 `验收通过待推送` 或 `已交付` 并进入 Phase 02。
 - 需要用户决定：无（执行中若出现实质冲突再据实填写）。
 
 ---
@@ -542,13 +556,29 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 - 复测：未验证
 - 该结果是否仍覆盖当前代码：未验证
 
+## VR-0002 — Phase 01 code and FE-D03
+
+- 日期：2026-09-09
+- 阶段：Phase 01
+- 被验证 commit：`7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee`
+- 工作区是否 clean：是（code commit 后、docs-only record commit 前）
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Codex In-app Browser
+- 命令/操作：Admin/UI typecheck、Admin webpack build、root typecheck/unit、contracts、lint、目标文件 format、FE-D03 tarball consumer install/typecheck/build、localhost:3000 Admin production browser、localhost:3001 UI consumer browser。
+- Exit code / 浏览器结果：除全仓 `pnpm format:check` 的 baseline FAIL 外，其余命令 PASS；FE-D03 browser PASS；Admin production browser PASS；390px 与真实 Admin session NOT_RUN。
+- stdout/stderr/截图/日志位置：本次 agent tool 输出；浏览器截图在本次会话回归结果中；未写入仓库，未包含敏感数据。
+- 结果摘要：Phase 01 foundation、Admin Shell、Audit state contract 与独立 UI distribution probe 已实现并推送；错误不再伪装为空数据；Command Menu 为单实例、仅导航。
+- 失败原因：FE-D03 首次 install 因 `@kit/shared` 内部版本被 registry 解析失败；已修复为探针 consumer 的本地 tarball override；失败记录保留。
+- 修复：把 `class-variance-authority` 修正为 `@kit/ui` runtime dependency；新增 `styles.css` export 与独立 consumer 探针。
+- 复测：FE-D03 install/typecheck/build/browser 全部 PASS；Admin build/browser 复测 PASS。
+- 该结果是否仍覆盖当前代码：是；之后仅修改 verification record。
+
 ---
 
 # 12. GitHub 交付记录追加区
 
 | 日期 | 阶段 | 类型 | Branch | Commit SHA | GitHub URL | Push | Remote confirmed | 备注 |
 |---|---|---|---|---|---|---|---|---|
-| 未记录 | 未记录 | code/docs | 未记录 | 未记录 | 未记录 | 未验证 | 未验证 | 未记录 |
+| 2026-09-09 | Phase 01 | code | `codex/frontend-plan-r1` | `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) | PASS | PASS | 远端 SHA 与本地一致；Phase 01 仍因未完成正向 session/390 验收保持进行中 |
 
 ---
 
@@ -556,13 +586,13 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**无；全部未开始**。
-- 下一阶段从哪里开始：用户派发后Phase01，先核对FE-R1、中文UI合同、Auth实现、布局与FE-D03独立UI安装；本轮仅修订文档。
-- 必须先处理：FE-D03在Phase01完成最小安装验证；FE-D02在Phase03核验批次重复创建；FE-D01在Phase05平台Files前通过。当前为已识别依赖，产品运行均NOT_RUN。
-- 可直接复用的已完成接口/能力：以执行时当前代码为准，未验证。
-- 不应重复实施的本任务工作：无；全部未开始。
-- 当前未提交修改及归属：未记录/未验证。
-- 当前 branch / HEAD：未记录/未验证。
+- 当前最后完成阶段：**Phase 01 代码实现与 FE-D03 探针；阶段仍进行中**。
+- 下一阶段从哪里开始：先补齐 Phase 01 的真实 Admin session、Audit 正向 success/empty/inspector 与 390px viewport，再按 Phase 02 的 Platform Context + Workspace 实施。
+- 必须先处理：FE-D02 在 Phase 03 核验批次重复创建；FE-D01 在 Phase 05 平台 Files 前通过。FE-D03 最小验证已 PASS，完整 Consumer/Registry 安装仍留给 Phase 07。
+- 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
+- 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
+- 当前未提交修改及归属：verification record 待 docs-only commit；产品代码无未提交修改。
+- 当前 branch / HEAD：`codex/frontend-plan-r1` / `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee`。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -583,9 +613,9 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 |---|---|---|
 | FE-D01 平台文件查询 | NOT_STARTED | 05前硬依赖 |
 | FE-D02 批次重复创建核验 | NOT_STARTED | 03核验，04消费 |
-| FE-D03 UI分发最小验证 | NOT_STARTED | 01完成，07完整安装 |
+| FE-D03 UI分发最小验证 | PASS | 01已完成本地 tarball consumer install/typecheck/build/browser；07仍需完整产物验证 |
 | FE-V01～16 | NOT_RUN | 具体定义见执行合同；逐项记录SHA/环境/用例/结果 |
-| 前端Phase01～08 | 未开始 | 文档修订不升级产品状态 |
+| 前端Phase01～08 | Phase01进行中；02～08未开始 | 本次已提交 Phase01 代码；未满足阶段全部交付门槛 |
 | Staging/生产/部署 | NOT_RUN | 本轮未执行 |
 
 ## FE-R1 文档静态验证
@@ -594,7 +624,7 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 - 计划包专项静态检查：20份Markdown，FE-V01～16共16个稳定编号、代码围栏、旧推荐路径退出、handoff中文合同入口及常见凭据格式扫描通过。
 - `git diff --cached --check`：PASS；暂存范围为本计划包与development/README、contracts，共22份文档。原计划包此前未跟踪，因此首次提交包含保留的原研究材料。
 - 首次组合检查命令因PowerShell不支持所用花括号路径表达式而未执行；改为逐路径/目录检查后以上静态检查通过。没有将命令解析失败记为产品失败或PASS。
-- 本轮不安装软件、不修改产品代码、不运行产品单测/API/浏览器/数据库/Staging/生产验证；FE-D01～03与FE-V01～16保持NOT_STARTED/NOT_RUN。
+- 本轮未安装系统软件；已修改 Phase01 产品代码并运行 typecheck/build/unit/合同/浏览器验证；未运行数据库、Staging、生产部署验证。FE-D03 最小验证为 PASS，FE-D01/02 与后续 FE-V 保持 NOT_STARTED/NOT_RUN，Phase01未完成项已在 §3.5 记录。
 - 文档分支：`codex/frontend-plan-r1`；文档commit/push以随后Git交付记录为准，不填入产品阶段代码SHA栏。
 
 ## FE-R1 文档交付记录
@@ -602,4 +632,4 @@ git rev-parse @{u}               -> 未执行/不适用待确认
 - 修订提交：`8a0b81bba716e90c5a3dd05a0130993da1223ba3`。
 - 已push至`origin/codex/frontend-plan-r1`，`git ls-remote origin refs/heads/codex/frontend-plan-r1`返回同一完整SHA，已核对远端包含修订。
 - [GitHub文档提交](https://github.com/aisenhub/Aisenhubplatform/commit/8a0b81bba716e90c5a3dd05a0130993da1223ba3)。本段由后续独立记录提交维护，不反复amend。
-- 下一项满足派发条件：Phase01基础合同/中文视觉样例与FE-D03最小独立安装验证；尚未派发产品实施。main未合并，未Release/部署。
+- 下一项满足派发条件：补齐 Phase01 真实 session/390px/正向 Audit 验收后再派发 Phase02；main未合并，未Release/部署。
