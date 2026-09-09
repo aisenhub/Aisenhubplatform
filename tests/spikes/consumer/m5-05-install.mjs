@@ -171,6 +171,7 @@ console.log(
       typecheck: 'PASS',
       build: 'PASS',
       workspaceLinks: 'ABSENT',
+      templateRoutes: 'PASS',
       localDualOriginPlatformE2E: 'PASS',
       hostedDualPlatformE2E: 'NOT_RUN (X05/hosted backend unavailable)',
     },

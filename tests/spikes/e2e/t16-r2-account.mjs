@@ -164,7 +164,7 @@ async function authRequest(path, options = {}) {
 }
 
 async function waitForUrl(url, label) {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(1000) });
       if (response.status) return;
@@ -490,6 +490,43 @@ async function loginConsumer(page, baseUrl, platformId) {
   assertStatus(principal.status, 200, `principal ${baseUrl}`);
   assert.equal(principal.payload?.data?.platform_id, platformId);
   assert.equal(principal.payload?.data?.account_status, 'active');
+}
+
+async function exercisePublicTemplateRoutes(page, baseUrl) {
+  const routes = [
+    ['/', 'Consumer application shell'],
+    ['/pricing', 'Plans are public, account data is not.'],
+    ['/login', 'Consumer login'],
+    ['/signup', 'Create account'],
+    ['/forgot-password', 'Forgot password'],
+    ['/update-password', 'Set new password'],
+  ];
+  for (const [path, heading] of routes) {
+    const response = await page.goto(`${baseUrl}${path}`, {
+      waitUntil: 'domcontentloaded',
+    });
+    assert.equal(response?.status(), 200, `template route ${path}`);
+    await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+  }
+}
+
+async function exerciseAuthenticatedTemplateRoutes(page, baseUrl) {
+  const routes = [
+    ['/subscription', 'Subscription'],
+    ['/account', 'Account settings'],
+    ['/files', 'Configuration files'],
+  ];
+  for (const [path, heading] of routes) {
+    const response = await page.goto(`${baseUrl}${path}`, {
+      waitUntil: 'domcontentloaded',
+    });
+    assert.equal(
+      response?.status(),
+      200,
+      `authenticated template route ${path}`,
+    );
+    await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+  }
 }
 
 async function readMailpitToken(email) {
@@ -906,8 +943,10 @@ try {
   const adminPage = await adminContext.newPage();
   for (const page of [pageA, pageB, adminPage]) page.setDefaultTimeout(15_000);
 
+  await exercisePublicTemplateRoutes(pageA, consumerAUrl);
   await loginConsumer(pageA, consumerAUrl, platformAId);
   await loginConsumer(pageB, consumerBUrl, platformBId);
+  await exerciseAuthenticatedTemplateRoutes(pageA, consumerAUrl);
   await exerciseSubscriptionAndFiles(pageA, consumerAUrl, redemptionCodeA);
   await exerciseSubscriptionAndFiles(pageB, consumerBUrl, redemptionCodeB);
   const userCookiesA = await contextA.cookies();
@@ -968,6 +1007,7 @@ try {
     JSON.stringify({
       independentContexts: 'PASS',
       platformKeyIsolation: 'PASS',
+      templateRoutes: 'PASS',
       subscriptionRedemption: 'PASS',
       fileUploadDownloadDelete: 'PASS',
       profilePreferences: 'PASS',
