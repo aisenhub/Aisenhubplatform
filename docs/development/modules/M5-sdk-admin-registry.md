@@ -4,7 +4,7 @@
 
 ## 1. 范围
 
-将account-auth、account-auth-nextjs、account-server形成正式版本产物；完善Admin资源管理与用户模板；建立全新Consumer安装测试。沿用Makerkit/shadcn现有样式基础，不重新发明UI体系。
+将account-auth、account-auth-nextjs、account-server形成正式版本产物；完善Admin资源管理与用户模板；建立全新Consumer安装测试。MakerKit/shadcn仅作为工程结构和组件组织参考，不作为视觉模板；UI独立评审操作顺畅度、信息清晰度、状态反馈及时性和页面质感。
 
 没有npm/Registry发布权限时可完成本地tarball验收，不能将本地package当作已发布产品。正式命名空间和域名属于X05外部输入。
 

@@ -6,6 +6,10 @@
 
 本盘点以当前工作树和冻结的Account/Admin OpenAPI为准。它是M5实现输入，不将 workspace 源码、Local通过或文档合同表述成已发布包/Registry/完整UI。
 
+## UI设计原则
+
+MakerKit 仅作为工程结构、组件组织和实现边界的参考，不作为产品视觉模板。Admin 与 Consumer 的视觉可以独立定制；UI 评审统一检查四项：操作是否顺畅、信息是否清楚、状态反馈是否及时、页面是否有质感。
+
 ## 1. 当前资源覆盖
 
 | 资源 | 领域入口 | HTTP/OpenAPI | SDK | 当前UI/消费者 | 缺口承接 |

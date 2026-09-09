@@ -90,6 +90,8 @@ Free 在读取权益时回退提供，不生成永久 Free Grant。关闭激活�
 
 保留 Makerkit Lite 的 Next.js、Turborepo、pnpm、TypeScript、Tailwind、shadcn/ui 及适用的 Query/Form/Table/Test 基础设施；实际能力以固定 upstream commit 核验，不宣称当前空仓库已有这些依赖。
 
+MakerKit 仅作为工程结构、组件组织和实现边界的参考，不作为产品视觉模板。Admin 与 Consumer 的 UI 视觉独立设计；UI 评审统一关注操作是否顺畅、信息是否清楚、状态反馈是否及时、页面是否有质感。
+
 初始化时 apps/web 改为 apps/admin；清除普通产品 Dashboard、Billing UI、Demo、示例业务与品牌内容，保留许可证要求声明。已有同类库不重复引入，不另采用 React Admin、Refine 或第二套 UI/Form/Query 框架。
 
 ~~~text

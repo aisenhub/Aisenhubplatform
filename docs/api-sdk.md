@@ -118,6 +118,8 @@ Account handler不依赖Consumer浏览器正确判断，服务端再次鉴权。
 
 Registry含auth-login/auth-signup/auth-forgot-password/auth-reset-password、OAuth callback、pricing-page、profile-settings、preferences-settings、subscription-status、subscription-redeem、config-files-manager、user-menu。模板复制UI、路由配置和BFF调用胶水；授权/金额/日期/配额算法不复制。
 
+模板的工程与组件组织可以参考 MakerKit，但不要求复刻 MakerKit 的视觉模板。产品 UI 以操作顺畅、信息清楚、状态反馈及时和页面有质感为验收标准，品牌、布局和视觉语言可独立定制。
+
 品牌配置含name/logo/routes，UI可以改；Pricing不含支付Checkout。文件UI显示真实占用（包括删除中/未知写入）、剩余预算、Replace所需临时空间及任务状态，不能把“已标记删除”显示成“容量已释放”。
 
 SDK使用SemVer，API保持/v1；破坏性字段或语义修改进入/v2或受审兼容发布。Registry产物记录SDK兼容区间、精确构建版本、依赖和内容校验和，发布固定版本URL。安装命令固定shadcn CLI版本，不用不可重现的latest。

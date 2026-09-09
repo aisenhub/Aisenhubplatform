@@ -32,6 +32,7 @@
 | D07 | unknown写入不释放预算，不猜测Storage已取消 | 基线固定 | M4给出保持占用/人工处理路径 |
 | D08 | M1只建立可审计删除请求/门闩骨架，M4完成对象相关清除 | 实施顺序固定 | 不在M2提供可用的半成品Global Purge |
 | D09 | 普通近期认证采用独立 email `token_hash` Auth session；中央 proof 绑定原业务 session，临时 session 必须撤销 | VERIFY（Local已实测） | BFF不得返回临时token；Account API验证双session与5分钟Auth session窗口，无法核实时拒绝 |
+| D10 | MakerKit 仅作为工程结构、组件组织和实现边界参考，不作为产品视觉模板 | CONFIRMED | Admin/Consumer UI 独立建立视觉语言；以操作顺畅、信息清楚、状态反馈及时、页面有质感作为评审标准 |
 
 ## 2. 上游及工具核对事实
 
