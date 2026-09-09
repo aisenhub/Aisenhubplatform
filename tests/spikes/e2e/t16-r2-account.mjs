@@ -510,6 +510,37 @@ async function exercisePublicTemplateRoutes(page, baseUrl) {
   }
 }
 
+async function exerciseAuthResponsive(page, baseUrl, routes) {
+  for (const width of [320, 375, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of routes) {
+      const response = await page.goto(`${baseUrl}${path}`, {
+        waitUntil: 'domcontentloaded',
+      });
+      assert.equal(
+        response?.status(),
+        200,
+        `responsive route ${path} at ${width}px`,
+      );
+      const metrics = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      assert.ok(
+        metrics.scrollWidth <= metrics.clientWidth + 1,
+        `horizontal overflow at ${width}px on ${path}`,
+      );
+      await page.keyboard.press('Tab');
+      assert.notEqual(
+        await page.evaluate(() => document.activeElement?.tagName),
+        'BODY',
+        `keyboard focus did not enter the form at ${width}px on ${path}`,
+      );
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+}
+
 async function exerciseAuthenticatedTemplateRoutes(page, baseUrl) {
   const routes = [
     ['/subscription', 'Subscription'],
@@ -997,6 +1028,11 @@ try {
   for (const page of [pageA, pageB, adminPage]) page.setDefaultTimeout(15_000);
 
   await exercisePublicTemplateRoutes(pageA, consumerAUrl);
+  await exerciseAuthResponsive(pageA, consumerAUrl, [
+    '/login',
+    '/signup',
+    '/forgot-password',
+  ]);
   await loginConsumer(pageA, consumerAUrl, platformAId);
   await loginConsumer(pageB, consumerBUrl, platformBId);
   await exerciseAuthenticatedTemplateRoutes(pageA, consumerAUrl);
@@ -1036,6 +1072,7 @@ try {
     'A key cannot construct B principal',
   );
 
+  await exerciseAuthResponsive(adminPage, adminUrl, ['/admin/login']);
   await exerciseAdmin(adminPage, adminTotp);
   const [suspendedRow] = await sql`
     select status from public.platform_accounts
