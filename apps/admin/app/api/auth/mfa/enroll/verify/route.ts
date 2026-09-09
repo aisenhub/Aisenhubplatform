@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { errorBody, responseBody } from '../../../_lib';
+import { errorBody, issueAdminRecentProof, responseBody } from '../../../_lib';
 import {
   authCookieNames,
   authSessionGate,
   createRequestAuthClient,
+  sessionIdFromAccessToken,
   setRequestAuthSession,
   writeAuthSessionCookies,
   type AuthCookieWriter,
@@ -11,7 +12,12 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-function config(): { url: string; publishableKey: string; origin: string } {
+function config(): {
+  url: string;
+  publishableKey: string;
+  origin: string;
+  accountApiUrl: string;
+} {
   const url = (
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
   )?.replace(/\/$/u, '');
@@ -21,15 +27,25 @@ function config(): { url: string; publishableKey: string; origin: string } {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const origin = process.env.ADMIN_ORIGIN;
-  if (!url || !publishableKey || !origin)
+  const accountApiUrl = process.env.ACCOUNT_API_URL?.replace(/\/$/u, '');
+  if (!url || !publishableKey || !origin || !accountApiUrl)
     throw new Error('AUTH_NOT_CONFIGURED');
-  return { url, publishableKey, origin };
+  return { url, publishableKey, origin, accountApiUrl };
 }
 
 function result(data: unknown, status = 200): NextResponse {
   if (data && typeof data === 'object' && 'code' in data) {
     const code = (data as { code: string }).code;
-    const mapped = code === 'RATE_LIMITED' ? 'RATE_LIMITED' : code === 'MFA_REQUIRED' ? 'MFA_REQUIRED' : code === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : 'AUTHORIZATION_UNAVAILABLE';
+    const mapped =
+      code === 'RATE_LIMITED'
+        ? 'RATE_LIMITED'
+        : code === 'MFA_REQUIRED'
+          ? 'MFA_REQUIRED'
+          : code === 'RECENT_MFA_REQUIRED'
+            ? 'RECENT_MFA_REQUIRED'
+            : code === 'UNAUTHORIZED'
+              ? 'UNAUTHORIZED'
+              : 'AUTHORIZATION_UNAVAILABLE';
     return errorBody(mapped, status);
   }
   return responseBody(data, status);
@@ -88,11 +104,17 @@ export async function POST(request: NextRequest): Promise<Response> {
       return result(
         {
           code:
-            error?.status && error.status >= 500
-              ? 'AUTHORIZATION_UNAVAILABLE'
-              : 'MFA_REQUIRED',
+            error?.status === 429
+              ? 'RATE_LIMITED'
+              : error?.status && error.status >= 500
+                ? 'AUTHORIZATION_UNAVAILABLE'
+                : 'MFA_REQUIRED',
         },
-        error?.status && error.status >= 500 ? 503 : 403,
+        error?.status === 429
+          ? 429
+          : error?.status && error.status >= 500
+            ? 503
+            : 403,
       );
 
     const elevatedSessionResult = await setRequestAuthSession(client, {
@@ -102,11 +124,36 @@ export async function POST(request: NextRequest): Promise<Response> {
     const elevatedSession = elevatedSessionResult.data.session;
     if (elevatedSessionResult.error || !elevatedSession)
       return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
+    if (
+      sessionIdFromAccessToken(elevatedSession.access_token) !==
+      gate.acknowledgement.session_id
+    )
+      return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
 
-    const response = result({
-      authenticated: true,
-      factor_id: input.factor_id,
+    const proof = await issueAdminRecentProof({
+      accountApiUrl: runtimeConfig.accountApiUrl,
+      accessToken: elevatedSession.access_token,
+      factorId: input.factor_id,
     });
+    const proofStatus = proof.ok
+      ? 200
+      : proof.status === 429
+        ? 429
+        : proof.status >= 500
+          ? 503
+          : 403;
+    const response = proof.ok
+      ? result({
+          authenticated: true,
+          factor_id: input.factor_id,
+          proof: 'issued',
+        })
+      : errorBody('RECENT_MFA_REQUIRED', proofStatus, undefined, {
+          mfa_verified: 'true',
+          proof_issued: 'false',
+          enrollment_verified: 'true',
+          recovery: 'verify_existing_factor',
+        });
     writeAuthSessionCookies({
       writer: response.cookies as unknown as AuthCookieWriter,
       session: elevatedSession,
@@ -114,6 +161,19 @@ export async function POST(request: NextRequest): Promise<Response> {
       prefix: 'admin',
       csrfToken: csrf,
     });
+    if (proof.ok)
+      response.cookies.set(
+        authCookieNames('admin').recentProof,
+        proof.proofId,
+        {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 5 * 60,
+        },
+      );
+    else response.cookies.delete(authCookieNames('admin').recentProof);
     return response;
   } catch {
     return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);

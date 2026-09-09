@@ -28,7 +28,14 @@ function config(): { url: string; publishableKey: string; origin: string } {
 function result(data: unknown, status = 200): NextResponse {
   if (data && typeof data === 'object' && 'code' in data) {
     const code = (data as { code: string }).code;
-    const mapped = code === 'RATE_LIMITED' ? 'RATE_LIMITED' : code === 'MFA_REQUIRED' ? 'MFA_REQUIRED' : code === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : 'AUTHORIZATION_UNAVAILABLE';
+    const mapped =
+      code === 'RATE_LIMITED'
+        ? 'RATE_LIMITED'
+        : code === 'MFA_REQUIRED'
+          ? 'MFA_REQUIRED'
+          : code === 'UNAUTHORIZED'
+            ? 'UNAUTHORIZED'
+            : 'AUTHORIZATION_UNAVAILABLE';
     return errorBody(mapped, status);
   }
   return responseBody(data, status);
@@ -59,7 +66,21 @@ export async function GET(request: NextRequest): Promise<Response> {
     });
     if (sessionResult.error) return result({ code: 'UNAUTHORIZED' }, 401);
     const { data, error } = await listMfaFactors(client);
-    if (error) return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
+    if (error) {
+      const status =
+        error.status === 401 ? 401 : error.status === 429 ? 429 : 503;
+      return result(
+        {
+          code:
+            status === 401
+              ? 'UNAUTHORIZED'
+              : status === 429
+                ? 'RATE_LIMITED'
+                : 'AUTHORIZATION_UNAVAILABLE',
+        },
+        status,
+      );
+    }
     const factors = (data.totp ?? [])
       .filter((factor) => factor.status === 'verified')
       .map((factor) => ({

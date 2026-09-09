@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
+
 type Factor = {
   id: string;
   factor_type: string;
@@ -15,23 +17,6 @@ type Enrollment = Factor & {
   uri: string;
 };
 
-function csrfToken(): string {
-  return (
-    document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('aisenhub-csrf='))
-      ?.split('=')[1] ?? ''
-  );
-}
-
-function requestHeaders(): HeadersInit {
-  return {
-    Accept: 'application/json',
-    Origin: window.location.origin,
-    'X-CSRF-Token': csrfToken(),
-  };
-}
-
 export default function AdminMfaPage() {
   const [factors, setFactors] = useState<Factor[]>([]);
   const [factorId, setFactorId] = useState('');
@@ -41,22 +26,33 @@ export default function AdminMfaPage() {
   const [enrolling, setEnrolling] = useState(false);
 
   async function loadFactors() {
-    const response = await fetch('/api/auth/mfa/factors', {
-      headers: requestHeaders(),
-      cache: 'no-store',
-    });
-    const payload = (await response.json().catch(() => null)) as {
-      data?: { factors?: Factor[] };
-    } | null;
-    if (!response.ok || !payload?.data?.factors?.length) {
-      setFactors([]);
-      setFactorId('');
-      setStatus('没有可用的已验证 MFA 因子，请先绑定认证器。');
+    let response: Response;
+    try {
+      response = await adminAuthSession.request('/api/auth/mfa/factors');
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
       return;
     }
-    setFactors(payload.data.factors);
-    setFactorId(payload.data.factors[0]?.id ?? '');
-    setStatus('请输入认证器中的 6 位验证码。');
+    const payload = (await response.json().catch(() => null)) as {
+      data?: { factors?: Factor[] };
+      error?: { code?: string };
+    } | null;
+    if (!response.ok) {
+      setFactors([]);
+      setFactorId('');
+      setStatus(
+        `MFA 因子读取失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+      );
+      return;
+    }
+    const nextFactors = payload?.data?.factors ?? [];
+    setFactors(nextFactors);
+    setFactorId(nextFactors[0]?.id ?? '');
+    setStatus(
+      nextFactors.length
+        ? '请输入认证器中的 6 位验证码。'
+        : '没有可用的已验证 MFA 因子，请先绑定认证器。',
+    );
   }
 
   useEffect(() => {
@@ -69,27 +65,29 @@ export default function AdminMfaPage() {
     setEnrolling(true);
     setStatus('正在生成认证器绑定信息…');
     try {
-      const response = await fetch('/api/auth/mfa/enroll', {
-        method: 'POST',
-        headers: {
-          ...requestHeaders(),
-          'Content-Type': 'application/json',
+      const response = await adminAuthSession.request(
+        '/api/auth/mfa/enroll',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
         },
-        body: JSON.stringify({}),
-      });
+        { replay: 'never' },
+      );
       const payload = (await response.json().catch(() => null)) as {
         data?: { factor?: Enrollment; code?: string };
+        error?: { code?: string };
       } | null;
       if (!response.ok || !payload?.data?.factor) {
         setStatus(
-          `绑定准备失败：${payload?.data?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+          `绑定准备失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
         );
         return;
       }
       setEnrollment(payload.data.factor);
       setStatus('请扫码或手动输入密钥，然后输入认证器生成的 6 位验证码。');
-    } catch {
-      setStatus('MFA 服务暂时不可用，请稍后重试。');
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
     } finally {
       setEnrolling(false);
     }
@@ -99,50 +97,79 @@ export default function AdminMfaPage() {
     event.preventDefault();
     if (!enrollment) return;
     setStatus('正在验证新认证器…');
-    const response = await fetch('/api/auth/mfa/enroll/verify', {
-      method: 'POST',
-      headers: {
-        ...requestHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ factor_id: enrollment.id, code }),
-    });
+    let response: Response;
+    try {
+      response = await adminAuthSession.request(
+        '/api/auth/mfa/enroll/verify',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ factor_id: enrollment.id, code }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     const payload = (await response.json().catch(() => null)) as {
-      data?: { code?: string };
+      error?: { code?: string; details?: Record<string, string> };
     } | null;
     if (!response.ok) {
+      const details = payload?.error?.details;
       setStatus(
-        `认证器绑定失败：${payload?.data?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+        details?.enrollment_verified === 'true'
+          ? '认证器已绑定，但近期认证证明签发失败；请使用已有认证器重试。'
+          : `认证器绑定失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
       );
       return;
     }
     setEnrollment(null);
     setCode('');
     await loadFactors();
-    setStatus('认证器已绑定。请再输入一个 6 位验证码以进入 Admin。');
+    adminAuthSession.completeAuthentication('admin_mfa');
+    setStatus('认证器已绑定并完成 MFA，正在进入 Admin…');
+    window.location.assign('/admin');
   }
 
   async function verifyExistingFactor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('正在验证 MFA 并获取近期认证证明…');
-    const response = await fetch('/api/auth/mfa/verify', {
-      method: 'POST',
-      headers: {
-        ...requestHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ factor_id: factorId, code }),
-    });
+    let response: Response;
+    try {
+      response = await adminAuthSession.request(
+        '/api/auth/mfa/verify',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ factor_id: factorId, code }),
+        },
+        { replay: 'never' },
+      );
+    } catch (error) {
+      setStatus(sessionErrorMessage(error));
+      return;
+    }
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as {
-        data?: { code?: string };
+        error?: { code?: string; details?: Record<string, string> };
       } | null;
+      const details = payload?.error?.details;
       setStatus(
-        `MFA 失败：${payload?.data?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+        details?.mfa_verified === 'true'
+          ? 'MFA 已验证，但近期认证证明签发失败；请稍后重试。'
+          : `MFA 失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
       );
       return;
     }
+    adminAuthSession.completeAuthentication('admin_recent_mfa');
     window.location.assign('/admin');
+  }
+
+  async function copySecret() {
+    if (!enrollment) return;
+    await navigator.clipboard.writeText(enrollment.secret);
+    setStatus('密钥已复制到剪贴板；请勿分享该密钥。');
   }
 
   return (
@@ -179,7 +206,12 @@ export default function AdminMfaPage() {
           <div className="one-time-secret">
             <strong>手动密钥</strong>
             <code>{enrollment.secret}</code>
-            <small>该密钥只在本次绑定流程显示，请勿分享。</small>
+            <button type="button" onClick={() => void copySecret()}>
+              复制密钥
+            </button>
+            <small>
+              该密钥只在本次绑定流程显示，请勿分享，也不会写入 URL。
+            </small>
           </div>
           <form className="stack-form" onSubmit={verifyEnrollment}>
             <label htmlFor="enrollment-code">认证器 6 位验证码</label>
