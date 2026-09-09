@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
-import { adminAuthSession } from '../../_lib/auth-session';
+import {
+  adminAuthSession,
+  useAdminSessionSnapshot,
+} from '../../_lib/auth-session';
 
 type Plan = {
   plan_id: string;
@@ -27,6 +30,7 @@ type Batch = {
 };
 
 export default function EntitlementsPage() {
+  const sessionSnapshot = useAdminSessionSnapshot();
   const [platformId, setPlatformId] = useState('');
   const [plans, setPlans] = useState<Plan[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -42,8 +46,22 @@ export default function EntitlementsPage() {
   const [batchCodes, setBatchCodes] = useState<string[]>([]);
   const [batchReceipt, setBatchReceipt] = useState('');
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setPlans([]);
+    setBatches([]);
+    setBatchCodes([]);
+    setBatchReceipt('');
+    setStatus('会话已结束，计划与批次数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   const load = useCallback(async () => {
     if (!platformId) return;
+    const epoch = adminAuthSession.getEpoch();
     setStatus('正在读取…');
     const [plansResponse, batchesResponse] = await Promise.all([
       adminAuthSession.request(
@@ -65,6 +83,7 @@ export default function EntitlementsPage() {
     }
     const plansBody = (await plansResponse.json()) as { data: Plan[] };
     const batchesBody = (await batchesResponse.json()) as { data: Batch[] };
+    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
     setPlans(plansBody.data ?? []);
     setBatches(batchesBody.data ?? []);
     setBatchPlanId((current) => current || plansBody.data?.[0]?.plan_id || '');

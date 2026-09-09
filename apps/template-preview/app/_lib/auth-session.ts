@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import {
   AuthorizationUnavailableError,
   createAuthSessionManager,
+  type AuthSessionManager,
   SessionExpiredError,
   SessionRetryRequiredError,
 } from '@kit/account-auth-nextjs/browser';
@@ -13,6 +15,16 @@ export const consumerAuthSession = createAuthSessionManager({
   refreshUrl: '/api/auth/refresh',
   logoutUrl: '/api/auth/logout',
 });
+
+type BrowserSessionSnapshot = ReturnType<AuthSessionManager['getSessionState']>;
+
+export function useConsumerSessionSnapshot(): BrowserSessionSnapshot {
+  const [snapshot, setSnapshot] = useState<BrowserSessionSnapshot>(() =>
+    consumerAuthSession.getSessionState(),
+  );
+  useEffect(() => consumerAuthSession.subscribe(setSnapshot), []);
+  return snapshot;
+}
 
 export function sessionErrorMessage(error: unknown): string {
   if (error instanceof SessionRetryRequiredError)

@@ -1024,8 +1024,10 @@ try {
   const adminContext = await browser.newContext();
   const pageA = await contextA.newPage();
   const pageB = await contextB.newPage();
+  const pageC = await contextA.newPage();
   const adminPage = await adminContext.newPage();
-  for (const page of [pageA, pageB, adminPage]) page.setDefaultTimeout(15_000);
+  for (const page of [pageA, pageB, pageC, adminPage])
+    page.setDefaultTimeout(15_000);
 
   await exercisePublicTemplateRoutes(pageA, consumerAUrl);
   await exerciseAuthResponsive(pageA, consumerAUrl, [
@@ -1038,6 +1040,25 @@ try {
   await exerciseAuthenticatedTemplateRoutes(pageA, consumerAUrl);
   await exerciseSubscriptionAndFiles(pageA, consumerAUrl, redemptionCodeA);
   await exerciseSubscriptionAndFiles(pageB, consumerBUrl, redemptionCodeB);
+  await loginConsumer(pageC, consumerAUrl, platformAId);
+  await pageC.goto(`${consumerAUrl}/subscription`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await pageC.getByRole('heading', { name: 'Subscription' }).waitFor();
+  await pageC.getByText('Pro').waitFor();
+  await pageA.goto(`${consumerAUrl}/subscription`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await pageA.getByRole('heading', { name: 'Subscription' }).waitFor();
+  await Promise.all([
+    pageA.waitForURL(/\/login$/u, { waitUntil: 'domcontentloaded' }),
+    pageA.getByRole('button', { name: '退出登录', exact: true }).click(),
+  ]);
+  await pageC
+    .getByText('会话已结束，权益数据已清理。', { exact: true })
+    .first()
+    .waitFor();
+  await loginConsumer(pageA, consumerAUrl, platformAId);
   const userCookiesA = await contextA.cookies();
   const userCookiesB = await contextB.cookies();
   const sessionA = userCookiesA.find(
@@ -1126,6 +1147,7 @@ try {
       csrfAndEtag: 'PASS',
       adminAal1AndSuspend: 'PASS',
       adminBatchConfirmationUi: 'PASS',
+      multiTabTerminal: 'PASS',
       ordinaryProof: 'PASS',
       closeDelete: 'PASS',
       browserBundleCredentials: 'PASS',

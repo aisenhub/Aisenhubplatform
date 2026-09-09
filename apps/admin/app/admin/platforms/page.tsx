@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
-import { adminAuthSession } from '../../_lib/auth-session';
+import {
+  adminAuthSession,
+  useAdminSessionSnapshot,
+} from '../../_lib/auth-session';
 
 type Platform = {
   platform_id: string;
@@ -43,6 +46,7 @@ function mutationHeaders(): Record<string, string> {
 }
 
 export default function PlatformsPage() {
+  const sessionSnapshot = useAdminSessionSnapshot();
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [origins, setOrigins] = useState<Origin[]>([]);
@@ -63,7 +67,22 @@ export default function PlatformsPage() {
   const [keyName, setKeyName] = useState('BFF key');
   const [accountReason, setAccountReason] = useState('');
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setPlatforms([]);
+    setSelectedId('');
+    setOrigins([]);
+    setAccounts([]);
+    setKeys([]);
+    setStatus('会话已结束，平台与账户数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   const loadPlatforms = useCallback(async () => {
+    const epoch = adminAuthSession.getEpoch();
     const response = await adminAuthSession.request(
       `/api/v1/admin/api/v1/platforms?limit=100${platformQuery.trim() ? `&q=${encodeURIComponent(platformQuery.trim())}` : ''}`,
       {
@@ -75,6 +94,7 @@ export default function PlatformsPage() {
       return;
     }
     const payload = (await response.json()) as { data?: Platform[] };
+    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
     const next = payload.data ?? [];
     setPlatforms(next);
     setSelectedId((current) => current || next[0]?.platform_id || '');
@@ -83,6 +103,7 @@ export default function PlatformsPage() {
 
   const loadSelected = useCallback(async () => {
     if (!selectedId) return;
+    const epoch = adminAuthSession.getEpoch();
     const prefix = `/api/v1/admin/api/v1/platforms/${selectedId}`;
     const [originResponse, accountResponse, keyResponse] = await Promise.all([
       adminAuthSession.request(
@@ -102,13 +123,13 @@ export default function PlatformsPage() {
       setStatus('平台详情读取失败。');
       return;
     }
-    setOrigins(
-      ((await originResponse.json()) as { data?: Origin[] }).data ?? [],
-    );
-    setAccounts(
-      ((await accountResponse.json()) as { data?: Account[] }).data ?? [],
-    );
-    setKeys(((await keyResponse.json()) as { data?: Key[] }).data ?? []);
+    const originsBody = (await originResponse.json()) as { data?: Origin[] };
+    const accountsBody = (await accountResponse.json()) as { data?: Account[] };
+    const keysBody = (await keyResponse.json()) as { data?: Key[] };
+    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+    setOrigins(originsBody.data ?? []);
+    setAccounts(accountsBody.data ?? []);
+    setKeys(keysBody.data ?? []);
   }, [accountQuery, keyQuery, originQuery, selectedId]);
 
   useEffect(() => {

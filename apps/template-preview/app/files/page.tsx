@@ -6,6 +6,7 @@ import {
   consumerAuthSession,
   responseErrorCode,
   sessionErrorMessage,
+  useConsumerSessionSnapshot,
 } from '../_lib/auth-session';
 
 type ConfigFile = {
@@ -47,12 +48,26 @@ function statusLabel(file: ConfigFile): string {
 }
 
 export default function FilesPage() {
+  const sessionSnapshot = useConsumerSessionSnapshot();
   const [files, setFiles] = useState<ConfigFile[]>([]);
   const [budget, setBudget] = useState<Budget | null>(null);
   const [selectedReplace, setSelectedReplace] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState('正在读取配置文件…');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setFiles([]);
+    setBudget(null);
+    setSelectedReplace('');
+    setSelectedFile(null);
+    setStatus('会话已结束，文件与预算数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
 
   const load = useCallback(async () => {
     const epoch = consumerAuthSession.getEpoch();
@@ -62,11 +77,14 @@ export default function FilesPage() {
         '/api/v1/config-files?limit=20',
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
     if (!response.ok) {
-      setStatus(`文件状态读取失败：${await responseErrorCode(response)}`);
+      const code = await responseErrorCode(response);
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(`文件状态读取失败：${code}`);
       return;
     }
     const payload = (await response.json()) as {
@@ -84,6 +102,7 @@ export default function FilesPage() {
 
   async function upload() {
     if (!selectedFile) return;
+    const epoch = consumerAuthSession.getEpoch();
     setBusy(true);
     setStatus('正在预约并上传…');
     try {
@@ -108,6 +127,7 @@ export default function FilesPage() {
       const intent = (await intentResponse.json().catch(() => null)) as {
         data?: { upload_path?: string };
       } | null;
+      if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
       if (!intentResponse.ok || !intent?.data?.upload_path) {
         setStatus('预约失败：配额不足、策略关闭或文件输入不符合限制。');
         return;
@@ -124,6 +144,7 @@ export default function FilesPage() {
         },
         { replay: 'never' },
       );
+      if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
       setStatus(
         uploadResponse.ok
           ? '上传已结算；请以文件状态和预算占用为准。'
@@ -135,13 +156,15 @@ export default function FilesPage() {
         await load();
       }
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
     } finally {
       setBusy(false);
     }
   }
 
   async function remove(fileId: string) {
+    const epoch = consumerAuthSession.getEpoch();
     setBusy(true);
     let response: Response;
     try {
@@ -158,7 +181,12 @@ export default function FilesPage() {
         { replay: 'never' },
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
+      setBusy(false);
+      return;
+    }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) {
       setBusy(false);
       return;
     }
@@ -183,7 +211,8 @@ export default function FilesPage() {
       return;
     }
     if (!response.ok) {
-      setStatus('下载失败：文件可能正在删除、账户已暂停或对象需要恢复。');
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus('下载失败：文件可能正在删除、账户已暂停或对象需要恢复。');
       return;
     }
     const blob = await response.blob();

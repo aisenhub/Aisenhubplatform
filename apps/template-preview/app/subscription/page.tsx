@@ -7,6 +7,7 @@ import {
   consumerAuthSession,
   responseErrorCode,
   sessionErrorMessage,
+  useConsumerSessionSnapshot,
 } from '../_lib/auth-session';
 
 type Entitlement = {
@@ -18,23 +19,40 @@ type Entitlement = {
 };
 
 export default function SubscriptionPage() {
+  const sessionSnapshot = useConsumerSessionSnapshot();
   const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
   const [code, setCode] = useState('');
   const [status, setStatus] = useState('正在读取账户权益…');
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setEntitlement(null);
+    setCode('');
+    setStatus('会话已结束，权益数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   async function load() {
+    const epoch = consumerAuthSession.getEpoch();
     let response: Response;
     try {
       response = await consumerAuthSession.request('/api/v1/subscription');
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
     if (!response.ok) {
-      setStatus(`权益读取失败：${await responseErrorCode(response)}`);
+      const code = await responseErrorCode(response);
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(`权益读取失败：${code}`);
       return;
     }
     const payload = (await response.json()) as { data: Entitlement };
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setEntitlement(payload.data);
     setStatus('权益已从 Account API 实时读取。');
   }
@@ -46,6 +64,7 @@ export default function SubscriptionPage() {
   async function redeem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!code.trim()) return;
+    const epoch = consumerAuthSession.getEpoch();
     setStatus('正在提交兑换…');
     let response: Response;
     try {
@@ -62,13 +81,17 @@ export default function SubscriptionPage() {
         { replay: 'never' },
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
     if (!response.ok) {
-      setStatus(`兑换未完成：${await responseErrorCode(response)}`);
+      const code = await responseErrorCode(response);
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(`兑换未完成：${code}`);
       return;
     }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setCode('');
     setStatus('兑换成功，正在刷新权益…');
     await load();

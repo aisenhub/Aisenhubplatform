@@ -290,6 +290,7 @@ export class AuthSessionManager {
   async login(init?: RequestInit): Promise<Response> {
     this.ensureBroadcastChannel();
     this.epoch += 1;
+    const generation = this.epoch;
     this.transition('authenticating', true, this.snapshot.stepUp);
     const headers = new Headers(init?.headers);
     headers.set(
@@ -302,11 +303,12 @@ export class AuthSessionManager {
         method: 'POST',
         headers,
       });
-      if (response.ok)
+      if (response.ok && this.isCurrentEpoch(generation))
         this.transition('authenticated', true, this.snapshot.stepUp);
       return response;
     } catch (error) {
-      this.transition('unauthenticated', true, this.snapshot.stepUp);
+      if (this.isCurrentEpoch(generation))
+        this.transition('unauthenticated', true, this.snapshot.stepUp);
       throw error;
     }
   }
@@ -423,6 +425,7 @@ export class AuthSessionManager {
     if (first.status !== 401 || isAuthPath(url.pathname)) return first;
     if (!this.isCurrentEpoch(generation)) throw new SessionExpiredError();
     await this.refresh();
+    if (!this.isCurrentEpoch(generation)) throw new SessionExpiredError();
     if (replay === 'never') throw new SessionRetryRequiredError();
     if (!prepared.clone) throw new SessionReplayPolicyError();
     const replayResponse = await fetch(prepared.clone);

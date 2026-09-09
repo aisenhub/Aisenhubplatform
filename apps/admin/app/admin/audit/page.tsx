@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
-import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
+import {
+  adminAuthSession,
+  sessionErrorMessage,
+  useAdminSessionSnapshot,
+} from '../../_lib/auth-session';
 
 type AuditEntry = {
   id?: string;
@@ -15,14 +19,27 @@ type AuditEntry = {
 };
 
 export default function AdminAuditPage() {
+  const sessionSnapshot = useAdminSessionSnapshot();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [filter, setFilter] = useState('');
   const [query, setQuery] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [status, setStatus] = useState('正在读取审计日志…');
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setEntries([]);
+    setNextCursor(null);
+    setStatus('会话已结束，审计数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   const load = useCallback(
     async (cursor?: string) => {
+      const epoch = adminAuthSession.getEpoch();
       setStatus('正在读取审计日志…');
       try {
         const response = await adminAuthSession.request(
@@ -40,6 +57,7 @@ export default function AdminAuditPage() {
           );
           return;
         }
+        if (!adminAuthSession.isCurrentEpoch(epoch)) return;
         setEntries(payload?.data ?? []);
         setNextCursor(payload?.next_cursor ?? null);
         setStatus(`已读取 ${payload?.data?.length ?? 0} 条审计记录。`);

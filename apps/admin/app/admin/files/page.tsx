@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
-import { adminAuthSession } from '../../_lib/auth-session';
+import {
+  adminAuthSession,
+  useAdminSessionSnapshot,
+} from '../../_lib/auth-session';
 
 type Platform = { platform_id: string; code: string; name: string };
 type Policy = {
@@ -42,6 +45,7 @@ function formatBytes(value: number): string {
 }
 
 export default function AdminFilesPage() {
+  const sessionSnapshot = useAdminSessionSnapshot();
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [platformId, setPlatformId] = useState('');
   const [policy, setPolicy] = useState<Policy | null>(null);
@@ -51,8 +55,23 @@ export default function AdminFilesPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [status, setStatus] = useState('正在读取文件运维数据…');
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setPlatforms([]);
+    setPlatformId('');
+    setPolicy(null);
+    setFiles([]);
+    setNextCursor(null);
+    setStatus('会话已结束，文件运维数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   const load = useCallback(
     async (cursor?: string) => {
+      const epoch = adminAuthSession.getEpoch();
       const platformResponse = await adminAuthSession.request(
         '/api/v1/admin/api/v1/platforms?limit=100',
         { cache: 'no-store' },
@@ -64,6 +83,7 @@ export default function AdminFilesPage() {
       const platformBody = (await platformResponse.json()) as {
         data?: Platform[];
       };
+      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       const nextPlatforms = platformBody.data ?? [];
       setPlatforms(nextPlatforms);
       const selected = platformId || nextPlatforms[0]?.platform_id || '';
@@ -90,13 +110,13 @@ export default function AdminFilesPage() {
         setStatus('文件策略或状态读取失败。');
         return;
       }
-      setPolicy(
-        ((await policyResponse.json()) as { data?: Policy }).data ?? null,
-      );
+      const policyBody = (await policyResponse.json()) as { data?: Policy };
       const fileBody = (await filesResponse.json()) as {
         data?: ConfigFile[];
         next_cursor?: string | null;
       };
+      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      setPolicy(policyBody.data ?? null);
       setFiles(
         (fileBody.data ?? []).filter(
           (file) => !file.platform_id || file.platform_id === selected,

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AdminFilterInput } from '../components/admin-filter-input';
 import { AdminNav } from '../components/admin-nav';
-import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
+import {
+  adminAuthSession,
+  sessionErrorMessage,
+  useAdminSessionSnapshot,
+} from '../../_lib/auth-session';
 
 type Job = {
   job_id: string;
@@ -29,12 +33,25 @@ function requestUrl(path: string): string {
 }
 
 export default function AdminDeletionJobsPage() {
+  const sessionSnapshot = useAdminSessionSnapshot();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobFilter, setJobFilter] = useState('');
   const [requestId, setRequestId] = useState('');
   const [status, setStatus] = useState('正在读取删除任务…');
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setJobs([]);
+    setRequestId('');
+    setStatus('会话已结束，删除任务数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   const load = useCallback(async () => {
+    const epoch = adminAuthSession.getEpoch();
     let response: Response;
     try {
       response = await adminAuthSession.request(
@@ -49,6 +66,7 @@ export default function AdminDeletionJobsPage() {
       return;
     }
     const body = (await response.json()) as { data?: Job[] };
+    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
     setJobs(body.data ?? []);
     setStatus('删除任务状态已刷新。');
   }, []);

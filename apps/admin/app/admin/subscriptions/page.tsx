@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
-import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
+import {
+  adminAuthSession,
+  sessionErrorMessage,
+  useAdminSessionSnapshot,
+} from '../../_lib/auth-session';
 
 type Subscription = {
   status?: string;
@@ -21,6 +25,7 @@ function requestCode(response: Response, payload: unknown): string {
 }
 
 export default function AdminSubscriptionsPage() {
+  const sessionSnapshot = useAdminSessionSnapshot();
   const [platformId, setPlatformId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -29,9 +34,23 @@ export default function AdminSubscriptionsPage() {
   const [status, setStatus] = useState('输入 Platform Account ID 后读取订阅。');
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setSubscription(null);
+    setPlatformId('');
+    setAccountId('');
+    setReason('');
+    setStatus('会话已结束，订阅数据已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   async function load(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     if (!platformId || !accountId) return;
+    const epoch = adminAuthSession.getEpoch();
     setBusy(true);
     setStatus('正在读取订阅投影…');
     try {
@@ -46,6 +65,7 @@ export default function AdminSubscriptionsPage() {
         setSubscription(null);
         return;
       }
+      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       setSubscription(payload?.data ?? null);
       setStatus('订阅投影已刷新；页面不直接编辑 Projection。');
     } catch (error) {

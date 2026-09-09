@@ -231,6 +231,116 @@ describe('AuthSessionManager', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it('drops a delayed refresh replay when logout advances the epoch', async () => {
+    installBrowser();
+    let resolveRefresh: ((response: Response) => void) | undefined;
+    let refreshStarted: (() => void) | undefined;
+    const refreshReady = new Promise<void>((resolve) => {
+      refreshStarted = resolve;
+    });
+    const refreshResponse = new Promise<Response>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const fetcher = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const url = String(input);
+      if (url.endsWith('/api/auth/refresh')) {
+        refreshStarted?.();
+        return refreshResponse;
+      }
+      if (url.endsWith('/api/auth/logout'))
+        return Promise.resolve(new Response(null, { status: 200 }));
+      return Promise.resolve(new Response(null, { status: 401 }));
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const manager = new AuthSessionManager(config);
+    const request = manager.request('/api/v1/profile');
+    await refreshReady;
+    await manager.logout();
+    resolveRefresh?.(new Response(null, { status: 204 }));
+
+    await expect(request).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not let a delayed login restore an already logged-out manager', async () => {
+    installBrowser();
+    let resolveLogin: ((response: Response) => void) | undefined;
+    const loginResponse = new Promise<Response>((resolve) => {
+      resolveLogin = resolve;
+    });
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementation((input) =>
+        String(input).endsWith('/api/auth/login')
+          ? loginResponse
+          : Promise.resolve(new Response(null, { status: 200 })),
+      );
+    vi.stubGlobal('fetch', fetcher);
+    const manager = new AuthSessionManager(config);
+    const login = manager.login({ body: '{}' });
+    await manager.logout();
+    resolveLogin?.(new Response(null, { status: 200 }));
+
+    await login;
+    expect(manager.getSessionState()).toMatchObject({
+      state: 'unauthenticated',
+      resolved: true,
+    });
+  });
+
+  it('does not let an obsolete login failure clear a newer login state', async () => {
+    installBrowser();
+    let rejectFirst: ((error: Error) => void) | undefined;
+    let resolveSecond: ((response: Response) => void) | undefined;
+    const firstLogin = new Promise<Response>((_, reject) => {
+      rejectFirst = reject;
+    });
+    const secondLogin = new Promise<Response>((resolve) => {
+      resolveSecond = resolve;
+    });
+    let loginCount = 0;
+    const fetcher = vi.fn<typeof fetch>().mockImplementation((input) => {
+      if (!String(input).endsWith('/api/auth/login'))
+        return Promise.resolve(new Response(null, { status: 200 }));
+      loginCount += 1;
+      return loginCount === 1 ? firstLogin : secondLogin;
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const manager = new AuthSessionManager(config);
+    const first = manager.login({ body: '{}' });
+    const second = manager.login({ body: '{}' });
+    resolveSecond?.(new Response(null, { status: 200 }));
+    await second;
+    rejectFirst?.(new Error('obsolete login failed'));
+    await expect(first).rejects.toThrow('obsolete login failed');
+
+    expect(manager.getSessionState().state).toBe('authenticated');
+  });
+
+  it('rejects new mutations while logout is pending', async () => {
+    installBrowser();
+    let resolveLogout: ((response: Response) => void) | undefined;
+    const logoutResponse = new Promise<Response>((resolve) => {
+      resolveLogout = resolve;
+    });
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementation((input) =>
+        String(input).endsWith('/api/auth/logout')
+          ? logoutResponse
+          : Promise.resolve(new Response(null, { status: 200 })),
+      );
+    vi.stubGlobal('fetch', fetcher);
+    const manager = new AuthSessionManager(config);
+    const logout = manager.logout();
+
+    await expect(
+      manager.request('/api/v1/account', { method: 'POST', body: '{}' }),
+    ).rejects.toBeInstanceOf(SessionExpiredError);
+    resolveLogout?.(new Response(null, { status: 200 }));
+    await logout;
+  });
+
   it('uses versioned, scoped terminal hints without echoing to the sender', async () => {
     installBrowser();
     vi.stubGlobal('BroadcastChannel', FakeBroadcastChannel);

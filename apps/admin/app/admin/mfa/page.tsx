@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
-import { adminAuthSession, sessionErrorMessage } from '../../_lib/auth-session';
+import {
+  adminAuthSession,
+  sessionErrorMessage,
+  useAdminSessionSnapshot,
+} from '../../_lib/auth-session';
 
 type Factor = {
   id: string;
@@ -18,6 +22,7 @@ type Enrollment = Factor & {
 };
 
 export default function AdminMfaPage() {
+  const sessionSnapshot = useAdminSessionSnapshot();
   const [factors, setFactors] = useState<Factor[]>([]);
   const [factorId, setFactorId] = useState('');
   const [code, setCode] = useState('');
@@ -25,7 +30,21 @@ export default function AdminMfaPage() {
   const [status, setStatus] = useState('正在读取已验证的 MFA 因子…');
   const [enrolling, setEnrolling] = useState(false);
 
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setFactors([]);
+    setFactorId('');
+    setCode('');
+    setEnrollment(null);
+    setStatus('会话已结束，MFA 状态与密钥已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
   async function loadFactors() {
+    const epoch = adminAuthSession.getEpoch();
     let response: Response;
     try {
       response = await adminAuthSession.request('/api/auth/mfa/factors');
@@ -37,6 +56,7 @@ export default function AdminMfaPage() {
       data?: { factors?: Factor[] };
       error?: { code?: string };
     } | null;
+    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
     if (!response.ok) {
       setFactors([]);
       setFactorId('');
@@ -62,6 +82,7 @@ export default function AdminMfaPage() {
   }, []);
 
   async function startEnrollment() {
+    const epoch = adminAuthSession.getEpoch();
     setEnrolling(true);
     setStatus('正在生成认证器绑定信息…');
     try {
@@ -78,6 +99,7 @@ export default function AdminMfaPage() {
         data?: { factor?: Enrollment; code?: string };
         error?: { code?: string };
       } | null;
+      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       if (!response.ok || !payload?.data?.factor) {
         setStatus(
           `绑定准备失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
@@ -96,6 +118,7 @@ export default function AdminMfaPage() {
   async function verifyEnrollment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!enrollment) return;
+    const epoch = adminAuthSession.getEpoch();
     setStatus('正在验证新认证器…');
     let response: Response;
     try {
@@ -115,6 +138,7 @@ export default function AdminMfaPage() {
     const payload = (await response.json().catch(() => null)) as {
       error?: { code?: string; details?: Record<string, string> };
     } | null;
+    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
     if (!response.ok) {
       const details = payload?.error?.details;
       setStatus(
@@ -134,6 +158,7 @@ export default function AdminMfaPage() {
 
   async function verifyExistingFactor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const epoch = adminAuthSession.getEpoch();
     setStatus('正在验证 MFA 并获取近期认证证明…');
     let response: Response;
     try {
@@ -162,6 +187,7 @@ export default function AdminMfaPage() {
       );
       return;
     }
+    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
     adminAuthSession.completeAuthentication('admin_recent_mfa');
     window.location.assign('/admin');
   }

@@ -7,6 +7,7 @@ import {
   consumerAuthSession,
   responseErrorCode,
   sessionErrorMessage,
+  useConsumerSessionSnapshot,
 } from '../_lib/auth-session';
 
 type Profile = {
@@ -23,6 +24,7 @@ type Preferences = {
 };
 
 export default function AccountPage() {
+  const sessionSnapshot = useConsumerSessionSnapshot();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -30,6 +32,21 @@ export default function AccountPage() {
   const [preferenceText, setPreferenceText] = useState('{}');
   const [tokenHash, setTokenHash] = useState('');
   const [status, setStatus] = useState('正在读取账户资料…');
+
+  useEffect(() => {
+    if (
+      !sessionSnapshot.resolved ||
+      !['unauthenticated', 'expired'].includes(sessionSnapshot.state)
+    )
+      return;
+    setProfile(null);
+    setPreferences(null);
+    setDisplayName('');
+    setBio('');
+    setPreferenceText('{}');
+    setTokenHash('');
+    setStatus('会话已结束，账户资料已清理。');
+  }, [sessionSnapshot.resolved, sessionSnapshot.state]);
 
   async function load() {
     const epoch = consumerAuthSession.getEpoch();
@@ -41,19 +58,20 @@ export default function AccountPage() {
         consumerAuthSession.request('/api/v1/preferences'),
       ]);
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
     if (!profileResponse.ok || !preferencesResponse.ok) {
-      setStatus(
-        `账户资料读取失败：${await responseErrorCode(profileResponse)}`,
-      );
+      const code = await responseErrorCode(profileResponse);
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(`账户资料读取失败：${code}`);
       return;
     }
-    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     const nextProfile = (await profileResponse.json()).data as Profile;
     const nextPreferences = (await preferencesResponse.json())
       .data as Preferences;
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setProfile(nextProfile);
     setPreferences(nextPreferences);
     setDisplayName(nextProfile.display_name ?? '');
@@ -69,6 +87,7 @@ export default function AccountPage() {
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!profile) return;
+    const epoch = consumerAuthSession.getEpoch();
     let response: Response;
     try {
       response = await consumerAuthSession.request(
@@ -84,9 +103,11 @@ export default function AccountPage() {
         { replay: 'never' },
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setStatus(
       response.ok ? '资料已保存。' : '资料保存失败，可能需要刷新版本。',
     );
@@ -96,6 +117,7 @@ export default function AccountPage() {
   async function savePreferences(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!preferences) return;
+    const epoch = consumerAuthSession.getEpoch();
     let value: unknown;
     try {
       value = JSON.parse(preferenceText);
@@ -122,9 +144,11 @@ export default function AccountPage() {
         { replay: 'never' },
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setStatus(
       response.ok ? '偏好已保存。' : '偏好保存失败，可能需要刷新版本。',
     );
@@ -132,6 +156,7 @@ export default function AccountPage() {
   }
 
   async function requestReauth() {
+    const epoch = consumerAuthSession.getEpoch();
     let response: Response;
     try {
       response = await consumerAuthSession.request(
@@ -140,9 +165,11 @@ export default function AccountPage() {
         { replay: 'never' },
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setStatus(
       response.ok
         ? '验证邮件已发送，请粘贴邮件链接中的 token_hash。'
@@ -151,6 +178,7 @@ export default function AccountPage() {
   }
 
   async function verifyReauth() {
+    const epoch = consumerAuthSession.getEpoch();
     let response: Response;
     try {
       response = await consumerAuthSession.request(
@@ -163,9 +191,11 @@ export default function AccountPage() {
         { replay: 'never' },
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setStatus(
       response.ok ? '近期认证已完成，可执行敏感账户操作。' : '近期认证未通过。',
     );
@@ -173,6 +203,7 @@ export default function AccountPage() {
   }
 
   async function sensitiveAction(path: string) {
+    const epoch = consumerAuthSession.getEpoch();
     let response: Response;
     try {
       response = await consumerAuthSession.request(
@@ -185,9 +216,11 @@ export default function AccountPage() {
         { replay: 'never' },
       );
     } catch (error) {
-      setStatus(sessionErrorMessage(error));
+      if (consumerAuthSession.isCurrentEpoch(epoch))
+        setStatus(sessionErrorMessage(error));
       return;
     }
+    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
     setStatus(
       response.ok ? '敏感操作已提交。' : '敏感操作被拒绝，请先完成近期认证。',
     );
