@@ -14,6 +14,7 @@
 - `pnpm test:unit`：6 个实际执行任务 PASS；`@kit/account-auth-nextjs` 22 tests PASS，新增 delayed login/refresh replay、logout pending mutation 和 obsolete login failure 竞态覆盖。
 - `pnpm typecheck`：9 tasks PASS。
 - `pnpm test:consumer:m5-05`：independent install/typecheck/build、无 workspace link、模板路由、本地双 Origin 平台 E2E 全部 PASS；hosted backend 仍为 NOT_RUN。
+- 在最终源码 `2f3937e` 上复测 `pnpm test:consumer:m5-05`：independent install、typecheck、build、workspace link 隔离、模板路由和 local dual-origin platform E2E 全部 PASS；hosted backend 为环境性 NOT_RUN。
 - `pnpm test:e2e:t16-r2`：本地 Supabase + Chromium 实际 PASS；双消费者隔离、CSRF/ETag、订阅兑换、文件生命周期、Admin AAL1/MFA、暂停恢复、批次确认、近期 proof、关闭删除、bundle 凭据扫描、同一 Browser Context 双标签页 terminal hint，以及 320/375/390/768/1440px Auth surface overflow/focus 检查均 PASS。
 - Consumer/Admin 受保护页面已统一订阅 browser session snapshot；terminal logout/expired 会清理私密页面状态，迟到 fetch、response body decode 和 mutation 结果受 epoch fence 丢弃。
 - 本地构建：`pnpm --filter template-preview build` 与 `pnpm --filter admin build` 均 exit 0；构建仅产生 `.next` 与生成类型文件，不纳入源码提交。
