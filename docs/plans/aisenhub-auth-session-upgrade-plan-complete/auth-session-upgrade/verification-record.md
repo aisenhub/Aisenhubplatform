@@ -10,11 +10,12 @@
 
 本节覆盖此前实施记录中的旧 NOT_RUN/环境失败项；历史失败仍保留在下方，不以覆盖方式删除。
 
-- 当前验证代码：`b8dec8dd27871de8f5931b19cdc59705b71c9963`（包含 `34c68e93b89a7c42dc8a67829f322ff54d824e2d` 的 BroadcastChannel 协议修复）。
-- `pnpm --filter @kit/account-auth-nextjs test:unit`：18 tests PASS；包含 versioned/scoped/no-echo terminal hint、If-Match replay boundary、single-flight settle。
+- 当前验证代码：`2f3937ed8da688348137184ff64f12a643776bfe`（包含 `34c68e93b89a7c42dc8a67829f322ff54d824e2d` 的 BroadcastChannel 协议修复）。
+- `pnpm test:unit`：6 个实际执行任务 PASS；`@kit/account-auth-nextjs` 22 tests PASS，新增 delayed login/refresh replay、logout pending mutation 和 obsolete login failure 竞态覆盖。
 - `pnpm typecheck`：9 tasks PASS。
 - `pnpm test:consumer:m5-05`：independent install/typecheck/build、无 workspace link、模板路由、本地双 Origin 平台 E2E 全部 PASS；hosted backend 仍为 NOT_RUN。
-- `pnpm test:e2e:t16-r2`：本地 Supabase + Chromium 实际 PASS；双消费者隔离、CSRF/ETag、订阅兑换、文件生命周期、Admin AAL1/MFA、暂停恢复、批次确认、近期 proof、关闭删除、bundle 凭据扫描，以及 320/375/390/768/1440px Auth surface overflow/focus 检查均 PASS。
+- `pnpm test:e2e:t16-r2`：本地 Supabase + Chromium 实际 PASS；双消费者隔离、CSRF/ETag、订阅兑换、文件生命周期、Admin AAL1/MFA、暂停恢复、批次确认、近期 proof、关闭删除、bundle 凭据扫描、同一 Browser Context 双标签页 terminal hint，以及 320/375/390/768/1440px Auth surface overflow/focus 检查均 PASS。
+- Consumer/Admin 受保护页面已统一订阅 browser session snapshot；terminal logout/expired 会清理私密页面状态，迟到 fetch、response body decode 和 mutation 结果受 epoch fence 丢弃。
 - 本地构建：`pnpm --filter template-preview build` 与 `pnpm --filter admin build` 均 exit 0；构建仅产生 `.next` 与生成类型文件，不纳入源码提交。
 - 仍未运行且不应推定通过：hosted/Staging/生产 Provider、真实外部 SMTP/Storage、自然 access 到期与故障注入下的延迟 callback/refresh/logout race 专项；这些不阻止本地实现交付，但属于发布前观察项。
 
@@ -102,7 +103,7 @@
 | 02 | Shared Session Runtime | 已交付 | 浏览器 session manager、single-flight、replay policy、RetryRequired、step-up 映射 | 无 | Phase 01 已交付 | `2514708530867bef9949866bf06ce3a7b19dad20` | 已成功 | 已核对远端 |
 | 03 | Consumer Session Adoption | 已交付 | Consumer 登录、恢复、账户/订阅/文件/密码页统一消费 manager | 无 | Phase 02 已交付 | `fa21e10d2fa4e57ec81e57a6c06176d8f36d716b` | 已成功 | 已核对远端 |
 | 04 | Admin MFA & Session Adoption | 已交付 | Admin MFA、enrollment partial success、recent proof recovery、因子状态 | 无 | Phase 02 已交付 | `4666792fd574917aba247b4d2d879ad3813d4597` | 已成功 | 已核对远端 |
-| 05 | Integration / Multi-tab / Validation / Cleanup | 已交付 | Admin 全页面迁移、多 Tab 终态提示、legacy scan、SDK/构建验证 | Windows `m5-05-install` 子进程回收仍需单独修复 | Phase 03 + 04 已交付 | `43374253ca6724eb9d4f4ee38f911bf50ac8e617` | 已成功 | 已核对远端 |
+| 05 | Integration / Multi-tab / Validation / Cleanup | 已交付 | Admin 全页面迁移、多 Tab 终态提示、terminal UI cleanup、legacy scan、SDK/构建验证 | 无；hosted/生产观察仍属发布前环境工作 | Phase 03 + 04 已交付 | `4337425` + follow-up `2f3937e` | 已成功 | 已核对远端 |
 
 ---
 
@@ -418,7 +419,7 @@ idempotent-mutation
 ### 最终交接
 
 - 下一阶段：本期结束；后续类别另立计划。
-- 必须先解决：Windows `m5-05-install` harness 子进程回收问题、真实 Supabase/Auth 与浏览器回归。
+- 必须先解决：无本地交付阻塞；发布前仍需在授权的 hosted/Staging/生产环境观察真实 Provider、自然过期和故障注入场景。
 - 可复用能力：共享 `@kit/account-auth-nextjs/browser` manager、scoped cookie/fence/ack 适配器。
 - 不应重复实施：页面级 refresh/replay、token 暴露、二进制自动重传。
 - 当前未提交修改及归属：仅用户未跟踪 Frontend 独立计划目录，已保留。
