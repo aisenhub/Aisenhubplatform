@@ -4,7 +4,7 @@
 
 ## DP2当前基线（优先于下方历史交接摘要）
 
-实现基线为`31b5142421847c26e61fe733b0df67f2fecd115a`，已核对远端`task/T04-session-revocation`；main仍为`f981ca533db67e543bbe3f6d88c337b78c0199d4`，应用尚未合并。下方原任务PASS沿用其报告范围，本次规划未重跑应用验收。详细差异见[DP2校准证据](evidence/DP2-baseline.md)。
+2026-09-09 ASU-R1 本地核对：当前 main 为 `0d42b4cd44a2c17777c33f616bd393c22ee78f16`，已有应用代码，不能再按空 main/尚未合并判断。DP2 原规划时实现基线 `31b5142421847c26e61fe733b0df67f2fecd115a` 与旧 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。下方原任务PASS沿用其报告范围，本次规划未重跑应用验收。详细差异见[DP2校准证据](evidence/DP2-baseline.md)。
 
 | 范围/Gate | 当前判定 | 剩余承接 |
 |---|---|---|
@@ -132,3 +132,7 @@ M0为IN_PROGRESS：T01～T07 Local 已完成，T04 的 JWT/logout/proof 子项�
 - 结果：交付三平台三用户 Local Auth fixture、真实角色负向/权限快照、跨租户复合 FK、Admin global/platform scope、Profile 乐观版本竞争、事务故障回滚和过期 lease fencing 验收。
 - 验收：T08/T09/T10 三份 pgTAP 共 59/59；T10 行为探针报告 fixture、跨租户拒绝、版本竞争、回滚、过期 fence 和 account/admin/job 角色负向均 PASS。
 - 限制：T10 不覆盖托管环境、真实 OAuth/SMTP、完整 Admin proof 生命周期或 M3 事件表；T11 可继续冻结 API/错误合同。
+
+## ASU-R1 Auth 计划修订
+
+文档修订已纳入 [Auth 执行计划](../plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md)，包含 ASU-01～05 与 ASU-V01～16。产品实施未开始，运行验收 NOT_RUN；本轮文档提交不升级任何应用 Gate。下一项是用户派发后的 ASU-01 基线与安全基础，完整 Frontend 独立计划在 Auth 交付后承接。

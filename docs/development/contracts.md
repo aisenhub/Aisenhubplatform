@@ -108,3 +108,11 @@ SP-SQL确认Auth表实际可授予列与pooler角色形式；SP-UPLOAD确认真�
 T17-R1核对Staging `verify_jwt=true`与安全专题网关配置要求的差异，以及默认数据库连接尚未证明独立executor/TLS的问题。当前仅登记未闭环差异，不认可另一套权限规则；任何合同变更先有ADR及消费者/验收同步。
 
 M4-01负责补齐文件SQL参数/结果、file-policy/查询/恢复包装及备份屏障/删除墓碑合同，沿用当前字段与6个Account文件操作；M4-02持久化最小屏障基础，M4-05消费它阻止物理删除，M6实现联合备份及独立墓碑保存。复用已存在的private.job_leases，不能新增同名公共任务设施。unknown是write_outcome，不作为新增status枚举。
+
+## 8. ASU-R1 Auth 变更登记（设计已修订，产品未实施）
+
+2026-09-09 审查确认：现有共享 Cookie TTL、local logout scope、迟到响应与隐式 setSession 刷新不满足新体验目标。新执行合同唯一维护于 [Auth master §2.10](../plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md)：scoped CSRF/proof、30 天 CSRF、local revoke 分类、有界退出、scoped HttpOnly fence/ack、epoch/generation、独立 stepUp、MFA 部分成功及安装产物验收。
+
+这些变更由 ASU-01～05 同步 shared packages、两 BFF/全部 Cookie 消费者、callback、UI 与测试后生效；不是已存在能力。旧共享 CSRF/proof 不做跨 scope 复制，已有浏览器允许一次重新登录。fence/ack 只增加本地退出拒绝条件，不替代中央实时授权、不确认 Provider 撤销，不新增 SQL 领域写入口。OpenAPI 仅在中央 HTTP/DTO 实际变更时同步，BFF Auth 合同不能误记成新增中央 API。
+
+Phase 01 更新 auth-security/API 专题的实际最终合同，Phase 05 提供实现 SHA 与完整消费者证据。本轮仅登记批准的设计方向，不把后续实现测试写成 PASS。

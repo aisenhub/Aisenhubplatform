@@ -32,6 +32,10 @@
 
 执行任务前必须读取所引用规格及公共合同，不能从总计划直接推测接口。验证报告遵循[证据规则](evidence/README.md)。
 
+## Auth 优化专项
+
+入口为 [ASU-R1 修订后的执行计划](../plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md)。ASU-01～05 与 ASU-V01～16 的范围、依赖和实际记录在该计划包维护；目前产品实施未开始，运行验证 NOT_RUN。用户已准备完整 Frontend 独立计划，待 Auth 优化交付后承接，不因本入口存在而自动执行。
+
 ## 状态词典
 
 - READY：任务前置条件已具备，可以派发；不是已获自动执行授权。

@@ -2,6 +2,8 @@
 
 本文件从属于 [架构基线](architecture.md)。身份是全局共享的，业务状态是平台本地的，两者不能互相替代。
 
+**ASU-R1 设计变更登记（2026-09-09，尚未实施）：** [Auth 优化计划 §2.10](plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md) 冻结 scoped CSRF/proof、CSRF 刷新窗口、local revoke 结果分类、退出 fence/ack、迟到响应隔离、显式刷新所有权与 MFA 部分成功协议。ASU-01～05 实施并验收后更新本文对应实现描述；不能把本设计登记当作已完成的安全能力。现有中央 JWT/session/AAL2/proof 和领域授权要求不变。
+
 ## 1. 平台信任边界
 
 V1 全部为同一运营主体控制的自营平台。Platform API Key 只证明调用服务所属平台；Global JWT 证明用户身份，**不证明用户是在目标平台完成登录，也不是平台绑定的授权令牌**。
