@@ -6,6 +6,20 @@
 
 ---
 
+## 1.4 最新实施复核（2026-09-09）
+
+本节覆盖此前实施记录中的旧 NOT_RUN/环境失败项；历史失败仍保留在下方，不以覆盖方式删除。
+
+- 当前验证代码：`b8dec8dd27871de8f5931b19cdc59705b71c9963`（包含 `34c68e93b89a7c42dc8a67829f322ff54d824e2d` 的 BroadcastChannel 协议修复）。
+- `pnpm --filter @kit/account-auth-nextjs test:unit`：18 tests PASS；包含 versioned/scoped/no-echo terminal hint、If-Match replay boundary、single-flight settle。
+- `pnpm typecheck`：9 tasks PASS。
+- `pnpm test:consumer:m5-05`：independent install/typecheck/build、无 workspace link、模板路由、本地双 Origin 平台 E2E 全部 PASS；hosted backend 仍为 NOT_RUN。
+- `pnpm test:e2e:t16-r2`：本地 Supabase + Chromium 实际 PASS；双消费者隔离、CSRF/ETag、订阅兑换、文件生命周期、Admin AAL1/MFA、暂停恢复、批次确认、近期 proof、关闭删除、bundle 凭据扫描，以及 320/375/390/768/1440px Auth surface overflow/focus 检查均 PASS。
+- 本地构建：`pnpm --filter template-preview build` 与 `pnpm --filter admin build` 均 exit 0；构建仅产生 `.next` 与生成类型文件，不纳入源码提交。
+- 仍未运行且不应推定通过：hosted/Staging/生产 Provider、真实外部 SMTP/Storage、自然 access 到期与故障注入下的延迟 callback/refresh/logout race 专项；这些不阻止本地实现交付，但属于发布前观察项。
+
+---
+
 # 1. 项目与基线
 
 ## 1.1 本次目标与范围
@@ -447,12 +461,14 @@ idempotent-mutation
 | 2026-09-09 | 05 | `4337425` | `pnpm test:sdk:m5-02` | Node 24.19.0 / Windows | 0 | reproducible tarballs, boundary scan, independent install/import PASS | no failure | command output |
 | 2026-09-09 | 05 | `4337425` | direct `pnpm exec next build --webpack` in `E:\AppData\m5-template-consumer` | Node 24.19.0 / Next 16.3.0 | 0 | production build PASS | harness wrapper separately failed to reap child | command output |
 | 2026-09-09 | 05 | `4337425` | `pnpm test:consumer:m5-05` | Node 24.19.0 / Windows | NOT_RUN | harness did not return a completed result; `next build` child remained alive | direct build above is separate evidence; do not mark wrapper PASS | command output/process inspection |
+| 2026-09-09 | 05 | `b8dec8d` | `pnpm test:consumer:m5-05` | Node 24.19.0 / Windows / local Supabase + Chromium | 0 | independent install/typecheck/build、workspace boundary、local dual-origin E2E PASS；hosted backend NOT_RUN | 改为直接调用 Next CLI 后复测通过 | command output |
 | 未执行 | 未开始 | 未记录 | 未执行 | 未验证 | 未记录 | 未验证 | 无 | 未记录 |
 
 ## 5.3 浏览器验证表
 
 | 日期 | 阶段 | SHA | 场景 | 浏览器/viewport | 测试素材 | 实际结果 | 截图/日志 | 状态 |
 |---|---|---|---|---|---|---|---|---|
+| 2026-09-09 | 05 | `b8dec8d` | T16 R2 local Supabase browser regression | Chromium headless；Consumer/Admin 320/375/390/768/1440px | fixture users/platforms；敏感值未写入日志 | Consumer/Admin functional flow 与 responsive focus/overflow PASS | command output | PASS |
 | 未执行 | 未开始 | 未记录 | 未执行 | 未验证 | 未准备 | 未验证 | 未记录 | 未验证 |
 
 ## 5.4 Frontend Integration 浏览器验证表
@@ -467,8 +483,8 @@ idempotent-mutation
 | 未执行 | 未填写 | 未填写 | RetryRequired 不自动 replay | 未记录 | 未验证 | 未记录 | 未验证 |
 | 未执行 | 未填写 | 未填写 | step-up 后 stale state 不自动 POST | 未记录 | 未验证 | 未记录 | 未验证 |
 | 未执行 | 未填写 | 未填写 | logout/expired 清 sensitive UI state | 未记录 | 未验证 | 未记录 | 未验证 |
-| 未执行 | 未填写 | 未填写 | multi-tab terminal reaction/no echo | 未记录 | 未验证 | 未记录 | 未验证 |
-| 未执行 | 未填写 | 未填写 | Login/MFA/Auth recovery responsive/a11y | `320/375/390/768/1440px` 待实际记录 | 未验证 | 未记录 | 未验证 |
+| 2026-09-09 | `b8dec8d` | multi-tab terminal reaction/no echo | Vitest FakeBroadcastChannel；Consumer/Admin scopes | versioned payload、scope isolation、sender no-echo PASS | command output | PASS（unit；真实双 Tab race 仍列发布前观察） |
+| 2026-09-09 | `b8dec8d` | Login/Auth recovery responsive/a11y | Chromium；`320/375/390/768/1440px`；keyboard Tab | Consumer/Admin login、signup、forgot-password 无横向溢出且 focus 可进入 PASS；完整 MFA/屏幕阅读器审计未执行 | command output | PARTIAL |
 
 ## 5.5 安全负向验证表
 
@@ -496,7 +512,7 @@ idempotent-mutation
 | refresh success 后 safe reads 各最多 replay 1 次 | `browser-session.test.ts` 并发用例 | PASS |
 | refresh 401 后进入 expired | `browser-session.test.ts` refresh failure 用例 | PASS |
 | refresh 503 不误清 session | `browser-session.test.ts` refresh failure 用例 | PASS |
-| single-flight settle 后后续 refresh 可重新发起 | 未单独覆盖 | 未验证 |
+| single-flight settle 后后续 refresh 可重新发起 | `browser-session.test.ts` settle 用例 | PASS |
 
 ## 6.2 Mutation Replay Boundary
 
@@ -504,7 +520,7 @@ idempotent-mutation
 |---|---|---|
 | 普通 mutation refresh 后不自动重放 | `browser-session.test.ts` mutation 用例 | PASS |
 | idempotent mutation 若重放保留同一 key | `browser-session.test.ts` keyed mutation 用例 | PASS |
-| If-Match 不自动提升 replay 权限 | 实现默认按 HTTP method 判定；未单独覆盖 | 未验证 |
+| If-Match 不自动提升 replay 权限 | `browser-session.test.ts` If-Match mutation 用例 | PASS |
 | 二进制/stream 永不自动重放 | keyed binary fail-fast 单测 + Consumer 文件页显式 never | PASS |
 
 ## 6.3 Logout Partial Failure
@@ -536,7 +552,7 @@ idempotent-mutation
 | Admin logged_out 只影响 Admin scope | channel handler scope check | PASS（静态） |
 | session_expired 只在确定 refresh 401 后广播 | refresh 401 branch | PASS（静态） |
 | refresh 503 不广播 expired | transient branch has no broadcast | PASS（静态） |
-| Channel payload 无敏感数据 | payload only `{scope,event}` | PASS（静态） |
+| Channel payload 无敏感数据 | payload only `{version,scope,type,sourceId}` | PASS（静态 + unit） |
 | BroadcastChannel 不可用时单 Tab 安全工作 | feature detection and optional channel | PASS（静态） |
 
 ---
@@ -660,13 +676,13 @@ idempotent-mutation
 ## 当前阶段
 
 - 当前阶段：本期完成（Phase 01–05 已交付）。
-- 当前状态：已交付；真实 Supabase/Auth、浏览器双 Tab/响应式回归和 Windows `m5-05-install` harness 修复仍是后续验证项。
+- 当前状态：代码已交付；Local Supabase/Chromium、独立 Consumer 安装、响应式基础回归均已完成。hosted/Staging/生产 Provider，以及自然到期和故障注入 race 专项仍是发布前观察项。
 
 ## 必须先解决的问题
 
 - 已核对项目绝对路径、Git remote/branch/start SHA、依赖版本和 Deno 路径。
 - 已完成 Phase 01–05 代码提交、逐阶段推送和远端 SHA 核对。
-- 浏览器/真实 Supabase 验证与 Windows harness 问题已保留为未完成项，不虚报通过。
+- 浏览器/真实 Supabase 验证与 Windows harness 已复测通过；未运行的 hosted/Staging/生产与故障注入项仍按 NOT_RUN 保留，不推定通过。
 
 ## 可以直接复用的已知能力
 
@@ -693,7 +709,9 @@ idempotent-mutation
 - 当前无。
 - 若执行时发现会改变安全/数据语义且无法从代码与冻结架构合理推断的实质冲突，再提出具体问题。
 
-## R1 文档修订基线与新增验收（ASU-R1）
+## R1 文档修订基线与新增验收（ASU-R1，历史基线）
+
+以下表格记录实施前的文档审查状态，不能覆盖上方最新实施复核；其中的 NOT_RUN 是历史事实，不代表当前代码状态。
 
 2026-09-09 本地审查基线：`main@0d42b4cd44a2c17777c33f616bd393c22ee78f16`；remote 配置为 `https://github.com/aisenhub/Aisenhubplatform.git`；工作区已有用户提供的 Auth 与 Frontend 未跟踪计划包。此基线不是未来实施 HEAD，实施时重新填写。文档修订不把任何 ASU 产品阶段标 DONE。
 
