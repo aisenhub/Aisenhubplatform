@@ -1,7 +1,7 @@
 # Authentication & Session Upgrade — Verification Record
 
 > **用途**：实施期真实进度、验证、GitHub 交付与交接记录。  
-> **计划生成状态**：所有阶段均为 `未开始`；所有运行环境、测试和 GitHub 交付结果均为 `未验证`。  
+> **实施状态**：Phase 01–05 已完成代码交付并推送到 `codex/auth-session-upgrade`；本记录区分实际通过、未运行和环境阻塞项。
 > 本文件不替代 `00-master-plan.md` 或阶段设计文档。新 agent 接手时必须先读本文件，再核对 Git 和实际代码；记录与代码不一致时，先查明并修正记录。
 
 ---
@@ -84,11 +84,11 @@
 
 | 阶段 | 名称 | 状态 | 已完成内容 | 剩余内容 | 前置依赖 | 代码 commit | Push | GitHub 链接 |
 |---|---|---|---|---|---|---|---|---|
-| 01 | Contract & Logout Foundation | 未开始 | 无 | 全部 | 无 | 未记录 | 未验证 | 未记录 |
-| 02 | Shared Session Runtime | 未开始 | 无 | 全部 | Phase 01 已交付 | 未记录 | 未验证 | 未记录 |
-| 03 | Consumer Session Adoption | 未开始 | 无 | 全部 | Phase 02 已交付 | 未记录 | 未验证 | 未记录 |
-| 04 | Admin MFA & Session Adoption | 未开始 | 无 | 全部 | Phase 02 已交付 | 未记录 | 未验证 | 未记录 |
-| 05 | Integration / Multi-tab / Validation / Cleanup | 未开始 | 无 | 全部 | Phase 03 + 04 已交付 | 未记录 | 未验证 | 未记录 |
+| 01 | Contract & Logout Foundation | 已交付 | 统一 envelope、scoped cookies、fence/ack、logout/refresh/BFF 边界 | 无 | 无 | `93757480c3516f497304c9abe09c78f50fa6d9b8` | 已成功 | 已核对远端 |
+| 02 | Shared Session Runtime | 已交付 | 浏览器 session manager、single-flight、replay policy、RetryRequired、step-up 映射 | 无 | Phase 01 已交付 | `2514708530867bef9949866bf06ce3a7b19dad20` | 已成功 | 已核对远端 |
+| 03 | Consumer Session Adoption | 已交付 | Consumer 登录、恢复、账户/订阅/文件/密码页统一消费 manager | 无 | Phase 02 已交付 | `fa21e10d2fa4e57ec81e57a6c06176d8f36d716b` | 已成功 | 已核对远端 |
+| 04 | Admin MFA & Session Adoption | 已交付 | Admin MFA、enrollment partial success、recent proof recovery、因子状态 | 无 | Phase 02 已交付 | `4666792fd574917aba247b4d2d879ad3813d4597` | 已成功 | 已核对远端 |
+| 05 | Integration / Multi-tab / Validation / Cleanup | 已交付 | Admin 全页面迁移、多 Tab 终态提示、legacy scan、SDK/构建验证 | Windows `m5-05-install` 子进程回收仍需单独修复 | Phase 03 + 04 已交付 | `43374253ca6724eb9d4f4ee38f911bf50ac8e617` | 已成功 | 已核对远端 |
 
 ---
 
@@ -185,19 +185,21 @@ idempotent-mutation
 
 ### 状态
 
-`未开始`
+`已交付`
 
 ### 实际修改文件及职责
 
-- 未填写。
+- `packages/domain/src/contracts/*`：统一 API 错误/登出结果契约。
+- `packages/account-auth-nextjs/src/index.ts`、`src/cookie-policy.ts`：scoped cookie、fence/ack、显式 local revoke、terminal clear。
+- `apps/template-preview/app/api/auth/*`、`apps/admin/app/api/auth/*` 与两端 BFF：统一 envelope、Origin/CSRF、无隐式 refresh。
 
 ### 已实现的用户/系统行为
 
-- 未填写。
+- 登录成功写入 session acknowledgement；refresh 仅在有效 gate 下轮换；logout 在 remote revoke confirmed/unavailable 两种结果下都完成本地清理。
 
 ### 实际冻结/调整的数据模型、接口与契约
 
-- 未填写；默认遵循第 3 节。
+- 实际使用 Consumer/Admin 独立 cookie 名称；remote logout 使用 Supabase `scope=local`，5 秒超时和非 2xx 均为 `unavailable`。
 
 ### 与原计划偏差
 
@@ -209,15 +211,15 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 全部未开始。
+- Staging/生产及真实 Supabase Auth 流程未运行；浏览器 E2E 仍受本地 Supabase 停止和 Windows 脚本回收问题影响。
 
 ### 阶段交接
 
-- 下一阶段：Phase 02。
-- 必须先解决：Phase 01 尚未实施。
-- 可复用能力：待实施后填写。
-- 不应重复实施：待填写。
-- 当前未提交修改及归属：未验证。
+- 下一阶段：Phase 02（已交付）。
+- 必须先解决：无；真实 Supabase/Auth 与 staging 观察另行执行。
+- 可复用能力：`authCookieNames`、`authSessionGate`、`AuthSessionManager`。
+- 不应重复实施：不得在页面另造 refresh/replay/token store。
+- 当前未提交修改及归属：仅用户未跟踪 Frontend 独立计划目录，已保留。
 - 需要用户决定：当前无；执行时若发现实质冲突再记录。
 
 ---
@@ -226,27 +228,27 @@ idempotent-mutation
 
 ### Frontend consumption 实际结论
 
-- resolved/refreshing/mfa/expired machine semantics：未验证。
-- RetryRequired 是否不携带 request body/credential：未验证。
-- safe returnTo path/query/deep-link 行为：未验证。
-- shared runtime 是否保持无 React/`@kit/ui` 依赖：未验证。
+- resolved/refreshing/mfa/expired machine semantics：本地单测覆盖；真实浏览器未运行。
+- RetryRequired 是否不携带 request body/credential：实现仅返回固定错误，不携带请求内容；本地单测覆盖。
+- safe returnTo path/query/deep-link 行为：本地 Domain 单测覆盖 path、external 和敏感 query；真实浏览器未运行。
+- shared runtime 是否保持无 React/`@kit/ui` 依赖：已通过独立 SDK 打包与消费者导入验证。
 
 ### 状态
 
-`未开始`
+`已交付`
 
 ### 实际修改文件及职责
 
-- 未填写。
+- `packages/account-auth-nextjs/src/browser-session.ts`、`src/browser.ts`：惰性 browser manager、epoch、single-flight refresh、受控 replay 和 BroadcastChannel 终态提示。
+- `packages/account-auth-nextjs/tests/browser-session.test.ts`：并发刷新、读重放、mutation boundary、MFA 状态、refresh failure。
 
 ### 已实现的用户/系统行为
 
-- 未填写。
+- 初始 snapshot 保留 `resolved:false`；普通 mutation 不重放并抛出 `SessionRetryRequiredError`；二进制 body 不进入幂等重放。
 
 ### 实际冻结/调整的数据模型、接口与契约
 
-- 未填写；默认遵循第 3 节。
-- 执行时补充记录：SessionSnapshot→UI machine semantics、RetryRequired 安全字段、terminal transition、safe returnTo 实际支持范围。
+- `SessionSnapshot` 与 replay policy 已落在 `@kit/account-auth`；browser entry 不依赖 React/`@kit/ui`，terminal BroadcastChannel payload 仅含 scope/event。
 
 ### 与原计划偏差
 
@@ -258,15 +260,15 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 全部未开始。
+- 真实浏览器 viewport 与生产环境会话仍未运行。
 
 ### 阶段交接
 
 - 下一阶段：Phase 03 / 04（可并行）。
-- 必须先解决：Phase 02 尚未实施。
-- 可复用接口：待填写。
-- 不应重复实施：待填写。
-- 当前未提交修改及归属：未验证。
+- 必须先解决：无；真实浏览器 E2E 尚未运行。
+- 可复用接口：`createAuthSessionManager`、`SessionRetryRequiredError`、scoped cookie policy。
+- 不应重复实施：页面不应直接读取认证 cookie 或实现 401 refresh。
+- 当前未提交修改及归属：仅用户未跟踪 Frontend 独立计划目录，已保留。
 - 需要用户决定：当前无。
 
 ---
@@ -275,28 +277,24 @@ idempotent-mutation
 
 ### Frontend integration 实际结论
 
-- unresolved/refreshing/expired UI：未验证。
-- safe deep-link returnTo：未验证。
-- ordinary reauth intent authoritative refetch：未验证。
-- logout/expired terminal cleanup：未验证。
-- remote revoke unavailable 用户文案：未验证。
-- 320/375/390/768/1440px + keyboard/focus/error announcement：未验证。
+- Consumer 页面已统一 manager；本地类型检查和 BFF/unit 验证通过，真实浏览器状态转场未运行。
+- safe returnTo、remote revoke unavailable 文案和二进制不重放已落实；响应式/键盘回归未运行。
 
 ### 状态
 
-`未开始`
+`已交付`
 
 ### 实际修改文件及职责
 
-- 未填写。
+- Consumer 账户、订阅、文件、密码、注册、忘记密码和登录页统一使用 `/browser` session manager；写操作显式 `replay: never`。
 
 ### 已实现的用户/系统行为
 
-- 未填写。
+- 页面不再读取 CSRF cookie、不手工设置 Origin；文件字节流不自动重发，恢复后要求用户重新提交或刷新状态。
 
 ### 与相邻业务模块的保留规则
 
-- 未填写；必须特别记录 Files 二进制上传没有被通用 replay 改写。
+- Files 二进制上传显式使用 `replay: never`；普通 POST/PATCH/DELETE 也不自动重放，状态不确定时由页面提示用户刷新/重试。
 
 ### 与原计划偏差
 
@@ -308,15 +306,15 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 全部未开始。
+- 真实邮件、Storage 和浏览器 E2E 未运行。
 
 ### 阶段交接
 
 - 下一阶段：Phase 05（需同时等待 Phase 04）。
-- 必须先解决：Phase 03 尚未实施。
-- 可复用接口：待填写。
-- 不应重复实施：待填写。
-- 当前未提交修改及归属：未验证。
+- 必须先解决：无；真实邮件、Storage 和浏览器 E2E 尚未运行。
+- 可复用接口：Consumer `app/_lib/auth-session.ts`。
+- 不应重复实施：不新增第二套 token store 或页面级 refresh manager。
+- 当前未提交修改及归属：仅用户未跟踪 Frontend 独立计划目录，已保留。
 - 需要用户决定：当前无。
 
 ---
@@ -325,29 +323,25 @@ idempotent-mutation
 
 ### Frontend integration 实际结论
 
-- factor loading/empty/error/expired/rate-limit 分离：未验证。
-- MFA enrollment one-time secret UX：未验证。
-- safe deep-link returnTo：未验证。
-- step-up intent authoritative refetch：未验证。
-- Admin terminal cleanup：未验证。
-- Admin Security indicator 未成为 authorization authority：未验证。
-- 320/375/390/768/1440px + keyboard/focus/error announcement：未验证。
+- 因子空列表与错误、MFA one-time secret、partial proof failure 已落地；真实浏览器状态转场与响应式/键盘回归未运行。
+- 授权仍由 Admin API/session gate 决定，UI indicator 未作为 authority。
 
 ### 状态
 
-`未开始`
+`已交付`
 
 ### 实际修改文件及职责
 
-- 未填写。
+- Admin 登录、MFA 因子/绑定/验证、审计、平台、订阅、权益、文件和删除任务页统一使用 session manager。
+- Enrollment verify 与 existing-factor verify 共享 recent-proof helper；proof 失败时保留 elevated session 并返回 recovery details。
 
 ### 已实现的用户/系统行为
 
-- 未填写。
+- MFA challenge/enrollment 成功后写回提升 session；recent-proof 失败返回 `RECENT_MFA_REQUIRED` 与 `mfa_verified=true` details，保留提升 session，并允许 existing-factor recovery。
 
 ### MFA / proof 恢复实际结果
 
-- 未验证。
+- 本地类型检查通过；首次 enrollment 不再要求第二个 OTP，页面明确 proof partial failure 和一次性 secret 行为。
 
 ### 与原计划偏差
 
@@ -359,15 +353,15 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 全部未开始。
+- 真实 AAL2/远程 proof API 与浏览器响应式验证未运行。
 
 ### 阶段交接
 
 - 下一阶段：Phase 05（需同时等待 Phase 03）。
-- 必须先解决：Phase 04 尚未实施。
-- 可复用接口：待填写。
-- 不应重复实施：待填写。
-- 当前未提交修改及归属：未验证。
+- 必须先解决：无；真实 AAL2/proof API 与浏览器验证尚未运行。
+- 可复用接口：Admin `app/_lib/auth-session.ts` 与共享 recent-proof helper。
+- 不应重复实施：不在页面绕过 Admin API 或把 security indicator 当授权依据。
+- 当前未提交修改及归属：仅用户未跟踪 Frontend 独立计划目录，已保留。
 - 需要用户决定：当前无。
 
 ---
@@ -376,28 +370,24 @@ idempotent-mutation
 
 ### Frontend integration 最终收口
 
-- resolved/refreshing/expired 全量页面行为：未验证。
-- RetryRequired vs unknown_outcome 边界：未验证。
-- safe returnTo 与 open-redirect/敏感 URL 负向测试：未验证。
-- multi-tab terminal UI reaction / no event echo：未验证。
-- terminal cleanup vs refresh 503：未验证。
-- Auth responsive/accessibility final regression：未验证。
+- manager 单测、类型检查、独立消费者构建通过；真实浏览器 unresolved/refreshing/expired、双 Tab 与响应式回归未运行。
+- Domain safe returnTo 负向测试通过；mutation 不自动 replay，文件状态保留 unknown-outcome 语义。
 
 ### 状态
 
-`未开始`
+`已交付`
 
 ### 实际修改文件及职责
 
-- 未填写。
+- Admin 全量 protected page adoption、scoped BroadcastChannel、legacy cookie scan、SDK tarball/build 验证。
 
 ### 已实现的用户/系统行为
 
-- 未填写。
+- 单元/类型/合同/SDK 验证通过；独立消费者直接 Next production build 通过。
 
 ### Legacy path 清理结果
 
-- 未验证。
+- 旧 cookie、旧页面 fetch/Origin/CSRF 读取已清理；合法剩余匹配仅为 browser manager、API 测试 header 和 E2E header。
 
 ### 与原计划偏差
 
@@ -409,15 +399,15 @@ idempotent-mutation
 
 ### 尚未完成 / 未验证
 
-- 全部未开始。
+- `m5-05-install` 自动脚本的 Windows `next build` 子进程未正常回收，需后续单独修复测试 harness；不将其记为 PASS。
 
 ### 最终交接
 
 - 下一阶段：本期结束；后续类别另立计划。
-- 必须先解决：Phase 05 尚未实施。
-- 可复用能力：待填写。
-- 不应重复实施：待填写。
-- 当前未提交修改及归属：未验证。
+- 必须先解决：Windows `m5-05-install` harness 子进程回收问题、真实 Supabase/Auth 与浏览器回归。
+- 可复用能力：共享 `@kit/account-auth-nextjs/browser` manager、scoped cookie/fence/ack 适配器。
+- 不应重复实施：页面级 refresh/replay、token 暴露、二进制自动重传。
+- 当前未提交修改及归属：仅用户未跟踪 Frontend 独立计划目录，已保留。
 - 需要用户决定：当前无；执行中如出现实质冲突据实填写。
 
 ---
@@ -448,6 +438,15 @@ idempotent-mutation
 
 | 日期 | 阶段 | 被验证 SHA | 命令 | 环境 | 退出码 | 结果 | 失败/修复/复测 | 证据位置 |
 |---|---|---|---|---|---:|---|---|---|
+| 2026-09-09 | 01 | `9375748` | `pnpm --filter @kit/account-auth-nextjs test:unit` | Node 24.19.0 / Vitest | 0 | 9 tests PASS | adapter cookie/fence/revoke 覆盖 | package test output |
+| 2026-09-09 | 01 | `9375748` | `pnpm --filter template-preview test:unit` | Node 24.19.0 / Vitest | 0 | 9 tests PASS | BFF scoped gate/CSRF 覆盖 | app test output |
+| 2026-09-09 | 02 | `2514708` | `pnpm --filter @kit/account-auth-nextjs test:unit` | Node 24.19.0 / Vitest | 0 | 15 tests PASS | single-flight/replay/step-up/refresh failure | package test output |
+| 2026-09-09 | 03–05 | `4337425` | `pnpm typecheck` | Node 24.19.0 / Turbo | 0 | 9 tasks PASS | SDK pack pre-step included | turbo output |
+| 2026-09-09 | 03–05 | `4337425` | `pnpm test:unit` | Node 24.19.0 / Turbo | 0 | 6 packages PASS | no NOT_RUN marked PASS | turbo output |
+| 2026-09-09 | 05 | `4337425` | `pnpm contracts:check` | Node 24.19.0 | 0 | OpenAPI PASS, account 18/admin 36 operations | no failure | command output |
+| 2026-09-09 | 05 | `4337425` | `pnpm test:sdk:m5-02` | Node 24.19.0 / Windows | 0 | reproducible tarballs, boundary scan, independent install/import PASS | no failure | command output |
+| 2026-09-09 | 05 | `4337425` | direct `pnpm exec next build --webpack` in `E:\AppData\m5-template-consumer` | Node 24.19.0 / Next 16.3.0 | 0 | production build PASS | harness wrapper separately failed to reap child | command output |
+| 2026-09-09 | 05 | `4337425` | `pnpm test:consumer:m5-05` | Node 24.19.0 / Windows | NOT_RUN | harness did not return a completed result; `next build` child remained alive | direct build above is separate evidence; do not mark wrapper PASS | command output/process inspection |
 | 未执行 | 未开始 | 未记录 | 未执行 | 未验证 | 未记录 | 未验证 | 无 | 未记录 |
 
 ## 5.3 浏览器验证表
@@ -475,6 +474,10 @@ idempotent-mutation
 
 | 日期 | SHA | 场景 | 预期 | 实际 | 证据 | 状态 |
 |---|---|---|---|---|---|---|
+| 2026-09-09 | `9375748` | Origin/CSRF mismatch | 拒绝且不调用中央 API | Consumer BFF unit test PASS | `apps/template-preview/app/api/v1/[...path]/route.test.ts` | PASS |
+| 2026-09-09 | `2514708` | 403 MFA / refresh failure | 不触发 refresh loop；区分 terminal/transient | browser-session unit test PASS | `packages/account-auth-nextjs/tests/browser-session.test.ts` | PASS |
+| 2026-09-09 | `fa21e10` | Binary upload auth ambiguity | 不自动 replay bytes | Consumer files page 显式 `replay: never`；静态 scan PASS | `apps/template-preview/app/files/page.tsx` | PASS |
+| 2026-09-09 | `9375748` | Remote logout revoke 503 | local clear + `unavailable` | adapter test PASS | `packages/account-auth-nextjs/tests/adapter.test.ts` | PASS |
 | 未执行 | 未记录 | Origin mismatch | 拒绝 | 未验证 | 未记录 | 未验证 |
 | 未执行 | 未记录 | CSRF mismatch | 拒绝 | 未验证 | 未记录 | 未验证 |
 | 未执行 | 未记录 | 403 permission/MFA code | 不触发 refresh loop | 未验证 | 未记录 | 未验证 |
@@ -489,52 +492,52 @@ idempotent-mutation
 
 | 项目 | 实际证据 | 状态 |
 |---|---|---|
-| 同一 Tab 多个并发 401 仅一个 refresh | 未记录 | 未验证 |
-| refresh success 后 safe reads 各最多 replay 1 次 | 未记录 | 未验证 |
-| refresh 401 后全部进入 expired | 未记录 | 未验证 |
-| refresh 503 不误清 session | 未记录 | 未验证 |
-| single-flight settle 后后续 refresh 可重新发起 | 未记录 | 未验证 |
+| 同一 Tab 多个并发 401 仅一个 refresh | `browser-session.test.ts` 并发用例 | PASS |
+| refresh success 后 safe reads 各最多 replay 1 次 | `browser-session.test.ts` 并发用例 | PASS |
+| refresh 401 后进入 expired | `browser-session.test.ts` refresh failure 用例 | PASS |
+| refresh 503 不误清 session | `browser-session.test.ts` refresh failure 用例 | PASS |
+| single-flight settle 后后续 refresh 可重新发起 | 未单独覆盖 | 未验证 |
 
 ## 6.2 Mutation Replay Boundary
 
 | 项目 | 实际证据 | 状态 |
 |---|---|---|
-| 普通 mutation refresh 后不自动重放 | 未记录 | 未验证 |
-| idempotent mutation 若重放保留同一 key | 未记录 | 未验证 |
-| If-Match 不自动提升 replay 权限 | 未记录 | 未验证 |
-| 二进制/stream 永不自动重放 | 未记录 | 未验证 |
+| 普通 mutation refresh 后不自动重放 | `browser-session.test.ts` mutation 用例 | PASS |
+| idempotent mutation 若重放保留同一 key | `browser-session.test.ts` keyed mutation 用例 | PASS |
+| If-Match 不自动提升 replay 权限 | 实现默认按 HTTP method 判定；未单独覆盖 | 未验证 |
+| 二进制/stream 永不自动重放 | keyed binary fail-fast 单测 + Consumer 文件页显式 never | PASS |
 
 ## 6.3 Logout Partial Failure
 
 | 项目 | 实际证据 | 状态 |
 |---|---|---|
-| remote revoke success → local clear | 未记录 | 未验证 |
-| no access token → not_required + local clear | 未记录 | 未验证 |
-| remote revoke outage → unavailable + local clear | 未记录 | 未验证 |
-| 没有 token 持久重试队列 | 未记录 | 未验证 |
-| 其他 Tab 得到 logged_out 通知 | 未记录 | 未验证 |
+| remote revoke success → local clear | adapter revoke test + route implementation | PASS |
+| no access token → not_required + local clear | route implementation；未运行 route integration | 未验证 |
+| remote revoke outage → unavailable + local clear | adapter outage test | PASS |
+| 没有 token 持久重试队列 | 静态代码检查 | PASS |
+| 其他 Tab 得到 logged_out 通知 | BroadcastChannel 实现；真实双 Tab 未运行 | 未验证 |
 
 ## 6.4 MFA Enrollment Recovery
 
 | 项目 | 实际证据 | 状态 |
 |---|---|---|
-| Enrollment verify 后 AAL2 | 未记录 | 未验证 |
-| 同一次 verify 签发 recent proof | 未记录 | 未验证 |
-| 不要求冗余第二个 OTP | 未记录 | 未验证 |
-| proof API 失败后 factor 仍显示 verified | 未记录 | 未验证 |
-| 可以 existing-factor verify 恢复 proof | 未记录 | 未验证 |
-| refresh 不延长 5 分钟 proof | 未记录 | 未验证 |
+| Enrollment verify 后 AAL2 | route implementation；真实 Auth 未运行 | 未验证 |
+| 同一次 verify 签发 recent proof | shared helper + route implementation；真实 proof API 未运行 | 未验证 |
+| 不要求冗余第二个 OTP | MFA page flow + typecheck | PASS |
+| proof API 失败后 factor 仍显示 verified | partial response details + page recovery copy；真实 API 未运行 | 未验证 |
+| 可以 existing-factor verify 恢复 proof | route/page flow implemented；真实 API 未运行 | 未验证 |
+| refresh 不延长 5 分钟 proof | cookie TTL implementation | PASS |
 
 ## 6.5 Multi-tab
 
 | 项目 | 实际证据 | 状态 |
 |---|---|---|
-| Consumer logged_out 只影响 Consumer scope | 未记录 | 未验证 |
-| Admin logged_out 只影响 Admin scope | 未记录 | 未验证 |
-| session_expired 只在确定 refresh 401 后广播 | 未记录 | 未验证 |
-| refresh 503 不广播 expired | 未记录 | 未验证 |
-| Channel payload 无敏感数据 | 未记录 | 未验证 |
-| BroadcastChannel 不可用时单 Tab 安全工作 | 未记录 | 未验证 |
+| Consumer logged_out 只影响 Consumer scope | channel handler scope check | PASS（静态） |
+| Admin logged_out 只影响 Admin scope | channel handler scope check | PASS（静态） |
+| session_expired 只在确定 refresh 401 后广播 | refresh 401 branch | PASS（静态） |
+| refresh 503 不广播 expired | transient branch has no broadcast | PASS（静态） |
+| Channel payload 无敏感数据 | payload only `{scope,event}` | PASS（静态） |
+| BroadcastChannel 不可用时单 Tab 安全工作 | feature detection and optional channel | PASS（静态） |
 
 ---
 
@@ -576,12 +579,12 @@ idempotent-mutation
 
 | 搜索模式 | 剩余匹配 | 合法归属说明 | 需清理项 | 状态 |
 |---|---|---|---|---|
-| `/api/auth/refresh` | 未扫描 | 未验证 | 未判断 | 未验证 |
-| `/api/auth/logout` | 未扫描 | 未验证 | 未判断 | 未验证 |
-| `payload.data.code` / optional variant | 未扫描 | 未验证 | 未判断 | 未验证 |
-| `aisenhub-csrf` | 未扫描 | 未验证 | 未判断 | 未验证 |
-| `X-CSRF-Token` | 未扫描 | 未验证 | 未判断 | 未验证 |
-| page-level 401 refresh logic | 未扫描 | 未验证 | 未判断 | 未验证 |
+| `/api/auth/refresh` | route + manager config | auth lifecycle endpoint, not page-level fetch | 无 | PASS |
+| `/api/auth/logout` | route + manager config | auth lifecycle endpoint, not page-level fetch | 无 | PASS |
+| `payload.data.code` / optional variant | 0 in app/package/test scan | all auth UI reads `payload.error.code`; `data.codes` is redemption data | 无 | PASS |
+| `aisenhub-csrf` | 0 in app/package/test scan | replaced by scoped names and manager cookie policy | 无 | PASS |
+| `X-CSRF-Token` | manager, BFF and E2E tests | legitimate transport contract; no page manually reads/writes it | 无 | PASS |
+| page-level 401 refresh logic | 0 | centralized in `AuthSessionManager` | 无 | PASS |
 
 ---
 
@@ -602,11 +605,11 @@ idempotent-mutation
 
 | 阶段 | Branch | 代码 commit SHA | 记录 commit SHA | Push 是否成功 | Remote 已包含代码 SHA | GitHub 链接 | 备注 |
 |---|---|---|---|---|---|---|---|
-| 01 | 未记录 | 未记录 | 未记录 | 未验证 | 未验证 | 未记录 | 未开始 |
-| 02 | 未记录 | 未记录 | 未记录 | 未验证 | 未验证 | 未记录 | 未开始 |
-| 03 | 未记录 | 未记录 | 未记录 | 未验证 | 未验证 | 未记录 | 未开始 |
-| 04 | 未记录 | 未记录 | 未记录 | 未验证 | 未验证 | 未记录 | 未开始 |
-| 05 | 未记录 | 未记录 | 未记录 | 未验证 | 未验证 | 未记录 | 未开始 |
+| 01 | `codex/auth-session-upgrade` | `93757480c3516f497304c9abe09c78f50fa6d9b8` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 02 | `codex/auth-session-upgrade` | `2514708530867bef9949866bf06ce3a7b19dad20` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 03 | `codex/auth-session-upgrade` | `fa21e10d2fa4e57ec81e57a6c06176d8f36d716b` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 04 | `codex/auth-session-upgrade` | `4666792fd574917aba247b4d2d879ad3813d4597` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付 |
+| 05 | `codex/auth-session-upgrade` | `43374253ca6724eb9d4f4ee38f911bf50ac8e617` | 待记录提交 SHA | 已成功 | 已核对 | [branch](https://github.com/aisenhub/Aisenhubplatform/tree/codex/auth-session-upgrade) | 已交付（wrapper E2E 保留 NOT_RUN） |
 
 ## 8.3 Push 失败记录
 
@@ -656,14 +659,14 @@ idempotent-mutation
 
 ## 当前阶段
 
-- 下一阶段：Phase 01 — Contract & Logout Foundation。
-- 当前状态：未开始。
+- 当前阶段：本期完成（Phase 01–05 已交付）。
+- 当前状态：已交付；真实 Supabase/Auth、浏览器双 Tab/响应式回归和 Windows `m5-05-install` harness 修复仍是后续验证项。
 
 ## 必须先解决的问题
 
-- 执行 agent 必须填入项目绝对路径并核对 Git remote/branch/start SHA/worktree。
-- 必须核对当前本地 dependency/Next/Supabase/测试脚本是否与研究快照一致。
-- 必须实际确认现有 E2E 的 Deno 路径是否阻塞当前环境。
+- 已核对项目绝对路径、Git remote/branch/start SHA、依赖版本和 Deno 路径。
+- 已完成 Phase 01–05 代码提交、逐阶段推送和远端 SHA 核对。
+- 浏览器/真实 Supabase 验证与 Windows harness 问题已保留为未完成项，不虚报通过。
 
 ## 可以直接复用的已知能力
 
@@ -683,7 +686,7 @@ idempotent-mutation
 
 ## 当前未提交修改及其归属
 
-- 未验证；由执行 agent 接手时核对。
+- 仅保留用户提供的 `docs/plans/aisenhub-frontend-experience-state-upgrade-plan/` 未跟踪目录；未暂存、未修改。
 
 ## 需要用户决定的事项
 
