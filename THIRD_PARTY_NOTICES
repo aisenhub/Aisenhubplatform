@@ -1,0 +1,9 @@
+Third-party notices for Aisenhubplatform
+
+MakerKit Lite
+- Source: https://github.com/makerkit/nextjs-saas-starter-kit-lite
+- Fixed commit: c5cba64391a80620309c4178163dc2df42568d1b
+- License: MIT
+- The upstream LICENSE file is retained at the repository root.
+
+T02 imports only the reviewed foundation files and does not import Starter business data, production credentials, or the upstream tracked environment files.

@@ -1,0 +1,622 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export type Database = {
+  public: {
+    Tables: {
+      audit_logs: {
+        Row: {
+          actor_type: string;
+          actor_user_id: string | null;
+          created_at: string;
+          event_type: string;
+          id: string;
+          ip: unknown;
+          metadata: Json;
+          platform_account_id: string | null;
+          platform_id: string | null;
+          request_id: string;
+          target_id: string | null;
+          target_type: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          actor_type: string;
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          ip?: unknown;
+          metadata?: Json;
+          platform_account_id?: string | null;
+          platform_id?: string | null;
+          request_id: string;
+          target_id?: string | null;
+          target_type: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          actor_type?: string;
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          ip?: unknown;
+          metadata?: Json;
+          platform_account_id?: string | null;
+          platform_id?: string | null;
+          request_id?: string;
+          target_id?: string | null;
+          target_type?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'audit_logs_platform_id_fkey';
+            columns: ['platform_id'];
+            isOneToOne: false;
+            referencedRelation: 'platforms';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'audit_logs_platform_id_platform_account_id_fkey';
+            columns: ['platform_id', 'platform_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'platform_accounts';
+            referencedColumns: ['platform_id', 'id'];
+          },
+        ];
+      };
+      platform_config_files: {
+        Row: {
+          actual_size_bytes: number | null;
+          cancel_requested_at: string | null;
+          created_at: string;
+          delete_requested_at: string | null;
+          deleted_at: string | null;
+          fencing_token: number;
+          id: string;
+          intent_expires_at: string;
+          lease_until: string | null;
+          last_error_code: string | null;
+          mime_type: string | null;
+          original_name: string;
+          next_attempt_at: string;
+          over_quota: boolean;
+          platform_account_id: string;
+          platform_id: string;
+          purpose: string | null;
+          replaces_file_id: string | null;
+          reserved_bytes: number;
+          reserved_count: number;
+          retry_count: number;
+          sha256: string | null;
+          status: string;
+          storage_bucket: string;
+          storage_path: string;
+          uploaded_at: string | null;
+          updated_at: string;
+          requested_size_bytes: number;
+          write_outcome: string;
+        };
+        Insert: {
+          actual_size_bytes?: number | null;
+          cancel_requested_at?: string | null;
+          created_at?: string;
+          delete_requested_at?: string | null;
+          deleted_at?: string | null;
+          fencing_token?: number;
+          id?: string;
+          intent_expires_at: string;
+          lease_until?: string | null;
+          last_error_code?: string | null;
+          mime_type?: string | null;
+          original_name: string;
+          next_attempt_at?: string;
+          over_quota?: boolean;
+          platform_account_id: string;
+          platform_id: string;
+          purpose?: string | null;
+          replaces_file_id?: string | null;
+          reserved_bytes?: number;
+          reserved_count?: number;
+          retry_count?: number;
+          sha256?: string | null;
+          status?: string;
+          storage_bucket?: string;
+          storage_path: string;
+          uploaded_at?: string | null;
+          updated_at?: string;
+          requested_size_bytes: number;
+          write_outcome?: string;
+        };
+        Update: {
+          actual_size_bytes?: number | null;
+          cancel_requested_at?: string | null;
+          created_at?: string;
+          delete_requested_at?: string | null;
+          deleted_at?: string | null;
+          fencing_token?: number;
+          id?: string;
+          intent_expires_at?: string;
+          lease_until?: string | null;
+          last_error_code?: string | null;
+          mime_type?: string | null;
+          original_name?: string;
+          next_attempt_at?: string;
+          over_quota?: boolean;
+          platform_account_id?: string;
+          platform_id?: string;
+          purpose?: string | null;
+          replaces_file_id?: string | null;
+          reserved_bytes?: number;
+          reserved_count?: number;
+          retry_count?: number;
+          sha256?: string | null;
+          status?: string;
+          storage_bucket?: string;
+          storage_path?: string;
+          uploaded_at?: string | null;
+          updated_at?: string;
+          requested_size_bytes?: number;
+          write_outcome?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_config_files_platform_id_platform_account_id_fkey';
+            columns: ['platform_id', 'platform_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'platform_accounts';
+            referencedColumns: ['platform_id', 'id'];
+          },
+          {
+            foreignKeyName: 'platform_config_files_platform_id_platform_account_id_replaces_file_id_fkey';
+            columns: ['platform_id', 'platform_account_id', 'replaces_file_id'];
+            isOneToOne: false;
+            referencedRelation: 'platform_config_files';
+            referencedColumns: ['platform_id', 'platform_account_id', 'id'];
+          },
+        ];
+      };
+      platform_file_policies: {
+        Row: {
+          enabled: boolean;
+          max_file_bytes: number;
+          max_files: number;
+          max_total_bytes: number;
+          platform_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          enabled?: boolean;
+          max_file_bytes?: number;
+          max_files?: number;
+          max_total_bytes?: number;
+          platform_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          enabled?: boolean;
+          max_file_bytes?: number;
+          max_files?: number;
+          max_total_bytes?: number;
+          platform_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_file_policies_platform_id_fkey';
+            columns: ['platform_id'];
+            isOneToOne: true;
+            referencedRelation: 'platforms';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      plans: {
+        Row: {
+          code: string;
+          created_at: string;
+          description: string | null;
+          features: Json;
+          id: string;
+          kind: string;
+          name: string;
+          platform_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          code: string;
+          created_at?: string;
+          description?: string | null;
+          features?: Json;
+          id?: string;
+          kind: string;
+          name: string;
+          platform_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          description?: string | null;
+          features?: Json;
+          id?: string;
+          kind?: string;
+          name?: string;
+          platform_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'plans_platform_id_fkey';
+            columns: ['platform_id'];
+            isOneToOne: false;
+            referencedRelation: 'platforms';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      platform_accounts: {
+        Row: {
+          activated_at: string;
+          anonymized_at: string | null;
+          closed_at: string | null;
+          created_at: string;
+          id: string;
+          last_login_at: string | null;
+          platform_id: string;
+          status: string;
+          suspended_at: string | null;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          activated_at?: string;
+          anonymized_at?: string | null;
+          closed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          last_login_at?: string | null;
+          platform_id: string;
+          status?: string;
+          suspended_at?: string | null;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          activated_at?: string;
+          anonymized_at?: string | null;
+          closed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          last_login_at?: string | null;
+          platform_id?: string;
+          status?: string;
+          suspended_at?: string | null;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_accounts_platform_id_fkey';
+            columns: ['platform_id'];
+            isOneToOne: false;
+            referencedRelation: 'platforms';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      platform_auth_origins: {
+        Row: {
+          created_at: string;
+          email_confirmation_url: string;
+          environment: string;
+          id: string;
+          oauth_callback_url: string;
+          origin: string;
+          password_reset_url: string;
+          platform_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          email_confirmation_url: string;
+          environment: string;
+          id?: string;
+          oauth_callback_url: string;
+          origin: string;
+          password_reset_url: string;
+          platform_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          email_confirmation_url?: string;
+          environment?: string;
+          id?: string;
+          oauth_callback_url?: string;
+          origin?: string;
+          password_reset_url?: string;
+          platform_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_auth_origins_platform_id_fkey';
+            columns: ['platform_id'];
+            isOneToOne: false;
+            referencedRelation: 'platforms';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      platform_preferences: {
+        Row: {
+          platform_account_id: string;
+          preferences: Json;
+          row_version: number;
+          updated_at: string;
+        };
+        Insert: {
+          platform_account_id: string;
+          preferences?: Json;
+          row_version?: number;
+          updated_at?: string;
+        };
+        Update: {
+          platform_account_id?: string;
+          preferences?: Json;
+          row_version?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_preferences_platform_account_id_fkey';
+            columns: ['platform_account_id'];
+            isOneToOne: true;
+            referencedRelation: 'platform_accounts';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      platform_profiles: {
+        Row: {
+          avatar_url: string | null;
+          bio: string | null;
+          created_at: string;
+          display_name: string | null;
+          locale: string | null;
+          metadata: Json;
+          platform_account_id: string;
+          row_version: number;
+          timezone: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          bio?: string | null;
+          created_at?: string;
+          display_name?: string | null;
+          locale?: string | null;
+          metadata?: Json;
+          platform_account_id: string;
+          row_version?: number;
+          timezone?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          bio?: string | null;
+          created_at?: string;
+          display_name?: string | null;
+          locale?: string | null;
+          metadata?: Json;
+          platform_account_id?: string;
+          row_version?: number;
+          timezone?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_profiles_platform_account_id_fkey';
+            columns: ['platform_account_id'];
+            isOneToOne: true;
+            referencedRelation: 'platform_accounts';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      platforms: {
+        Row: {
+          allow_activation: boolean;
+          code: string;
+          config: Json;
+          created_at: string;
+          default_locale: string | null;
+          default_plan_id: string | null;
+          default_plan_kind: string;
+          id: string;
+          name: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          allow_activation?: boolean;
+          code: string;
+          config?: Json;
+          created_at?: string;
+          default_locale?: string | null;
+          default_plan_id?: string | null;
+          default_plan_kind?: string;
+          id?: string;
+          name: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          allow_activation?: boolean;
+          code?: string;
+          config?: Json;
+          created_at?: string;
+          default_locale?: string | null;
+          default_plan_id?: string | null;
+          default_plan_kind?: string;
+          id?: string;
+          name?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_default_free_plan_fk';
+            columns: ['id', 'default_plan_id', 'default_plan_kind'];
+            isOneToOne: false;
+            referencedRelation: 'plans';
+            referencedColumns: ['platform_id', 'id', 'kind'];
+          },
+        ];
+      };
+    };
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
+  };
+};
+
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>;
+type DefaultSchema = DatabaseWithoutInternals[Extract<
+  keyof Database,
+  'public'
+>];
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+      Row: infer R;
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] &
+        DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] &
+        DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
+      }
+      ? R
+      : never
+    : never;
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema['Tables']
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Insert: infer I;
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I;
+      }
+      ? I
+      : never
+    : never;
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema['Tables']
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Update: infer U;
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U;
+      }
+      ? U
+      : never
+    : never;
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema['Enums']
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+    : never;
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema['CompositeTypes']
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+    : never;
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const;

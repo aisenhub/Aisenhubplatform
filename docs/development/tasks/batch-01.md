@@ -2,32 +2,32 @@
 
 版本DP1，基于[总计划](../master-plan.md)、[公共合同](../contracts.md)与[验证目录](../verification-plan.md)。本批目标是完成开发基座、公共数据库设施和账户纵向链路，**不包含正式开发权益、文件业务或生产部署**；文件/事务探针只验证技术可行性。
 
-当前所有应用任务未执行，T01可派发，其余按依赖等待。任务派发后执行者读取根AGENTS和对应模块规格，先检查依赖证据，不把已有规划文字当作依赖已完成。
+当前应用实现已推进至首批后段：T01～T11、T13～T15有分范围Local交付，T12/T16/T17仍PARTIAL，T18 WAITING。T13～T15的SQL/部分SDK完成不代表全部HTTP/UI完成。剩余范围以[DP2收尾细化](closeout-01.md)和[校准证据](../evidence/DP2-baseline.md)承接；M3 Local交付见[第二批](batch-02.md)，文件计划见[第三批](batch-03.md)。执行者先检查依赖证据，不把任务清单当作已授权实现。
 
 ## 任务导航
 
 | 任务 | 内容 | 依赖 | 当前状态 |
 |---|---|---|---|
-| T01 | 环境、上游与导入清单核验 | 无 | READY |
-| T02 | 固定版本导入与Admin-only骨架 | T01 | WAITING |
-| T03 | 双运行时公共边界、脚本与CI | T02 | WAITING |
-| T04 | Auth/SSR/MFA与近期认证探针 | T03 | WAITING |
-| T05 | 私有SQL/pooler/角色探针 | T03 | WAITING |
-| T06 | 受控上传与真实字节边界探针 | T03 | WAITING |
-| T07 | 双连接事务、幂等与回滚探针 | T05 | WAITING |
-| T08 | 核心平台与账户迁移 | T05,T07 | WAITING |
-| T09 | 安全辅助表、角色和内部helper | T08,T04 | WAITING |
-| T10 | 数据库负向与事务设施验收 | T09,T07 | WAITING |
-| T11 | OpenAPI、SQL context和错误合同冻结 | T10,T04 | WAITING |
-| T12 | Auth SDK、SSR adapter和Admin鉴权 | T11 | WAITING |
-| T13 | Platform Key、Principal与Admin平台基础 | T12,T10 | WAITING |
-| T14 | 激活、状态控制、关闭与删除请求 | T13 | WAITING |
-| T15 | Profile、Preferences与公开Plan | T14,T11 | WAITING |
-| T16 | 最小Consumer/BFF纵向集成 | T15,T12 | WAITING |
-| T17 | 托管环境探针与真实Auth验收 | T16,T06 | WAITING |
+| T01 | 环境、上游与导入清单核验 | 无 | DONE |
+| T02 | 固定版本导入与Admin-only骨架 | T01 | DONE |
+| T03 | 双运行时公共边界、脚本与CI | T02 | DONE |
+| T04 | Auth/SSR/MFA与近期认证探针 | T03 | DONE（Local；托管/浏览器留T17） |
+| T05 | 私有SQL/pooler/角色探针 | T03 | DONE |
+| T06 | 受控上传与真实字节边界探针 | T03 | DONE |
+| T07 | 双连接事务、幂等与回滚探针 | T05 | DONE |
+| T08 | 核心平台与账户迁移 | T05,T07 | DONE |
+| T09 | 安全辅助表、角色和内部helper | T08,T04 | DONE |
+| T10 | 数据库负向与事务设施验收 | T09,T07 | DONE |
+| T11 | OpenAPI、SQL context和错误合同冻结 | T10,T04 | DONE |
+| T12 | Auth SDK、SSR adapter和Admin鉴权 | T11 | PARTIAL/BLOCKED |
+| T13 | Platform Key、Principal与Admin平台基础 | T12,T10 | DONE |
+| T14 | 激活、状态控制、关闭与删除请求 | T13 | DONE |
+| T15 | Profile、Preferences与公开Plan | T14,T11 | DONE |
+| T16 | 最小Consumer/BFF纵向集成 | T15,T12 | PARTIAL/BLOCKED |
+| T17 | 托管环境探针与真实Auth验收 | T16,T06 | PARTIAL（基础 Auth/API 与 logout 旧 JWT 拒绝已完成；X02/X03、pooler/TLS、浏览器/Storage仍待完成） |
 | T18 | G1/G2验收、首批交接与下一批细化 | T16,T17 | WAITING |
 
-T04/T05/T06依赖相同，可按资源独立安排，但不自动授权多agent。T17还需要X01/X02/X03，缺失时T16仍可本地完成；T18可提前整理G2-L材料，但T17未过不能宣称整批托管验收完成。
+T04/T05/T06依赖相同，可按资源独立安排，但不自动授权多agent。T17已获得X01 Staging项目并完成仓库迁移、Edge部署和基础 Auth/API 探针；仍需要X02/X03、托管 pooler/TLS、浏览器/Storage条件才能完成真实托管验收。T18可提前整理G2-L材料，但T17未过不能宣称整批托管验收完成。
 
 ## 通用执行合同
 
@@ -233,7 +233,7 @@ Close和Global Delete request按T04/T11近期认证协议，删除请求只是pe
 
 扫描Browser bundle确认无Platform/Supabase Secret/SQL凭据，测试Token刷新不串用户、CSRF/returnTo/缓存、authorization unavailable不放行。BFF真正调用打包前SDK，不在测试中绕过中央API直连表。
 
-验收：G2-L与V-AUTH/ACCOUNT已交付矩阵，M0/M1/M2本地命令可复现。不要声称完整Registry安装或权益/文件已完成。
+验收：G2-L与V-AUTH-01/02/03/04、V-ACCOUNT-01/02/03/04/05已交付矩阵，M0/M1/M2本地命令可复现。不要声称完整Registry安装或权益/文件已完成。
 
 ## T17 — 托管环境探针与真实Auth验收
 
@@ -256,10 +256,10 @@ Close和Global Delete request按T04/T11近期认证协议，删除请求只是pe
 
 核对T01～T17真实commit/证据、G1/G2-L/G2-S状态、Schema/OpenAPI/SDK兼容、无未关闭安全问题。使用干净依赖与Local库复现关键链路，核对远端已推送。
 
-把M3权益/兑换和M4文件规格细化为下一批任务：依赖已实现函数和fixture，不重新复制公共设施；为每项关联V-ENT/REDEEM/FILE/JOB用例与代码范围。
+M3已形成第二批Local交付，M3-R1补完整证据收口；M4已在DP2形成第三批细化。T18负责在真实验收后复核这些计划与实际函数/fixture的一致性，不因计划提前完成就宣称T18依赖通过。详见收尾文件T18-L/T18-S。
 
 验收：首批应用完成报告、真实未解决项、下一批任务清单。T17缺输入时只能交付本地阶段总结，T18保持部分完成/WAITING，不将整个首批标DONE。
 
-## 可直接派发的首项指令
+## 历史首项派发指令（T01已完成，不重复执行）
 
 > 执行docs/development/tasks/batch-01.md中的T01。先读取AGENTS.md、架构主文档、M0规格与决策登记；完成环境和固定上游核验、导入清单及版本差异报告。不要导入或开发应用代码，不安装到C盘默认目录，不执行T02。将脱敏证据与来源记录提交到任务分支，推送到指定GitHub仓库并核对远端commit，最后报告T02是否具备启动条件。

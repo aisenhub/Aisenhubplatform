@@ -1,0 +1,49 @@
+{
+  "name": "@kit/domain",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js",
+      "default": "./dist/contracts/index.js"
+    },
+    "./errors": {
+      "types": "./dist/contracts/errors.d.ts",
+      "import": "./dist/contracts/errors.js",
+      "default": "./dist/contracts/errors.js"
+    },
+    "./validation": {
+      "types": "./dist/contracts/validation.d.ts",
+      "import": "./dist/contracts/validation.js",
+      "default": "./dist/contracts/validation.js"
+    },
+    "./redemption": {
+      "types": "./dist/redemption.d.ts",
+      "import": "./dist/redemption.js",
+      "default": "./dist/redemption.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "@kit/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

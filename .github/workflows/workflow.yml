@@ -1,0 +1,63 @@
+name: Workflow
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  quality:
+    name: M0 quality checks
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: 'pnpm'
+
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.6
+
+      - name: Format check
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit tests
+        run: pnpm run test:unit
+
+      - name: Runtime import probe
+        run: pnpm run runtime:probe
+
+      - name: Documentation check
+        run: pnpm run docs:check
+
+      - name: OpenAPI contract check
+        run: pnpm run contracts:check

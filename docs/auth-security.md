@@ -54,6 +54,8 @@ Admin Auth adapter在官方MFA验证成功后写入 private.admin_step_up：user
 
 Admin数据库入口的授权包装函数重新检查成员、会话、AAL2已验证上下文及step-up证明，再调用共用领域函数；Account executor无权调用Admin包装或记录step-up。数据库不自行验证HTTP JWT签名，由服务器Auth adapter验证后传入受控上下文。
 
+普通用户的近期认证使用独立的 Supabase email sign-in 事件：当前业务会话先由 BFF 恢复并确认用户，邮件中的 `token_hash` 在不持久化的临时 Auth client 中验证，随后 BFF 只把临时 access token 通过 `X-Reauth-Access-Token` 传给中央 Account API。中央 API 分别验证当前 bearer 与事件 token 的 Auth 用户、解析出的 `session_id`，并由窄范围的 security-definer helper 检查事件 session 属于同一用户、创建时间在 5 分钟内且仍有效；proof 只写入原业务 session，临时 session 在 BFF 中撤销且不会返回浏览器。邮件 token 不放入中央 API body、proof cookie 仍为 HttpOnly，缺少任一事件/绑定/撤销证据即拒绝。该实现不把 `iat`、AAL2 或客户端布尔值当作近期认证证明；Supabase 的 `reauthenticate()`/nonce 流程仍仅保留为资料或密码变更语义，不作为本 proof 协议。
+
 ## 6. 私有数据库调用和 RLS
 
 固定路径：Account/Admin SQL repository → TLS事务连接池 → private领域函数；不通过supabase.rpc调用未暴露schema，不将private加入Data API exposed schemas。连接只在短事务内占用，禁止依赖跨请求session变量、会话级锁或命名prepared statement；项目连接串使用真实部署返回的pooler地址，不手工推测主机名。

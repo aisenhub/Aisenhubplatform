@@ -2,6 +2,23 @@
 
 基线日期2026-09-07。状态：CONFIRMED为用户确认或既定领域边界；DEFAULT为可用于本地实现的工程默认；VERIFY为需运行验证；EXTERNAL为需项目所有者提供的真实环境信息。
 
+## DP2状态增补（2026-09-08）
+
+下方2026-09-07工具记录为历史核对，不代表当前仍缺工具：T02已导入固定上游并安装项目依赖，固定CLI为2.111.0，T03记录Deno安装到D盘。具体版本以lock与执行时核对为准，本轮未安装/升级软件。
+
+| 项目 | 当前证据边界 | 承接 |
+|---|---|---|
+| X01 | Staging基础已建立并有历史探针记录 | T17-R1执行前重新核对目标与权限 |
+| X02/X03 | 托管站点/代理链、Google/SMTP仍未闭环 | T17-R2/R3；不能将配置缺口写成实现PASS |
+| X04/X05/X06 | 当前证据未证明已提供 | M6-01整理，实际备份/发布/容量前确认 |
+| D05 | Local角色/pooler有证据，托管独立身份/TLS仍未证明 | T17-R1 |
+| D06 | Admin Local MFA/proof有证据，普通reauth及浏览器待补 | T12-R2、T17-R2 |
+| 网关差异 | 已按安全专题及官方指南将仓库 `account-api` 配置改为 `verify_jwt=false`；远端旧部署未变更/未重验 | T17-R1；由 adapter 执行逐路由 Platform Key/JWT/AAL2 检查，hosted 矩阵待受控输入 |
+| 会话范围 | 当前logout调用未显式scope，不宣称local语义已验收 | T12-R1双独立会话实测 |
+| 文件/备份交界 | M4需持久屏障，M6负责真实备份与外部墓碑 | M4-01/02/05和M6-01/02，保持原领域不变量 |
+
+本表只校准验证状态，不改变P01～P08默认值或预先批准外部资源。详细任务见[收尾](tasks/closeout-01.md)、[第三批](tasks/batch-03.md)及[后续路线](roadmap-dp2.md)。
+
 ## 1. 已确定的设计
 
 | ID | 决策 | 状态 | 实施影响 |
@@ -14,6 +31,7 @@
 | D06 | Admin近期MFA证明绑定session、5分钟有效 | VERIFY | SP-AUTH证明不能靠refresh续期 |
 | D07 | unknown写入不释放预算，不猜测Storage已取消 | 基线固定 | M4给出保持占用/人工处理路径 |
 | D08 | M1只建立可审计删除请求/门闩骨架，M4完成对象相关清除 | 实施顺序固定 | 不在M2提供可用的半成品Global Purge |
+| D09 | 普通近期认证采用独立 email `token_hash` Auth session；中央 proof 绑定原业务 session，临时 session 必须撤销 | VERIFY（Local已实测） | BFF不得返回临时token；Account API验证双session与5分钟Auth session窗口，无法核实时拒绝 |
 
 ## 2. 上游及工具核对事实
 
@@ -27,7 +45,7 @@
 
 引用：[固定commit](https://github.com/makerkit/nextjs-saas-starter-kit-lite/tree/c5cba64391a80620309c4178163dc2df42568d1b)、[依赖catalog](https://github.com/makerkit/nextjs-saas-starter-kit-lite/blob/c5cba64391a80620309c4178163dc2df42568d1b/pnpm-workspace.yaml)。
 
-导入使用上述固定commit及其lockfile；先审查安装脚本和依赖可获得性，再clean install。pnpm按上游11.18.0固定，不能因本机存在11.24.0就静默改锁文件。Node使用本机已存在的24.19.0并记录CI一致版本。Supabase CLI和Deno由T01核实已有路径、兼容版本与官方分发后精确锁定到toolchain记录；不虚构尚未验证的版本号。
+导入使用上述固定commit及其lockfile；先审查安装脚本和依赖可获得性，再clean install。pnpm按上游11.18.0固定，不能因本机存在11.24.0就静默改锁文件。Node使用本机已存在的24.19.0并记录CI一致版本。Supabase CLI与Deno不在当前PATH；T01又检查了`D:\APP\Codex`、`D:\APP\Base`、常见用户程序目录及npm bin目录，仍未发现对应可执行文件。这只记录已检查范围，不声称全盘未安装。Supabase CLI优先采用项目内由lock固定的`2.111.0`并通过`pnpm exec supabase`运行；Deno尚无可验证版本，T03前按D盘安装规则补齐并记录，不虚构版本号。
 
 项目测试优先现有Vitest/Playwright/pgTAP；不另引入第二套测试框架。上游脚本中的git clean、自动fix、生产deploy快捷命令先禁用/改为受控操作，不能在导入时直接执行。
 

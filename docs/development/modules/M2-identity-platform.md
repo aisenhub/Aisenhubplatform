@@ -1,6 +1,6 @@
 # M2 身份、平台与账户实施规格
 
-状态：待实施；依赖M1公共设施、SP-AUTH/SP-SQL本地结论。依据[安全](../../auth-security.md)、[API](../../api-sdk.md)、[公共合同](../contracts.md)。
+状态：IN_PROGRESS；已有SQL/部分SDK/HTTP及密码登录链路，T12/T16仍PARTIAL。依赖M1公共设施、SP-AUTH/SP-SQL结论；剩余任务见[DP2收尾](../tasks/closeout-01.md)。依据[安全](../../auth-security.md)、[API](../../api-sdk.md)、[公共合同](../contracts.md)。
 
 ## 1. 范围与纵向链路
 

@@ -14,8 +14,10 @@ node_modules/
 .turbo/
 dist/
 build/
+artifacts/
 coverage/
 .pnpm-store/
+.deno-cache/
 
 # Local services, reports and temporary output
 supabase/.temp/
@@ -25,6 +27,7 @@ playwright-report/
 *.log
 *.dump
 *.backup
+*.tsbuildinfo
 __pycache__/
 .DS_Store
 Thumbs.db

@@ -1,0 +1,6 @@
+{
+  "lock": false,
+  "tasks": {
+    "runtime:probe": "deno run --allow-read tests/spikes/runtime/deno-import.ts"
+  }
+}

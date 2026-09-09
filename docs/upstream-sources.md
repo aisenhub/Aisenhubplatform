@@ -38,3 +38,27 @@
 本轮开发规划补充了[固定commit与工具核对](development/decision-register.md)；下一步按T01/T02完成脚本审查、导入清单与clean install。候选版本不代表已通过兼容性或供应链审查。
 
 依赖优先级：官方SDK/文档 → 已核验OSS模式 → Starter胶水 → 项目自有Domain。Auth不自造；Platform、Principal、Tenant Integrity、Grant规则、单管理员和严格文件预算属于本项目领域，不让Starter替代。
+
+## T01 固定上游与导入审查
+
+核验日期：2026-09-07。任务分支：`task/T01-source-inventory`。
+
+| 项目 | 核验结果 |
+|---|---|
+| 上游仓库 | `https://github.com/makerkit/nextjs-saas-starter-kit-lite` |
+| 固定 commit | `c5cba64391a80620309c4178163dc2df42568d1b`，可通过 fetch 取得并成功 detached checkout |
+| 许可证 | MIT；导入时保留 MakerKit 版权声明 |
+| 根 Node 约束 | `>=22.13.0`；本机 Node `24.19.0`，路径为 `D:\APP\Base\Nodejs\node.exe` |
+| pnpm | 上游 `packageManager=pnpm@11.18.0`；本机 `11.24.0`，不得静默改写上游 lock |
+| lockfile | `pnpm-lock.yaml`，lockfile v9；Supabase CLI 包由 lock 解析为 `2.111.0` |
+| 本机 Docker | Docker Desktop 服务可用，客户端/服务端 `29.7.2` |
+| Supabase CLI | PATH 与已检查的工具目录均未发现；T02 优先使用项目内固定版本，不安装全局副本 |
+| Deno | PATH 与已检查的工具目录均未发现；T03 前需按固定版本补齐，不能把缺失当作已验证 |
+
+上游目录审查结论：`apps/web` 应改造为 `apps/admin`，`apps/e2e` 应改造为 `apps/template-preview`；`packages/supabase` 只能作为 Auth/SSR 适配参考，不能原样保留其直接业务表访问或 service-role 管理路径。`apps/web/supabase` 应迁至根 `supabase/` 后重新设计，旧的 `public.accounts`、Storage bucket/policy、Auth trigger、Starter RLS/GRANT 和删除用户逻辑不得作为本项目生产迁移直接执行。`packages/features/accounts` 的个人/团队账户模型也不得当作本项目 `platform_accounts`。
+
+上游脚本审查结论：根 `postinstall` 会执行 `manypkg fix`；根与 workspace 含 `git clean -xdf`；`lint:fix`、`healthcheck` 含自动修复；`apps/web` 含 `supabase:deploy`（link 后 `db push`）；CI 使用 `lts/*`、未固定 pnpm 版本，E2E 流程使用 `supabase/setup-cli@v1` 但未锁定 CLI 版本。T02/T03 必须先禁用或改造成受控、只检查、不部署的脚本。
+
+固定 commit 的 README 与 package manifest 对 Next.js 版本存在文字不一致；导入以 manifest、workspace catalog 和 lockfile 为准。上游跟踪的 `.env*` 文件包含非空配置项（包括 service-role 变量），T02 不得复制这些文件或其值，只能创建脱敏的 `.env.example`。
+
+工具补齐方案：Supabase CLI 依照官方文档采用项目级依赖并固定版本，命令通过 `pnpm exec supabase` 运行；若确需系统副本，目标只能是 `D:\APP\Codex\SupabaseCLI\`。Deno 依照官方 Windows 安装文档取得可复现版本，目标只能是 `D:\APP\Codex\Deno\`；版本确认前不写入固定号，不使用默认 C 盘安装路径。参考：[Supabase CLI 安装文档](https://supabase.com/docs/guides/local-development/cli/getting-started?platform=npx&queryGroups=platform)、[Deno Windows 安装文档](https://docs.deno.com/runtime/getting_started/installation/)。

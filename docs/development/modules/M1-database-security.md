@@ -1,6 +1,6 @@
 # M1 数据库与安全公共设施实施规格
 
-状态：待实施；依赖M0本地基座、SP-SQL已明确可执行角色路径。依据[数据模型](../../data-model.md)、[安全](../../auth-security.md)、[公共合同](../contracts.md)。
+状态：IN_PROGRESS；基础迁移、角色与辅助设施已有Local交付，T18-L负责候选commit的G1收口。依赖M0本地基座、SP-SQL角色路径。依据[数据模型](../../data-model.md)、[安全](../../auth-security.md)、[公共合同](../contracts.md)及[DP2收尾](../tasks/closeout-01.md)。
 
 ## 1. 范围与交付
 

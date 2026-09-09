@@ -111,7 +111,7 @@ Replace 固定为新对象验证完成后，在同一数据库事务中将新行
 
 ## 5. 下载和删除
 
-GET /v1/config-files/:id/content 经 BFF/Account API 重新校验身份、平台、账户、文件 active 后代理私有对象。Admin 下载额外要求近期 MFA。响应固定 application/octet-stream、Content-Disposition: attachment、X-Content-Type-Options: nosniff、Cache-Control: private, no-store，文件名转义，不提供浏览器直接预览或永久 URL。
+GET /v1/config-files/:id/content 经 BFF/Account API 重新校验身份、平台、账户、文件 active 后代理私有对象。Admin 下载额外要求近期 MFA。响应固定 application/octet-stream、Content-Disposition: attachment、X-Content-Type-Options: nosniff、Cache-Control: private, no-store，文件名转义，不提供浏览器直接预览或永久 URL。GET /v1/config-files 使用 `limit`（默认20、最大100）和绑定账户/平台排序的 UUID `cursor`，返回 `items` 与 `next_cursor`；详情至少返回 status、write_outcome、reserved bytes/count、actual size、created/updated。
 
 下载审计区分 download_authorized、download_stream_completed、download_failed；服务端流完成不等于客户端已保存。已经开始的下载不承诺被后续 Suspend 瞬间撤回，新的下载请求必须拒绝。
 
@@ -126,3 +126,46 @@ pending 且未写入可取消并释放；receiving/storing 有租约或未知写
 归属不明对象隔离并人工审核，不能猜测归属后自动删除。active 对象缺失标记不可下载、告警并从对象备份恢复，不把 metadata 当作文件备份。预算修复仍须持有账户锁。
 
 必须验证：20个并发意图不超配额；伪造小size/Content-Length及chunked超限在 Storage 调用前拒绝；0字节/压缩体拒绝；内容与声明不符；两次PUT不同内容；无浏览器Storage写权限；上传中Suspend；满配额Replace拒绝且旧内容完整；存储成功但数据库失败；超时迟到写入仍被预算覆盖；删除失败不释放；租约过期旧worker不得覆盖新状态；跨账户替换FK拒绝。
+
+## 7. M4-01冻结附录：入口、状态和恢复屏障
+
+本节冻结M4实现和M6联合备份之间的公共边界。它只定义受控SQL入口和结果语义，不代表这些函数、表或任务已经实现；M4-02起按此合同追加迁移，不能由HTTP层自行拼接第二套配额或删除算法。
+
+### 7.1 领域SQL入口
+
+所有入口位于 `private`，由对应executor经固定 context 调用；普通运行时不获得文件表、备份屏障或Storage metadata的直接DML权限。函数内部先验证context、平台/账户/身份门闩，再按“账户锁→相关文件UUID升序锁→状态/预算更新”的顺序执行。
+
+| 入口 | 调用者与输入 | 成功结果/事务职责 | 幂等、状态和拒绝 |
+|---|---|---|---|
+| `file_intent_create(ctx, request, idem_key)` | account executor；name、声明size、content_type、purpose、optional replace id | 新file_id、不可复用object path、expires_at、reserved bytes/count；创建pending并写Audit/幂等 | 同key同请求返回原结果，异请求409；策略/账户/门闩/预算/并发意图不满足时拒绝 |
+| `file_receive_claim(ctx, file_id, owner, fence)` | account executor；重新认证的账户context、file_id、worker owner | pending→receiving，写lease/fence；不改变已结算预算 | 非pending、过期、已有有效租约、跨账户或旧fence拒绝；不因超时自动归零 |
+| `file_prepare_store(ctx, file_id, actual_size, sha256, idem_key)` | account executor；有界接收完成后的实际size/hash | receiving→storing，创建唯一未结算write attempt并按actual调整reserved bytes | size/hash/策略/门闩不符拒绝；同key同内容返回原attempt，异内容409；事务不等待Storage |
+| `file_write_attempt_settle(job_ctx, attempt_id, outcome, evidence)` | account/job recovery executor；trusted adapter结果、provider request id、size/hash | confirmed后storing→active，settled_absent后进入可清理状态；记录证据和Audit | in_flight/unknown不得由客户端改写；旧fence、错误file或重复矛盾结果拒绝；unknown持续占用 |
+| `file_delete_request(ctx, file_id, idem_key)` | account executor；用户文件id | 无写入的pending/receiving可直接expired/deleted并释放；其他状态标记deleting并返回现有状态；不在请求事务调用Storage | 重复请求返回现有状态；未知写入、Replace、Close/backup屏障返回处理中或FILE_BUSY，不释放预算 |
+| `file_cleanup_candidates(cursor, limit)` | job executor；UUID游标/固定批量上限 | 返回到期、deleting或待结算的固定候选，不改变状态 | 不接受任意表名/SQL；仅返回受控文件id和调度时间 |
+| `file_cleanup_claim(job_ctx, file_id, lease_seconds)` | job executor；受控候选文件 | 复用job lease/fence；无写入过期、备份屏障或待结算分别返回受控动作；可删除对象时持有lease到finish | unknown/in-flight不释放预算或启动第二次PUT；旧/忙租约不能执行 |
+| `file_cleanup_finish(job_ctx, file_id, fence, outcome, error)` | job executor；可信Storage remove结果 | remove确认后deleted并归零；失败/unknown按1分钟起、1小时上限退避，预算保持 | 旧fence拒绝；10次失败转人工告警；Storage调用不在DB事务内 |
+| `file_reconcile_step(job_ctx, cursor, limit)` | job executor；固定UUID游标/批量上限 | 分页核对active缺失、孤儿、unknown、deleting、预算漂移并产生告警事件 | 只接受有效context和固定游标；不接受任意表名/SQL；归属不明进入人工队列 |
+| `file_backup_barrier_begin(job_ctx, snapshot_id)` / `file_backup_barrier_finish(job_ctx, snapshot_id, result)` | job/recovery executor；外部恢复集标识 | 持久化屏障scope、snapshot、lease、manifest状态；finish仅能提交完整/失败结果 | 2小时内未完成先将恢复集标记failed再解除；没有完整active对象清单不能标success |
+
+### 7.2 `status` 与 `write_outcome` 分离
+
+`status` 表示文件业务生命周期，允许集合为 `pending`、`receiving`、`storing`、`active`、`deleting`、`deleted`、`failed`、`expired`；`write_outcome` 表示Storage写入事实，允许集合为 `not_started`、`in_flight`、`confirmed`、`unknown`、`settled_absent`。`unknown`不是失败，也不能通过任务重试、HEAD 404或租约过期推断为不存在。
+
+客户端只能触发意图、受控接收和删除请求；不能提交 `status`、`write_outcome`、reserved bytes、fence、provider request id、实际hash或checkpoint。所有响应至少包含file_id、status、write_outcome、reserved bytes、actual size（可空）、created/updated时间和可安全展示的错误码；不会返回Storage URL、Secret或原始metadata。
+
+文件名只作为受限metadata保存：拒绝NUL、控制字符、超过合同长度或无法规范化的输入；下载时使用安全的 `Content-Disposition` 编码。purpose/content type/metadata均有固定长度和对象结构上限，未知字段拒绝，不接受无界JSON。
+
+### 7.3 M4/M6共享备份删除屏障和墓碑
+
+删除任务在调用Storage remove前必须检查最新的持久屏障：`barrier_id`、`scope`、`recovery_set_id`、`state`（active/running/complete/failed）、`lease_owner`、`fencing_token`、`started_at`、`deadline_at`、`manifest_version`和`last_error_code`。`active`或未结算写入对象缺少manifest记录时，屏障不能进入complete；屏障超时先写failed，再按同一有效fence解除删除阻塞并告警。
+
+删除墓碑只保存恢复所需的非Secret最小字段：`tombstone_id`、`operation_id`、`platform_id`、脱敏后的账户/文件引用、对象path hash、原状态、删除请求/确认时间、原因分类、数据版本和来源commit/manifest版本。不得保存原始文件名、文件内容、access/refresh token、Platform Key、兑换码、SQL密码、IP/UA或自由文本。
+
+M4将屏障消费和墓碑事件写入主库的受控过程；M6负责把manifest和墓碑复制到主库之外的独立恢复介质，并在恢复时重新应用。没有M6外部介质时，只能运行屏障故障注入和隔离模拟，不能宣称联合备份或G6通过。
+
+### 7.4 HTTP/SDK映射冻结
+
+Account侧只保留现有六个文件操作：`POST /v1/config-files/upload-intent`、`PUT/GET /v1/config-files/{fileId}/content`、`GET /v1/config-files`、`GET/DELETE /v1/config-files/{fileId}`；不增加浏览器 `complete`、signed-upload或Storage直连路径。Admin侧的file-policy、files、deletion-jobs列表/详情/下载/受控delete/retry均必须调用同一领域入口；M4-08再提供页面，不能在UI中重算预算或直接写表。
+
+HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。M4-02～M4-07若需要变更字段，必须先同步本节、`docs/development/contracts.md`、OpenAPI、DTO、SDK和测试，不能静默改名。
