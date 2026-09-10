@@ -793,6 +793,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 2026-09-10 | Phase 08 | code | `codex/frontend-plan-r1` | `11aa3f2f95003baa92ec952382f6018f8461358e` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/11aa3f2f95003baa92ec952382f6018f8461358e) | PASS | PASS | 远端 SHA 与本地一致；T12 五档 70 路由、语义/a11y、T16/m5 与 detector 通过；后续 docs-only 同步提交 `2cd5aff` 已推送并合并 `main` |
 | 2026-09-10 | FE-D02 / Phase 03–04 | code | `codex/frontend-plan-r1` | `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/54ff79727dd0b7ea734822d23db2c9b58d6fe4ea) | PASS | PASS | M3 batch replay boundary、HTTP/API contract、Admin consumer 与 SQL/API probe 已推送；`main` 与任务分支均核对为该 SHA |
 | 2026-09-10 | T16-R2 / FE-V | code+test | `codex/frontend-plan-r1` | `868e069c1e9631cad09021598bc6070db23a694e` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/868e069c1e9631cad09021598bc6070db23a694e) | PASS | PASS | Admin 429/503/409 中文主文案与技术详情隔离；T16-R2 当前共 17 项 Local 浏览器断言通过；`main` 与任务分支均核对为该 SHA |
+| 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `e5d67aa94e3658340c64455d80f5000991861eac` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/e5d67aa94e3658340c64455d80f5000991861eac) | PASS | PASS | 更新当前实现基线、T16-R2 17 项结果、FE-V 剩余矩阵与 Hosted/M4–M6 阻塞清单；两个远端分支已核对一致 |
 
 ---
 
@@ -806,7 +807,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
 - 当前未提交修改及归属：无本任务修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
-- 当前代码基线 / branch：当前产品实现基线为 `main` / `868e069c1e9631cad09021598bc6070db23a694e`；FE-D02 批次边界基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对均为 `868e069`；本轮文档维护提交待本次记录完成后同步到两个远端分支。
+- 当前代码基线 / branch：当前产品实现基线为 `main` / `868e069c1e9631cad09021598bc6070db23a694e`；FE-D02 批次边界基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。代码提交后 `origin/main` 与 `origin/codex/frontend-plan-r1` 已核对均为 `868e069`；本轮文档维护已提交并同步到两个远端，最终远端 SHA 以本节 GitHub 交付记录和命令核对为准。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -860,7 +861,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 |---|---|
 | Phase 01–08 代码 | 已形成独立代码提交并 push；Phase 08 代码为 `11aa3f2`，当前产品实现基线为 `868e069`。 |
 | Local 前端回归 | Admin/Consumer typecheck/build、root lint/typecheck/unit/contracts/docs、T12 五档 70 路由、T16 当前 17 项、M5/Registry 和最终 detector 均已记录 PASS。 |
-| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea` 与本轮 Admin 错误状态代码/测试 commit `868e069c1e9631cad09021598bc6070db23a694e` 均已推送；本次文档维护提交待本次记录完成后同步；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
+| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`、本轮 Admin 错误状态代码/测试 commit `868e069c1e9631cad09021598bc6070db23a694e` 与文档维护 commit `e5d67aa94e3658340c64455d80f5000991861eac` 均已推送；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
 | 文档一致性 | `pnpm docs:check` 于本次审查实际运行并通过；当前漂移已在总计划、状态、合同、路线、handoff 和各 Phase 入口修正。 |
 
 ## 15.2 尚未完成的任务
