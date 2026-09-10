@@ -846,6 +846,7 @@ async function exerciseAdmin(page, adminTotp) {
   await page.getByRole('button', { name: '验证并继续' }).click();
   await page.waitForURL(/\/admin$/u, { waitUntil: 'domcontentloaded' });
   await exerciseAdminErrorCopyMatrix(page);
+  await exerciseFilesStateMatrix(page);
   await page.goto(`${adminUrl}/admin/platforms`, {
     waitUntil: 'domcontentloaded',
   });
@@ -1126,6 +1127,166 @@ async function exerciseAdminErrorCopyMatrix(page) {
   }
 }
 
+async function exerciseFilesStateMatrix(page) {
+  const filesEndpoint = '/api/v1/admin/api/v1/config-files';
+  const policyEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}/file-policy`;
+  const activeFileId = crypto.randomUUID();
+  const receivingFileId = crypto.randomUUID();
+  const storingFileId = crypto.randomUUID();
+  const deletingFileId = crypto.randomUUID();
+  const unknownFileId = crypto.randomUUID();
+  const deletedFileId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const file = (fileId, name, status, writeOutcome, reservedBytes) => ({
+    file_id: fileId,
+    platform_id: platformAId,
+    platform_account_id: null,
+    original_name: name,
+    mime_type: 'application/json',
+    status,
+    write_outcome: writeOutcome,
+    reserved_bytes: reservedBytes,
+    reserved_count: 1,
+    actual_size_bytes: status === 'active' ? reservedBytes : null,
+    created_at: now,
+    updated_at: now,
+    cancel_requested_at: null,
+  });
+  const files = [
+    file(activeFileId, 'active.json', 'active', 'confirmed', 128),
+    file(receivingFileId, 'receiving.json', 'receiving', 'pending', 256),
+    file(storingFileId, 'storing.json', 'storing', 'pending', 384),
+    file(deletingFileId, 'deleting.json', 'deleting', 'confirmed', 512),
+    file(unknownFileId, 'unknown.json', 'receiving', 'unknown', 640),
+    file(deletedFileId, 'deleted.json', 'deleted', 'confirmed', 768),
+  ];
+  let filesResponseCompleted = false;
+  const filesRoute = (url) => new URL(url).pathname === filesEndpoint;
+  const policyRoute = (url) => new URL(url).pathname === policyEndpoint;
+  await page.route(filesRoute, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 1200));
+    filesResponseCompleted = true;
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: files,
+        next_cursor: null,
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  await page.route(policyRoute, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: {
+          enabled: true,
+          max_file_bytes: 1048576,
+          max_files: 20,
+          max_total_bytes: 4096,
+          reserved_bytes: 2304,
+          reserved_count: 6,
+          available_bytes: 1792,
+          available_count: 14,
+          over_quota: true,
+          updated_at: now,
+        },
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  try {
+    await page.goto(`${adminUrl}/admin/platforms/${platformAId}/files`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.getByRole('heading', { name: '配置文件' }).waitFor();
+    await page.getByText('Usage / Policy', { exact: true }).waitFor();
+    await page.getByText('当前使用量高于策略', { exact: true }).waitFor();
+    assert.equal(
+      filesResponseCompleted,
+      false,
+      'policy must become usable while file list response is delayed',
+    );
+    await page.getByText('文件状态', { exact: true }).waitFor();
+    await page.getByText('正在接收', { exact: true }).waitFor();
+    await page.getByText('正在写入', { exact: true }).waitFor();
+    await page.getByText('删除处理中', { exact: true }).waitFor();
+    await page.getByText('正在确认写入结果', { exact: true }).waitFor();
+    await page.getByText('已删除', { exact: true }).waitFor();
+    await page.getByText('预算仍以服务端状态为准', { exact: false }).waitFor();
+
+    const activeRow = page.locator(
+      `[data-test="platform-file-row-${activeFileId}"]`,
+    );
+    const receivingRow = page.locator(
+      `[data-test="platform-file-row-${receivingFileId}"]`,
+    );
+    const deletingRow = page.locator(
+      `[data-test="platform-file-row-${deletingFileId}"]`,
+    );
+    const unknownRow = page.locator(
+      `[data-test="platform-file-row-${unknownFileId}"]`,
+    );
+    const deletedRow = page.locator(
+      `[data-test="platform-file-row-${deletedFileId}"]`,
+    );
+    assert.equal(
+      await activeRow
+        .locator(`[data-test="platform-file-download-${activeFileId}"]`)
+        .isDisabled(),
+      false,
+      'active confirmed file must allow download',
+    );
+    assert.equal(
+      await receivingRow
+        .locator(`[data-test="platform-file-download-${receivingFileId}"]`)
+        .isDisabled(),
+      true,
+      'receiving file must not allow download',
+    );
+    assert.equal(
+      await deletingRow
+        .locator(`[data-test="platform-file-delete-${deletingFileId}"]`)
+        .isDisabled(),
+      true,
+      'deleting file must not allow a second delete',
+    );
+    assert.equal(
+      await unknownRow
+        .locator(`[data-test="platform-file-delete-${unknownFileId}"]`)
+        .isDisabled(),
+      false,
+      'unknown write outcome keeps a controlled delete decision with server state',
+    );
+    assert.equal(
+      await deletedRow
+        .locator(`[data-test="platform-file-delete-${deletedFileId}"]`)
+        .isDisabled(),
+      true,
+      'deleted file must not allow another delete',
+    );
+  } finally {
+    await page.unroute(filesRoute);
+    await page.unroute(policyRoute);
+  }
+}
+
 async function scanBrowserBundles() {
   const forbidden =
     /PLATFORM_KEY|PLATFORM_KEY_HMAC_SECRET|ACCOUNT_API_DB_URL|SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/iu;
@@ -1392,6 +1553,7 @@ try {
       csrfAndEtag: 'PASS',
       adminAal1AndSuspend: 'PASS',
       adminErrorCopyMatrix: 'PASS',
+      filesStateMatrix: 'PASS',
       batchReplayBoundaryUi: 'PASS',
       adminBatchConfirmationUi: 'PASS',
       multiTabTerminal: 'PASS',
