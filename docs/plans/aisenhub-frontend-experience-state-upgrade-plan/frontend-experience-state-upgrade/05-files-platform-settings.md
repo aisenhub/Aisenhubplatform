@@ -1,6 +1,6 @@
 # Phase 05 — Files、File Policy 与 Platform Settings
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 05 产品实现已开始，验收记录以 `verification-record.md` 为准。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 05 本地代码批次已交付；完整 Files/Settings 状态矩阵和托管门槛以 `verification-record.md` 为准。
 
 > 状态：**进行中**  
 > 前置：Phase 01–04 代码批次已推送；Phase 05 的 FE-D01 已在本地实现并通过 SQL/handler 静态核对，完整阶段验收仍待本阶段提交后的记录确认。  

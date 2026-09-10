@@ -1,8 +1,8 @@
 # Phase 04 — Accounts 与 Entitlements 资源页
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 04 代码批次已交付；FE-D02 与完整资源状态矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
-> 状态：**未开始**  
+> 状态：**进行中**（代码批次已交付；FE-D02 消费与完整资源矩阵仍开放）  
 > 前置：Phase 01–03 已交付并 push。  
 > 可与 Phase 05、Phase 07 并行。  
 > 文件所有权建议：`apps/admin/features/accounts|plans|subscriptions|redemption/**`、对应 nested routes；不要改 Files/Consumer/shared UI contract，shared bug 交 Integrator。

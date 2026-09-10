@@ -1,8 +1,8 @@
 # Phase 02 — Platform Context 与 Workspace
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 02 代码批次已交付；阶段剩余核验以 [verification-record.md](verification-record.md) 为准。
 
-> 状态：**未开始**  
+> 状态：**进行中**（代码批次已交付；平台错误/切换行为级证据仍待完整关闭）  
 > 前置：Phase 01 已完成必要验证、commit 并 push；`verification-record.md` 已记录 UI toolchain 和 shell contract。
 
 ## 1. 目标

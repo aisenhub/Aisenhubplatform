@@ -1,6 +1,6 @@
 # Phase 08 — Responsive、Accessibility、Integration 与 Legacy Cleanup
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 08 已进入最终收口，正式发布仍不在本期范围。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 08 本地响应式/a11y/legacy/integration 收口已完成并合并 `main`；全状态故障注入、Hosted/Staging/生产仍按验证记录保留。
 
 > 状态：**进行中**  
 > 前置：Phase 04、05、06、07 全部必要代码已 push；Integrator 已核对任务分支 remote commits，当前进入最终收口。  

@@ -34,7 +34,7 @@
 
 ## Auth 优化专项
 
-入口为 [ASU-R1 修订后的执行计划](../plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md)。ASU-01～05 与 ASU-V01～16 的范围、依赖和实际记录在该计划包维护；Auth Phase01～05已有实现与Local验证，hosted/Staging/生产边界以该计划verification record为准。前端承接见 [FE-R1执行计划](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/00-master-plan.md)：包含中文优先UI规范及必要依赖，前端产品尚未开始，入口不自动授权实施。
+入口为 [ASU-R1 修订后的执行计划](../plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md)。ASU-01～05 与 ASU-V01～16 的范围、依赖和实际记录在该计划包维护；Auth Phase01～05已有实现与Local验证，hosted/Staging/生产边界以该计划verification record为准。前端承接见 [FE-R1执行计划](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/00-master-plan.md)：Phase 01–08 已完成 Local 代码交付并合并 `main`，FE-D02、故障矩阵、Hosted/Staging/生产与正式发布门槛仍按其 verification record 维护；入口不自动授权后续任务。
 
 ## 状态词典
 

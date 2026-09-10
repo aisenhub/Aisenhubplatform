@@ -117,8 +117,8 @@ M4-01负责补齐文件SQL参数/结果、file-policy/查询/恢复包装及备�
 
 Phase 01 更新 auth-security/API 专题的实际最终合同，Phase 05 提供实现 SHA 与完整消费者证据。本轮仅登记批准的设计方向，不把后续实现测试写成 PASS。
 
-## 9. FE-R1 前端必要依赖登记（规划，未实现）
+## 9. FE-R1 前端必要依赖登记（合同仍有效；实现状态分层记录）
 
-前端修订合同见 [FE-R1](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/references/fe-r1-execution-contracts.md)。FE-D01已在现有Admin文件列表补可选精确platform_id：通过新增受控 scoped SQL wrapper、handler 参数校验、OpenAPI 与权限/分页测试实现；不更改Account租户推导或配额算法。FE-D02核验批次重复创建的明文/receipt语义，未闭环前禁止通过重发创建恢复明文。FE-D03补共享UI独立分发与安装验收，不等于授权公开发布。FE-D01代码已实现并完成本地两平台返回范围核对，完整交付仍随Phase05浏览器/跨平台cursor矩阵验收。
+前端修订合同见 [FE-R1](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/references/fe-r1-execution-contracts.md)。FE-D01已在现有Admin文件列表补可选精确platform_id：通过新增受控 scoped SQL wrapper、handler 参数校验、OpenAPI 与权限/分页测试实现；不更改Account租户推导或配额算法。FE-D02核验批次重复创建的明文/receipt语义，未闭环前禁止通过重发创建恢复明文。FE-D03补共享UI独立分发与安装验收，不等于授权公开发布。FE-D01代码已实现并完成本地两平台返回范围核对，Phase 05 代码批次已 push 并合并 `main`；Hosted/完整阶段关闭仍以 FE-R1 verification record 的实际证据为准。
 
 默认简体中文仅改变展示，DTO/稳定错误码/枚举/Header/幂等key与时间传输合同保持原值；中文说明见 [中文UI合同](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/references/chinese-ui-contract.md)。

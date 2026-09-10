@@ -1,6 +1,6 @@
 # Architecture Coverage Matrix
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 01–08 已有代码实现；本矩阵仍只证明架构映射，不替代 [verification-record.md](verification-record.md) 的运行证据。
 
 > 用途：证明 `Aisenhub_Frontend_Experience_State_Architecture.md` 中的内容没有在执行计划拆分时遗漏。  
 > 状态：规划映射，不代表任何功能已实施。

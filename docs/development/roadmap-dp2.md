@@ -1,10 +1,10 @@
 # DP2：从当前实现到V1发布候选
 
-更新：2026-09-09。DP2是在架构v1.2、DP1模块规格上的执行规划修订，不改变产品范围；本文件同时记录当前实施进度，不代表已完成托管部署、正式产物发布或生产操作。
+更新：2026-09-10。DP2是在架构v1.2、DP1模块规格上的执行规划修订，不改变产品范围；本文件同时记录当前实施进度，不代表已完成托管部署、正式产物发布或生产操作。
 
 ## 当前起点与路线
 
-代码基线`31b5142421847c26e61fe733b0df67f2fecd115a`已在远端任务分支；main仍为规划提交`f981ca533db67e543bbe3f6d88c337b78c0199d4`。已有工程、M1基础、M2部分链路及M3 Local实现；G2-L仍需正式收口，G0-S/G2-S尚未完整通过，M4～M6未实施。详情见[校准证据](evidence/DP2-baseline.md)和[进度](status.md)。
+DP2 原规划基线 `31b5142421847c26e61fe733b0df67f2fecd115a` 与旧 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。当前 `main@2cd5affe2c52cbc1fe185d50c8695e226b8a2ada` 已包含 Frontend Phase 01–08 Local 代码、验证记录和交付文档；G0-S/G2-S/G4-S/G5-P/G6 及 M4–M6 外部/发布门槛仍未完整通过。详情见[校准证据](evidence/DP2-baseline.md)、[进度](status.md)和[FE-R1 verification record](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/verification-record.md)。
 
 | 阶段 | 本次计划精度 | 进入与完成条件 |
 |---|---|---|
@@ -142,4 +142,4 @@
 
 本次已给出M5/M6任务链，不等M4结束再从零规划。M4-01后冻结恢复协议，T18-L后解锁文件实现，M4-10后复核M5合同/页面差距，M4-11与X04/X06明确后将运维步骤补成实测runbook。每阶段如出现公共合同变化先登记并同步消费者，不能静默降级。
 
-当前应用提交尚未并入main。本规划分支从已推送实现基线派生，包含其历史；文档PR不能被误当作仅含规划的新分支。各实施任务小提交、指定文件暂存、脱敏差异检查、push并核对SHA；模块集成另做PR审查，只有明确合并授权才merge。
+Frontend Phase 01–08 的应用与交付文档已并入 `main@2cd5aff`；这不代表 Hosted/Staging/生产部署、正式 Registry 发布或生产操作已执行。各后续实施任务仍须小提交、指定文件暂存、脱敏差异检查、push并核对SHA；模块集成和发布仍需明确授权，禁止将本次合并视为 Release。

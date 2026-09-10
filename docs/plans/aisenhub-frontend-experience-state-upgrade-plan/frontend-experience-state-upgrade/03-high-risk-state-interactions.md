@@ -1,8 +1,8 @@
 # Phase 03 — High-risk Interaction、Mutation State 与 Secret Flow
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 03 代码批次已交付；FE-D02 与高风险故障矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
-> 状态：**未开始**  
+> 状态：**进行中**（代码批次已交付；FE-D02 与完整故障矩阵仍开放）  
 > 前置：Phase 01、02 已验证、commit、push。  
 > 本阶段冻结所有后续高风险资源页必须使用的唯一交互合同。
 

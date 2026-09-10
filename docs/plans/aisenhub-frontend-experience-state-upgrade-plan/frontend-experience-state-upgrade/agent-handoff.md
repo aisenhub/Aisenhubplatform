@@ -1,6 +1,6 @@
 # Frontend Experience & State Upgrade — Agent Handoff
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次已完成并合并 `main`；剩余合同、托管和发布门槛以 [verification-record.md](verification-record.md) 及总计划当前状态为准。
 
 > 用途：稳定执行入口，不是日常进度日志。  
 > 执行 agent 必须结合 `00-master-plan.md`、当前阶段文档、`verification-record.md` 和实际代码工作，无需重新做整轮架构讨论。

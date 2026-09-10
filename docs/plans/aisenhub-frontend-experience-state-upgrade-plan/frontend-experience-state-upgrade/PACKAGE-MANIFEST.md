@@ -1,8 +1,8 @@
 # Frontend Experience & State Upgrade — Package Manifest
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。原规划快照已产生 Phase 01–08 实施结果，当前状态以 [verification-record.md](verification-record.md) 为准。
 
-> 本包是执行计划，不是实施结果。所有 Phase 01–08 在生成时均为未开始；没有运行产品测试、没有修改产品代码、没有执行 Git commit/push/deploy。
+> 本包仍是执行计划索引，不替代实施证据。Phase 01–08 已有代码、Local 验证、commit/push 和 `main` 合并；Hosted/Staging/生产、FE-D02、全状态故障注入和正式发布仍按状态记录维护。
 
 ## 推荐放置位置
 

@@ -1,10 +1,23 @@
 # 实际进度与阶段同步
 
-更新日期：2026-09-09。规划交付与应用实现严格分开。
+更新日期：2026-09-10。规划交付与应用实现严格分开；Frontend Experience & State 已完成 Local 代码交付，但总体发布门槛仍未关闭。
 
 ## DP2当前基线（优先于下方历史交接摘要）
 
-2026-09-09 ASU-R1 本地核对：当前 main 为 `0d42b4cd44a2c17777c33f616bd393c22ee78f16`，已有应用代码，不能再按空 main/尚未合并判断。DP2 原规划时实现基线 `31b5142421847c26e61fe733b0df67f2fecd115a` 与旧 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。下方原任务PASS沿用其报告范围，本次规划未重跑应用验收。详细差异见[DP2校准证据](evidence/DP2-baseline.md)。
+2026-09-10 FE-R1/DP2 本地核对：当前 `main` 为 `2cd5affe2c52cbc1fe185d50c8695e226b8a2ada`，Frontend Phase 01–08 代码、Local 验证、docs push 和 main fast-forward 已完成；不能再按空 main/尚未合并判断。DP2 原规划时实现基线 `31b5142421847c26e61fe733b0df67f2fecd115a`、ASU-R1 旧 main `0d42b4cd44a2c17777c33f616bd393c22ee78f16` 与更早 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。下方原任务 PASS 仍只代表各自报告范围；本次前端审查的剩余项见 [FE-R1 verification record](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/verification-record.md)。
+
+## FE-R1 前端当前审查（2026-09-10）
+
+| 范围 | 当前状态 | 尚未关闭的任务/门槛 |
+|---|---|---|
+| Phase 01–08 代码交付 | Local 已交付 | 代码批次均已 push；`main` 与任务分支远端均为 `2cd5aff`；不等于 Hosted、Staging、生产或正式发布通过。 |
+| FE-D02 批次重复创建 | NOT_STARTED | 需由受控 API/SQL 探针核验 `creation_operation_id` 重放和明文/receipt 恢复边界；未关闭前禁止重发创建恢复 codes。 |
+| FE-V 状态/故障矩阵 | PARTIAL | 409/412/429/503/202、网络 unknown、正向高风险 mutation 及 Files/Settings 全状态仍需行为级证据；已有 T12/T16 Local PASS 不替代故障注入。 |
+| Hosted / Staging | BLOCKED / NOT_RUN | 依赖 X02/X03/X05 与受控权限，承接 T17-R1～R3、T18-S、G4-S、M5-05 hosted；覆盖 OAuth/SMTP/SSR、独立 executor/TLS/pooler/CA、Storage 迟到写入和双平台。 |
+| M4–M6 运维/发布 | PARTIAL / WAITING | M4-11、M6-02 外部备份、M6-03/04 恢复/轮换/告警、M5-06 正式 Registry 发布仍需 X04/X06、隔离目标和明确授权。 |
+| Future diagnostics | NOT_STARTED（计划内） | 需真实 Observability、搜索、告警生命周期和权限/脱敏合同；本期不实现假指标、假搜索、假通知。 |
+
+`pnpm format:check` 的 61 个未触及历史文件问题记录为基线债务，不作为本次前端代码回归；本轮目标文件检查通过。上述状态不得从文档审核自动升级为生产验收。
 
 | 范围/Gate | 当前判定 | 剩余承接 |
 |---|---|---|
@@ -31,7 +44,7 @@ T13～T15的DONE指历史报告已交付SQL/部分SDK范围，不代表原任务
 - [首批收尾](tasks/closeout-01.md)：10项任务，细化T12/T16、M3证据收口和托管门槛。
 - [M4第三批](tasks/batch-03.md)：11项任务；M4-01为可先做的合同规格，M4-02实现依赖T18-L。
 - [后续路线](roadmap-dp2.md)：M5六项、M6六项，明确早期准备、细节冻结、外部输入与发布授权。
-- 当前下一项：在 X05/托管后端到位后补 M5-05 Hosted 双 Origin/Platform 验收；Local G5-L 已完成。M5-03/M5-04 的 Local 开发和验证已完成。M4-11 的实际host G4-S仍依赖 T18-S 与受控托管输入。Close 30 天候选调度、Storage cleanup、Auth provider boundary 与 backup barrier guard 已接入 Local maintenance。M5-06正式发布仍依赖X05和明确发布授权。
+- 当前下一项：Frontend 先补 FE-D02 与 FE-V 故障/恢复矩阵；DP2 后端路线在 X05/托管后端到位后补 M5-05 Hosted 双 Origin/Platform 验收。Local G5-L、M5-03/M5-04 的 Local 开发和验证已完成。M4-11 的实际 host G4-S 仍依赖 T18-S 与受控托管输入；M5-06 正式发布仍依赖 X05 和明确发布授权。
 - 本轮已在独立任务分支执行T12-R2普通proof合同/issuer、Admin MFA与真实Local浏览器子集、M4-01和M3-R1完整Local SQL/API范围内验证；未执行的托管、Storage及生产项仍保持BLOCKED/NOT_RUN。各任务证据和最终同步以对应分支报告为准。
 
 ## 已完成事实

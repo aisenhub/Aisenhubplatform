@@ -1,6 +1,6 @@
 # Phase 06 — Operations Center、Audit Inspector 与真实 Overview
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 06 产品实现已开始。
+> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 06 本地代码批次已交付；全状态故障注入与阶段关闭条件以 `verification-record.md` 为准。
 
 > 状态：**进行中**  
 > 前置：Phase 01–05 中至少 Phase 04、05 已交付并 push；Operations 需要知道新资源 routes。  
