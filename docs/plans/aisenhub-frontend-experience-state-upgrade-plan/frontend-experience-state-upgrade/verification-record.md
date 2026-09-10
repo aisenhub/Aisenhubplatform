@@ -1,10 +1,10 @@
 # Frontend Experience & State Upgrade — Verification Record
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01–03 已完成当前代码批次并推送，但均尚未满足全部阶段交付门槛。
+> FE-R1（2026-09-10）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01–04 已完成当前代码批次并推送，但均尚未满足全部阶段交付门槛。
 
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
-> 计划创建状态：Phase 01–03 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 04–08 仍为 **未开始 / 未验证 / 未记录**。  
+> 计划创建状态：Phase 01–04 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 05–08 仍为 **未开始 / 未验证 / 未记录**。  
 > 禁止把 `references/`、`docs/development/status.md`、历史 evidence、研究快照或别的分支的 PASS 直接复制为本任务验证结果。
 
 ---
@@ -31,7 +31,7 @@
 ## 1.1 本次目标与实施范围
 
 - 目标：按 `00-master-plan.md` 将 Frontend Experience & State 架构实施到 Admin、Consumer/Registry，并完成 Phase 01–08。
-- 本期范围：**Phase 01、Phase 02、Phase 03 进行中；Phase 04–08 未开始**。
+- 本期范围：**Phase 01、Phase 02、Phase 03、Phase 04 进行中；Phase 05–08 未开始**。
 - Future/第二期：`future/01-diagnostics-search-alerts.md`，本期 **不实施**。
 - 计划目录：`docs/plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/`（执行时确认实际放置位置）。
 
@@ -44,7 +44,7 @@
 | 工作分支 | `codex/frontend-plan-r1` | 已验证 | 任务分支 |
 | upstream branch | `origin/codex/frontend-plan-r1` | 已验证 | `git rev-parse @{u}` |
 | 起始 commit | `5e408286c36ed5b2708e5be55415fb80be51602e` | 已验证 | 阶段开始 HEAD |
-| 当前 HEAD | `f4026bffa920cf7c6ceec27907d72ea380f97a19` | 已验证 | Phase 03 code commit |
+| 当前 HEAD | `5b25ed9659e906a633e1589571cf29db36772d62` | 已验证 | Phase 04 code commit |
 | 初始工作区状态 | clean | 已验证 | 阶段开始 `git status --short` 为空 |
 | 初始已有修改 | 无 | 已验证 | 未覆盖归属不明修改 |
 | 远程是否含起始 commit | 是 | 已验证 | code push 后 `git ls-remote` 核对 |
@@ -107,7 +107,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | 01 | Experience Foundation + Admin Shell + Audit vertical slice | 进行中 | UI toolchain、shared state primitives、AdminShell、导航命令面板、Audit URL/state/inspector 代码、FE-D03 独立安装探针 | 真实 Admin session、Audit success/empty/inspector 正向数据、390px 实机验收 | 无 | `7b3f64d` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) |
 | 02 | Platform Context + Workspace | 进行中 | Platform Directory、URL 平台上下文、Switcher、Header、Overview、嵌套路由骨架、legacy settings 兼容入口 | 真实 Admin session 下的成功/403/404/disabled/切换正向数据、390px 与最终阶段门槛 | Phase 01 必要基础已存在；Phase 01 正向 session/390px 仍待补齐 | `e9c5c9f` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/e9c5c9fa096b9a193c59e08e233923f8908c75a2) |
 | 03 | High-risk State & Interactions | 进行中 | MutationState、确认弹窗、近期 MFA step-up、accepted/unknown outcome、一次性密钥、账户/Key 高风险动作、安全总览代码 | 真实 Admin session、正向高风险 mutation、409/412/429/503/202/网络歧义、390px 与最终阶段门槛 | Phase 02 代码批次已推送；Auth 依赖按实际核对 | `f4026bf` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/f4026bffa920cf7c6ceec27907d72ea380f97a19) |
-| 04 | Accounts & Entitlements Resource Pages | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；阶段验收门槛仍待补齐 | 未记录 | 未验证 | 未记录 |
+| 04 | Accounts & Entitlements Resource Pages | 进行中 | Accounts、Plans、Subscriptions detail、Redemption Batches 真实 API 页面；URL 状态、行级 mutation、MFA/冲突/未知结果、一次性密文交付；旧入口退出 | 真实 Admin session 下资源正向矩阵、M3 批次 SQL 探针合同修复/复验、390px 与最终阶段门槛 | Phase 03 代码批次已推送；API 能力矩阵已按当前本地实现核对 | `5b25ed9` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/5b25ed9659e906a633e1589571cf29db36772d62) |
 | 05 | Files & Platform Settings | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；阶段验收门槛仍待补齐 | 未记录 | 未验证 | 未记录 |
 | 06 | Operations + Audit + Overview | 未开始 | 无 | 全部 | Phase 04 + 05 已交付 | 未记录 | 未验证 | 未记录 |
 | 07 | Consumer + Registry Adoption | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；Auth 依赖按实际核对 | 未记录 | 未验证 | 未记录 |
@@ -308,38 +308,42 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 ## 6.1 阶段元数据
 
-- 状态：**未开始**
-- 开始 HEAD：未记录
-- 代码 commit：未记录
-- Push：未验证
+- 状态：**进行中**
+- 开始 HEAD：`f4026bffa920cf7c6ceec27907d72ea380f97a19`
+- 代码 commit：`5b25ed9659e906a633e1589571cf29db36772d62`
+- Push：已验证，远端 `origin/codex/frontend-plan-r1` 与代码 SHA 一致
 
 ## 6.2 实施范围
 
-- Accounts final table/inspector/actions：未开始。
-- Plans independent page：未开始。
-- Subscriptions page/list/detail/commands：未开始。
-- Redemption Batches + secret delivery：未开始。
-- URL table state：未开始。
-- 412/409/429/recent-MFA/error states：未开始。
-- 旧 Entitlements mega-page / legacy subscription entry 退出：未开始。
+- Accounts final table/inspector/actions：已实现真实列表/搜索、详情 inspector、行级 suspend/restore/close、202 accepted/unknown outcome 与近期 MFA。
+- Plans independent page：已实现真实列表、创建/编辑、Free 默认切换与归档；features 保留真实对象，不提供伪造字段编辑器。
+- Subscriptions page/list/detail/commands：已按“无订阅列表接口”实现账号搜索后的 detail-only 页面；命令 operation_id 在确认/重试/未知结果检查中保持一致。
+- Redemption Batches + secret delivery：已实现批次列表/创建、creation_operation_id、一次性 codes/receipt 内存交付、确认与 disable。
+- URL table state：账号搜索 q 与订阅 account 使用 URL；其余列表字段遵循当前 API 未提供的能力边界，不伪造 cursor/query。
+- 412/409/429/recent-MFA/error states：已接入共享错误与 mutation 状态、近期 MFA、冲突/服务拒绝保留；未知结果不自动重放。
+- 旧 Entitlements mega-page / legacy subscription entry 退出：已改为 `/admin/platforms` redirect，并移除旧导航入口与旧 settings 账户重复区块。
 
 ## 6.3 验证记录
 
 | 日期 | 代码版本 | 命令/场景 | 退出码/结果 | 摘要 |
 |---|---|---|---|---|
-| 未记录 | 未记录 | `pnpm --filter admin typecheck` | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter admin build` | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm contracts:check` | 未执行 | 未记录 |
-| 未记录 | 未记录 | Accounts/Plans/Subscriptions/Redemption 浏览器矩阵 | 未验证 | 未记录 |
-| 未记录 | 未记录 | 并发/Idempotency/secret acknowledgement | 未验证 | 未记录 |
+| 2026-09-10 | `5b25ed9` | `pnpm --filter admin typecheck` | PASS | Admin 类型检查通过。 |
+| 2026-09-10 | `5b25ed9` | `pnpm --filter admin build` | PASS | Next production build 通过；四个平台资源路由和旧 redirect 路由均生成。 |
+| 2026-09-10 | `5b25ed9` | `pnpm contracts:check` | PASS | `account=18 operations, admin=36 operations`，引用/sample/binary/no-store 校验通过。 |
+| 2026-09-10 | `5b25ed9` | `pnpm lint`、根 typecheck/unit、`@kit/ui` unit、目标文件格式检查、`git diff --check` | PASS | 均通过；lint 仅保留既有 `apps/admin/app/admin/mfa/page.tsx` 的 `next/no-img-element` warning。 |
+| 2026-09-10 | `5b25ed9` | Phase 04 UI impeccable detector | PASS | 最终 UI 修改后运行一次，结果为空数组；不把该静态结果当作浏览器验收。 |
+| 2026-09-10 | `5b25ed9` | `pnpm test:api:t16-m2-management` | PASS | `platform/origin/keyIssue/keySecretNotListed/accountList/accountSuspendRestoreClose` 全部 PASS。 |
+| 2026-09-10 | `5b25ed9` | `/admin/entitlements`、`/admin/subscriptions` 浏览器退出路径 | PASS | 均到达 `http://localhost:3000/admin/platforms`；控制台 error/warning 为空。 |
+| 2026-09-10 | `5b25ed9` | Accounts/Plans/Subscriptions/Redemption 真实成功、403/404/disabled、冲突/限流/网络歧义浏览器矩阵 | NOT_RUN | 当前浏览器没有可用真实 Admin session/平台正向数据；不伪造 PASS。390px 视口能力也不可用。 |
+| 2026-09-10 | `5b25ed9` | `node tests/spikes/sql/m3-entitlement-ledger.mjs`（补齐本地变量并允许 fixture swap 后） | FAIL（保留） | 探针在 `admin_batch_confirm` 因现有 fixture 使用非 64 位十六进制 receipt（`22023 invalid_input`）退出；未修改探针或后端掩盖失败，需先对齐探针与当前 receipt HMAC 合同再复验。 |
 
 ## 6.4 GitHub / 交接
 
-- code commit：未记录
-- push：未验证
-- remote confirmation：未验证
-- 给 Phase 06 的 resource routes/data contracts：未记录
-- 未提交修改：未记录
+- code commit：`5b25ed9659e906a633e1589571cf29db36772d62`
+- push：PASS
+- remote confirmation：PASS，`git ls-remote origin refs/heads/codex/frontend-plan-r1` 返回同一 SHA
+- 给 Phase 06 的 resource routes/data contracts：四个嵌套路由已接入真实 Admin API；订阅保持 detail-only；批次列表无 cursor/creation_operation_id 展示字段；resource 错误与 mutation 状态可复用。
+- 未提交修改：产品代码 clean；verification record 将单独形成 docs-only commit。
 - 需要用户决定：无
 
 ---
@@ -614,6 +618,20 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 未运行项：真实 Admin session、正向 mutation、MFA proof、409/412/429/503/202/网络歧义、双击并发、secret reload、390px 和完整键盘矩阵。当前浏览器后端不提供 viewport override，后端也未提供安全故障注入/正向凭据，均保持 NOT_RUN。
 - 该结果是否仍覆盖当前代码：是；之后仅追加 verification record docs 变更。
 
+## VR-0005 — Phase 04 accounts and entitlement resource pages
+
+- 日期：2026-09-10
+- 阶段：Phase 04
+- 被验证 commit：`5b25ed9659e906a633e1589571cf29db36772d62`
+- 工作区是否 clean：是（code commit/push 后、docs-only record commit 前）
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Codex In-app Browser；Admin production server `http://localhost:3000`
+- 命令/操作：Admin typecheck/build、contracts、lint、根 typecheck/unit、`@kit/ui` unit、目标文件格式/diff、Phase 04 impeccable detector；M2 管理 API 探针；旧 Entitlements/Subscriptions 路由浏览器退出检查；M3 SQL ledger 探针。
+- Exit code / 浏览器结果：Admin typecheck/build、contracts、lint、根 typecheck/unit、UI unit、格式/diff/detector、M2 探针 PASS；lint 仅有既有 `next/no-img-element` warning；旧入口 redirect 与空控制台日志 PASS；M3 探针保留 FAIL（`admin_batch_confirm` 收到非 64 hex receipt fixture，Postgres `22023 invalid_input`）。
+- stdout/stderr/截图/日志位置：本次 agent tool 输出与浏览器截图；未写入仓库，未包含敏感数据。
+- 结果摘要：四个资源页均使用平台上下文和真实 API；Accounts 避免 N+1 并提供 inspector/行级动作；Plans 支持真实字段与默认/归档；Subscriptions 明确无列表接口并保持 operation intent；Redemption 创建与确认复用同一 operation/receipt，明文 codes 只进入一次性内存面板；旧入口退出。
+- 未运行项：真实 Admin session 下四资源页成功/403/404/disabled/切换正向矩阵、完整 409/412/429/503/202/网络歧义浏览器矩阵、390px 视口和完整键盘矩阵。M3 需修正现有探针 receipt fixture 与后端合同后复验。
+- 该结果是否仍覆盖当前代码：是；之后仅追加本 verification record docs 变更。
+
 ---
 
 # 12. GitHub 交付记录追加区
@@ -622,6 +640,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 |---|---|---|---|---|---|---|---|---|
 | 2026-09-09 | Phase 01 | code | `codex/frontend-plan-r1` | `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) | PASS | PASS | 远端 SHA 与本地一致；Phase 01 仍因未完成正向 session/390 验收保持进行中 |
 | 2026-09-10 | Phase 03 | code | `codex/frontend-plan-r1` | `f4026bffa920cf7c6ceec27907d72ea380f97a19` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/f4026bffa920cf7c6ceec27907d72ea380f97a19) | PASS | PASS | 远端 SHA 与本地一致；Phase 03 仍因真实高风险正向矩阵/390px 未完成保持进行中 |
+| 2026-09-10 | Phase 04 | code | `codex/frontend-plan-r1` | `5b25ed9659e906a633e1589571cf29db36772d62` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/5b25ed9659e906a633e1589571cf29db36772d62) | PASS | PASS | 远端 SHA 与本地一致；Phase 04 仍因真实资源正向矩阵、M3 探针合同和 390px 未完成保持进行中 |
 
 ---
 
@@ -629,13 +648,13 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 03 代码实现与推送；Phase 01、Phase 02、Phase 03 均仍进行中**。
-- 下一阶段从哪里开始：补齐可用 Admin session 后复验 Phase 01–03 正向场景；实现 Phase 04 Accounts、Plans、Subscriptions、Redemption Batches 资源页面，复用本阶段的确认/状态组件。
+- 当前最后完成阶段：**Phase 04 代码实现与推送；Phase 01、Phase 02、Phase 03、Phase 04 均仍进行中**。
+- 下一阶段从哪里开始：补齐可用 Admin session 后复验 Phase 01–04 正向场景；开始实现 Phase 05 Files 与 Platform Settings，先核对 FE-D01 平台文件查询依赖。
 - 必须先处理：FE-D02 在 Phase 03 核验批次重复创建；FE-D01 在 Phase 05 平台 Files 前通过。FE-D03 最小验证已 PASS，完整 Consumer/Registry 安装仍留给 Phase 07。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
 - 当前未提交修改及归属：verification record 待 docs-only commit；产品代码无未提交修改。
-- 当前 branch / HEAD：`codex/frontend-plan-r1` / `f4026bffa920cf7c6ceec27907d72ea380f97a19`。
+- 当前 branch / HEAD：`codex/frontend-plan-r1` / `5b25ed9659e906a633e1589571cf29db36772d62`。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -658,7 +677,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | FE-D02 批次重复创建核验 | NOT_STARTED | 03核验，04消费 |
 | FE-D03 UI分发最小验证 | PASS | 01已完成本地 tarball consumer install/typecheck/build/browser；07仍需完整产物验证 |
 | FE-V01～16 | NOT_RUN | 具体定义见执行合同；逐项记录SHA/环境/用例/结果 |
-| 前端Phase01～08 | Phase01～03进行中；04～08未开始 | Phase01～03代码批次已提交并推送；各阶段真实 session/正向数据/390px 等交付门槛仍未全部满足 |
+| 前端Phase01～08 | Phase01～04进行中；05～08未开始 | Phase01～04代码批次已提交并推送；各阶段真实 session/正向数据/390px 等交付门槛仍未全部满足 |
 | Staging/生产/部署 | NOT_RUN | 本轮未执行 |
 
 ## FE-R1 文档静态验证
@@ -675,4 +694,4 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 修订提交：`8a0b81bba716e90c5a3dd05a0130993da1223ba3`。
 - 已push至`origin/codex/frontend-plan-r1`，`git ls-remote origin refs/heads/codex/frontend-plan-r1`返回同一完整SHA，已核对远端包含修订。
 - [GitHub文档提交](https://github.com/aisenhub/Aisenhubplatform/commit/8a0b81bba716e90c5a3dd05a0130993da1223ba3)。本段由后续独立记录提交维护，不反复amend。
-- 下一项满足派发条件：继续实现 Phase04 资源页面；同时保留 Phase01–03 真实 session、正向资源数据、故障矩阵和 390px 验收为阶段交付门槛。Phase03代码已独立推送，main未合并，未Release/部署。
+- 下一项满足派发条件：继续实现 Phase05 Files 与 Platform Settings；同时保留 Phase01–04 真实 session、正向资源数据、故障矩阵、M3 探针合同对齐和 390px 验收为阶段交付门槛。Phase04代码已独立推送，main未合并，未Release/部署。
