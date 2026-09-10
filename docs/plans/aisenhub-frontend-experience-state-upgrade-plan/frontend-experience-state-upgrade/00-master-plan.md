@@ -523,6 +523,6 @@ pnpm --version
 - 当前复核基线 `main@54ff797`；原审查基线 `main@b563a98` 仅保留供追溯。后续实施/验证仍须重新记录 HEAD，冲突以本节及修订合同为准。
 - 先读取 [执行合同与能力矩阵](references/fe-r1-execution-contracts.md) 和 [中文优先UI合同](references/chinese-ui-contract.md)。架构正文唯一维护于上一级同名架构文件，references内同名文件只是入口。
 - FE-D03在Phase01完成独立UI安装最小验证；FE-D02已在Phase03/04完成 Local 核验与消费；FE-D01在Phase05平台Files前通过。三项均有明确目录/合同/测试边界，属于必要依赖，不授权其他后端扩张。
-- 所有页面中文优先，必要英文技术标识保留；公开Auth/Pricing及Registry也在范围内。FE-V01～16均为新的运行验收，当前NOT_RUN。
+- 所有页面中文优先，必要英文技术标识保留；公开Auth/Pricing及Registry也在范围内。FE-V01～16均为新的运行验收；当前已有 Phase 08、T12-R2、T16-R2 及相关 Local 集成证据，但完整状态/故障恢复矩阵仍为 PARTIAL，Hosted/Staging/生产项保持 NOT_RUN 或 BLOCKED，详见 [verification-record.md](verification-record.md)。
 - 默认按已派发任务串行执行。04/05/07的并行图只表达依赖可并行，不代表自动授权多Agent开发。
 - 路由/布局、请求隔离、mutation恢复、视觉样例和安装产物在基础阶段冻结，后续不得各自重新决定。
