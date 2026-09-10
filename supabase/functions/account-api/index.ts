@@ -290,6 +290,7 @@ function mapSqlFault(error: unknown): ApiFault {
   const message = sqlError.message ?? '';
   const code = sqlError.code;
   if (error instanceof ApiFault) return error;
+  if (code === '22023') return new ApiFault(400, 'INVALID_INPUT');
   if (code === '23505') return new ApiFault(409, 'IDEMPOTENCY_CONFLICT');
   if (code === '40001') return new ApiFault(412, 'PRECONDITION_FAILED');
   if (code === '42501') {
@@ -1018,14 +1019,19 @@ async function dispatchAdmin(
   }
 
   if (path === 'admin/api/v1/config-files' && request.method === 'GET') {
+    const platformIdValue = url.searchParams.get('platform_id');
+    const platformId =
+      platformIdValue === null ? null : uuidValue(platformIdValue);
+    if (platformIdValue !== null && !platformId)
+      throw new ApiFault(400, 'INVALID_INPUT');
     const cursorValue = url.searchParams.get('cursor');
     const cursor = cursorValue === null ? null : uuidValue(cursorValue);
     if (cursorValue !== null && !cursor)
       throw new ApiFault(400, 'INVALID_INPUT');
     const limit = boundedLimit(url.searchParams.get('limit'));
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_file_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer, $6::text)',
-      [...context, cursor, limit, url.searchParams.get('q')],
+      'select * from private.admin_file_list_v3(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::integer, $7::text)',
+      [...context, platformId, cursor, limit, url.searchParams.get('q')],
     );
     return {
       status: 200,

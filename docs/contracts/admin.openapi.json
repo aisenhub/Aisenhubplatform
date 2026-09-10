@@ -396,9 +396,20 @@
               "default": 20
             }
           },
+          {
+            "name": "platform_id",
+            "in": "query",
+            "required": false,
+            "description": "精确平台范围；过滤在服务端游标分页前执行。提供时 cursor 必须属于同一平台。",
+            "schema": { "type": "string", "format": "uuid" }
+          },
           { "$ref": "#/components/parameters/SearchQuery" }
         ],
-        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
       }
     },
     "/admin/api/v1/config-files/{fileId}": {

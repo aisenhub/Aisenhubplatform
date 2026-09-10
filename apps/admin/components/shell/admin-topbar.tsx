@@ -1,16 +1,41 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
+import { useState } from 'react';
+
+import { Button } from '@kit/ui/button';
 import { Separator } from '@kit/ui/separator';
 import { SidebarTrigger } from '@kit/ui/sidebar';
 
+import { adminAuthSession } from '../../app/_lib/auth-session';
 import { adminNavigationLabel } from '../navigation/admin-navigation';
 import { AdminCommandMenu } from '../navigation/admin-command-menu';
 
 export function AdminTopbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState(false);
   const pageLabel = adminNavigationLabel(pathname);
+
+  async function logout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError(false);
+    try {
+      const response = await adminAuthSession.logout();
+      if (response.ok) {
+        router.replace('/admin/login');
+      } else {
+        setLogoutError(true);
+      }
+    } catch {
+      setLogoutError(true);
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <header
@@ -32,6 +57,20 @@ export function AdminTopbar() {
           <span className="text-sm font-medium">{pageLabel}</span>
         </div>
         <AdminCommandMenu compact />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void logout()}
+          disabled={loggingOut}
+          data-test="admin-logout"
+        >
+          {loggingOut ? '退出中…' : '退出登录'}
+        </Button>
+        {logoutError ? (
+          <span className="text-xs text-destructive" role="alert">
+            退出失败，请重试
+          </span>
+        ) : null}
       </div>
     </header>
   );

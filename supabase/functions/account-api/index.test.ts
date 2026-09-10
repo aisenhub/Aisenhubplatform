@@ -156,7 +156,7 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
-          if (query.startsWith('select * from private.admin_file_list_v2')) {
+          if (query.startsWith('select * from private.admin_file_list_v3')) {
             return [
               {
                 file_id: keyId,
@@ -717,12 +717,21 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
 
   const files = await handleRequest(
     new Request(
-      'http://local/functions/v1/account-api/admin/api/v1/config-files?q=fixture&limit=20',
+      'http://local/functions/v1/account-api/admin/api/v1/config-files?platform_id=00000000-0000-4000-8000-000000000001&q=fixture&limit=20',
       { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
     ),
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
   );
   assertEquals(files.status, 200);
+
+  const invalidScopedFiles = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/config-files?platform_id=not-a-uuid',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(invalidScopedFiles.status, 400);
 
   const audit = await handleRequest(
     new Request(

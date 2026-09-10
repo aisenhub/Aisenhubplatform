@@ -261,7 +261,7 @@ async function runBrowserFlow(secret) {
   await page.getByLabel('验证码').fill(totp(secret));
   await page.getByRole('button', { name: '验证并继续' }).click();
   await page.waitForURL(/\/admin$/u);
-  await assertPageText('Admin control center');
+  await assertPageText('管理员总览');
 
   const cookiesBeforeLogout = await context.cookies(appUrl);
   const proofCookie = cookiesBeforeLogout.find(
@@ -281,24 +281,22 @@ async function runBrowserFlow(secret) {
   assertStatus(aal2.status, 200, 'AAL2 Admin API access');
   assert.equal(aal2.payload?.data?.[0]?.code, 'free');
 
-  await page.goto(`${appUrl}/admin/entitlements`, {
+  const loadPlansResponsePromise = page.waitForResponse((response) =>
+    response
+      .url()
+      .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`),
+  );
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/plans`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.getByLabel('Platform ID').fill(platformId);
-  const [loadPlansResponse] = await Promise.all([
-    page.waitForResponse((response) =>
-      response
-        .url()
-        .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`),
-    ),
-    page.getByRole('button', { name: '加载' }).click(),
-  ]);
+  await page.locator('[data-test="platform-plans-page"]').waitFor({
+    state: 'visible',
+  });
+  const loadPlansResponse = await loadPlansResponsePromise;
   assertStatus(loadPlansResponse.status(), 200, 'browser admin plan list');
-  await assertPageText(
-    '已加载；所有写入仍由中央 Account API 和数据库领域函数执行。',
-  );
-  await page.locator('input[aria-label="Plan code"]').fill('browser-pro');
-  await page.locator('input[aria-label="Plan name"]').fill('Browser Pro');
+  await page.locator('[data-test="plan-create-open"]').click();
+  await page.locator('[data-test="plan-editor-code"]').fill('browser-pro');
+  await page.locator('[data-test="plan-editor-name"]').fill('Browser Pro');
   const [createPlanResponse] = await Promise.all([
     page.waitForResponse(
       (response) =>
@@ -307,7 +305,7 @@ async function runBrowserFlow(secret) {
           .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`) &&
         response.request().method() === 'POST',
     ),
-    page.getByRole('button', { name: '创建计划' }).click(),
+    page.locator('[data-test="plan-editor-submit"]').click(),
   ]);
   assertStatus(createPlanResponse.status(), 201, 'browser admin plan create');
   await page.getByText('browser-pro', { exact: true }).waitFor({

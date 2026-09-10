@@ -168,4 +168,4 @@ M4将屏障消费和墓碑事件写入主库的受控过程；M6负责把manifes
 
 Account侧只保留现有六个文件操作：`POST /v1/config-files/upload-intent`、`PUT/GET /v1/config-files/{fileId}/content`、`GET /v1/config-files`、`GET/DELETE /v1/config-files/{fileId}`；不增加浏览器 `complete`、signed-upload或Storage直连路径。Admin侧的file-policy、files、deletion-jobs列表/详情/下载/受控delete/retry均必须调用同一领域入口；M4-08再提供页面，不能在UI中重算预算或直接写表。
 
-HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。M4-02～M4-07若需要变更字段，必须先同步本节、`docs/development/contracts.md`、OpenAPI、DTO、SDK和测试，不能静默改名。
+HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。Admin 文件列表支持可选精确 `platform_id`：过滤在服务端游标分页前执行；无效 UUID 返回400、未知平台返回404、与平台范围不一致的 cursor 返回400 `INVALID_INPUT`。不带该参数仍保留全局列表语义。M4-02～M4-07若需要变更字段，必须先同步本节、`docs/development/contracts.md`、OpenAPI、DTO、SDK和测试，不能静默改名。

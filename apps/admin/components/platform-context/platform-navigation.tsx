@@ -40,7 +40,9 @@ export function PlatformNavigation({ platformId }: PlatformNavigationProps) {
         const active =
           item.key === 'overview'
             ? pathname === prefix
-            : pathname === href || pathname.startsWith(`${href}/`);
+            : item.key === 'settings'
+              ? pathname === href
+              : pathname === href || pathname.startsWith(`${href}/`);
 
         return (
           <Link

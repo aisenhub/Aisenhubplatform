@@ -81,7 +81,7 @@ Admin路径固定为/admin/api/v1，具体动作：
 - config-files：metadata、受控download、delete。
 - audit：只读筛选分页；deletion-jobs：只读状态、Admin start/retry；不提供任意checkpoint编辑。
 
-Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文件列表支持可选 `q`（最多128字符）以及既有 `limit`/cursor 参数，过滤在受控 SQL wrapper 内执行。所有敏感动作使用同一授权包装和Audit。读列表也须Admin身份，不能因不修改数据跳过鉴权。
+Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文件列表支持可选 `q`（最多128字符）以及既有 `limit`/cursor 参数，过滤在受控 SQL wrapper 内执行。文件列表另支持可选精确 `platform_id`，必须在服务端分页前过滤，scoped cursor 跨平台返回400，未知平台返回404；不带该参数保持全局兼容语义。所有敏感动作使用同一授权包装和Audit。读列表也须Admin身份，不能因不修改数据跳过鉴权。
 
 ## 5. T11冻结产物
 
@@ -119,6 +119,6 @@ Phase 01 更新 auth-security/API 专题的实际最终合同，Phase 05 提供�
 
 ## 9. FE-R1 前端必要依赖登记（规划，未实现）
 
-前端修订合同见 [FE-R1](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/references/fe-r1-execution-contracts.md)。FE-D01拟在现有Admin文件列表补可选精确platform_id，先登记请求/错误/cursor范围再同步OpenAPI、CLI新迁移、handler和权限/分页测试；不更改Account租户推导或配额算法。FE-D02核验批次重复创建的明文/receipt语义，未闭环前禁止通过重发创建恢复明文。FE-D03补共享UI独立分发与安装验收，不等于授权公开发布。以上均未实现，Frontend Phase01～08未开始。
+前端修订合同见 [FE-R1](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/references/fe-r1-execution-contracts.md)。FE-D01已在现有Admin文件列表补可选精确platform_id：通过新增受控 scoped SQL wrapper、handler 参数校验、OpenAPI 与权限/分页测试实现；不更改Account租户推导或配额算法。FE-D02核验批次重复创建的明文/receipt语义，未闭环前禁止通过重发创建恢复明文。FE-D03补共享UI独立分发与安装验收，不等于授权公开发布。FE-D01代码已实现并完成本地两平台返回范围核对，完整交付仍随Phase05浏览器/跨平台cursor矩阵验收。
 
 默认简体中文仅改变展示，DTO/稳定错误码/枚举/Header/幂等key与时间传输合同保持原值；中文说明见 [中文UI合同](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/references/chinese-ui-contract.md)。

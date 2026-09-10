@@ -1,5 +1,5 @@
-import { LegacyPlatformSettings } from '../../../../../features/platforms/legacy-platform-settings';
+import { PlatformSettingsPage as PlatformSettingsFeaturePage } from '../../../../../features/platform-settings/platform-settings-page';
 
 export default function PlatformSettingsPage() {
-  return <LegacyPlatformSettings />;
+  return <PlatformSettingsFeaturePage />;
 }

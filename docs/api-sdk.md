@@ -31,7 +31,7 @@ principal为状态诊断接口，返回disabled时不表示授权通过；其余
 
 公开Pricing通过 Browser → BFF → GET /plans，不需要登录，也不暴露Platform Key。仅返回code/name/description/kind/features，不返回platform config、内部ID、兑换库存或Secret；Free/paid展示不意味着用户已获得权益。
 
-Admin独立 /admin/api/v1：platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、config-files、audit、deletion-jobs。所有入口强制Admin鉴权；Grant/revoke/pause/resume、批次交付及Key操作的高风险规则不可由前端参数关闭。Admin不提供直接更新Projection或任意SQL入口。
+Admin独立 /admin/api/v1：platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、config-files、audit、deletion-jobs。所有入口强制Admin鉴权；Grant/revoke/pause/resume、批次交付及Key操作的高风险规则不可由前端参数关闭。Admin文件列表的可选 `platform_id` 在受控SQL边界内先于分页过滤；Admin不提供直接更新Projection或任意SQL入口。
 
 ## 2. 请求与返回
 

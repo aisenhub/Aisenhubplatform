@@ -13,7 +13,7 @@ const overviewLinks = [
   {
     title: '配置文件',
     description: '查看文件策略、状态和需要 worker 继续处理的任务。',
-    href: '/admin/files',
+    href: '/admin/platforms',
   },
   {
     title: '运维任务',

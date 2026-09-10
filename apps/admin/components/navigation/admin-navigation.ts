@@ -1,7 +1,6 @@
 import {
   Activity,
   Boxes,
-  FileKey2,
   LayoutDashboard,
   LockKeyhole,
   ScrollText,
@@ -34,17 +33,6 @@ export const adminNavigationGroups: Array<{
         href: '/admin/platforms',
         description: '管理平台、账户和平台密钥',
         icon: Boxes,
-      },
-    ],
-  },
-  {
-    label: '资源',
-    items: [
-      {
-        label: '配置文件',
-        href: '/admin/files',
-        description: '查看文件策略和配置文件状态',
-        icon: FileKey2,
       },
     ],
   },

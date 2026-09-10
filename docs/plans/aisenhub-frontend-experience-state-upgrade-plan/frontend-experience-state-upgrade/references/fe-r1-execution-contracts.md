@@ -13,17 +13,17 @@
 | 套餐 | 平台范围列表、真实写入口 | 只提供已实现筛选与编辑字段 |
 | 订阅 | 单账户读取和 command，无列表 | Accounts → 订阅详情，URL account 参数；不新增订阅列表 |
 | 兑换批次 | platform_id/limit，无 cursor，列表不返回 creation_operation_id | 有界列表；创建未知结果不能按名称猜原 operation |
-| 文件 | 全局 q/limit/cursor，无精确 platform_id；SQL q 不搜索平台 ID | 平台 Files 必须依赖 FE-D01，禁止全局一页客户端过滤冒充平台数据集 |
+| 文件 | 全局 q/limit/cursor；Admin 列表另支持可选精确 platform_id，SQL q 不搜索平台 ID | 平台 Files 使用服务端范围过滤与 cursor；不允许全局一页客户端过滤冒充平台数据集 |
 | 审计 | q/limit/cursor，无独立 exact target filter | 基础搜索与详情，不提供精确资源时间线 |
 | 删除任务 | limit 有界列表 | Operations 第一版主来源；显示查询范围，不能当全局完整计数 |
 
 ### FE-D01：平台文件查询最小合同补齐（Phase 05 开始前）
 
-- Owner：集成人/受控 API 维护方；依赖 Phase 02 平台路由合同，可独立于 Phase 04 准备。当前状态 NOT_STARTED。
+- Owner：集成人/受控 API 维护方；依赖 Phase 02 平台路由合同，可独立于 Phase 04 准备。当前状态 IMPLEMENTED_LOCAL，FE-V05/Phase05 的浏览器与跨平台 cursor 验收已在本地完成，阶段交付仍以 push/记录为准。
 - 在现有 Admin 文件列表增加可选精确 `platform_id`（合法 UUID；无参数保留全局语义）。精确平台过滤必须在排序/分页前执行；未知平台、无效参数、跨平台 cursor 的拒绝语义先登记 OpenAPI/合同和测试，再实现。
 - 新 scoped 列表只返回目标平台；cursor 必须属于相同平台范围。详情/动作仍由服务端授权，前端打开详情时核对返回 platform_id 与 URL，不能在 B 平台标题下操作 A 的文件。
 - 允许目录：`docs/contracts/admin.openapi.json`、公共合同、相关 DTO（如确有改动）、Account API handler、CLI 生成的新 migration、权限/分页/API 测试和消费者。不得修改已应用迁移，不新增配额/授权算法。执行 Supabase 工作时仍须加载技能、核对固定版本与官方资料。
-- 测试：两平台文件交错且跨多页、空平台、invalid/unknown ID、跨平台 cursor、原 global 查询兼容、匿名/非管理员拒绝。FE-V05。
+- 测试：两平台文件交错且跨多页、空平台、invalid/unknown ID、跨平台 cursor、原 global 查询兼容、匿名/非管理员拒绝。FE-V05；当前已完成本地 scoped 返回、跨平台 cursor、无效 UUID、global handler compatibility 与 Admin 权限边界核对。
 - 未通过时 Phase 05 平台文件列表 BLOCKED；可完成策略/设置等独立准备，不能宣称整阶段通过。不得为绕过依赖无限拉全局文件。
 
 ## 2. Auth 接入与布局
