@@ -109,7 +109,7 @@ try {
   const adminContext = () =>
     sql`row(${adminUser.user}, ${adminUser.session}, ${crypto.randomUUID()})::private.admin_context`;
   const createBatch = async (planId, codeHmac, name, keyVersion = 1) => {
-    const receiptHmac = `${name}-receipt`;
+    const receiptHmac = fixtureCodeHmac();
     const [created] = await asRole(
       'admin_executor',
       (transaction) =>
@@ -288,7 +288,7 @@ try {
   );
   const redemptionCodeHmac = `${platformId.replaceAll('-', '')}${'e'.repeat(32)}`;
   const creationOperationId = crypto.randomUUID();
-  const receiptHmac = 'receipt-hmac-fixture';
+  const receiptHmac = 'a'.repeat(64);
   const expiresAt = new Date(Date.now() + 86400000).toISOString();
   const deliveryDeadline = new Date(Date.now() + 600000).toISOString();
   const codePayload = [
@@ -305,7 +305,9 @@ try {
       transaction`select * from private.admin_batch_create(${adminContext()}, ${platformId}, ${paidPlanId}, 'M3 batch', 1, 30, 'day', ${expiresAt}, ${deliveryDeadline}, ${creationOperationId}, ${receiptHmac}, ${sql.json(codePayload)})`,
   );
   assert(
-    batch.status === 'pending_delivery' && batch.quantity === 1,
+    batch.status === 'pending_delivery' &&
+      batch.quantity === 1 &&
+      batch.creation_state === 'created',
     'batch starts pending delivery',
   );
   const [lostDeliveryResponseRetry] = await asRole(
@@ -317,8 +319,19 @@ try {
     lostDeliveryResponseRetry.batch_id === batch.batch_id &&
       lostDeliveryResponseRetry.status === 'pending_delivery' &&
       lostDeliveryResponseRetry.quantity === 1 &&
+      lostDeliveryResponseRetry.creation_state === 'replayed_existing' &&
       !('codes' in lostDeliveryResponseRetry),
     'lost batch response retry cannot recover plaintext codes',
+  );
+  await expectSqlState(
+    () =>
+      asRole(
+        'admin_executor',
+        (transaction) =>
+          transaction`select * from private.admin_batch_create(${adminContext()}, ${platformId}, ${paidPlanId}, 'M3 batch changed', 1, 30, 'day', ${expiresAt}, ${deliveryDeadline}, ${creationOperationId}, ${receiptHmac}, ${sql.json(codePayload)})`,
+      ),
+    '23505',
+    'same batch operation with changed request conflicts',
   );
   const [beforeDelivery] = await asRole(
     'account_executor',
@@ -552,12 +565,12 @@ try {
   const [concurrentBatch] = await asRole(
     'admin_executor',
     (transaction) =>
-      transaction`select * from private.admin_batch_create(${adminContext()}, ${platformId}, ${paidPlanId}, 'M3 concurrent batch', 1, 30, 'day', ${expiresAt}, ${deliveryDeadline}, ${concurrentBatchOperationId}, 'concurrent-receipt', ${sql.json(concurrentCodePayload)})`,
+      transaction`select * from private.admin_batch_create(${adminContext()}, ${platformId}, ${paidPlanId}, 'M3 concurrent batch', 1, 30, 'day', ${expiresAt}, ${deliveryDeadline}, ${concurrentBatchOperationId}, ${'c'.repeat(64)}, ${sql.json(concurrentCodePayload)})`,
   );
   await asRole(
     'admin_executor',
     (transaction) =>
-      transaction`select * from private.admin_batch_confirm(${adminContext()}, ${platformId}, ${concurrentBatch.batch_id}, 'concurrent-receipt')`,
+      transaction`select * from private.admin_batch_confirm(${adminContext()}, ${platformId}, ${concurrentBatch.batch_id}, ${'c'.repeat(64)})`,
   );
   const concurrentResults = await Promise.all(
     Array.from({ length: 10 }, (_, index) =>

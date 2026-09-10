@@ -1,11 +1,12 @@
 begin;
 
-select plan(43);
+select plan(44);
 
 select has_table('public', 'subscriptions', 'subscription projection exists');
 select has_table('public', 'subscription_grants', 'immutable grant ledger exists');
 select has_table('public', 'subscription_events', 'ordered subscription events exist');
 select has_table('public', 'redemption_code_batches', 'redemption batches exist');
+select has_column('public', 'redemption_code_batches', 'creation_request_hash', 'batch replay request hash exists');
 select has_table('public', 'redemption_codes', 'redemption codes exist');
 select has_table('public', 'redemption_events', 'redemption events exist');
 select has_function('private', 'entitlement_recompute', array['uuid', 'uuid'], 'recompute exists');

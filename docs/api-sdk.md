@@ -33,6 +33,8 @@ principal为状态诊断接口，返回disabled时不表示授权通过；其余
 
 Admin独立 /admin/api/v1：platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、config-files、audit、deletion-jobs。所有入口强制Admin鉴权；Grant/revoke/pause/resume、批次交付及Key操作的高风险规则不可由前端参数关闭。Admin文件列表的可选 `platform_id` 在受控SQL边界内先于分页过滤；Admin不提供直接更新Projection或任意SQL入口。
 
+兑换码批次创建重放以 `200` 返回 `batch_id`、`status=pending_delivery` 与 `creation_state=replayed_existing`，不返回 plaintext codes 或 delivery receipt；同一 `creation_operation_id` 参数不一致返回 `409 IDEMPOTENCY_CONFLICT`。
+
 ## 2. 请求与返回
 
 JSON统一外壳为 data + request_id，错误为 error:{code,message} + request_id；错误文案可本地化，机器判断只使用code。下载成功返回字节和X-Request-Id，失败在发流前返回标准错误，发流后中断记录独立事件。

@@ -1529,6 +1529,19 @@ async function dispatchAdmin(
           ),
         ],
       );
+      if (result?.creation_state === 'replayed_existing') {
+        return {
+          status: 200,
+          data: {
+            batch_id: result.batch_id,
+            status: result.status,
+            quantity: result.quantity,
+            creation_state: result.creation_state,
+          },
+        };
+      }
+      if (result?.creation_state !== 'created')
+        throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
       return {
         status: 201,
         data: { ...result, delivery_receipt: receipt, codes },

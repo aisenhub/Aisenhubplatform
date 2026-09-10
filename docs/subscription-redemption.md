@@ -246,7 +246,7 @@ Admin 手动操作提交 operation_id UUID、reason 和目标账户；operation_
 
 1. Admin 近期 MFA 后提交生成操作，数据库创建 pending_delivery Batch 和 Codes；明文仅在生成进程内存中，通过 no-store 响应返回一次，禁止日志和持久缓存。
 2. Admin UI 完成下载后让管理员确认已保存，再调用交付确认；服务端验证同一管理员会话、批次、数量与一次性 receipt HMAC，在10分钟期限内将 Batch 激活并审计。
-3. receipt 原文只随首次响应返回，数据库只存其 HMAC、会话绑定和失效时间；不得将明文 Code 放入幂等响应缓存。创建重试只能返回批次 ID 与 pending 状态，不能恢复明文。
+3. receipt 原文只随首次响应返回，数据库只存其 HMAC、会话绑定和失效时间；不得将明文 Code 放入幂等响应缓存。创建重试以 `200` 返回批次 ID、`pending_delivery` 和 `creation_state=replayed_existing`，不能恢复明文 Code 或 receipt；同一 operation_id 参数不一致必须返回 `409 IDEMPOTENCY_CONFLICT`。
 4. 响应丢失或未确认，Batch 不能兑换；期限后禁用。重新生成必须创建新操作和新 Batch，不复活旧批次。确认本身幂等。
 
 Batch 须增加 delivery_session_id、delivery_receipt_hmac、delivery_confirmed_by 等交付字段，后台只能保存 receipt HMAC。禁用批次永不重新激活；“替换丢失码”必须先禁用原未用批次或原未用码，再生成新码，不追回已兑换权益。

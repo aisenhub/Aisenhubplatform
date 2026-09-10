@@ -368,6 +368,18 @@ try {
 
   const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
   const deliveryDeadline = new Date(Date.now() + 600_000).toISOString();
+  const creationOperationId = crypto.randomUUID();
+  const batchRequest = {
+    platform_id: platformId,
+    plan_id: paidPlanId,
+    name: 'M3 API batch',
+    quantity: 1,
+    duration_value: 30,
+    duration_unit: 'day',
+    expires_at: expiresAt,
+    delivery_deadline: deliveryDeadline,
+    creation_operation_id: creationOperationId,
+  };
   const batchResponse = await apiRequest(
     '/functions/v1/account-api/admin/api/v1/redemption-batches',
     {
@@ -377,24 +389,52 @@ try {
         'Content-Type': 'application/json',
         'X-Recent-Auth-Proof': proofId,
       },
-      body: JSON.stringify({
-        platform_id: platformId,
-        plan_id: paidPlanId,
-        name: 'M3 API batch',
-        quantity: 1,
-        duration_value: 30,
-        duration_unit: 'day',
-        expires_at: expiresAt,
-        delivery_deadline: deliveryDeadline,
-        creation_operation_id: crypto.randomUUID(),
-      }),
+      body: JSON.stringify(batchRequest),
     },
   );
   assertStatus(batchResponse, 201, 'admin create batch');
   const batch = await json(batchResponse);
+  assert.equal(batch.data.creation_state, 'created');
   assert.equal(batch.data.codes.length, 1);
   assert.ok(batch.data.delivery_receipt);
   const batchId = batch.data.batch_id;
+
+  const replayResponse = await apiRequest(
+    '/functions/v1/account-api/admin/api/v1/redemption-batches',
+    {
+      method: 'POST',
+      headers: {
+        ...adminHeaders,
+        'Content-Type': 'application/json',
+        'X-Recent-Auth-Proof': proofId,
+      },
+      body: JSON.stringify(batchRequest),
+    },
+  );
+  assertStatus(replayResponse, 200, 'admin replay batch create');
+  const replay = await json(replayResponse);
+  assert.equal(replay.data.creation_state, 'replayed_existing');
+  assert.equal(replay.data.batch_id, batchId);
+  assert.equal(replay.data.status, 'pending_delivery');
+  assert.equal(replay.data.quantity, 1);
+  assert.equal('codes' in replay.data, false);
+  assert.equal('delivery_receipt' in replay.data, false);
+
+  const conflictResponse = await apiRequest(
+    '/functions/v1/account-api/admin/api/v1/redemption-batches',
+    {
+      method: 'POST',
+      headers: {
+        ...adminHeaders,
+        'Content-Type': 'application/json',
+        'X-Recent-Auth-Proof': proofId,
+      },
+      body: JSON.stringify({ ...batchRequest, name: 'M3 API batch changed' }),
+    },
+  );
+  assertStatus(conflictResponse, 409, 'admin replay conflict');
+  const conflict = await json(conflictResponse);
+  assert.equal(conflict.error.code, 'IDEMPOTENCY_CONFLICT');
 
   const confirmResponse = await apiRequest(
     `/functions/v1/account-api/admin/api/v1/redemption-batches/${batchId}/confirm-delivery`,

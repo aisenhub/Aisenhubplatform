@@ -345,6 +345,7 @@ export function PlatformRedemptionBatchesPage() {
         );
         const payload = await readApiPayload<{
           batch_id?: string;
+          creation_state?: 'created' | 'replayed_existing';
           codes?: Array<{ code?: string }>;
           delivery_receipt?: string;
         }>(response);
@@ -358,6 +359,21 @@ export function PlatformRedemptionBatchesPage() {
           }
           setMutationState('failure');
           setMutationError(resourceError(response, payload, '兑换批次创建'));
+          return;
+        }
+        if (payload?.data?.creation_state === 'replayed_existing') {
+          setMutationState('unknown_outcome');
+          setMutationError({
+            title: '批次已存在，明文无法恢复',
+            description:
+              '服务端已找到同一 creation_operation_id 对应的批次；页面不会重新创建，也不会显示新的明文码或 receipt。请按批次 ID 和支持流程确认原次交付。',
+            requestId:
+              response.headers.get('x-request-id') ??
+              payload?.request_id ??
+              null,
+            technicalDetail: payload.data.batch_id ?? 'BATCH_REPLAYED',
+          });
+          await load(true);
           return;
         }
         const batchId = payload?.data?.batch_id;
