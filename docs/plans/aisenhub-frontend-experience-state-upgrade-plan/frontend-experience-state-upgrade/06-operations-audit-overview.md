@@ -1,8 +1,8 @@
 # Phase 06 — Operations Center、Audit Inspector 与真实 Overview
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 06 产品实现已开始。
 
-> 状态：**未开始**  
+> 状态：**进行中**  
 > 前置：Phase 01–05 中至少 Phase 04、05 已交付并 push；Operations 需要知道新资源 routes。  
 > Phase 07 Consumer 可与本阶段并行继续。
 
@@ -17,6 +17,16 @@
 - Resource Activity：只有 Audit API 能按 exact target filter 时实现；
 - 旧 `/admin/deletion-jobs` 退出为 redirect/compat entry；
 - 为未来 System Health/Diagnostics 留清晰导航边界，但不实现假状态。
+
+## 1.1 当前实施（2026-09-10）
+
+- `/admin/operations` 已接入真实有界 `deletion-jobs` 列表、详情、批准/启动和受控重试；状态展示只投影服务端 `state/checkpoint`，重试复用确认、近期 MFA、稳定幂等键和 unknown outcome 检查。
+- 全局文件 attention 未伪造：当前 Admin config-files API 没有全局 `status` filter，因此 Operations 明确说明能力边界并链接到平台内 Files；不以一页文件结果冒充全局 deleting/unknown 统计。
+- `/admin/audit` 保持 `q/limit/cursor` 真实过滤，在 Inspector 中仅为已确认存在的 platform、deletion job 路由提供目标跳转；request ID 仍是复制/查询入口，不伪造 Request Inspector。
+- `/admin` 已改为真实 Overview，独立读取有界 platforms、deletion-jobs、audit 数据；局部刷新失败保留已知数据并标记失败，不生成 system health、趋势图或全局假计数。
+- `/admin/deletion-jobs` 已退出为 `/admin/operations` redirect；导航、快捷入口和旧工程里程碑文案已收口。
+
+验证与未完成项以 [verification-record.md](verification-record.md) 的 Phase 06 / VR-0007 为准；390px、完整键盘/焦点矩阵及全状态故障注入仍留最终收口阶段。
 
 ## 2. 必读
 
