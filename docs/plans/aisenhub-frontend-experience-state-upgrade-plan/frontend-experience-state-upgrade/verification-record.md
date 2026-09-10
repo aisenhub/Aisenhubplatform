@@ -852,6 +852,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `e5d67aa94e3658340c64455d80f5000991861eac` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/e5d67aa94e3658340c64455d80f5000991861eac) | PASS | PASS | 更新当前实现基线、T16-R2 17 项结果、FE-V 剩余矩阵与 Hosted/M4–M6 阻塞清单；两个远端分支已核对一致 |
 | 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `c489d333c3ae28105fb52f60b9e7cb6ec0dd639e` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/c489d333c3ae28105fb52f60b9e7cb6ec0dd639e) | PASS | PASS | 更新 T16-R2 19 项结果、VR-0015 Settings 生命周期证据与当前 FE-V 剩余清单；两个远端分支已核对一致 |
 | 2026-09-10 | T16-R2 / Phase 05 | code+test | `codex/frontend-plan-r1` | `94631ff` | [GitHub code+test commit](https://github.com/aisenhub/Aisenhubplatform/commit/94631ff) | PASS | PASS | Workspace 状态刷新保留当前上下文；Settings 列表 503 显式重试、平台设置 409/网络 unknown 不重发；T16-R2 当前共 19 项 Local 浏览器断言通过，两个远端分支均核对一致 |
+| 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `a974122` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/a974122) | PASS | PASS | 更新当前产品基线至 `94631ff`、新增 VR-0017 Settings 故障恢复证据，并同步总计划、状态、合同、handoff 与 Phase 入口；两个远端分支已核对一致 |
 
 ---
 
@@ -919,7 +920,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 |---|---|
 | Phase 01–08 代码 | 已形成独立代码提交并 push；Phase 08 代码为 `11aa3f2`，当前产品实现基线为 `94631ff`。 |
 | Local 前端回归 | Admin/Consumer typecheck/build、root lint/typecheck/unit/contracts/docs、T12 五档 70 路由、T16 当前 19 项、M5/Registry 和最终 detector 均已记录 PASS；最新 `filesStateMatrix` 含下载失败/MFA 与 Policy MFA/409，Settings 含列表 503 重试与平台状态网络 unknown 不重发。 |
-| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`、此前 Admin/Files/Settings 增量 commit 与本轮产品+测试 commit `94631ff` 均已推送；文档维护提交 `e5ceb98` 及本轮后续 docs 提交将一并记录；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
+| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`、此前 Admin/Files/Settings 增量 commit 与本轮产品+测试 commit `94631ff` 均已推送；文档维护提交 `e5ceb98`、`a974122` 均已推送，当前记录的后续 docs 收口提交由 Git 历史追溯；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
 | 文档一致性 | `pnpm docs:check` 于本次审查实际运行并通过；当前漂移已在总计划、状态、合同、路线、handoff 和各 Phase 入口修正。 |
 
 ## 15.2 尚未完成的任务
