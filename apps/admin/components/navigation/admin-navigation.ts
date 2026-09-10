@@ -41,8 +41,8 @@ export const adminNavigationGroups: Array<{
     items: [
       {
         label: '运维任务',
-        href: '/admin/deletion-jobs',
-        description: '跟踪删除任务和恢复检查点',
+        href: '/admin/operations',
+        description: '查看删除任务、检查点和可控重试',
         icon: Activity,
       },
       {

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   Suspense,
   useCallback,
@@ -134,6 +135,17 @@ function readableTarget(entry: AuditEntry): string {
   );
 }
 
+function supportedTargetHref(entry: AuditEntry): string | null {
+  if (!entry.target_id) return null;
+  if (entry.target_type === 'platform') {
+    return `/admin/platforms/${encodeURIComponent(entry.target_id)}`;
+  }
+  if (entry.target_type === 'deletion_job') {
+    return `/admin/operations?job_id=${encodeURIComponent(entry.target_id)}`;
+  }
+  return null;
+}
+
 function TechnicalDetails({ entry }: { entry: AuditEntry }) {
   return (
     <details className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
@@ -177,6 +189,7 @@ function AuditInspector({
   onClose: () => void;
 }) {
   const status = auditStatus(entry?.outcome);
+  const targetHref = entry ? supportedTargetHref(entry) : null;
 
   return (
     <Sheet
@@ -252,6 +265,15 @@ function AuditInspector({
                         value={entry.target_id}
                         label={`${entry.target_type ?? '资源'} · ${entry.target_id}`}
                       />
+                      {targetHref ? (
+                        <Link
+                          href={targetHref}
+                          className="mt-2 inline-flex text-sm text-primary underline-offset-4 hover:underline"
+                          data-test="audit-target-link"
+                        >
+                          打开关联资源
+                        </Link>
+                      ) : null}
                     </dd>
                   </div>
                 ) : null}
