@@ -2,7 +2,7 @@
 
 > 用途：Frontend Experience & State 只能消费这些认证/会话语义，不能在页面里重新设计第二套实现。  
 > 来源：上一轮 `Authentication & Session` 优化计划研究结果。  
-> 状态：FE-R1已核对Auth Phase01～05实现与Local验证记录；hosted/Staging/生产边界仍以实际Auth verification record为准。类型以packages/account-auth导出为准。
+> 状态：FE-R1已核对Auth Phase01～05实现与Local验证记录；当前暂缓继续开发，现有认证/会话语义冻结消费，不新增第二套实现；hosted/Staging/生产边界仍以实际Auth verification record为准。类型以packages/account-auth导出为准。
 
 ## Session 状态
 

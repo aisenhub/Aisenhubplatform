@@ -4,6 +4,10 @@
 
 > 本包仍是执行计划索引，不替代实施证据。Phase 01–08 与 FE-D02 Local 已有代码、验证、commit/push 和 `main` 合并；Hosted/Staging/生产、全状态故障注入和正式发布仍按状态记录维护。
 
+## 当前交接策略（2026-09-10）
+
+本专题本轮代码与 Local 验收已完成，当前暂缓继续开发，优先承接其他明确派发功能。FE-R1 总体仍为 PARTIAL：剩余 FE-V01～16 全量正向/恢复、390px/键盘焦点、Hosted/Staging/生产和 M4–M6 门槛不得从本地 PASS 推定关闭。恢复时从 `main@c9c19f4`、[verification-record.md](verification-record.md) 的 VR-0018/VR-0019 和 [agent-handoff.md](agent-handoff.md) 接续；新功能使用独立任务文档和证据，不混入本计划。
+
 ## 推荐放置位置
 
 ```text

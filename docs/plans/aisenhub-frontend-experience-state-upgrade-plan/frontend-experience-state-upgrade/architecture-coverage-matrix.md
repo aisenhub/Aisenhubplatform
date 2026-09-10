@@ -3,7 +3,7 @@
 > FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 01–08 与 FE-D02 已有代码实现；本矩阵仍只证明架构映射，不替代 [verification-record.md](verification-record.md) 的运行证据。
 
 > 用途：证明 `Aisenhub_Frontend_Experience_State_Architecture.md` 中的内容没有在执行计划拆分时遗漏。  
-> 状态：规划映射，不代表任何功能已实施。
+> 状态：架构映射；Phase 01–08 代码已交付，但本矩阵不替代运行证据，也不代表 FE-R1 剩余验收或发布门槛已关闭。当前专题暂缓继续开发，恢复入口见 [verification-record.md](verification-record.md) 的 VR-0019。
 
 | 架构主题 | 执行阶段 | 本期状态/说明 |
 |---|---|---|

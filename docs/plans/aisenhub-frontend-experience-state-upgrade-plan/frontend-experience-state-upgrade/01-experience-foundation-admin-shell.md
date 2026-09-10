@@ -2,7 +2,7 @@
 
 > FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 01 代码批次已交付；阶段剩余核验以 [verification-record.md](verification-record.md) 为准。
 
-> 状态：**进行中**（代码批次已交付；Audit 行为级证据仍待完整关闭）  
+> 状态：**进行中（当前暂缓承接）**（代码批次已交付；Audit 行为级证据仍待完整关闭）  
 > 上游：`00-master-plan.md`  
 > 本阶段必须先完成，后续阶段不可绕过其 shared UI/state contract。
 

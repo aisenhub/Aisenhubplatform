@@ -9,6 +9,8 @@
 > 本文重点：Admin 控制台，同时统一 Consumer 的页面状态与交互基础  
 > 本轮性质：架构与实现边界维护；不替代具体环境的运行验收
 
+> 当前交接（2026-09-10）：FE-R1 本轮代码与 Local 验收已完成，当前按产品优先级暂缓继续开发；剩余矩阵、托管门槛和恢复条件以 [verification-record.md](frontend-experience-state-upgrade/verification-record.md) 的 VR-0018/VR-0019 为准。
+
 ---
 
 ## 0. 结论摘要

@@ -2,7 +2,7 @@
 
 > FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 07 本地代码批次与 Consumer/Registry Local 验证已交付；Hosted 双平台和正式发布仍不在本地关闭范围。
 
-> 状态：**进行中**  
+> 状态：**进行中（当前暂缓承接）**  
 > 前置：Phase 01–03 已交付并 push；若 Authentication & Session Consumer adoption 尚未交付，相关 session transport 工作等待上游，不复制实现。  
 > 可与 Phase 04、05、06 并行，但共享 `packages/ui` contract 只能由 Integrator 修改。
 

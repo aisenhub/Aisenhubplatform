@@ -4,10 +4,12 @@
 
 ## 当前接手点（2026-09-10）
 
-- 已完成并推送：`c9c19f4`；`origin/main` 已核对包含完整 SHA `c9c19f45d97c2f9b7265c62861ed160a2e987dd5`。
+- 当前策略：本专题按用户安排暂缓继续开发，先承接其他明确派发功能；暂缓不等于 FE-R1 完成或发布通过。
+- 已完成并推送：`c9c19f4`；`origin/main` 已核对包含完整 SHA `c9c19f45d97c2f9b7265c62861ed160a2e987dd5`。文档收口与交付记录已在随后 docs-only 批次完成。
 - 本轮 Local 浏览器命令：`pnpm run test:e2e:t16-r2`，退出码 0；汇总 20 个 PASS。第一次因平台目录 400 文案期望不符而失败，已保留失败并修正测试后复跑通过。
 - 代码层已补 Plans/Keys/Origins/Redemption/Subscriptions loader generation/epoch 防护；Admin MFA 二维码使用 Next Image；变更未扩展公共 API/数据库合同。
-- 下一步：继续 FE-V01～16 的全量正向高风险流程、逐资源恢复闭环、390px/键盘焦点矩阵；Hosted/Staging/生产仍需 X02/X03/X05、受控权限和环境输入，不得从本地 PASS 推定。
+- 暂缓期间不得自动开启 FE-R1 新实现；恢复时从 `main@c9c19f4`、VR-0018/VR-0019 复核并继续 FE-V01～16 全量正向高风险流程、逐资源恢复闭环、390px/键盘焦点矩阵。Hosted/Staging/生产仍需 X02/X03/X05、受控权限和环境输入，不得从本地 PASS 推定。
+- 其他功能入口：由用户另行派发具体任务编号、目标模块和验收条件；新任务应独立提交、推送和维护对应 evidence，不直接改写本专题历史记录。
 
 > 用途：稳定执行入口，不是日常进度日志。  
 > 执行 agent 必须结合 `00-master-plan.md`、当前阶段文档、`verification-record.md` 和实际代码工作，无需重新做整轮架构讨论。

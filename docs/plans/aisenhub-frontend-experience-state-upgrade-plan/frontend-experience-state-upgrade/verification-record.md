@@ -2,6 +2,8 @@
 
 > FE-R1（2026-09-10）：当前产品实现按 `main@c9c19f4` 维护，FE-D02 批次边界基线为 `main@54ff797`，最新 FE-V Local 浏览器回归测试提交为 `main@c9c19f4`；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复、本地验证和 Git 交付已完成，本轮已补资源竞态和代表性错误矩阵，合同级、Hosted/Staging/生产与发布门槛仍按本记录保留为未关闭事实。
 
+> 当前执行策略（2026-09-10）：本专题本轮已完成代码、Local 验收和文档交接，按用户安排暂缓继续开发，优先承接其他明确功能；恢复时从 VR-0018/VR-0019 和 `main@c9c19f4` 继续，不将暂缓视为总体完成或发布通过。
+
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
 > 计划创建状态是历史快照；当前执行状态：Phase 01–08 已有实际实施、测试、commit、push，Phase 08 已完成本地最终扫描并合并 `main`。不要用历史创建状态覆盖当前记录。
@@ -869,18 +871,21 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 2026-09-10 | T16-R2 / FE-V | code+test | `main` | `c9c19f45d97c2f9b7265c62861ed160a2e987dd5` | [GitHub code+test commit](https://github.com/aisenhub/Aisenhubplatform/commit/c9c19f45d97c2f9b7265c62861ed160a2e987dd5) | PASS | PASS | 资源 loader generation/epoch、目录 400/403/404/409/412/428/429/500/503、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 代表性 412/429/503/202、Origins 迟到响应与状态收敛；T16-R2 汇总 20 项 PASS |
 | 2026-09-10 | FE-R1 文档维护 | docs | `main` | `457742333692b07e0fa407ab08a49c1f9cebfc1c` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/457742333692b07e0fa407ab08a49c1f9cebfc1c) | PASS | PASS | 同步当前 `c9c19f4` 基线、VR-0018 资源竞态/错误矩阵证据、状态文档与 agent handoff；用户未跟踪架构草稿未纳入 |
 
+| 2026-09-10 | FE-R1 暂缓交接 | docs | `main` | `0a4fc07f6a664a0c67451fb1afd7ef41e87808d2` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/0a4fc07f6a664a0c67451fb1afd7ef41e87808d2) | PASS | PASS | 记录 FE-R1 暂缓策略、已完成/未完成范围、恢复条件和其他功能交接边界；用户未跟踪架构草稿未纳入 |
+
 ---
 
 # 13. 当前交接信息
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 08 代码、FE-D02 代码与 T16-R2 Admin/Files/Policy/Settings Local 验证已推送并 fast-forward 合并 `main`；本轮 FE-V 代码/测试与文档维护已纳入当前 FE-R1 批次**。
-- 下一阶段从哪里开始：从 `c9c19f4` 的 FE-V 代表性矩阵继续补 FE-V01～16 全量正向和逐资源恢复证据；Future diagnostics、hosted dual-platform、Staging/生产、历史 M3/M4 与正式发布按任务/环境条件处理，保留 NOT_RUN/FAIL 事实。
+- 当前最后完成阶段：**Phase 08 代码、FE-D02 代码与 T16-R2 Admin/Files/Policy/Settings Local 验证已推送并 fast-forward 合并 `main`；本轮 FE-V 代码/测试与文档维护已纳入当前 FE-R1 批次，现按用户安排暂缓继续开发**。
+- 下一阶段从哪里开始：先承接用户另行派发的其他功能；FE-R1 恢复时从 `c9c19f4` 的 FE-V 代表性矩阵继续补 FE-V01～16 全量正向和逐资源恢复证据。Future diagnostics、hosted dual-platform、Staging/生产、历史 M3/M4 与正式发布按任务/环境条件处理，保留 NOT_RUN/FAIL 事实。
 - 必须先处理：FE-D02 已在 Phase 03/04 完成批次重复创建 Local 核验；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对；Consumer/Registry 独立安装与 T16 已 PASS。当前 T16 已覆盖 replay UI、网络 unknown、目录完整错误副本、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 412/429/503/202、Origins 迟到响应、关闭/重开与刷新失败收敛；Phase 08 不重复实施 FE-D03 或 Consumer 页面。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
-- 当前未提交修改及归属：本轮 FE-R1 文档维护已纳入当前批次；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
+- 当前未提交修改及归属：本轮 FE-R1 文档维护已完成并推送；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
+- 其他功能交接：当前没有已指定的新功能任务；收到具体任务编号、模块和验收条件后，使用独立范围和提交继续开发，不自动修改本专题的历史证据。
 - 当前代码基线 / branch：当前产品实现基线为 `main` / `c9c19f45d97c2f9b7265c62861ed160a2e987dd5`；最新 FE-V Local 浏览器回归测试同为该 SHA；FE-D02 批次边界基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。`origin/main` 已核对包含该 SHA；本轮资源矩阵证据见 VR-0018。
 - 需要用户决定的事项：**无**。
 

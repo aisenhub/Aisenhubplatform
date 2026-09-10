@@ -2,7 +2,7 @@
 
 > FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 03 代码批次已交付；FE-D02 已完成 Local 核验，高风险故障矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
-> 状态：**进行中**（代码批次已交付；FE-D02 Local 已核验，完整故障矩阵仍开放）  
+> 状态：**进行中（当前暂缓承接）**（代码批次已交付；FE-D02 Local 已核验，完整故障矩阵仍开放）  
 > 前置：Phase 01、02 已验证、commit、push。  
 > 本阶段冻结所有后续高风险资源页必须使用的唯一交互合同。
 

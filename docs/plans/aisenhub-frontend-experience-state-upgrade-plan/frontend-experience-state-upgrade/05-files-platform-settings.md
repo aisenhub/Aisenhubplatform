@@ -2,7 +2,7 @@
 
 > FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 05 本地代码批次已交付，T16-R2 已补 Files/Policy/Settings 的 412/503/202、Origins 迟到响应竞态、列表刷新失败保留已知数据和 Platform Key/Origin loader generation/epoch；Admin MFA 二维码 lint 已修复。完整 Files/Settings 状态矩阵和托管门槛以 `verification-record.md` 为准。
 
-> 状态：**进行中**  
+> 状态：**进行中（当前暂缓承接）**  
 > 前置：Phase 01–04 代码批次已推送；Phase 05 的 FE-D01 已在本地实现并通过 SQL/handler 静态核对，完整阶段验收仍待本阶段提交后的记录确认。  
 > 可与 Phase 04、07 并行。  
 > 文件所有权建议：`apps/admin/features/files|platform-settings|origins|platform-keys/**` 及对应 nested routes；不要修改 Entitlements/Consumer/shared contract。

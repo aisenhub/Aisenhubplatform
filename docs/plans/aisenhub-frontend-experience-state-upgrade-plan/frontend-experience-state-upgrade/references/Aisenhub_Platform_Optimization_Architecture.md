@@ -4,6 +4,8 @@
 > 目标：将当前分散在 Admin、Consumer、认证、文件、权益、订阅、日志、测试和开发体验中的问题，收敛为可独立分析、独立实施、逐步演进的优化体系。  
 > 核心原则：**不通过放宽权限、缓存授权结果、跳过校验、削弱 MFA / CSRF / Origin / RLS / 幂等 / 并发控制等安全约束来换取性能或体验。**
 
+> FE-R1 当前交接（2026-09-10）：Frontend Experience & State 本轮代码与 Local 验收已收口，当前暂缓继续开发，优先承接其他明确功能；具体完成项、未完成项和恢复条件见 [FE-R1 verification record](../verification-record.md) 的 VR-0018/VR-0019。
+
 ---
 
 ## 1. 文档目标

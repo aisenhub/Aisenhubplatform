@@ -2,7 +2,7 @@
 
 > FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 04 代码批次已交付；本轮补 Plans/Accounts/Subscriptions/Redemption 的 generation/epoch 与 412/429/503/202 代表性 Local 回归，完整资源状态矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
-> 状态：**进行中**（代码批次已交付；FE-D02 Local 已消费与复验，完整资源矩阵仍开放）  
+> 状态：**进行中（当前暂缓承接）**（代码批次已交付；FE-D02 Local 已消费与复验，完整资源矩阵仍开放）  
 > 前置：Phase 01–03 已交付并 push。  
 > 可与 Phase 05、Phase 07 并行。  
 > 文件所有权建议：`apps/admin/features/accounts|plans|subscriptions|redemption/**`、对应 nested routes；不要改 Files/Consumer/shared UI contract，shared bug 交 Integrator。
