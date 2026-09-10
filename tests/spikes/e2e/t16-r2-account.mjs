@@ -846,7 +846,7 @@ async function exerciseAdmin(page, adminTotp) {
   await page.getByRole('button', { name: '验证并继续' }).click();
   await page.waitForURL(/\/admin$/u, { waitUntil: 'domcontentloaded' });
   await exerciseAdminErrorCopyMatrix(page);
-  await exerciseFilesStateMatrix(page);
+  await exerciseFilesStateMatrix(page, adminTotp);
   await exerciseSettingsLifecycleMatrix(page);
   await page.goto(`${adminUrl}/admin/platforms`, {
     waitUntil: 'domcontentloaded',
@@ -1128,7 +1128,7 @@ async function exerciseAdminErrorCopyMatrix(page) {
   }
 }
 
-async function exerciseFilesStateMatrix(page) {
+async function exerciseFilesStateMatrix(page, adminTotp) {
   const filesEndpoint = '/api/v1/admin/api/v1/config-files';
   const policyEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}/file-policy`;
   const activeFileId = crypto.randomUUID();
@@ -1163,8 +1163,14 @@ async function exerciseFilesStateMatrix(page) {
   ];
   let filesResponseCompleted = false;
   let unknownDeleteCount = 0;
+  let downloadRequestCount = 0;
+  let downloadMode = 'storage-error';
+  let policyPatchCount = 0;
+  let policyPatchMode = 'mfa';
   const filesRoute = (url) => new URL(url).pathname === filesEndpoint;
   const policyRoute = (url) => new URL(url).pathname === policyEndpoint;
+  const downloadEndpoint = `${filesEndpoint}/${activeFileId}/content`;
+  const downloadRoute = (url) => new URL(url).pathname === downloadEndpoint;
   const unknownDetailEndpoint = `${filesEndpoint}/${unknownFileId}`;
   const unknownDetailRoute = (url) =>
     new URL(url).pathname === unknownDetailEndpoint;
@@ -1189,6 +1195,25 @@ async function exerciseFilesStateMatrix(page) {
     });
   });
   await page.route(policyRoute, async (route) => {
+    if (route.request().method() === 'PATCH') {
+      policyPatchCount += 1;
+      const isMfa = policyPatchMode === 'mfa';
+      await route.fulfill({
+        status: isMfa ? 403 : 409,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: {
+            code: isMfa ? 'RECENT_MFA_REQUIRED' : 'IDEMPOTENCY_CONFLICT',
+            message: isMfa ? 'RECENT_MFA_REQUIRED' : 'IDEMPOTENCY_CONFLICT',
+          },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
     if (route.request().method() !== 'GET') {
       await route.continue();
       return;
@@ -1211,6 +1236,28 @@ async function exerciseFilesStateMatrix(page) {
           available_count: 14,
           over_quota: true,
           updated_at: now,
+        },
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  await page.route(downloadRoute, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    downloadRequestCount += 1;
+    const isMfa = downloadMode === 'mfa';
+    await route.fulfill({
+      status: isMfa ? 403 : 503,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        error: {
+          code: isMfa ? 'MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
+          message: isMfa ? 'MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
         },
         request_id: crypto.randomUUID(),
       }),
@@ -1309,6 +1356,124 @@ async function exerciseFilesStateMatrix(page) {
       'deleted file must not allow another delete',
     );
 
+    const downloadError = page.locator(
+      '[data-test="platform-files-download-error"]',
+    );
+    await activeRow
+      .locator(`[data-test="platform-file-download-${activeFileId}"]`)
+      .click();
+    await downloadError
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    const downloadSummary = await downloadError.evaluate((element) => {
+      const clone = element.cloneNode(true);
+      clone.querySelectorAll('details').forEach((details) => details.remove());
+      return clone.textContent ?? '';
+    });
+    assert.equal(
+      downloadSummary.includes('STORAGE_UNAVAILABLE'),
+      false,
+      'download technical code must stay out of the user-facing summary',
+    );
+    assert.equal(
+      await downloadError
+        .locator('details')
+        .getByText('STORAGE_UNAVAILABLE', { exact: true })
+        .count(),
+      1,
+      'download technical code must remain available in technical details',
+    );
+    assert.equal(
+      downloadRequestCount,
+      1,
+      'download storage failure must submit exactly once',
+    );
+
+    downloadMode = 'mfa';
+    const [mfaDownloadResponse] = await Promise.all([
+      page.waitForResponse((response) => {
+        const requestUrl = new URL(response.url());
+        return (
+          requestUrl.pathname === downloadEndpoint &&
+          response.request().method() === 'GET'
+        );
+      }),
+      activeRow
+        .locator(`[data-test="platform-file-download-${activeFileId}"]`)
+        .click(),
+    ]);
+    assert.equal(mfaDownloadResponse.status(), 403, 'download MFA response');
+    await page
+      .locator('[data-test="platform-files-download-step-up"]')
+      .getByText('下载需要近期 MFA', { exact: false })
+      .waitFor();
+    assert.equal(
+      downloadRequestCount,
+      2,
+      'download MFA response must not be automatically replayed',
+    );
+
+    await page.goto(`${adminUrl}/admin/platforms/${platformAId}/files`, {
+      waitUntil: 'domcontentloaded',
+    });
+    const policyPanel = page.locator('[data-test="platform-file-policy"]');
+    await policyPanel
+      .locator('[data-test="platform-file-policy-save"]')
+      .click();
+    await policyPanel.locator('[data-test="recent-mfa-panel"]').waitFor();
+    assert.equal(
+      policyPatchCount,
+      1,
+      'policy save must submit once before MFA step-up',
+    );
+    await policyPanel
+      .locator('[data-test="recent-mfa-code"]')
+      .fill(totp(adminTotp.secret));
+    await policyPanel.locator('[data-test="recent-mfa-submit"]').click();
+    const policySave = policyPanel.locator(
+      '[data-test="platform-file-policy-save"]',
+    );
+    await policyPanel
+      .locator('[data-test="recent-mfa-panel"]')
+      .waitFor({ state: 'detached' });
+    assert.equal(
+      await policySave.isDisabled(),
+      false,
+      'policy save must become explicitly available after MFA verification',
+    );
+
+    policyPatchMode = 'conflict';
+    await policySave.click();
+    const policyError = page.locator(
+      '[data-test="platform-file-policy-error"]',
+    );
+    await policyError
+      .getByText('这项操作与已有请求冲突', { exact: false })
+      .waitFor();
+    const policySummary = await policyError.evaluate((element) => {
+      const clone = element.cloneNode(true);
+      clone.querySelectorAll('details').forEach((details) => details.remove());
+      return clone.textContent ?? '';
+    });
+    assert.equal(
+      policySummary.includes('IDEMPOTENCY_CONFLICT'),
+      false,
+      'policy conflict code must stay out of the user-facing summary',
+    );
+    assert.equal(
+      await policyError
+        .locator('details')
+        .getByText('IDEMPOTENCY_CONFLICT', { exact: true })
+        .count(),
+      1,
+      'policy conflict code must remain available in technical details',
+    );
+    assert.equal(
+      policyPatchCount,
+      2,
+      'policy conflict must not trigger an automatic retry',
+    );
+
     await unknownRow
       .locator(`[data-test="platform-file-delete-${unknownFileId}"]`)
       .click();
@@ -1335,6 +1500,7 @@ async function exerciseFilesStateMatrix(page) {
   } finally {
     await page.unroute(filesRoute);
     await page.unroute(policyRoute);
+    await page.unroute(downloadRoute);
     await page.unroute(unknownDetailRoute);
   }
 }

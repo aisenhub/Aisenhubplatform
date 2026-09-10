@@ -65,6 +65,9 @@ export function PlatformWorkspace({
   const [error, setError] = useState<WorkspaceError | null>(null);
   const generationRef = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
+  const sessionIsTerminal =
+    sessionSnapshot.resolved &&
+    ['unauthenticated', 'expired'].includes(sessionSnapshot.state);
 
   const load = useCallback(async () => {
     const generation = generationRef.current + 1;
@@ -164,29 +167,27 @@ export function PlatformWorkspace({
   }, [platformId]);
 
   useEffect(() => {
-    if (
-      sessionSnapshot.resolved &&
-      ['unauthenticated', 'expired'].includes(sessionSnapshot.state)
-    ) {
-      controllerRef.current?.abort();
-      generationRef.current += 1;
-      setPlatform(null);
-      setError({
-        title: '会话已结束',
-        description: '请重新登录后再打开平台工作区。',
-        requestId: null,
-        technicalDetail: null,
-      });
-      setState('access');
-      return;
-    }
+    if (!sessionIsTerminal) return;
+    controllerRef.current?.abort();
+    generationRef.current += 1;
+    setPlatform(null);
+    setError({
+      title: '会话已结束',
+      description: '请重新登录后再打开平台工作区。',
+      requestId: null,
+      technicalDetail: null,
+    });
+    setState('access');
+  }, [sessionIsTerminal]);
 
+  useEffect(() => {
+    if (sessionIsTerminal) return;
     void load();
     return () => {
       controllerRef.current?.abort();
       generationRef.current += 1;
     };
-  }, [load, sessionSnapshot.resolved, sessionSnapshot.state]);
+  }, [load, sessionIsTerminal]);
 
   const contextValue = useMemo(
     () => (platform ? { platform, reload: () => void load() } : null),
