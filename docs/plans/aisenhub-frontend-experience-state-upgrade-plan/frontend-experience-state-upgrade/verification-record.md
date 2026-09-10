@@ -740,6 +740,20 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 
 ---
 
+## VR-0011 — T16-R2 当前代码 Local 浏览器复跑
+
+- 日期：2026-09-10
+- 阶段：T16-R2 / FE-V Local supporting evidence
+- 被验证 commit：`54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Supabase CLI 2.111.0；Local Supabase（Auth/DB/Edge/Storage/Mailpit）；Playwright headless Chrome；本地三应用临时端口由 runner 管理。
+- 命令：`pnpm run test:e2e:t16-r2`。
+- 结果：退出码 `0`；独立上下文、双平台 Key 隔离、模板公开/受保护路由、订阅/兑换、文件上传/下载/删除、配额、Profile/Preferences、CSRF/ETag、Admin AAL1/停用恢复、批次创建/确认、双 Tab 终态、普通 proof/Close/Delete 和浏览器 bundle 凭据扫描共 14 项 `PASS`。
+- 环境纠偏：复跑前 Mailpit 曾保留旧默认邮件模板，无法提供 `token_hash`；本地 Supabase stop/start 重新加载仓库模板后复跑通过。该事实只证明 Local runner 可恢复，不代表 Hosted/Staging 邮件配置已验收。
+- 未覆盖：FE-V 全状态故障注入、FE-V08 批次重放浏览器语义、Hosted/Staging/生产和正式发布；这些继续保持 PARTIAL、NOT_RUN 或 BLOCKED。
+- 该结果是否仍覆盖当前代码：是；本次仅新增运行证据，未改变产品代码基线。
+
+---
+
 # 12. GitHub 交付记录追加区
 
 | 日期 | 阶段 | 类型 | Branch | Commit SHA | GitHub URL | Push | Remote confirmed | 备注 |
