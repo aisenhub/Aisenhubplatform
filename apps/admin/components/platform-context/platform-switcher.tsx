@@ -11,6 +11,7 @@ import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
+import { apiErrorDescription } from '../../features/resources/admin-resource-utils';
 import type { Platform, PlatformListResponse } from './platform-types';
 
 type PlatformSwitcherProps = {
@@ -44,7 +45,11 @@ export function PlatformSwitcher({ current }: PlatformSwitcherProps) {
             ? '会话已结束，请重新登录后再切换平台。'
             : response.status === 403
               ? '当前账号没有平台目录访问权限。'
-              : payload?.error?.message || '平台切换列表暂时不可用。',
+              : apiErrorDescription(
+                  response,
+                  payload,
+                  '平台切换列表暂时不可用。',
+                ),
         );
         return;
       }

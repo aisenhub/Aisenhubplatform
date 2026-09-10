@@ -23,6 +23,7 @@ import {
 } from '../../app/_lib/auth-session';
 import { PlatformHeader } from './platform-header';
 import type { Platform, PlatformResponse } from './platform-types';
+import { apiErrorDescription } from '../../features/resources/admin-resource-utils';
 
 type WorkspaceState = 'loading' | 'success' | 'access' | 'not-found' | 'error';
 
@@ -122,9 +123,11 @@ export function PlatformWorkspace({
                   }
                 : {
                     title: '平台上下文暂时不可用',
-                    description:
-                      payload?.error?.message ||
+                    description: apiErrorDescription(
+                      response,
+                      payload,
                       '请检查网络或服务状态后重试；当前页面不会显示不属于此平台的数据。',
+                    ),
                     requestId,
                     technicalDetail:
                       payload?.error?.code ?? `HTTP_${response.status}`,

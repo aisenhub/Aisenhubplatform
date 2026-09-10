@@ -845,6 +845,7 @@ async function exerciseAdmin(page, adminTotp) {
   await page.getByLabel('验证码').fill(totp(adminTotp.secret));
   await page.getByRole('button', { name: '验证并继续' }).click();
   await page.waitForURL(/\/admin$/u, { waitUntil: 'domcontentloaded' });
+  await exerciseAdminErrorCopyMatrix(page);
   await page.goto(`${adminUrl}/admin/platforms`, {
     waitUntil: 'domcontentloaded',
   });
@@ -987,6 +988,142 @@ async function exerciseBatchReplayUi(page) {
     await page.unroute(endpoint);
   }
   await page.locator('[data-test="confirm-action-cancel"]').click();
+}
+
+async function exerciseAdminErrorCopyMatrix(page) {
+  async function assertTechnicalDetailIsNotSummary(locator, code, label) {
+    const summaryText = await locator.evaluate((element) => {
+      const clone = element.cloneNode(true);
+      clone.querySelectorAll('details').forEach((details) => details.remove());
+      return clone.textContent ?? '';
+    });
+    assert.equal(
+      summaryText.includes(code),
+      false,
+      `${label} technical code must stay out of user-facing copy`,
+    );
+    assert.equal(
+      await locator.locator('details').getByText(code, { exact: true }).count(),
+      1,
+      `${label} technical code must remain available in technical details`,
+    );
+  }
+
+  const directoryEndpoint = '/api/v1/admin/api/v1/platforms';
+  const directoryRoute = (url) => new URL(url).pathname === directoryEndpoint;
+  await page.route(directoryRoute, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 429,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        error: { code: 'RATE_LIMITED', message: 'RATE_LIMITED' },
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  try {
+    await page.goto(`${adminUrl}/admin/platforms`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.getByRole('heading', { name: '平台目录' }).waitFor();
+    await page
+      .getByText('请求过于频繁，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      page.locator('[data-test="recoverable-error"]'),
+      'RATE_LIMITED',
+      'rate limit',
+    );
+  } finally {
+    await page.unroute(directoryRoute);
+  }
+
+  const workspaceEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}`;
+  const workspaceRoute = (url) => new URL(url).pathname === workspaceEndpoint;
+  await page.route(workspaceRoute, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 503,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        error: {
+          code: 'AUTHORIZATION_UNAVAILABLE',
+          message: 'AUTHORIZATION_UNAVAILABLE',
+        },
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  try {
+    await page.goto(`${adminUrl}/admin/platforms/${platformAId}`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      page.locator('[data-test="recoverable-error"]'),
+      'AUTHORIZATION_UNAVAILABLE',
+      'authorization',
+    );
+  } finally {
+    await page.unroute(workspaceRoute);
+  }
+
+  await page.goto(`${adminUrl}/admin/platforms/${platformAId}/settings`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.getByRole('heading', { name: '平台设置' }).waitFor();
+  await page.route(workspaceRoute, async (route) => {
+    if (route.request().method() !== 'PATCH') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 409,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        error: {
+          code: 'IDEMPOTENCY_CONFLICT',
+          message: 'IDEMPOTENCY_CONFLICT',
+        },
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  try {
+    await page.locator('[data-test="platform-settings-toggle"]').click();
+    await page.locator('[data-test="confirm-action-submit"]').click();
+    await page
+      .getByText('这项操作与已有请求冲突，请检查当前状态后再决定是否重试。', {
+        exact: false,
+      })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      page.locator('[data-test="confirm-action-error"]'),
+      'IDEMPOTENCY_CONFLICT',
+      'conflict',
+    );
+    await page.locator('[data-test="confirm-action-cancel"]').click();
+  } finally {
+    await page.unroute(workspaceRoute);
+  }
 }
 
 async function scanBrowserBundles() {
@@ -1254,6 +1391,7 @@ try {
       profilePreferences: 'PASS',
       csrfAndEtag: 'PASS',
       adminAal1AndSuspend: 'PASS',
+      adminErrorCopyMatrix: 'PASS',
       batchReplayBoundaryUi: 'PASS',
       adminBatchConfirmationUi: 'PASS',
       multiTabTerminal: 'PASS',

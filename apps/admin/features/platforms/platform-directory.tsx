@@ -29,6 +29,7 @@ import { Label } from '@kit/ui/label';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
+import { apiErrorDescription } from '../resources/admin-resource-utils';
 import {
   Table,
   TableBody,
@@ -88,9 +89,11 @@ function responseError(
   }
   return {
     title: '暂时无法读取平台目录',
-    description:
-      payload?.error?.message ||
+    description: apiErrorDescription(
+      response,
+      payload,
       '请检查网络或服务状态后重试；本次读取失败不会显示成暂无平台。',
+    ),
     requestId,
     technicalDetail: payload?.error?.code ?? `HTTP_${response.status}`,
   };

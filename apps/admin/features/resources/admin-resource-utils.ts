@@ -26,6 +26,45 @@ export async function readApiPayload<T>(
     | null;
 }
 
+export function apiErrorDescription(
+  response: Response,
+  payload: ApiErrorPayload | null,
+  fallback: string,
+): string {
+  const code = payload?.error?.code;
+  const serverMessage = payload?.error?.message?.trim();
+  if (
+    serverMessage &&
+    serverMessage !== code &&
+    /[\u3400-\u9fff]/u.test(serverMessage)
+  )
+    return serverMessage;
+
+  switch (code) {
+    case 'MFA_REQUIRED':
+    case 'RECENT_MFA_REQUIRED':
+      return '这项操作需要近期 MFA，请先完成验证。';
+    case 'RATE_LIMITED':
+      return '请求过于频繁，请稍后重试。';
+    case 'IDEMPOTENCY_CONFLICT':
+      return '这项操作与已有请求冲突，请检查当前状态后再决定是否重试。';
+    case 'PRECONDITION_FAILED':
+    case 'PRECONDITION_REQUIRED':
+      return '当前数据已发生变化，请刷新后再提交。';
+    case 'AUTHORIZATION_UNAVAILABLE':
+    case 'STORAGE_UNAVAILABLE':
+      return '服务暂时不可用，请稍后重试。';
+    default:
+      if (response.status === 429) return '请求过于频繁，请稍后重试。';
+      if (response.status >= 500) return '服务暂时不可用，请稍后重试。';
+      if (response.status === 409)
+        return '操作与当前服务端状态冲突，请刷新后确认再重试。';
+      if (response.status === 412 || response.status === 428)
+        return '当前数据已发生变化，请刷新后再提交。';
+      return fallback;
+  }
+}
+
 export function resourceError(
   response: Response,
   payload: ApiErrorPayload | null,
@@ -59,11 +98,10 @@ export function resourceError(
       technicalDetail,
     };
   }
+  const fallback = `读取${resourceName}失败，请稍后重试；页面不会把失败误显示为空列表。`;
   return {
     title: `${resourceName}暂时不可用`,
-    description:
-      payload?.error?.message ??
-      `读取${resourceName}失败，请稍后重试；页面不会把失败误显示为空列表。`,
+    description: apiErrorDescription(response, payload, fallback),
     requestId,
     technicalDetail,
   };
