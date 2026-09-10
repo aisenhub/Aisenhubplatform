@@ -767,6 +767,33 @@ async function exerciseAccount(page, baseUrl) {
   assert.ok(proof?.httpOnly, 'consumer proof must be HttpOnly');
   assert.equal(proof?.sameSite, 'Strict');
 
+  const deleteEndpoint = `${baseUrl}/api/v1/identity/delete-request`;
+  let abortedDeleteCount = 0;
+  await page.route(deleteEndpoint, async (route) => {
+    if (route.request().method() === 'POST') {
+      abortedDeleteCount += 1;
+      await route.abort('failed');
+      return;
+    }
+    await route.continue();
+  });
+  await sensitiveDialog.locator('[data-test="confirm-action-submit"]').click();
+  await sensitiveDialog.getByText('结果待确认', { exact: true }).waitFor();
+  assert.equal(
+    abortedDeleteCount,
+    1,
+    'network unknown must not automatically submit a second delete request',
+  );
+  await sensitiveDialog
+    .locator('[data-test="confirm-action-check-unknown"]')
+    .click();
+  await sensitiveDialog.getByText('结果仍待确认', { exact: true }).waitFor();
+  await page.unroute(deleteEndpoint);
+  await sensitiveDialog.locator('[data-test="confirm-action-cancel"]').click();
+
+  await page
+    .getByRole('button', { name: '提交全局删除请求', exact: true })
+    .click();
   const [deleteRequest] = await Promise.all([
     page.waitForResponse((item) =>
       item.url().endsWith('/api/v1/identity/delete-request'),
@@ -1230,6 +1257,7 @@ try {
       batchReplayBoundaryUi: 'PASS',
       adminBatchConfirmationUi: 'PASS',
       multiTabTerminal: 'PASS',
+      networkUnknownSensitiveMutation: 'PASS',
       ordinaryProof: 'PASS',
       closeDelete: 'PASS',
       browserBundleCredentials: 'PASS',
