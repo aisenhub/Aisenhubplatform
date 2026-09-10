@@ -1,6 +1,6 @@
 # FE-R1 执行合同与能力校准
 
-修订日期：2026-09-10；当前代码基线：`main@2cd5aff`。以下是 FE-R1 执行合同与能力边界；Phase 01～08 已有本地代码批次和验证记录，但合同级剩余项仍未全部关闭。与旧研究快照描述冲突时，本修订用于执行；公共安全/业务合同仍以上层架构和专题为准。
+修订日期：2026-09-10；当前代码基线：`main@54ff797`。以下是 FE-R1 执行合同与能力边界；Phase 01～08 与 FE-D02 已有本地代码批次和验证记录，但合同级剩余项仍未全部关闭。与旧研究快照描述冲突时，本修订用于执行；公共安全/业务合同仍以上层架构和专题为准。
 
 ## 1. 已知 API 能力与依赖
 
@@ -61,7 +61,7 @@ Intent 以 scope/platform/target/kind 定位；首次实际提交前允许编辑
 
 ### FE-D02：批次重试语义核验（Phase 03 冻结策略，Phase 04 消费）
 
-静态审查风险：HTTP create 先生成 codes/receipt，SQL按 creation_operation_id命中已有批次时返回原 metadata。必须保留失败用例，核实重复请求是否返回不匹配的明文。未核验前 batch create固定 replay never，禁止任何“重发创建以恢复明文”入口。若问题证实，单独记录必要修复任务并同步 HTTP/领域合同与测试，不在 UI 隐藏风险；相关安全验收未闭环则批次创建不能标完整交付。其他资源准备可继续。FE-V08。
+已完成核验：原 HTTP create 先生成 codes/receipt，SQL按 creation_operation_id命中已有批次时返回原 metadata，导致重放响应可能携带未入库材料。`54ff797` 已通过独立迁移保存逻辑请求指纹；同参数重放返回 `200 + creation_state=replayed_existing` 及批次元数据，不返回 codes/receipt；异参数返回 `409 IDEMPOTENCY_CONFLICT`。batch create 仍固定 `replay never`，UI 不提供“重发创建以恢复明文”入口；SQL/API 失败用例已保留并复验。Hosted/完整 FE-V08 尚未运行。
 
 ## 5. UI 分发与视觉基线
 

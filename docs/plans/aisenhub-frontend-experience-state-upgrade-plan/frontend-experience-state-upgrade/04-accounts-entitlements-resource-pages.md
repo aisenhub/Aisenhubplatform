@@ -1,8 +1,8 @@
 # Phase 04 — Accounts 与 Entitlements 资源页
 
-> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 04 代码批次已交付；FE-D02 与完整资源状态矩阵仍开放，详见 [verification-record.md](verification-record.md)。
+> FE-R1（2026-09-10）：按当前 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 04 代码批次已交付；FE-D02 已完成 Local 消费与复验，完整资源状态矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
-> 状态：**进行中**（代码批次已交付；FE-D02 消费与完整资源矩阵仍开放）  
+> 状态：**进行中**（代码批次已交付；FE-D02 Local 已消费与复验，完整资源矩阵仍开放）  
 > 前置：Phase 01–03 已交付并 push。  
 > 可与 Phase 05、Phase 07 并行。  
 > 文件所有权建议：`apps/admin/features/accounts|plans|subscriptions|redemption/**`、对应 nested routes；不要改 Files/Consumer/shared UI contract，shared bug 交 Integrator。
@@ -394,7 +394,7 @@ M3/Entitlements 当前真实 API/DB test 命令应从执行时 `package.json` / 
 ## FE-R1 阶段补充：资源能力与恢复落点
 
 - 本地已确认无subscription list：采用Accounts→/subscriptions?account=<id>详情，不再让实施Agent重新二选一；列表属于后续合同任务。
-- 批次列表当前platform_id/limit，不支持cursor且无creation_operation_id字段；不通过名称/时间猜测丢失响应对应的批次。沿用FE-D02结果与恢复矩阵。
+- 批次列表当前platform_id/limit，不支持cursor且无creation_operation_id字段；不通过名称/时间猜测丢失响应对应的批次。创建重放由服务端返回 `replayed_existing` 元数据，不恢复 codes/receipt；仍沿用 FE-D02 恢复矩阵。
 - 订阅投影/last_event_sequence不能证明某operation执行。原operation_id和已提交payload保持一致，按领域合同显式重试；不自动新建command。
-- 确认交付需要同页MFA恢复并保留原receipt；复制/本地ack不代表服务端确认，成功后再清明文。FE-D02安全验收未闭环不标批次创建完成。
+- 确认交付需要同页MFA恢复并保留原receipt；复制/本地ack不代表服务端确认，成功后再清明文。FE-D02 Local 安全语义已闭环，Hosted/完整资源矩阵仍不标阶段完整交付。
 - 套餐、权益、订阅、兑换码批次统一中文术语，raw status、代码、ID保留原值；验收FE-V06～08、FE-V11、FE-V13、FE-V16。

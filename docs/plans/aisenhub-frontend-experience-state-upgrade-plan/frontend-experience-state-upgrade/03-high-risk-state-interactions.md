@@ -1,8 +1,8 @@
 # Phase 03 — High-risk Interaction、Mutation State 与 Secret Flow
 
-> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 03 代码批次已交付；FE-D02 与高风险故障矩阵仍开放，详见 [verification-record.md](verification-record.md)。
+> FE-R1（2026-09-10）：按当前 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 03 代码批次已交付；FE-D02 已完成 Local 核验，高风险故障矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
-> 状态：**进行中**（代码批次已交付；FE-D02 与完整故障矩阵仍开放）  
+> 状态：**进行中**（代码批次已交付；FE-D02 Local 已核验，完整故障矩阵仍开放）  
 > 前置：Phase 01、02 已验证、commit、push。  
 > 本阶段冻结所有后续高风险资源页必须使用的唯一交互合同。
 
@@ -351,6 +351,6 @@ pnpm contracts:check
 - MFA改为复用现有表单与BFF的同页交互，保留原认证路由；不能通过整页跳/admin实现高风险continuation。stepUp区分初次AAL2、近期MFA、Consumer近期认证。
 - 以执行合同§4恢复矩阵替代通用“GET后推断执行成功”。提交后的payload/key冻结；关闭弹窗不取消服务端操作；accepted/unknown不能因关闭而自动销毁原安全intent。
 - 秘密/receipt仅在当前专用flow内存，不进通用intent；终态会话清理优先于保留草稿；敏感流程MFA后仍显式确认提交。
-- 执行FE-D02重复批次创建风险核验并保留失败用例。批次创建固定replay never，不以幂等参数存在推导明文可恢复。
+- 执行FE-D02重复批次创建风险核验并保留失败用例。批次创建固定replay never；同 operation 重放只返回 `replayed_existing` 元数据，参数不一致返回冲突，不以幂等参数存在推导明文可恢复。
 - 所有高风险说明、一次性保存提示、再次验证、请求受理/结果未确认文案中文优先；技术原值只在安全详情提供。
-- 验收 FE-V01、FE-V03、FE-V06～08、FE-V13、FE-V16；FE-D02未闭环则后续批次创建完整交付受阻。
+- 验收 FE-V01、FE-V03、FE-V06～08、FE-V13、FE-V16；FE-D02 已有 Local 证据，完整阶段仍受 FE-V 故障矩阵约束。

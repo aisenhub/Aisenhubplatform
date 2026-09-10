@@ -1,6 +1,6 @@
 # Frontend Experience & State Upgrade — 总执行计划
 
-> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。原“产品实施仍未开始”是规划创建时的历史快照，当前事实以 [verification-record.md](verification-record.md) 为准。
+> FE-R1（2026-09-10）：按当前 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。原“产品实施仍未开始”是规划创建时的历史快照，当前事实以 [verification-record.md](verification-record.md) 为准。
 
 > 计划目录建议：`docs/plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/`  
 > 目标模块：Frontend Experience & State（Admin 为主，Consumer/Registry 同步采用共享状态语义）  
@@ -11,14 +11,14 @@
 ## 0. 当前执行状态（2026-09-10）
 
 - Phase 01–08 的代码批次均已推送；Phase 08 本地响应式、语义化控件、legacy cleanup 和回归已完成。
-- 任务分支与 `main` 已 fast-forward 合并，当前本地和远端 `main` 均为 `2cd5affe2c52cbc1fe185d50c8695e226b8a2ada`；无正式 Release、Staging/生产部署或生产观察。
-- 本期前端代码交付已完成，但 FE-R1 总状态仍保持开放：下面的合同核验、托管环境和上位 M4–M6 发布门槛不能由 Local PASS 推定完成。
+- 任务分支与 `main` 已 fast-forward 合并，当前本地和远端 `main` 均为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`；无正式 Release、Staging/生产部署或生产观察。
+- 本期前端代码交付与 FE-D02 Local 核验已完成，但 FE-R1 总状态仍保持开放：下面的 FE-V 故障矩阵、托管环境和上位 M4–M6 发布门槛不能由 Local PASS 推定完成。
 
 ### 剩余任务审查
 
 | 优先级 | 任务 | 当前状态 | 下一步 / 关闭条件 |
 |---|---|---|---|
-| P1 | FE-D02：兑换批次重复创建与明文/receipt 恢复语义 | NOT_STARTED | 由受控 API/SQL 探针核实 `creation_operation_id` 重放；未关闭前禁止通过重发创建恢复 Codes。同步 HTTP/领域合同、Phase 03/04 验证。 |
+| P1 | FE-D02：兑换批次重复创建与明文/receipt 恢复语义 | PASS（Local） | `54ff797` 已完成受控 API/SQL 探针：同 operation 只返回批次元数据，异参数冲突；HTTP/领域合同与 Phase 03/04 已同步。Hosted 未运行。 |
 | P1 | FE-V 状态/失败矩阵补齐 | PARTIAL | 对 409/412/429/503/202、网络 unknown、正向高风险 mutation、Files/Settings 全状态补行为级证据；已有 T12/T16 Local PASS 不替代未运行故障注入。 |
 | P1 | Hosted / Staging 上游验收 | BLOCKED / NOT_RUN | 依赖 X02/X03/X05 及受控权限，补 OAuth/SMTP/SSR、独立 executor/TLS/pooler/CA、Storage 迟到写入和双平台 hosted E2E；对应 T17-R1～R3、T18-S、G4-S、G5-L hosted。 |
 | P1 | M4–M6 发布与运维门槛 | WAITING / PARTIAL | M4-11、M6-02 外部备份、M6-03/04 恢复/轮换/容量告警、M5-06 正式 Registry 发布；需 X04/X06、受控恢复目标和明确发布授权。 |
@@ -520,9 +520,9 @@ pnpm --version
 
 ## 15. FE-R1 执行入口与新增门槛
 
-- 当前复核基线 `main@2cd5aff`；原审查基线 `main@b563a98` 仅保留供追溯。后续实施/验证仍须重新记录 HEAD，冲突以本节及修订合同为准。
+- 当前复核基线 `main@54ff797`；原审查基线 `main@b563a98` 仅保留供追溯。后续实施/验证仍须重新记录 HEAD，冲突以本节及修订合同为准。
 - 先读取 [执行合同与能力矩阵](references/fe-r1-execution-contracts.md) 和 [中文优先UI合同](references/chinese-ui-contract.md)。架构正文唯一维护于上一级同名架构文件，references内同名文件只是入口。
-- FE-D03在Phase01完成独立UI安装最小验证；FE-D02在Phase03核验并由Phase04消费；FE-D01在Phase05平台Files前通过。三项均有明确目录/合同/测试边界，属于必要依赖，不授权其他后端扩张。
+- FE-D03在Phase01完成独立UI安装最小验证；FE-D02已在Phase03/04完成 Local 核验与消费；FE-D01在Phase05平台Files前通过。三项均有明确目录/合同/测试边界，属于必要依赖，不授权其他后端扩张。
 - 所有页面中文优先，必要英文技术标识保留；公开Auth/Pricing及Registry也在范围内。FE-V01～16均为新的运行验收，当前NOT_RUN。
 - 默认按已派发任务串行执行。04/05/07的并行图只表达依赖可并行，不代表自动授权多Agent开发。
 - 路由/布局、请求隔离、mutation恢复、视觉样例和安装产物在基础阶段冻结，后续不得各自重新决定。
