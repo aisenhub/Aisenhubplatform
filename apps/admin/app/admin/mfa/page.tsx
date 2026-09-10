@@ -199,9 +199,8 @@ export default function AdminMfaPage() {
   }
 
   return (
-    <main className="shell">
-      <p className="eyebrow">Aisenhub Admin</p>
-      <h1>Confirm administrator MFA</h1>
+    <main className="shell" data-test="admin-mfa-page">
+      <h1>验证管理员身份</h1>
       <p className="muted">
         Admin 操作需要 AAL2；验证成功后，服务端向当前 session 绑定 5 分钟
         proof，浏览器不会自行提交 proof。
@@ -214,7 +213,12 @@ export default function AdminMfaPage() {
             使用 Google Authenticator、Microsoft Authenticator 或其他兼容 TOTP
             的认证器绑定此 Admin 账户。
           </p>
-          <button type="button" onClick={startEnrollment} disabled={enrolling}>
+          <button
+            type="button"
+            data-test="mfa-enroll-start"
+            onClick={startEnrollment}
+            disabled={enrolling}
+          >
             {enrolling ? '正在生成…' : '生成绑定二维码'}
           </button>
         </section>
@@ -232,7 +236,11 @@ export default function AdminMfaPage() {
           <div className="one-time-secret">
             <strong>手动密钥</strong>
             <code>{enrollment.secret}</code>
-            <button type="button" onClick={() => void copySecret()}>
+            <button
+              type="button"
+              data-test="mfa-secret-copy"
+              onClick={() => void copySecret()}
+            >
               复制密钥
             </button>
             <small>
@@ -251,7 +259,11 @@ export default function AdminMfaPage() {
               maxLength={6}
               required
             />
-            <button type="submit" disabled={code.length !== 6}>
+            <button
+              type="submit"
+              data-test="mfa-enroll-submit"
+              disabled={code.length !== 6}
+            >
               确认绑定
             </button>
           </form>
@@ -284,7 +296,11 @@ export default function AdminMfaPage() {
             maxLength={6}
             required
           />
-          <button type="submit" disabled={!factorId || code.length !== 6}>
+          <button
+            type="submit"
+            data-test="mfa-verify-submit"
+            disabled={!factorId || code.length !== 6}
+          >
             验证并继续
           </button>
         </form>

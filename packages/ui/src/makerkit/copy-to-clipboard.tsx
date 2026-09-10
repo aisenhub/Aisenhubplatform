@@ -11,6 +11,7 @@ interface CopyToClipboardProps {
   children: ReactNode;
   value?: string;
   className?: string;
+  dataTest?: string;
   tooltipText?: string;
   successMessage?: string;
   errorMessage?: string;
@@ -23,9 +24,10 @@ export function CopyToClipboard({
   children,
   className,
   value = undefined,
-  tooltipText = 'Copy to clipboard',
-  successMessage = 'Copied to clipboard',
-  errorMessage = 'Failed to copy to clipboard',
+  dataTest = 'copy-to-clipboard',
+  tooltipText = '复制到剪贴板',
+  successMessage = '已复制到剪贴板',
+  errorMessage = '复制失败，请检查浏览器权限',
 }: CopyToClipboardProps) {
   const [copied, setCopied] = useState(false);
 
@@ -42,8 +44,7 @@ export function CopyToClipboard({
           toast.success(successMessage);
           setTimeout(() => setCopied(false), 2000);
         })
-        .catch((error) => {
-          console.error('Failed to copy text: ', error);
+        .catch(() => {
           toast.error(errorMessage);
         });
     },
@@ -56,7 +57,10 @@ export function CopyToClipboard({
 
   return (
     <button
+      type="button"
+      data-test={dataTest}
       title={tooltipText}
+      aria-label={`${tooltipText}：${children?.toString() ?? ''}`}
       onClick={handleCopy}
       className={cn(
         'group group/button -mx-1 inline-flex cursor-pointer items-center gap-1 rounded px-1 transition-colors hover:underline',
