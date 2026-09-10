@@ -323,6 +323,8 @@ async function runBrowserFlow(secret) {
     status: 'active',
   });
 
+  const responsiveA11y = await runResponsiveA11yMatrix();
+
   await page.getByRole('button', { name: '退出登录' }).click();
   await page.waitForURL(/\/admin\/login$/u);
   const cookiesAfterLogout = await context.cookies(appUrl);
@@ -357,12 +359,191 @@ async function runBrowserFlow(secret) {
     browserMfa: 'PASS',
     httpOnlyProof: 'PASS',
     sensitiveWrite: 'PASS',
+    responsiveA11y,
     logoutOldJwtRejected: 'PASS',
   };
 }
 
 async function assertPageText(text) {
   await page.getByText(text, { exact: true }).waitFor({ state: 'visible' });
+}
+
+async function runResponsiveA11yMatrix() {
+  const routes = [
+    { label: 'Admin Shell', path: '/admin' },
+    { label: 'Platforms', path: '/admin/platforms' },
+    {
+      label: 'Platform Workspace',
+      path: `/admin/platforms/${platformId}`,
+    },
+    {
+      label: 'Accounts',
+      path: `/admin/platforms/${platformId}/accounts`,
+    },
+    { label: 'Plans', path: `/admin/platforms/${platformId}/plans` },
+    {
+      label: 'Subscriptions',
+      path: `/admin/platforms/${platformId}/subscriptions`,
+    },
+    { label: 'Files', path: `/admin/platforms/${platformId}/files` },
+    {
+      label: 'Settings',
+      path: `/admin/platforms/${platformId}/settings`,
+    },
+    {
+      label: 'Settings Keys',
+      path: `/admin/platforms/${platformId}/settings/keys`,
+    },
+    {
+      label: 'Redemption Batches',
+      path: `/admin/platforms/${platformId}/redemption-batches`,
+    },
+    { label: 'Operations', path: '/admin/operations' },
+    { label: 'Audit', path: '/admin/audit' },
+    { label: 'Security', path: '/admin/security' },
+    { label: 'MFA', path: '/admin/mfa' },
+  ];
+  const viewports = [320, 375, 390, 768, 1440];
+  const observations = [];
+
+  for (const width of viewports) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of routes) {
+      await page.goto(`${appUrl}${route.path}`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await page.waitForTimeout(150);
+      const audit = await page.evaluate(() => {
+        const isVisible = (element) => {
+          const style = window.getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            rect.width > 0 &&
+            rect.height > 0
+          );
+        };
+        const accessibleName = (element) =>
+          element.getAttribute('aria-label') ||
+          element.getAttribute('title') ||
+          element.textContent?.replace(/\s+/gu, ' ').trim() ||
+          '';
+        const interactive = Array.from(
+          document.querySelectorAll('button, a, summary'),
+        ).filter(isVisible);
+        const missingNames = interactive
+          .filter((element) => !accessibleName(element))
+          .map((element) => element.outerHTML.slice(0, 180));
+        const fields = Array.from(
+          document.querySelectorAll('input, textarea, select'),
+        ).filter(isVisible);
+        const unlabeledFields = fields
+          .filter(
+            (field) =>
+              !field.labels?.length &&
+              !field.getAttribute('aria-label') &&
+              !field.getAttribute('aria-labelledby'),
+          )
+          .map((field) => field.outerHTML.slice(0, 180));
+        const tablesWithoutHeaders = Array.from(
+          document.querySelectorAll('table'),
+        )
+          .filter((table) => !table.querySelector('th'))
+          .map((table) => table.outerHTML.slice(0, 180));
+        return {
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+          overflowing: Array.from(document.querySelectorAll('*'))
+            .map((element) => ({
+              tag: element.tagName,
+              test: element.getAttribute('data-test'),
+              className: element.getAttribute('class'),
+              right: Math.round(element.getBoundingClientRect().right),
+            }))
+            .filter(
+              (element) =>
+                element.right > document.documentElement.clientWidth + 1,
+            )
+            .slice(0, 5),
+          missingNames,
+          unlabeledFields,
+          tablesWithoutHeaders,
+        };
+      });
+      assert.ok(
+        audit.scrollWidth <= audit.clientWidth + 1,
+        `${route.label} at ${width}px overflows: ${audit.scrollWidth}/${audit.clientWidth} ${JSON.stringify(audit.overflowing)}`,
+      );
+      assert.deepEqual(
+        audit.missingNames,
+        [],
+        `${route.label} at ${width}px has unnamed visible controls`,
+      );
+      assert.deepEqual(
+        audit.unlabeledFields,
+        [],
+        `${route.label} at ${width}px has unlabeled visible fields`,
+      );
+      assert.deepEqual(
+        audit.tablesWithoutHeaders,
+        [],
+        `${route.label} at ${width}px has a table without headers`,
+      );
+      observations.push(`${route.label}@${width}`);
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(`${appUrl}/admin/platforms`, {
+    waitUntil: 'domcontentloaded',
+  });
+  const createTrigger = page.locator('[data-test="platform-create-open"]');
+  await createTrigger.focus();
+  await createTrigger.click();
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor({ state: 'visible' });
+  assert.ok(
+    await dialog.evaluate((element) =>
+      element.contains(document.activeElement),
+    ),
+    'platform create dialog must move focus inside the dialog',
+  );
+  await dialog.getByRole('button', { name: '取消' }).click();
+  assert.equal(
+    await page.evaluate(() => document.activeElement?.dataset.test),
+    'platform-create-open',
+    'closing platform dialog must restore focus to its trigger',
+  );
+
+  await page.goto(`${appUrl}/admin`, { waitUntil: 'domcontentloaded' });
+  await page.locator('body').click({ position: { x: 2, y: 2 } });
+  let tabStops = 0;
+  for (let index = 0; index < 16; index += 1) {
+    await page.keyboard.press('Tab');
+    const focused = await page.evaluate(() => {
+      const element = document.activeElement;
+      return Boolean(
+        element &&
+        element !== document.body &&
+        element !== document.documentElement,
+      );
+    });
+    if (focused) tabStops += 1;
+  }
+  assert.ok(
+    tabStops > 0,
+    'keyboard Tab must reach an interactive Admin control',
+  );
+
+  return {
+    viewports: viewports.join(','),
+    routes: observations.length,
+    overflow: 'PASS',
+    semanticControls: 'PASS',
+    dialogFocus: 'PASS',
+    tabNavigation: 'PASS',
+  };
 }
 
 try {

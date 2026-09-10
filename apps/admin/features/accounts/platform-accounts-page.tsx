@@ -14,6 +14,14 @@ import { ResourceId } from '@kit/ui/resource-id';
 import { ResourceInspector } from '@kit/ui/resource-inspector';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@kit/ui/table';
 import type { MutationState } from '@kit/ui/mutation-state';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
@@ -411,74 +419,90 @@ export function PlatformAccountsPage() {
             tabIndex={0}
             aria-label="账户列表，可横向滚动"
           >
-            <div className="min-w-[52rem]">
-              <div className="data-table-row data-table-head grid-cols-[1.25fr_1fr_0.85fr_1.2fr_1.3fr]">
-                <span>账户 ID</span>
-                <span>用户 ID</span>
-                <span>状态</span>
-                <span>创建时间</span>
-                <span className="text-right">操作</span>
-              </div>
-              {accounts.map((account) => {
-                const suspended = account.status === 'suspended';
-                const pending =
-                  intent?.accountId === account.platform_account_id &&
-                  mutationState === 'pending';
-                return (
-                  <div
-                    className="data-table-row items-center grid-cols-[1.25fr_1fr_0.85fr_1.2fr_1.3fr]"
-                    key={account.platform_account_id}
-                    data-test={`account-row-${account.platform_account_id}`}
-                  >
-                    <ResourceId value={account.platform_account_id} />
-                    <ResourceId
-                      value={account.user_id ?? '匿名账户'}
-                      label={account.user_id ? undefined : '匿名账户'}
-                    />
-                    <StatusBadge
-                      label={statusLabel(account.status)}
-                      tone={statusTone(account.status)}
-                      rawValue={account.status}
-                    />
-                    <span className="text-left text-sm text-muted-foreground">
-                      {formatUtc(account.created_at)}
-                    </span>
-                    <span className="flex flex-wrap justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          void openInspector(account.platform_account_id)
-                        }
-                        data-test={`account-inspect-${account.platform_account_id}`}
-                      >
-                        查看详情
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pending}
-                        onClick={() =>
-                          openAction(account, suspended ? 'restore' : 'suspend')
-                        }
-                        data-test={`account-toggle-${account.platform_account_id}`}
-                      >
-                        {suspended ? '恢复' : '暂停'}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={pending}
-                        onClick={() => openAction(account, 'close')}
-                        data-test={`account-close-${account.platform_account_id}`}
-                      >
-                        关闭
-                      </Button>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <Table className="min-w-[52rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">账户 ID</TableHead>
+                  <TableHead scope="col">用户 ID</TableHead>
+                  <TableHead scope="col">状态</TableHead>
+                  <TableHead scope="col">创建时间</TableHead>
+                  <TableHead scope="col" className="text-right">
+                    操作
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {accounts.map((account) => {
+                  const suspended = account.status === 'suspended';
+                  const pending =
+                    intent?.accountId === account.platform_account_id &&
+                    mutationState === 'pending';
+                  return (
+                    <TableRow
+                      key={account.platform_account_id}
+                      data-test={`account-row-${account.platform_account_id}`}
+                    >
+                      <TableCell>
+                        <ResourceId value={account.platform_account_id} />
+                      </TableCell>
+                      <TableCell>
+                        <ResourceId
+                          value={account.user_id ?? '匿名账户'}
+                          label={account.user_id ? undefined : '匿名账户'}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          label={statusLabel(account.status)}
+                          tone={statusTone(account.status)}
+                          rawValue={account.status}
+                        />
+                      </TableCell>
+                      <TableCell className="text-left text-sm text-muted-foreground">
+                        {formatUtc(account.created_at)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              void openInspector(account.platform_account_id)
+                            }
+                            data-test={`account-inspect-${account.platform_account_id}`}
+                          >
+                            查看详情
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pending}
+                            onClick={() =>
+                              openAction(
+                                account,
+                                suspended ? 'restore' : 'suspend',
+                              )
+                            }
+                            data-test={`account-toggle-${account.platform_account_id}`}
+                          >
+                            {suspended ? '恢复' : '暂停'}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={pending}
+                            onClick={() => openAction(account, 'close')}
+                            data-test={`account-close-${account.platform_account_id}`}
+                          >
+                            关闭
+                          </Button>
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         </section>
       ) : null}

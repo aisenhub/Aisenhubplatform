@@ -21,6 +21,14 @@ import { Label } from '@kit/ui/label';
 import type { MutationState } from '@kit/ui/mutation-state';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@kit/ui/table';
 import { Textarea } from '@kit/ui/textarea';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
@@ -454,111 +462,122 @@ export function PlatformPlansPage() {
             tabIndex={0}
             aria-label="Plan 列表，可横向滚动"
           >
-            <div className="min-w-[64rem]">
-              <div className="data-table-row data-table-head grid-cols-[1.1fr_1.3fr_0.8fr_0.9fr_1.6fr_1.5fr]">
-                <span>code / 名称</span>
-                <span>描述</span>
-                <span>类型</span>
-                <span>状态</span>
-                <span>features 摘要</span>
-                <span className="text-right">操作</span>
-              </div>
-              {visiblePlans.map((plan) => (
-                <div
-                  className="data-table-row items-center grid-cols-[1.1fr_1.3fr_0.8fr_0.9fr_1.6fr_1.5fr]"
-                  key={plan.plan_id}
-                  data-test={`plan-row-${plan.plan_id}`}
-                >
-                  <div className="min-w-0 text-left">
-                    <strong className="block truncate">{plan.code}</strong>
-                    <span className="block truncate text-sm text-muted-foreground">
-                      {plan.name}
-                    </span>
-                    {plan.is_default ? (
-                      <span className="mt-1 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                        默认 Free
+            <Table className="min-w-[64rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">code / 名称</TableHead>
+                  <TableHead scope="col">描述</TableHead>
+                  <TableHead scope="col">类型</TableHead>
+                  <TableHead scope="col">状态</TableHead>
+                  <TableHead scope="col">features 摘要</TableHead>
+                  <TableHead scope="col" className="text-right">
+                    操作
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visiblePlans.map((plan) => (
+                  <TableRow
+                    key={plan.plan_id}
+                    data-test={`plan-row-${plan.plan_id}`}
+                  >
+                    <TableCell className="min-w-0 text-left">
+                      <strong className="block truncate">{plan.code}</strong>
+                      <span className="block truncate text-sm text-muted-foreground">
+                        {plan.name}
                       </span>
-                    ) : null}
-                  </div>
-                  <span className="line-clamp-2 text-left text-sm">
-                    {plan.description || '—'}
-                  </span>
-                  <span className="text-left text-sm">
-                    {plan.kind === 'free' ? 'Free' : 'paid'}
-                  </span>
-                  <StatusBadge
-                    label={statusLabel(plan.status)}
-                    tone={statusTone(plan.status)}
-                    rawValue={plan.status}
-                  />
-                  <span className="break-words text-left text-sm">
-                    {plan.features && Object.keys(plan.features).length > 0
-                      ? `${Object.keys(plan.features).length} 个字段`
-                      : '空对象'}
-                  </span>
-                  <span className="flex flex-wrap justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEdit(plan)}
-                      data-test={`plan-edit-${plan.plan_id}`}
-                    >
-                      编辑
-                    </Button>
-                    {plan.status === 'active' && !plan.is_default ? (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() =>
-                          openPlanAction(plan, {
-                            status: 'archived',
-                            make_default: false,
-                            clear_default: false,
-                          })
-                        }
-                        data-test={`plan-archive-${plan.plan_id}`}
-                      >
-                        归档
-                      </Button>
-                    ) : null}
-                    {plan.kind === 'free' &&
-                    plan.status === 'active' &&
-                    !plan.is_default ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          openPlanAction(plan, {
-                            status: plan.status,
-                            make_default: true,
-                            clear_default: false,
-                          })
-                        }
-                        data-test={`plan-default-${plan.plan_id}`}
-                      >
-                        设为默认
-                      </Button>
-                    ) : null}
-                    {plan.is_default ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          openPlanAction(plan, {
-                            status: plan.status,
-                            make_default: false,
-                            clear_default: true,
-                          })
-                        }
-                        data-test={`plan-clear-default-${plan.plan_id}`}
-                      >
-                        清空默认
-                      </Button>
-                    ) : null}
-                  </span>
-                </div>
-              ))}
-            </div>
+                      {plan.is_default ? (
+                        <span className="mt-1 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                          默认 Free
+                        </span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-left text-sm">
+                      <span className="line-clamp-2">
+                        {plan.description || '—'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-left text-sm">
+                      {plan.kind === 'free' ? 'Free' : 'paid'}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        label={statusLabel(plan.status)}
+                        tone={statusTone(plan.status)}
+                        rawValue={plan.status}
+                      />
+                    </TableCell>
+                    <TableCell className="break-words text-left text-sm">
+                      {plan.features && Object.keys(plan.features).length > 0
+                        ? `${Object.keys(plan.features).length} 个字段`
+                        : '空对象'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(plan)}
+                          data-test={`plan-edit-${plan.plan_id}`}
+                        >
+                          编辑
+                        </Button>
+                        {plan.status === 'active' && !plan.is_default ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() =>
+                              openPlanAction(plan, {
+                                status: 'archived',
+                                make_default: false,
+                                clear_default: false,
+                              })
+                            }
+                            data-test={`plan-archive-${plan.plan_id}`}
+                          >
+                            归档
+                          </Button>
+                        ) : null}
+                        {plan.kind === 'free' &&
+                        plan.status === 'active' &&
+                        !plan.is_default ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              openPlanAction(plan, {
+                                status: plan.status,
+                                make_default: true,
+                                clear_default: false,
+                              })
+                            }
+                            data-test={`plan-default-${plan.plan_id}`}
+                          >
+                            设为默认
+                          </Button>
+                        ) : null}
+                        {plan.is_default ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              openPlanAction(plan, {
+                                status: plan.status,
+                                make_default: false,
+                                clear_default: true,
+                              })
+                            }
+                            data-test={`plan-clear-default-${plan.plan_id}`}
+                          >
+                            清空默认
+                          </Button>
+                        ) : null}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </section>
       ) : null}

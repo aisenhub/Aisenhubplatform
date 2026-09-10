@@ -21,7 +21,6 @@ const navigation = [
 ] as const;
 
 export function ConsumerShell({
-  eyebrow,
   title,
   description,
   actions,
@@ -29,7 +28,6 @@ export function ConsumerShell({
   children,
   narrow = false,
 }: {
-  eyebrow: string;
   title: string;
   description?: string;
   actions?: ReactNode;
@@ -75,7 +73,6 @@ export function ConsumerShell({
       </header>
       <main className={`consumer-main${narrow ? ' consumer-main-narrow' : ''}`}>
         <div className="consumer-page-heading">
-          <p className="consumer-eyebrow">{eyebrow}</p>
           <div className="consumer-heading-row">
             <div>
               <h1>{title}</h1>

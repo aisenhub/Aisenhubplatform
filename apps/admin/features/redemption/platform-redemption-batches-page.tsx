@@ -14,6 +14,14 @@ import { OneTimeSecretPanel } from '@kit/ui/one-time-secret-panel';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@kit/ui/table';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
@@ -701,75 +709,88 @@ export function PlatformRedemptionBatchesPage() {
                 tabIndex={0}
                 aria-label="兑换批次列表，可横向滚动"
               >
-                <div className="min-w-[70rem]">
-                  <div className="data-table-row data-table-head grid-cols-[1.25fr_1fr_0.8fr_0.9fr_1.4fr_1.4fr_1.7fr]">
-                    <span>名称</span>
-                    <span>Plan</span>
-                    <span>数量</span>
-                    <span>状态</span>
-                    <span>到期</span>
-                    <span>交付截止/时间</span>
-                    <span className="text-right">操作</span>
-                  </div>
-                  {visibleBatches.map((batch) => {
-                    const canDisable = batch.status !== 'disabled';
-                    const hasReceipt =
-                      delivery?.batchId === batch.batch_id &&
-                      Boolean(delivery.receipt);
-                    return (
-                      <div
-                        className="data-table-row items-center grid-cols-[1.25fr_1fr_0.8fr_0.9fr_1.4fr_1.4fr_1.7fr]"
-                        key={batch.batch_id}
-                        data-test={`batch-row-${batch.batch_id}`}
-                      >
-                        <div className="min-w-0 text-left">
-                          <strong className="block truncate">
-                            {batch.name}
-                          </strong>
-                          <ResourceId value={batch.batch_id} />
-                        </div>
-                        <span className="text-left">{batch.plan_code}</span>
-                        <span className="text-left">{batch.quantity}</span>
-                        <StatusBadge
-                          label={statusLabel(batch.status)}
-                          tone={statusTone(batch.status)}
-                          rawValue={batch.status}
-                        />
-                        <span className="text-left text-sm">
-                          {formatUtc(batch.expires_at)}
-                        </span>
-                        <span className="text-left text-sm">
-                          {batch.delivered_at
-                            ? formatUtc(batch.delivered_at)
-                            : formatUtc(batch.delivery_deadline)}
-                        </span>
-                        <span className="flex flex-wrap justify-end gap-2">
-                          {batch.status === 'pending_delivery' ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDelivery(batch)}
-                              disabled={!hasReceipt}
-                              data-test={`batch-confirm-${batch.batch_id}`}
-                            >
-                              {hasReceipt ? '确认交付' : '等待本次 receipt'}
-                            </Button>
-                          ) : null}
-                          {canDisable ? (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => openDisable(batch)}
-                              data-test={`batch-disable-${batch.batch_id}`}
-                            >
-                              停用
-                            </Button>
-                          ) : null}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <Table className="min-w-[70rem]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead scope="col">名称</TableHead>
+                      <TableHead scope="col">Plan</TableHead>
+                      <TableHead scope="col">数量</TableHead>
+                      <TableHead scope="col">状态</TableHead>
+                      <TableHead scope="col">到期</TableHead>
+                      <TableHead scope="col">交付截止/时间</TableHead>
+                      <TableHead scope="col" className="text-right">
+                        操作
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleBatches.map((batch) => {
+                      const canDisable = batch.status !== 'disabled';
+                      const hasReceipt =
+                        delivery?.batchId === batch.batch_id &&
+                        Boolean(delivery.receipt);
+                      return (
+                        <TableRow
+                          key={batch.batch_id}
+                          data-test={`batch-row-${batch.batch_id}`}
+                        >
+                          <TableCell className="min-w-0 text-left">
+                            <strong className="block truncate">
+                              {batch.name}
+                            </strong>
+                            <ResourceId value={batch.batch_id} />
+                          </TableCell>
+                          <TableCell className="text-left">
+                            {batch.plan_code}
+                          </TableCell>
+                          <TableCell className="text-left">
+                            {batch.quantity}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              label={statusLabel(batch.status)}
+                              tone={statusTone(batch.status)}
+                              rawValue={batch.status}
+                            />
+                          </TableCell>
+                          <TableCell className="text-left text-sm">
+                            {formatUtc(batch.expires_at)}
+                          </TableCell>
+                          <TableCell className="text-left text-sm">
+                            {batch.delivered_at
+                              ? formatUtc(batch.delivered_at)
+                              : formatUtc(batch.delivery_deadline)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="flex flex-wrap justify-end gap-2">
+                              {batch.status === 'pending_delivery' ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openDelivery(batch)}
+                                  disabled={!hasReceipt}
+                                  data-test={`batch-confirm-${batch.batch_id}`}
+                                >
+                                  {hasReceipt ? '确认交付' : '等待本次 receipt'}
+                                </Button>
+                              ) : null}
+                              {canDisable ? (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => openDisable(batch)}
+                                  data-test={`batch-disable-${batch.batch_id}`}
+                                >
+                                  停用
+                                </Button>
+                              ) : null}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </section>

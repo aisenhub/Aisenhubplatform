@@ -557,6 +557,7 @@ export function OperationsCenterPage() {
           <Input
             id="operations-filter"
             type="search"
+            className="min-w-0 flex-1"
             value={draftQuery}
             onChange={(event) => setDraftQuery(event.target.value)}
             placeholder="state、checkpoint、Job ID 或 request ID"

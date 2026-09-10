@@ -58,7 +58,6 @@ export default function UpdatePasswordPage() {
 
   return (
     <ConsumerShell
-      eyebrow="Recovery session"
       title="设置新密码"
       description="此页面只使用回调设置的 HttpOnly session，不接收或显示 reset token。"
       narrow

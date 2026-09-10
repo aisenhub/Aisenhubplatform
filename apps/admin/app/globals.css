@@ -175,14 +175,6 @@ a {
   width: min(100%, 110rem);
 }
 
-.eyebrow {
-  color: var(--primary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 h1,
 h2,
 h3 {
@@ -246,26 +238,6 @@ summary:focus-visible {
   outline-offset: 2px;
 }
 
-.filter-control {
-  display: grid;
-  min-width: min(100%, 28rem);
-  gap: 0.4rem;
-}
-
-.inline-form,
-.grid-two {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.inline-form {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.grid-two {
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-}
-
 .stack-form {
   display: grid;
   gap: 0.65rem;
@@ -323,20 +295,6 @@ summary:focus-visible {
   overflow-x: auto;
 }
 
-.data-table-row {
-  display: grid;
-  min-width: 42rem;
-  grid-template-columns: 1.2fr 1fr 1.5fr 0.8fr;
-  gap: 0.75rem;
-  padding: 0.8rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.data-table-head {
-  color: var(--muted-foreground);
-  font-weight: 700;
-}
-
 .one-time-secret {
   display: grid;
   gap: 0.6rem;
@@ -366,30 +324,6 @@ summary:focus-visible {
   image-rendering: pixelated;
 }
 
-.section-heading,
-.file-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.file-row {
-  align-items: flex-start;
-  padding: 0.9rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.file-row:last-child {
-  border-bottom: 0;
-}
-
-.file-row small {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--muted-foreground);
-}
-
 .link {
   color: var(--primary);
   font-weight: 700;
@@ -399,12 +333,6 @@ summary:focus-visible {
 @media (max-width: 40rem) {
   .shell {
     padding: 1.25rem 1rem 3rem;
-  }
-
-  .file-row,
-  .section-heading {
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .detail-list div {
@@ -418,8 +346,10 @@ summary:focus-visible {
   *::before,
   *::after {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+    transition-property:
+      color, background-color, border-color, opacity !important;
+    transition-duration: 120ms !important;
+    animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
   }
 }

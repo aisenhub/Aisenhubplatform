@@ -216,7 +216,6 @@ export default function SubscriptionPage() {
 
   return (
     <ConsumerShell
-      eyebrow="Subscription"
       title="订阅与兑换"
       description="权益状态由 Account API 实时判定。兑换会保留同一 logical intent；网络不确定时不会静默创建新的幂等 key。"
       headerActions={<ConsumerLogoutButton />}
@@ -245,10 +244,7 @@ export default function SubscriptionPage() {
         <section className="consumer-card" data-test="subscription-entitlement">
           <div className="consumer-card-header">
             <div>
-              <p className="consumer-eyebrow">Current entitlement</p>
-              <h2 className="mt-2">
-                {entitlement?.plan?.name ?? '暂无当前套餐'}
-              </h2>
+              <h2>{entitlement?.plan?.name ?? '暂无当前套餐'}</h2>
             </div>
             <span className="consumer-code">
               {entitlement?.plan?.code ?? 'none'}

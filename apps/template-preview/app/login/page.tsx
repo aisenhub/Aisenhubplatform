@@ -47,7 +47,6 @@ export default function ConsumerLoginPage() {
 
   return (
     <ConsumerShell
-      eyebrow="Welcome back"
       title="登录你的账户"
       description="登录后，账户、订阅和文件数据会通过同源 BFF 读取。"
       narrow

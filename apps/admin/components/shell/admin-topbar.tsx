@@ -44,7 +44,7 @@ export function AdminTopbar() {
     >
       <SidebarTrigger data-test="admin-sidebar-toggle" />
       <Separator orientation="vertical" className="hidden h-5 sm:block" />
-      <div className="hidden min-w-0 items-center gap-2 text-sm text-muted-foreground sm:flex">
+      <div className="hidden min-w-0 items-center gap-2 text-sm text-muted-foreground lg:flex">
         <span>Aisenhub</span>
         <span aria-hidden="true">/</span>
         <span className="truncate font-medium text-foreground">
@@ -52,7 +52,7 @@ export function AdminTopbar() {
         </span>
       </div>
       <div className="ml-auto flex min-w-0 items-center gap-2">
-        <div className="sm:hidden">
+        <div className="lg:hidden min-w-0 truncate">
           <span className="sr-only">当前页面：</span>
           <span className="text-sm font-medium">{pageLabel}</span>
         </div>

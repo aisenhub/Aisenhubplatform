@@ -533,7 +533,6 @@ export default function AccountPage() {
 
   return (
     <ConsumerShell
-      eyebrow="Account workspace"
       title="账户设置"
       description="分别管理资料、偏好与安全操作。草稿不会被新版本静默覆盖，敏感操作必须经过确认和近期认证。"
       headerActions={<ConsumerLogoutButton />}

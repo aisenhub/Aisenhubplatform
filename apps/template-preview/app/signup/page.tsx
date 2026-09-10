@@ -62,7 +62,6 @@ export default function SignupPage() {
 
   return (
     <ConsumerShell
-      eyebrow="Get started"
       title="创建账户"
       description="创建后即可进入账户工作区。你的账户数据不会出现在公开套餐页面。"
       narrow

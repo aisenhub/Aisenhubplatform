@@ -57,7 +57,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <ConsumerShell
-      eyebrow="Account recovery"
       title="找回密码"
       description="为了保护账户，即使邮箱不存在，页面也会使用一致的提示。"
       narrow

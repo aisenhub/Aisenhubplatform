@@ -85,7 +85,6 @@ export default function PricingPage() {
 
   return (
     <ConsumerShell
-      eyebrow="Public pricing"
       title="选择适合你的工作区"
       description="套餐信息来自公开 Plans API。展示套餐不代表账户已经获得对应权益；权益仍由登录后的 Account API 判定。"
       actions={
@@ -124,8 +123,10 @@ export default function PricingPage() {
             <article key={plan.code} className="consumer-card">
               <div className="consumer-card-header">
                 <div>
-                  <p className="consumer-eyebrow">{plan.kind ?? 'Plan'}</p>
-                  <h2 className="mt-2">{plan.name}</h2>
+                  <h2>{plan.name}</h2>
+                  <p className="consumer-card-meta">
+                    {plan.kind === 'free' ? '免费套餐' : '付费套餐'}
+                  </p>
                 </div>
                 <span className="consumer-code">{plan.code}</span>
               </div>

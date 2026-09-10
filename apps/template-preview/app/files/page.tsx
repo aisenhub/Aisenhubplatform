@@ -469,7 +469,6 @@ export default function FilesPage() {
 
   return (
     <ConsumerShell
-      eyebrow="File workspace"
       title="配置文件"
       description="预算和文件状态分别表达。上传字节流不会自动重传，删除接受后预算仍可能占用，最终以服务端状态为准。"
       headerActions={<ConsumerLogoutButton />}
@@ -509,8 +508,7 @@ export default function FilesPage() {
             <section className="consumer-card" data-test="consumer-budget">
               <div className="consumer-card-header">
                 <div>
-                  <p className="consumer-eyebrow">Storage budget</p>
-                  <h2 className="mt-2">当前使用情况</h2>
+                  <h2>当前使用情况</h2>
                 </div>
                 <StatusBadge
                   label={budget.enabled ? '策略已启用' : '策略已关闭'}

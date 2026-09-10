@@ -51,7 +51,7 @@ export function AdminCommandMenu({ compact = false }: { compact?: boolean }) {
         data-test="admin-command-trigger"
         className={
           compact
-            ? 'size-8 justify-center px-0 text-muted-foreground sm:w-56 sm:justify-between sm:px-2.5'
+            ? 'size-8 justify-center px-0 text-muted-foreground lg:w-56 lg:justify-between lg:px-2.5'
             : 'w-full justify-between gap-3 text-muted-foreground sm:w-56'
         }
         onClick={() => setOpen(true)}

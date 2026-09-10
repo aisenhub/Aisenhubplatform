@@ -25,7 +25,6 @@ const entryPoints = [
 export default function TemplatePreviewPage() {
   return (
     <ConsumerShell
-      eyebrow="Consumer Preview"
       title="把账户任务做得清楚、可恢复"
       description="一个面向普通用户的轻量工作区。数据由同源 BFF 读取，敏感动作保留正式确认、认证和服务端结果。"
       actions={
@@ -40,8 +39,7 @@ export default function TemplatePreviewPage() {
       >
         <div className="consumer-card-header">
           <div>
-            <p className="consumer-eyebrow">Your workspace</p>
-            <h2 className="mt-2">从一个明确的下一步开始</h2>
+            <h2>从一个明确的下一步开始</h2>
             <p className="consumer-card-description">
               初始加载、空数据、恢复错误和异步操作会分别表达；技术详情只在需要支持时展开。
             </p>
@@ -68,7 +66,6 @@ export default function TemplatePreviewPage() {
             href={item.href}
             className="consumer-card group outline-none transition-colors hover:border-primary/45 focus-visible:ring-2 focus-visible:ring-focus"
           >
-            <span className="consumer-eyebrow">Workspace</span>
             <span className="text-lg font-semibold text-foreground">
               {item.title}
             </span>
