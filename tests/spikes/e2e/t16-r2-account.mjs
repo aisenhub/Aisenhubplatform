@@ -847,6 +847,7 @@ async function exerciseAdmin(page, adminTotp) {
   await page.waitForURL(/\/admin$/u, { waitUntil: 'domcontentloaded' });
   await exerciseAdminErrorCopyMatrix(page);
   await exerciseFilesStateMatrix(page);
+  await exerciseSettingsLifecycleMatrix(page);
   await page.goto(`${adminUrl}/admin/platforms`, {
     waitUntil: 'domcontentloaded',
   });
@@ -1335,6 +1336,267 @@ async function exerciseFilesStateMatrix(page) {
     await page.unroute(filesRoute);
     await page.unroute(policyRoute);
     await page.unroute(unknownDetailRoute);
+  }
+}
+
+async function exerciseSettingsLifecycleMatrix(page) {
+  const originEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}/origins`;
+  const originId = crypto.randomUUID();
+  const createdOriginId = crypto.randomUUID();
+  const origin = {
+    origin_id: originId,
+    platform_id: platformAId,
+    environment: 'local',
+    origin: 'http://127.0.0.1:3110',
+    oauth_callback_url: 'http://127.0.0.1:3110/auth/callback',
+    password_reset_url: 'http://127.0.0.1:3110/auth/reset',
+    email_confirmation_url: 'http://127.0.0.1:3110/auth/confirm',
+    status: 'active',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const createdOrigin = {
+    ...origin,
+    origin_id: createdOriginId,
+    origin: 'https://t16-r2.example.test',
+    oauth_callback_url: 'https://t16-r2.example.test/auth/callback',
+    password_reset_url: 'https://t16-r2.example.test/auth/reset',
+    email_confirmation_url: 'https://t16-r2.example.test/auth/confirm',
+  };
+  let originCreateCount = 0;
+  let originCreated = false;
+  const originRoute = (url) => new URL(url).pathname === originEndpoint;
+  await page.route(originRoute, async (route) => {
+    if (route.request().method() === 'POST') {
+      originCreateCount += 1;
+      originCreated = true;
+      await route.fulfill({
+        status: 201,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: createdOrigin,
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: originCreated ? [origin, createdOrigin] : [origin],
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  try {
+    await page.goto(
+      `${adminUrl}/admin/platforms/${platformAId}/settings/origins`,
+      {
+        waitUntil: 'domcontentloaded',
+      },
+    );
+    await page.getByRole('heading', { name: 'Origins', exact: true }).waitFor();
+    await page.getByText(origin.origin, { exact: true }).waitFor();
+    await page.locator('[data-test="platform-origin-open-create"]').click();
+    await page.locator('#origin-value').fill('not-a-url');
+    await page.locator('[data-test="platform-origin-create-submit"]').click();
+    await page
+      .getByText('Origin 必须是 http 或 https URL。', { exact: true })
+      .waitFor();
+    await page.locator('#origin-value').fill(createdOrigin.origin);
+    await page
+      .locator('#origin-oauth-callback')
+      .fill(createdOrigin.oauth_callback_url);
+    await page
+      .locator('#origin-password-reset')
+      .fill(createdOrigin.password_reset_url);
+    await page
+      .locator('#origin-confirmation')
+      .fill(createdOrigin.email_confirmation_url);
+    await page.locator('[data-test="platform-origin-create-submit"]').click();
+    await page.getByText(createdOrigin.origin, { exact: true }).waitFor();
+    assert.equal(originCreateCount, 1, 'Origin create must submit once');
+  } finally {
+    await page.unroute(originRoute);
+  }
+
+  const keyEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}/keys`;
+  const initialKeyId = crypto.randomUUID();
+  const createdKeyId = crypto.randomUUID();
+  const keySecret = `phk_v1_${createdKeyId}_t16-r2-created`;
+  const keyNow = new Date().toISOString();
+  const initialKey = {
+    key_id: initialKeyId,
+    platform_id: platformAId,
+    name: 'T16 R2 initial key',
+    hmac_key_version: 1,
+    key_prefix: 'phk_v1',
+    key_suffix: 'initial',
+    status: 'active',
+    expires_at: null,
+    revoked_at: null,
+    creation_operation_id: crypto.randomUUID(),
+    created_at: keyNow,
+    deployment_confirmed_at: null,
+    deployment_confirmed_by: null,
+  };
+  let keyCreated = false;
+  let keyDeployed = false;
+  let keyRevoked = false;
+  let keyCreateCount = 0;
+  const createdKey = () => ({
+    key_id: createdKeyId,
+    platform_id: platformAId,
+    name: 'BFF key',
+    hmac_key_version: 1,
+    key_prefix: 'phk_v1',
+    key_suffix: 'created',
+    status: keyRevoked ? 'revoked' : 'active',
+    expires_at: null,
+    revoked_at: keyRevoked ? keyNow : null,
+    creation_operation_id: crypto.randomUUID(),
+    created_at: keyNow,
+    deployment_confirmed_at: keyDeployed ? keyNow : null,
+    deployment_confirmed_by: keyDeployed ? adminId : null,
+  });
+  const keyRoute = (url) =>
+    new URL(url).pathname.startsWith(`${keyEndpoint}/`) ||
+    new URL(url).pathname === keyEndpoint;
+  await page.route(keyRoute, async (route) => {
+    const method = route.request().method();
+    const pathname = new URL(route.request().url()).pathname;
+    if (method === 'GET' && pathname === keyEndpoint) {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: keyCreated ? [initialKey, createdKey()] : [initialKey],
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (method === 'POST' && pathname === keyEndpoint) {
+      keyCreateCount += 1;
+      keyCreated = true;
+      await route.fulfill({
+        status: 201,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: { ...createdKey(), presented_key: keySecret },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (
+      method === 'POST' &&
+      pathname === `${keyEndpoint}/${createdKeyId}/confirm-deployment`
+    ) {
+      keyDeployed = true;
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: createdKey(),
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (
+      method === 'POST' &&
+      pathname === `${keyEndpoint}/${createdKeyId}/revoke`
+    ) {
+      keyRevoked = true;
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: createdKey(),
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  try {
+    await page.goto(
+      `${adminUrl}/admin/platforms/${platformAId}/settings/keys`,
+      {
+        waitUntil: 'domcontentloaded',
+      },
+    );
+    await page
+      .getByRole('heading', { name: 'Platform Keys', exact: true })
+      .waitFor();
+    await page.locator('[data-test="platform-key-open-create"]').click();
+    await page.locator('[data-test="confirm-action-submit"]').click();
+    await page.locator('[data-test="one-time-secret-panel"]').waitFor();
+    assert.equal(
+      await page.getByText(keySecret, { exact: true }).count(),
+      1,
+      'created Platform Key secret must be shown once',
+    );
+    assert.equal(keyCreateCount, 1, 'Platform Key create must submit once');
+    await page.locator('[data-test="one-time-secret-acknowledge"]').click();
+    await page
+      .locator('[data-test="one-time-secret-panel"]')
+      .waitFor({ state: 'detached' });
+    assert.equal(
+      (await page.locator('body').innerText()).includes(keySecret),
+      false,
+      'acknowledged Platform Key secret must leave the DOM',
+    );
+
+    const createdKeyRow = page
+      .locator('[data-test="platform-key-rows"] article')
+      .filter({ hasText: 'BFF key' });
+    await createdKeyRow.getByRole('button', { name: '确认已部署' }).click();
+    const [deploymentResponse] = await Promise.all([
+      page.waitForResponse((item) =>
+        item.url().endsWith('/confirm-deployment'),
+      ),
+      page.locator('[data-test="confirm-action-submit"]').click(),
+    ]);
+    assertStatus(deploymentResponse.status(), 200, 'Platform Key deployment');
+    await createdKeyRow.getByText('已确认部署', { exact: false }).waitFor();
+    await page.locator('[data-test="confirm-action-cancel"]').click();
+
+    await createdKeyRow.getByRole('button', { name: '撤销' }).click();
+    const [revokeResponse] = await Promise.all([
+      page.waitForResponse((item) => item.url().endsWith('/revoke')),
+      page.locator('[data-test="confirm-action-submit"]').click(),
+    ]);
+    assertStatus(revokeResponse.status(), 200, 'Platform Key revoke');
+    await createdKeyRow.getByText('revoked', { exact: true }).waitFor();
+    await page.locator('[data-test="confirm-action-cancel"]').click();
+  } finally {
+    await page.unroute(keyRoute);
   }
 }
 
