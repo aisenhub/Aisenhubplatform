@@ -1,6 +1,6 @@
 # FE-R1 执行合同与能力校准
 
-修订日期：2026-09-10；当前代码基线：`main@868e069`（FE-D02 批次边界基线为 `54ff797`，文档维护提交另行记录）。以下是 FE-R1 执行合同与能力边界；Phase 01～08 与 FE-D02 已有本地代码批次和验证记录，但合同级剩余项仍未全部关闭。与旧研究快照描述冲突时，本修订用于执行；公共安全/业务合同仍以上层架构和专题为准。
+修订日期：2026-09-10；当前代码基线：`main@1a8cd5e`（FE-D02 批次边界基线为 `54ff797`，文档维护提交另行记录）。以下是 FE-R1 执行合同与能力边界；Phase 01～08 与 FE-D02 已有本地代码批次和验证记录，但合同级剩余项仍未全部关闭。与旧研究快照描述冲突时，本修订用于执行；公共安全/业务合同仍以上层架构和专题为准。
 
 ## 1. 已知 API 能力与依赖
 
@@ -61,7 +61,7 @@ Intent 以 scope/platform/target/kind 定位；首次实际提交前允许编辑
 
 ### FE-D02：批次重试语义核验（Phase 03 冻结策略，Phase 04 消费）
 
-已完成核验：原 HTTP create 先生成 codes/receipt，SQL按 creation_operation_id命中已有批次时返回原 metadata，导致重放响应可能携带未入库材料。`54ff797` 已通过独立迁移保存逻辑请求指纹；同参数重放返回 `200 + creation_state=replayed_existing` 及批次元数据，不返回 codes/receipt；异参数返回 `409 IDEMPOTENCY_CONFLICT`。batch create 仍固定 `replay never`，UI 不提供“重发创建以恢复明文”入口；SQL/API 失败用例已保留并复验，`868e069` 另补 Admin 429/503/409 中文主文案与技术详情隔离矩阵。Hosted/完整 FE-V08 尚未运行。
+已完成核验：原 HTTP create 先生成 codes/receipt，SQL按 creation_operation_id命中已有批次时返回原 metadata，导致重放响应可能携带未入库材料。`54ff797` 已通过独立迁移保存逻辑请求指纹；同参数重放返回 `200 + creation_state=replayed_existing` 及批次元数据，不返回 codes/receipt；异参数返回 `409 IDEMPOTENCY_CONFLICT`。batch create 仍固定 `replay never`，UI 不提供“重发创建以恢复明文”入口；SQL/API 失败用例已保留并复验，`1a8cd5e` 另补 Platform Workspace MFA step-up 上下文保持、Files 下载失败/MFA 与 Policy MFA/409 故障恢复矩阵，Admin 429/503/409 中文主文案与技术详情隔离矩阵仍在当前基线。Hosted/完整 FE-V08 尚未运行。
 
 ## 5. UI 分发与视觉基线
 
