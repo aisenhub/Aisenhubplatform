@@ -1,17 +1,10 @@
-import { PlatformRoutePlaceholder } from '../../../../../components/platform-context/platform-route-placeholder';
+import { PlatformAccountsPage as PlatformAccountsFeaturePage } from '../../../../../features/accounts/platform-accounts-page';
 
 export default async function PlatformAccountsPage({
   params,
 }: {
   params: Promise<{ platformId: string }>;
 }) {
-  const { platformId } = await params;
-  return (
-    <PlatformRoutePlaceholder
-      title="平台账户"
-      description="当前平台上下文下的账户目录。"
-      platformId={platformId}
-      nextPhase="Phase 04"
-    />
-  );
+  await params;
+  return <PlatformAccountsFeaturePage />;
 }

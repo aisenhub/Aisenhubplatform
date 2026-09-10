@@ -1,9 +1,7 @@
 import {
   Activity,
   Boxes,
-  CircleDollarSign,
   FileKey2,
-  FileText,
   LayoutDashboard,
   LockKeyhole,
   ScrollText,
@@ -42,18 +40,6 @@ export const adminNavigationGroups: Array<{
   {
     label: '资源',
     items: [
-      {
-        label: '权益与套餐',
-        href: '/admin/entitlements',
-        description: '管理套餐、权益和兑换码批次',
-        icon: CircleDollarSign,
-      },
-      {
-        label: '订阅',
-        href: '/admin/subscriptions',
-        description: '查看账户订阅并提交受控命令',
-        icon: FileText,
-      },
       {
         label: '配置文件',
         href: '/admin/files',

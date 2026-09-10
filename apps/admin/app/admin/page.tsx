@@ -11,16 +11,6 @@ const overviewLinks = [
     href: '/admin/platforms',
   },
   {
-    title: '权益与套餐',
-    description: '管理套餐、权益和兑换码批次；不直接修改权益投影。',
-    href: '/admin/entitlements',
-  },
-  {
-    title: '订阅操作',
-    description: '在明确账户上下文中读取订阅并提交受控命令。',
-    href: '/admin/subscriptions',
-  },
-  {
     title: '配置文件',
     description: '查看文件策略、状态和需要 worker 继续处理的任务。',
     href: '/admin/files',

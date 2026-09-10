@@ -32,12 +32,6 @@ type Origin = {
   status: string;
 };
 
-type Account = {
-  platform_account_id: string;
-  user_id: string | null;
-  status: string;
-};
-
 type Key = {
   key_id: string;
   name: string;
@@ -66,12 +60,7 @@ type OperationError = {
 };
 
 type ConfirmIntent = {
-  kind:
-    | 'platform-toggle'
-    | 'key-create'
-    | 'key-deployment'
-    | 'key-revoke'
-    | 'account-action';
+  kind: 'platform-toggle' | 'key-create' | 'key-deployment' | 'key-revoke';
   targetId: string;
   title: string;
   impact: string;
@@ -80,7 +69,6 @@ type ConfirmIntent = {
   action?: 'suspend' | 'restore' | 'close';
   keyId?: string;
   keyName?: string;
-  accountId?: string;
 };
 
 function headers() {
@@ -109,7 +97,6 @@ export function LegacyPlatformSettings() {
   const platformId = platform.platform_id;
   const prefix = `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}`;
   const [origins, setOrigins] = useState<Origin[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
   const [keys, setKeys] = useState<Key[]>([]);
   const [state, setState] = useState<'loading' | 'success' | 'error'>(
     'loading',
@@ -119,8 +106,6 @@ export function LegacyPlatformSettings() {
   const [originQuery, setOriginQuery] = useState('');
   const [keyFilter, setKeyFilter] = useState('');
   const [keyQuery, setKeyQuery] = useState('');
-  const [accountFilter, setAccountFilter] = useState('');
-  const [accountQuery, setAccountQuery] = useState('');
   const [origin, setOrigin] = useState('http://localhost:3000');
   const [keyName, setKeyName] = useState('BFF key');
   const [secret, setSecret] = useState<string | null>(null);
@@ -141,10 +126,6 @@ export function LegacyPlatformSettings() {
     const responses = await Promise.all([
       adminAuthSession.request(
         `${prefix}/origins${originQuery.trim() ? `?q=${encodeURIComponent(originQuery.trim())}` : ''}`,
-        { cache: 'no-store' },
-      ),
-      adminAuthSession.request(
-        `${prefix}/accounts?limit=100${accountQuery.trim() ? `&q=${encodeURIComponent(accountQuery.trim())}` : ''}`,
         { cache: 'no-store' },
       ),
       adminAuthSession.request(
@@ -173,15 +154,14 @@ export function LegacyPlatformSettings() {
       return;
     }
 
-    const [originBody, accountBody, keyBody] = (await Promise.all(
+    const [originBody, keyBody] = (await Promise.all(
       responses.map((response) => response.json()),
-    )) as [ApiList<Origin>, ApiList<Account>, ApiList<Key>];
+    )) as [ApiList<Origin>, ApiList<Key>];
     if (!adminAuthSession.isCurrentEpoch(epoch)) return;
     setOrigins(Array.isArray(originBody.data) ? originBody.data : []);
-    setAccounts(Array.isArray(accountBody.data) ? accountBody.data : []);
     setKeys(Array.isArray(keyBody.data) ? keyBody.data : []);
     setState('success');
-  }, [accountQuery, keyQuery, originQuery, prefix]);
+  }, [keyQuery, originQuery, prefix]);
 
   useEffect(() => {
     void load();
@@ -262,27 +242,6 @@ export function LegacyPlatformSettings() {
     setConfirmIntent(intent);
   }
 
-  function accountAction(
-    accountId: string,
-    action: 'suspend' | 'restore' | 'close',
-  ) {
-    const actionLabel =
-      action === 'suspend' ? '暂停' : action === 'restore' ? '恢复' : '关闭';
-    openConfirmation({
-      kind: 'account-action',
-      targetId: accountId,
-      accountId,
-      action,
-      title: `${actionLabel}平台账户`,
-      impact:
-        action === 'close'
-          ? '关闭是不可逆的账户状态动作，并会保留审计记录。'
-          : `服务端会尝试${actionLabel}这个账户，最终状态以 API 返回为准。`,
-      reversible: action !== 'close',
-      reasonRequired: true,
-    });
-  }
-
   function confirmKeyDeployment(keyId: string) {
     openConfirmation({
       kind: 'key-deployment',
@@ -319,7 +278,7 @@ export function LegacyPlatformSettings() {
     });
   }
 
-  async function executeConfirmation(reason: string) {
+  async function executeConfirmation(_reason: string) {
     if (!confirmIntent) return;
     const intent = confirmIntent;
     setMutationState('pending');
@@ -349,17 +308,6 @@ export function LegacyPlatformSettings() {
       } else if (intent.kind === 'key-revoke' && intent.keyId) {
         path = `${prefix}/keys/${encodeURIComponent(intent.keyId)}/revoke`;
         init = { method: 'POST', headers: headers() };
-      } else if (
-        intent.kind === 'account-action' &&
-        intent.accountId &&
-        intent.action
-      ) {
-        path = `${prefix}/accounts/${encodeURIComponent(intent.accountId)}/${intent.action}`;
-        init = {
-          method: 'POST',
-          headers: headers(),
-          body: JSON.stringify({ reason }),
-        };
       }
 
       const response = await adminAuthSession.request(path, init, {
@@ -488,15 +436,6 @@ export function LegacyPlatformSettings() {
           .includes(keyFilter.trim().toLowerCase()),
       ),
     [keyFilter, keys],
-  );
-  const visibleAccounts = useMemo(
-    () =>
-      accounts.filter((account) =>
-        `${account.user_id ?? ''} ${account.status}`
-          .toLowerCase()
-          .includes(accountFilter.trim().toLowerCase()),
-      ),
-    [accountFilter, accounts],
   );
   const status = platformStatus(platform.status);
 
@@ -743,73 +682,6 @@ export function LegacyPlatformSettings() {
                           撤销
                         </Button>
                       ) : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        <div className="panel gap-3">
-          <h2>平台账户</h2>
-          <p className="text-sm text-muted-foreground">
-            每个账户动作都在独立确认窗口中填写原因，不共享或残留到其他账户。
-          </p>
-          <FilterForm
-            id="account-filter"
-            label="筛选账户"
-            value={accountFilter}
-            onChange={setAccountFilter}
-            onSubmit={() => setAccountQuery(accountFilter)}
-            placeholder="user ID 或 status"
-          />
-          {visibleAccounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">当前查询暂无账户。</p>
-          ) : (
-            <ul className="data-list" data-test="platform-account-list">
-              {visibleAccounts.map((account) => {
-                const rowOperation =
-                  mutationState === 'pending' &&
-                  confirmIntent?.accountId === account.platform_account_id;
-                const isSuspended = account.status === 'suspended';
-                return (
-                  <li key={account.platform_account_id} className="items-start">
-                    <span className="min-w-0">
-                      <strong className="break-all">
-                        {account.user_id ?? '已匿名化账户'}
-                      </strong>
-                      <small className="mt-1 block">{account.status}</small>
-                    </span>
-                    <span className="flex shrink-0 flex-wrap justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={rowOperation}
-                        data-test={`platform-account-${account.platform_account_id}-toggle`}
-                        onClick={() =>
-                          void accountAction(
-                            account.platform_account_id,
-                            isSuspended ? 'restore' : 'suspend',
-                          )
-                        }
-                      >
-                        {isSuspended ? '恢复' : '暂停'}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={rowOperation}
-                        data-test={`platform-account-${account.platform_account_id}-close`}
-                        onClick={() =>
-                          void accountAction(
-                            account.platform_account_id,
-                            'close',
-                          )
-                        }
-                      >
-                        关闭
-                      </Button>
                     </span>
                   </li>
                 );
