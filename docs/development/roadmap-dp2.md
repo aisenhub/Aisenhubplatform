@@ -4,7 +4,7 @@
 
 ## 当前起点与路线
 
-DP2 原规划基线 `31b5142421847c26e61fe733b0df67f2fecd115a` 与旧 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。当前 `main@2cd5affe2c52cbc1fe185d50c8695e226b8a2ada` 已包含 Frontend Phase 01–08 Local 代码、验证记录和交付文档；G0-S/G2-S/G4-S/G5-P/G6 及 M4–M6 外部/发布门槛仍未完整通过。详情见[校准证据](evidence/DP2-baseline.md)、[进度](status.md)和[FE-R1 verification record](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/verification-record.md)。
+DP2 原规划基线 `31b5142421847c26e61fe733b0df67f2fecd115a` 与旧 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。当前代码基线 `main@54ff79727dd0b7ea734822d23db2c9b58d6fe4ea` 已包含 Frontend Phase 01–08 Local 代码、FE-D02 修复、验证记录和交付文档；G0-S/G2-S/G4-S/G5-P/G6 及 M4–M6 外部/发布门槛仍未完整通过。详情见[校准证据](evidence/DP2-baseline.md)、[进度](status.md)和[FE-R1 verification record](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/verification-record.md)。
 
 | 阶段 | 本次计划精度 | 进入与完成条件 |
 |---|---|---|
@@ -142,4 +142,4 @@ DP2 原规划基线 `31b5142421847c26e61fe733b0df67f2fecd115a` 与旧 main `f981
 
 本次已给出M5/M6任务链，不等M4结束再从零规划。M4-01后冻结恢复协议，T18-L后解锁文件实现，M4-10后复核M5合同/页面差距，M4-11与X04/X06明确后将运维步骤补成实测runbook。每阶段如出现公共合同变化先登记并同步消费者，不能静默降级。
 
-Frontend Phase 01–08 的应用与交付文档已并入 `main@2cd5aff`；这不代表 Hosted/Staging/生产部署、正式 Registry 发布或生产操作已执行。各后续实施任务仍须小提交、指定文件暂存、脱敏差异检查、push并核对SHA；模块集成和发布仍需明确授权，禁止将本次合并视为 Release。
+Frontend Phase 01–08 与 FE-D02 的应用及交付文档已并入代码基线 `main@54ff797`；这不代表 Hosted/Staging/生产部署、正式 Registry 发布或生产操作已执行。各后续实施任务仍须小提交、指定文件暂存、脱敏差异检查、push并核对SHA；模块集成和发布仍需明确授权，禁止将本次合并视为 Release。

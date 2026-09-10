@@ -1,6 +1,6 @@
 # Phase 01 — Experience Foundation、Admin Shell 与 Audit 真实闭环
 
-> FE-R1（2026-09-10）：按当前 `main@2cd5aff` 维护；Auth 已实施，本期默认简体中文。Phase 01 代码批次已交付；阶段剩余核验以 [verification-record.md](verification-record.md) 为准。
+> FE-R1（2026-09-10）：按当前代码基线 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 01 代码批次已交付；阶段剩余核验以 [verification-record.md](verification-record.md) 为准。
 
 > 状态：**进行中**（代码批次已交付；Audit 行为级证据仍待完整关闭）  
 > 上游：`00-master-plan.md`  
