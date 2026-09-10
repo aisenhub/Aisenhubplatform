@@ -560,12 +560,12 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 ## 10.6 Final GitHub 交付
 
 - final code commit(s)：`11aa3f2f95003baa92ec952382f6018f8461358e`
-- verification/docs commit：待最终 docs-only commit
+- verification/docs commit：`df094b26d675c2caf004707d03a068e27b5f151a`（本阶段验证记录与计划收口）
 - branch：`codex/frontend-plan-r1`
 - push：PASS；远端任务分支已确认包含 `11aa3f2`
-- remote branch contains all Phase 01–08 commits：Phase 01–08 当前代码/文档批次均已在任务分支历史，最终 remote SHA 待 docs-only commit 后复核
+- remote branch contains all Phase 01–08 commits：PASS；任务分支远端已确认包含 Phase 01–08 代码/文档批次，当前 SHA 为 `df094b2`
 - GitHub links：[Phase 08 code commit](https://github.com/aisenhub/Aisenhubplatform/commit/11aa3f2f95003baa92ec952382f6018f8461358e)
-- merge main：待所有 docs-only 记录提交并完成 remote 核对后执行
+- merge main：PASS；已从任务分支 fast-forward 到 `origin/main`，合并时远端 SHA 为 `df094b2`
 - Release：**不属于本任务，未执行**
 - Deploy：**不属于本任务，未执行**
 
@@ -732,13 +732,13 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 08 代码实现与推送；最终 verification docs 仍待独立提交，之后合并 main**。
-- 下一阶段从哪里开始：提交并推送 Phase 08 docs-only record，核对任务分支 remote SHA，再执行 fast-forward 合并到 `main` 并核对 `origin/main`；保留 hosted/历史故障基线 NOT_RUN/FAIL 事实。
+- 当前最后完成阶段：**Phase 08 代码与 verification docs 已推送，并已 fast-forward 合并 `main`**。
+- 下一阶段从哪里开始：本任务实现与 Git 交付已完成；Future diagnostics、hosted dual-platform、Staging/生产、历史 M3/M4 与全状态故障注入按后续任务/环境条件处理，保留 NOT_RUN/FAIL 事实。
 - 必须先处理：FE-D02 在 Phase 03/04 的批次重复创建核验仍未闭环；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对；Consumer/Registry 独立安装与 T16 已 PASS。Phase 08 不重复实施 FE-D03 或 Consumer 页面。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
-- 当前未提交修改及归属：Phase 08 verification record 与计划待 docs-only commit；产品代码无未提交修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 不属于本任务。
-- 当前 branch / HEAD：`codex/frontend-plan-r1` / Phase 08 code `11aa3f2f95003baa92ec952382f6018f8461358e`（docs-only commit 后以 Git 为准）。
+- 当前未提交修改及归属：无本任务修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
+- 当前 branch / HEAD：`codex/frontend-plan-r1` / `df094b26d675c2caf004707d03a068e27b5f151a`；`main` 已同步到同一代码/文档内容。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
