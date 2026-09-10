@@ -1,6 +1,6 @@
 # Phase 08 — Responsive、Accessibility、Integration 与 Legacy Cleanup
 
-> FE-R1（2026-09-10）：按当前代码基线 `main@94631ff` 维护；Auth 已实施，本期默认简体中文。Phase 08 本地响应式/a11y/legacy/integration 收口已完成并合并 `main`；全状态故障注入、Hosted/Staging/生产仍按验证记录保留。
+> FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 08 本地响应式/a11y/legacy/integration 收口已完成并合并 `main`，本轮 Admin MFA 二维码 Next Image lint 修复已验证；全状态故障注入、Hosted/Staging/生产仍按验证记录保留。
 
 > 状态：**进行中**  
 > 前置：Phase 04、05、06、07 全部必要代码已 push；Integrator 已核对任务分支 remote commits，当前进入最终收口。  

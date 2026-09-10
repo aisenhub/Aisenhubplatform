@@ -1,6 +1,6 @@
 # Frontend Experience & State Upgrade — Verification Record
 
-> FE-R1（2026-09-10）：当前产品实现按 `main@94631ff` 维护，FE-D02 批次边界基线为 `main@54ff797`，最新 FE-V Local 浏览器回归测试提交为 `main@94631ff`；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复、本地验证和 Git 交付已完成，合同级、Hosted/Staging/生产与发布门槛仍按本记录保留为未关闭事实。
+> FE-R1（2026-09-10）：当前产品实现按 `main@c9c19f4` 维护，FE-D02 批次边界基线为 `main@54ff797`，最新 FE-V Local 浏览器回归测试提交为 `main@c9c19f4`；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复、本地验证和 Git 交付已完成，本轮已补资源竞态和代表性错误矩阵，合同级、Hosted/Staging/生产与发布门槛仍按本记录保留为未关闭事实。
 
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
@@ -48,7 +48,7 @@
 | 初始工作区状态 | clean | 已验证 | 阶段开始 `git status --short` 为空 |
 | 初始已有修改 | 无 | 已验证 | 未覆盖归属不明修改 |
 | 远程是否含起始 commit | 是 | 已验证 | code push 后 `git ls-remote` 核对 |
-| 当前产品实现基线（main/任务分支） | `94631ff` | 已验证 | Platform Workspace 在 MFA step-up 与状态刷新期间保持上下文；最新 FE-V Local 浏览器回归为 `94631ff`，FE-D02 批次边界基线仍为 `54ff797`，两个远端分支已核对一致 |
+| 当前产品实现基线（main） | `c9c19f4` | 已验证 | 资源 loader generation/epoch、FE-V 代表性错误/竞态矩阵、Files/Policy/Settings 412/429/503/202、Admin MFA Next Image；最新 FE-V Local 浏览器回归为 `c9c19f4`，FE-D02 批次边界基线仍为 `54ff797`，origin/main 已核对一致 |
 
 ### 基线命令记录
 
@@ -832,6 +832,18 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 
 ---
 
+## VR-0018 — FE-V 资源竞态与错误矩阵 Local 复跑
+
+- 日期：2026-09-10。
+- 阶段：T16-R2 / FE-V / Phase 03–06 supporting evidence。
+- 被验证 commit：`c9c19f45d97c2f9b7265c62861ed160a2e987dd5`，branch `main`；`origin/main` 已核对同 SHA。
+- 环境：Local Supabase、中央 Account API、两个 Consumer production server、Admin production server、headless Chromium；runner 自动创建并清理随机 fixture。
+- 命令与结果：`pnpm --filter admin typecheck` PASS；`pnpm --filter admin build` PASS；`pnpm lint` PASS（Admin MFA 原 `<img>` warning 已清零）；目标文件 `oxfmt --check` PASS；`node --check tests/spikes/e2e/t16-r2-account.mjs` PASS；impeccable detector `[]`；`pnpm run test:e2e:t16-r2` 退出码 0。
+- 浏览器断言：T16-R2 汇总 20 项 PASS。目录覆盖 400/403/404/409/412/428/429/500/503；Plans 429/412；Accounts 503/202；Operations 503/429；Subscriptions 412/503；Files 列表 503/删除 202；Policy 412；Platform Settings 412；Origins 503 重试及 late/fresh 乱序响应；既有 Consumer Close/Delete、Admin suspend/restore、网络 unknown、Files 状态/下载/MFA 仍通过。
+- 收敛断言：新响应覆盖迟到旧响应；后台刷新失败保留 last-known data；202 显示 accepted 并等待权威刷新；关闭/重开、刷新失败、unknown 状态检查不重发原 mutation。
+- 失败保留与复测：第一次运行因平台目录实际统一文案与测试期望不一致而失败（退出码 1，`exerciseAdminErrorCopyMatrix`）；修正测试期望后复跑退出码 0。该失败保留为测试 contract 对齐记录，未删除或放宽断言。
+- 未覆盖：FE-V01～16 全量正向高风险流程、逐资源所有状态的完全闭环、390px/完整键盘焦点、Hosted/Staging/生产、真实 Storage 迟到写入及正式发布；继续保持 PARTIAL、NOT_RUN 或 BLOCKED。
+
 # 12. GitHub 交付记录追加区
 
 | 日期 | 阶段 | 类型 | Branch | Commit SHA | GitHub URL | Push | Remote confirmed | 备注 |
@@ -854,19 +866,21 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 2026-09-10 | T16-R2 / Phase 05 | code+test | `codex/frontend-plan-r1` | `94631ff` | [GitHub code+test commit](https://github.com/aisenhub/Aisenhubplatform/commit/94631ff) | PASS | PASS | Workspace 状态刷新保留当前上下文；Settings 列表 503 显式重试、平台设置 409/网络 unknown 不重发；T16-R2 当前共 19 项 Local 浏览器断言通过，两个远端分支均核对一致 |
 | 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `a974122` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/a974122) | PASS | PASS | 更新当前产品基线至 `94631ff`、新增 VR-0017 Settings 故障恢复证据，并同步总计划、状态、合同、handoff 与 Phase 入口；两个远端分支已核对一致 |
 
+| 2026-09-10 | T16-R2 / FE-V | code+test | `main` | `c9c19f45d97c2f9b7265c62861ed160a2e987dd5` | [GitHub code+test commit](https://github.com/aisenhub/Aisenhubplatform/commit/c9c19f45d97c2f9b7265c62861ed160a2e987dd5) | PASS | PASS | 资源 loader generation/epoch、目录 400/403/404/409/412/428/429/500/503、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 代表性 412/429/503/202、Origins 迟到响应与状态收敛；T16-R2 汇总 20 项 PASS |
+
 ---
 
 # 13. 当前交接信息
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 08 代码、FE-D02 代码与 T16-R2 Admin/Files/Policy/Settings Local 验证已推送并 fast-forward 合并 `main`；本轮文档维护已完成并推送**。
-- 下一阶段从哪里开始：本轮已完成 Files 下载/MFA 与 Policy MFA/409 边界；继续从 FE-V08/Phase 03–05 的迟到响应、完整故障恢复矩阵和 Settings 其余故障状态开始。Future diagnostics、hosted dual-platform、Staging/生产、历史 M3/M4 与正式发布按任务/环境条件处理，保留 NOT_RUN/FAIL 事实。
-- 必须先处理：FE-D02 已在 Phase 03/04 完成批次重复创建 Local 核验；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对；Consumer/Registry 独立安装与 T16 已 PASS。下一项为 FE-V08/Phase 03–05 的迟到响应与完整故障恢复复验；当前 T16 已覆盖 replay UI、网络 unknown、Admin 429/503/409 文案边界、Files 状态/删除 unknown/下载失败/MFA、Policy MFA/409 和 Settings Origins/Platform Key 生命周期，Phase 08 不重复实施 FE-D03 或 Consumer 页面。
+- 当前最后完成阶段：**Phase 08 代码、FE-D02 代码与 T16-R2 Admin/Files/Policy/Settings Local 验证已推送并 fast-forward 合并 `main`；本轮 FE-V 代码/测试与文档维护已纳入当前 FE-R1 批次**。
+- 下一阶段从哪里开始：从 `c9c19f4` 的 FE-V 代表性矩阵继续补 FE-V01～16 全量正向和逐资源恢复证据；Future diagnostics、hosted dual-platform、Staging/生产、历史 M3/M4 与正式发布按任务/环境条件处理，保留 NOT_RUN/FAIL 事实。
+- 必须先处理：FE-D02 已在 Phase 03/04 完成批次重复创建 Local 核验；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对；Consumer/Registry 独立安装与 T16 已 PASS。当前 T16 已覆盖 replay UI、网络 unknown、目录完整错误副本、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 412/429/503/202、Origins 迟到响应、关闭/重开与刷新失败收敛；Phase 08 不重复实施 FE-D03 或 Consumer 页面。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
-- 当前未提交修改及归属：本次任务无未提交代码/文档修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
-- 当前代码基线 / branch：当前产品实现基线为 `main` / `94631ff`；最新 FE-V Local 浏览器回归测试同为 `94631ff`；FE-D02 批次边界基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。两个远端分支均已核对包含 `94631ff`；本轮 Settings 故障恢复证据见 VR-0017。
+- 当前未提交修改及归属：本轮 FE-R1 文档维护已纳入当前批次；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
+- 当前代码基线 / branch：当前产品实现基线为 `main` / `c9c19f45d97c2f9b7265c62861ed160a2e987dd5`；最新 FE-V Local 浏览器回归测试同为该 SHA；FE-D02 批次边界基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。`origin/main` 已核对包含该 SHA；本轮资源矩阵证据见 VR-0018。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -918,9 +932,9 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 
 | 项目 | 事实 |
 |---|---|
-| Phase 01–08 代码 | 已形成独立代码提交并 push；Phase 08 代码为 `11aa3f2`，当前产品实现基线为 `94631ff`。 |
-| Local 前端回归 | Admin/Consumer typecheck/build、root lint/typecheck/unit/contracts/docs、T12 五档 70 路由、T16 当前 19 项、M5/Registry 和最终 detector 均已记录 PASS；最新 `filesStateMatrix` 含下载失败/MFA 与 Policy MFA/409，Settings 含列表 503 重试与平台状态网络 unknown 不重发。 |
-| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`、此前 Admin/Files/Settings 增量 commit 与本轮产品+测试 commit `94631ff` 均已推送；文档维护提交 `e5ceb98`、`a974122` 均已推送，当前记录的后续 docs 收口提交由 Git 历史追溯；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
+| Phase 01–08 代码 | 已形成独立代码提交并 push；Phase 08 代码为 `11aa3f2`，当前产品实现基线为 `c9c19f4`。 |
+| Local 前端回归 | Admin/Consumer typecheck/build、root lint/typecheck/unit/contracts/docs、T12 五档 70 路由、T16 当前 20 项、M5/Registry 和最终 detector 均已记录 PASS；最新矩阵含资源 generation/epoch、目录 400/403/404/409/412/428/429/500/503、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 412/429/503/202 与 Origins 迟到响应收敛。 |
+| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`、此前 Admin/Files/Settings 增量 commit 与本轮产品+测试 commit `c9c19f45d97c2f9b7265c62861ed160a2e987dd5` 均已推送；文档维护提交 `e5ceb98`、`a974122` 均已推送，当前记录的后续 docs 收口提交由 Git 历史追溯；`origin/main` 已核对一致；未纳入用户已有未跟踪架构文档。 |
 | 文档一致性 | `pnpm docs:check` 于本次审查实际运行并通过；当前漂移已在总计划、状态、合同、路线、handoff 和各 Phase 入口修正。 |
 
 ## 15.2 尚未完成的任务
@@ -928,7 +942,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 优先级 | ID / 范围 | 状态 | 关闭条件 |
 |---|---|---|---|
 | P1 | FE-D02 批次重复创建语义 | PASS（Local） | `54ff797` 的受控 API/SQL 探针证明 `creation_operation_id` 重放只返回元数据、明文/receipt 边界成立，异参数返回冲突；Hosted 未运行。 |
-| P1 | FE-V 状态与故障恢复矩阵 | PARTIAL | FE-V08 已有 Local API/SQL 边界与浏览器 `replayed_existing` UI 分支，Consumer 敏感 mutation 已有网络 unknown/显式状态检查，Admin 已有 429/503/409 主文案与技术详情隔离矩阵，Files 已有延迟列表、状态/预算边界、下载失败/MFA 和删除 unknown 恢复，Policy 已有 MFA step-up 后 409 冲突且不自动重试，Settings 已有 Origins/Platform Keys 列表 503 显式重试、平台设置 409/网络 unknown 不重发、Origins 校验/创建刷新与 Platform Key 一次性 secret→部署确认→撤销生命周期；继续补迟到响应、409/412/429/503/202 全矩阵、正向高风险 mutation、Files/Settings 其余全状态故障恢复证据。 |
+| P1 | FE-V 状态与故障恢复矩阵 | PARTIAL | `c9c19f4` 已补资源 loader generation/epoch、目录 400/403/404/409/412/428/429/500/503、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 的代表性 412/429/503/202、Origins 迟到响应和刷新失败保留已知状态；继续补 FE-V01～16 全量正向高风险 mutation、逐资源完整恢复闭环、390px/键盘焦点与 Hosted 验收。 |
 | P1 | T17-R1～R3 / T18-S / G4-S / M5-05 hosted | BLOCKED / NOT_RUN | 获得 X02/X03/X05 和受控环境/权限，验证 OAuth/SMTP/SSR、executor/TLS/pooler/CA、Storage 迟到写入及双平台 hosted E2E。 |
 | P1 | M4-11 / M6-02～06 / M5-06 | PARTIAL / WAITING | 完成真实备份、恢复、轮换、容量告警、G5-P Registry 发布和 G6/生产授权门槛；不可由 Local PASS 推定。 |
 | P2 | Future diagnostics/search/alerts | NOT_STARTED（计划内） | 真实 Observability、Search、Alert lifecycle、权限和脱敏合同先到位；本期不实施。 |
@@ -936,7 +950,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 
 ## 15.3 下一次执行顺序
 
-1. 继续补 FE-V08/Phase 03–05 的迟到响应、409/412/429/503/202 及关闭/重开恢复复验；FE-D02 API/SQL Local 边界、`replayed_existing` UI 分支、Consumer 网络 unknown、Admin 错误文案、Files 状态/删除 unknown/下载失败/MFA、Policy MFA/409 和 Settings 列表 503/平台设置网络 unknown 不重发/Origins/Platform Key 生命周期边界已完成。
+1. 继续补 FE-V01～16 的全量正向高风险流程、逐资源完整恢复闭环和 390px/键盘焦点矩阵；本轮 `c9c19f4` 已完成资源 loader generation/epoch、目录完整错误副本、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 代表性 412/429/503/202、Origins 迟到响应和关闭/重开/刷新失败状态收敛。
 2. 在托管输入到位后执行 T17/T18、G4-S、M5-05 hosted；保留所有失败和 NOT_RUN 证据。
 3. 按 DP2 依赖推进 M4-11、M6-02～06 与 M5-06；获得明确发布授权前不得 Release 或生产部署。
 

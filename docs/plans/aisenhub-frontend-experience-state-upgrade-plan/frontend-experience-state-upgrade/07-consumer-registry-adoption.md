@@ -1,6 +1,6 @@
 # Phase 07 — Consumer Experience 与 Registry Adoption
 
-> FE-R1（2026-09-10）：按当前代码基线 `main@94631ff` 维护；Auth 已实施，本期默认简体中文。Phase 07 本地代码批次与 Consumer/Registry Local 验证已交付；Hosted 双平台和正式发布仍不在本地关闭范围。
+> FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；Auth 已实施，本期默认简体中文。Phase 07 本地代码批次与 Consumer/Registry Local 验证已交付；Hosted 双平台和正式发布仍不在本地关闭范围。
 
 > 状态：**进行中**  
 > 前置：Phase 01–03 已交付并 push；若 Authentication & Session Consumer adoption 尚未交付，相关 session transport 工作等待上游，不复制实现。  

@@ -1,6 +1,13 @@
 # Frontend Experience & State Upgrade — Agent Handoff
 
-> FE-R1（2026-09-10）：按当前代码基线 `main@94631ff` 维护；最新 FE-V Local 浏览器回归为 `main@94631ff`，已覆盖 Admin/Files/Policy/Settings 新增边界；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复已完成并合并 `main`；剩余合同、托管和发布门槛以 [verification-record.md](verification-record.md) 及总计划当前状态为准。
+> FE-R1（2026-09-10）：按当前代码基线 `main@c9c19f4` 维护；最新 FE-V Local 浏览器回归为 `main@c9c19f4`，已覆盖资源 loader 竞态、目录完整错误副本、Plans/Accounts/Operations/Subscriptions、Files/Policy/Settings 412/429/503/202、Origins 迟到响应和 MFA Image lint；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复已完成并合并 `main`；剩余合同、托管和发布门槛以 [verification-record.md](verification-record.md) 及总计划当前状态为准。
+
+## 当前接手点（2026-09-10）
+
+- 已完成并推送：`c9c19f4`；`origin/main` 已核对包含完整 SHA `c9c19f45d97c2f9b7265c62861ed160a2e987dd5`。
+- 本轮 Local 浏览器命令：`pnpm run test:e2e:t16-r2`，退出码 0；汇总 20 个 PASS。第一次因平台目录 400 文案期望不符而失败，已保留失败并修正测试后复跑通过。
+- 代码层已补 Plans/Keys/Origins/Redemption/Subscriptions loader generation/epoch 防护；Admin MFA 二维码使用 Next Image；变更未扩展公共 API/数据库合同。
+- 下一步：继续 FE-V01～16 的全量正向高风险流程、逐资源恢复闭环、390px/键盘焦点矩阵；Hosted/Staging/生产仍需 X02/X03/X05、受控权限和环境输入，不得从本地 PASS 推定。
 
 > 用途：稳定执行入口，不是日常进度日志。  
 > 执行 agent 必须结合 `00-master-plan.md`、当前阶段文档、`verification-record.md` 和实际代码工作，无需重新做整轮架构讨论。
