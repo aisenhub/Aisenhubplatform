@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { SessionRetryRequiredError } from '@kit/account-auth-nextjs/browser';
@@ -138,9 +138,12 @@ export function PlatformRedemptionBatchesPage() {
   const [mutationError, setMutationError] = useState<ResourceError | null>(
     null,
   );
+  const loadGeneration = useRef(0);
 
   const load = useCallback(
     async (background = false) => {
+      const generation = ++loadGeneration.current;
+      const epoch = adminAuthSession.getEpoch();
       setRefreshError(null);
       setRefreshing(background);
       if (!background) {
@@ -160,6 +163,11 @@ export function PlatformRedemptionBatchesPage() {
         ]);
         const plansPayload = await readApiPayload<Plan[]>(plansResponse);
         const batchesPayload = await readApiPayload<Batch[]>(batchesResponse);
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         if (!plansResponse.ok || !Array.isArray(plansPayload?.data)) {
           const nextError = resourceError(
             plansResponse,
@@ -198,6 +206,11 @@ export function PlatformRedemptionBatchesPage() {
         );
         setState('success');
       } catch (caught) {
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         const nextError: ResourceError = {
           title: '兑换批次读取失败',
           description: sessionErrorMessage(caught),
@@ -210,7 +223,7 @@ export function PlatformRedemptionBatchesPage() {
           setState('error');
         }
       } finally {
-        setRefreshing(false);
+        if (generation === loadGeneration.current) setRefreshing(false);
       }
     },
     [platform.platform_id],

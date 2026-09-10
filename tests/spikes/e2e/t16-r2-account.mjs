@@ -864,6 +864,7 @@ async function exerciseAdmin(page, adminTotp) {
   await page.getByRole('button', { name: '验证并继续' }).click();
   await page.waitForURL(/\/admin$/u, { waitUntil: 'domcontentloaded' });
   await exerciseAdminErrorCopyMatrix(page);
+  await exerciseAdminResourceFailureMatrix(page);
   await exerciseFilesStateMatrix(page, adminTotp);
   await exerciseSettingsLifecycleMatrix(page);
   await page.goto(`${adminUrl}/admin/platforms`, {
@@ -1013,36 +1014,97 @@ async function exerciseBatchReplayUi(page) {
 async function exerciseAdminErrorCopyMatrix(page) {
   const directoryEndpoint = '/api/v1/admin/api/v1/platforms';
   const directoryRoute = (url) => new URL(url).pathname === directoryEndpoint;
+  let directoryStatus = 429;
+  const directoryCases = [
+    {
+      status: 400,
+      code: 'INVALID_INPUT',
+      copy: '请检查网络或服务状态后重试',
+    },
+    {
+      status: 403,
+      code: 'FORBIDDEN',
+      copy: '请确认当前管理员账号具备平台读取权限',
+    },
+    {
+      status: 404,
+      code: 'NOT_FOUND',
+      copy: '请检查网络或服务状态后重试',
+    },
+    {
+      status: 409,
+      code: 'IDEMPOTENCY_CONFLICT',
+      copy: '这项操作与已有请求冲突',
+    },
+    {
+      status: 412,
+      code: 'PRECONDITION_FAILED',
+      copy: '当前数据已发生变化，请刷新后再提交',
+    },
+    {
+      status: 428,
+      code: 'PRECONDITION_REQUIRED',
+      copy: '当前数据已发生变化，请刷新后再提交',
+    },
+    {
+      status: 429,
+      code: 'RATE_LIMITED',
+      copy: '请求过于频繁，请稍后重试',
+    },
+    {
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      copy: '服务暂时不可用，请稍后重试',
+    },
+    {
+      status: 503,
+      code: 'AUTHORIZATION_UNAVAILABLE',
+      copy: '服务暂时不可用，请稍后重试',
+    },
+  ];
   await page.route(directoryRoute, async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
       return;
     }
     await route.fulfill({
-      status: 429,
+      status: directoryStatus,
       headers: {
         'content-type': 'application/json',
         'x-request-id': crypto.randomUUID(),
       },
       body: JSON.stringify({
-        error: { code: 'RATE_LIMITED', message: 'RATE_LIMITED' },
+        error: {
+          code:
+            directoryCases.find((item) => item.status === directoryStatus)
+              ?.code ?? 'AUTHORIZATION_UNAVAILABLE',
+          message:
+            directoryCases.find((item) => item.status === directoryStatus)
+              ?.code ?? 'AUTHORIZATION_UNAVAILABLE',
+        },
         request_id: crypto.randomUUID(),
       }),
     });
   });
   try {
-    await page.goto(`${adminUrl}/admin/platforms`, {
-      waitUntil: 'domcontentloaded',
-    });
-    await page.getByRole('heading', { name: '平台目录' }).waitFor();
-    await page
-      .getByText('请求过于频繁，请稍后重试。', { exact: false })
-      .waitFor();
-    await assertTechnicalDetailIsNotSummary(
-      page.locator('[data-test="recoverable-error"]'),
-      'RATE_LIMITED',
-      'rate limit',
-    );
+    for (const failureCase of directoryCases) {
+      directoryStatus = failureCase.status;
+      await page.goto(`${adminUrl}/admin/platforms`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await page.getByRole('heading', { name: '平台目录' }).waitFor();
+      const error = page.locator(
+        failureCase.status === 403
+          ? '[data-test="access-error"]'
+          : '[data-test="recoverable-error"]',
+      );
+      await error.getByText(failureCase.copy, { exact: false }).waitFor();
+      await assertTechnicalDetailIsNotSummary(
+        error,
+        failureCase.code,
+        `directory HTTP ${failureCase.status}`,
+      );
+    }
   } finally {
     await page.unroute(directoryRoute);
   }
@@ -1101,16 +1163,19 @@ async function exerciseAdminErrorCopyMatrix(page) {
       await route.abort('failed');
       return;
     }
+    const precondition = settingsPatchMode === 'precondition';
     await route.fulfill({
-      status: 409,
+      status: precondition ? 412 : 409,
       headers: {
         'content-type': 'application/json',
         'x-request-id': crypto.randomUUID(),
       },
       body: JSON.stringify({
         error: {
-          code: 'IDEMPOTENCY_CONFLICT',
-          message: 'IDEMPOTENCY_CONFLICT',
+          code: precondition ? 'PRECONDITION_FAILED' : 'IDEMPOTENCY_CONFLICT',
+          message: precondition
+            ? 'PRECONDITION_FAILED'
+            : 'IDEMPOTENCY_CONFLICT',
         },
         request_id: crypto.randomUUID(),
       }),
@@ -1149,6 +1214,20 @@ async function exerciseAdminErrorCopyMatrix(page) {
       'settings state check must not resubmit the original mutation',
     );
     await page.locator('[data-test="confirm-action-cancel"]').click();
+
+    settingsPatchMode = 'precondition';
+    await page.locator('[data-test="platform-settings-toggle"]').click();
+    await page.locator('[data-test="confirm-action-submit"]').click();
+    await page
+      .getByText('当前数据已发生变化，请刷新后再提交。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      page.locator('[data-test="confirm-action-error"]'),
+      'PRECONDITION_FAILED',
+      'settings precondition',
+    );
+    assert.equal(settingsPatchCount, 3, 'settings 412 must submit once');
+    await page.locator('[data-test="confirm-action-cancel"]').click();
   } finally {
     await page.unroute(workspaceRoute);
   }
@@ -1163,6 +1242,7 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
   const deletingFileId = crypto.randomUUID();
   const unknownFileId = crypto.randomUUID();
   const deletedFileId = crypto.randomUUID();
+  const acceptedFileId = crypto.randomUUID();
   const now = new Date().toISOString();
   const file = (fileId, name, status, writeOutcome, reservedBytes) => ({
     file_id: fileId,
@@ -1186,9 +1266,12 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     file(deletingFileId, 'deleting.json', 'deleting', 'confirmed', 512),
     file(unknownFileId, 'unknown.json', 'receiving', 'unknown', 640),
     file(deletedFileId, 'deleted.json', 'deleted', 'confirmed', 768),
+    file(acceptedFileId, 'accepted.json', 'active', 'confirmed', 896),
   ];
   let filesResponseCompleted = false;
+  let filesListMode = 'success';
   let unknownDeleteCount = 0;
+  let acceptedDeleteCount = 0;
   let downloadRequestCount = 0;
   let downloadMode = 'storage-error';
   let policyPatchCount = 0;
@@ -1200,6 +1283,9 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
   const unknownDetailEndpoint = `${filesEndpoint}/${unknownFileId}`;
   const unknownDetailRoute = (url) =>
     new URL(url).pathname === unknownDetailEndpoint;
+  const acceptedDetailEndpoint = `${filesEndpoint}/${acceptedFileId}`;
+  const acceptedDetailRoute = (url) =>
+    new URL(url).pathname === acceptedDetailEndpoint;
   await page.route(filesRoute, async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
@@ -1207,6 +1293,23 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     }
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 1200));
     filesResponseCompleted = true;
+    if (filesListMode === 'unavailable') {
+      await route.fulfill({
+        status: 503,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: {
+            code: 'STORAGE_UNAVAILABLE',
+            message: 'STORAGE_UNAVAILABLE',
+          },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       headers: {
@@ -1224,16 +1327,25 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     if (route.request().method() === 'PATCH') {
       policyPatchCount += 1;
       const isMfa = policyPatchMode === 'mfa';
+      const isPrecondition = policyPatchMode === 'precondition';
       await route.fulfill({
-        status: isMfa ? 403 : 409,
+        status: isMfa ? 403 : isPrecondition ? 412 : 409,
         headers: {
           'content-type': 'application/json',
           'x-request-id': crypto.randomUUID(),
         },
         body: JSON.stringify({
           error: {
-            code: isMfa ? 'RECENT_MFA_REQUIRED' : 'IDEMPOTENCY_CONFLICT',
-            message: isMfa ? 'RECENT_MFA_REQUIRED' : 'IDEMPOTENCY_CONFLICT',
+            code: isMfa
+              ? 'RECENT_MFA_REQUIRED'
+              : isPrecondition
+                ? 'PRECONDITION_FAILED'
+                : 'IDEMPOTENCY_CONFLICT',
+            message: isMfa
+              ? 'RECENT_MFA_REQUIRED'
+              : isPrecondition
+                ? 'PRECONDITION_FAILED'
+                : 'IDEMPOTENCY_CONFLICT',
           },
           request_id: crypto.randomUUID(),
         }),
@@ -1311,6 +1423,39 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       }),
     });
   });
+  await page.route(acceptedDetailRoute, async (route) => {
+    if (route.request().method() === 'DELETE') {
+      acceptedDeleteCount += 1;
+      files.find((item) => item.file_id === acceptedFileId).status = 'deleting';
+      await route.fulfill({
+        status: 202,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: files.find((item) => item.file_id === acceptedFileId),
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: files.find((item) => item.file_id === acceptedFileId),
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
   try {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/files`, {
       waitUntil: 'domcontentloaded',
@@ -1345,6 +1490,9 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     );
     const deletedRow = page.locator(
       `[data-test="platform-file-row-${deletedFileId}"]`,
+    );
+    const acceptedRow = page.locator(
+      `[data-test="platform-file-row-${acceptedFileId}"]`,
     );
     assert.equal(
       await activeRow
@@ -1381,6 +1529,28 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       true,
       'deleted file must not allow another delete',
     );
+
+    filesListMode = 'unavailable';
+    await page.locator('[data-test="platform-files-refresh"]').click();
+    const filesRefreshError = page.locator(
+      '[data-test="platform-files-refresh-error"]',
+    );
+    await filesRefreshError
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      filesRefreshError,
+      'STORAGE_UNAVAILABLE',
+      'files refresh unavailable',
+    );
+    assert.equal(
+      await activeRow.count(),
+      1,
+      'Files 503 refresh must retain the known rows',
+    );
+    filesListMode = 'success';
+    await page.locator('[data-test="platform-files-refresh"]').click();
+    await activeRow.waitFor();
 
     const downloadError = page.locator(
       '[data-test="platform-files-download-error"]',
@@ -1500,6 +1670,51 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       'policy conflict must not trigger an automatic retry',
     );
 
+    policyPatchMode = 'precondition';
+    await policySave.click();
+    await policyError
+      .getByText('当前数据已发生变化，请刷新后再提交。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      policyError,
+      'PRECONDITION_FAILED',
+      'policy precondition',
+    );
+    assert.equal(
+      policyPatchCount,
+      3,
+      'policy 412 must not trigger an automatic retry',
+    );
+
+    await acceptedRow
+      .locator(`[data-test="platform-file-delete-${acceptedFileId}"]`)
+      .click();
+    await page
+      .locator('[data-test="confirm-action-reason"]')
+      .fill('T16 R2 accepted file delete');
+    const [acceptedDeleteResponse] = await Promise.all([
+      page.waitForResponse((response) => {
+        const requestUrl = new URL(response.url());
+        return (
+          requestUrl.pathname === acceptedDetailEndpoint &&
+          response.request().method() === 'DELETE'
+        );
+      }),
+      page.locator('[data-test="confirm-action-submit"]').click(),
+    ]);
+    assertStatus(acceptedDeleteResponse.status(), 202, 'accepted file delete');
+    await page
+      .locator('[data-test="confirm-action-submit"]')
+      .getByText('已受理', { exact: true })
+      .waitFor();
+    assert.equal(
+      acceptedDeleteCount,
+      1,
+      'accepted file delete must submit exactly once',
+    );
+    await page.locator('[data-test="confirm-action-cancel"]').click();
+    await acceptedRow.getByText('删除处理中', { exact: true }).waitFor();
+
     await unknownRow
       .locator(`[data-test="platform-file-delete-${unknownFileId}"]`)
       .click();
@@ -1528,6 +1743,7 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     await page.unroute(policyRoute);
     await page.unroute(downloadRoute);
     await page.unroute(unknownDetailRoute);
+    await page.unroute(acceptedDetailRoute);
   }
 }
 
@@ -1554,6 +1770,14 @@ async function exerciseSettingsLifecycleMatrix(page) {
     oauth_callback_url: 'https://t16-r2.example.test/auth/callback',
     password_reset_url: 'https://t16-r2.example.test/auth/reset',
     email_confirmation_url: 'https://t16-r2.example.test/auth/confirm',
+  };
+  const raceOrigin = {
+    ...createdOrigin,
+    origin_id: crypto.randomUUID(),
+    origin: 'https://t16-r2-fresh.example.test',
+    oauth_callback_url: 'https://t16-r2-fresh.example.test/auth/callback',
+    password_reset_url: 'https://t16-r2-fresh.example.test/auth/reset',
+    email_confirmation_url: 'https://t16-r2-fresh.example.test/auth/confirm',
   };
   let originCreateCount = 0;
   let originCreated = false;
@@ -1592,6 +1816,23 @@ async function exerciseSettingsLifecycleMatrix(page) {
             code: 'STORAGE_UNAVAILABLE',
             message: 'STORAGE_UNAVAILABLE',
           },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (originListMode === 'race') {
+      const query = new URL(route.request().url()).searchParams.get('q');
+      if (query === 'late')
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 800));
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: query === 'fresh' ? [raceOrigin] : [origin],
           request_id: crypto.randomUUID(),
         }),
       });
@@ -1653,6 +1894,33 @@ async function exerciseSettingsLifecycleMatrix(page) {
     originListMode = 'success';
     await originError.locator('[data-test="async-retry"]').click();
     await page.getByText(createdOrigin.origin, { exact: true }).waitFor();
+
+    originListMode = 'race';
+    await page.locator('[data-test="platform-origin-query"]').fill('late');
+    const lateOriginRequest = page.waitForRequest((request) => {
+      const requestUrl = new URL(request.url());
+      return (
+        requestUrl.pathname === originEndpoint &&
+        request.method() === 'GET' &&
+        requestUrl.searchParams.get('q') === 'late'
+      );
+    });
+    await page.locator('[data-test="platform-origin-query-submit"]').click();
+    await lateOriginRequest;
+    await page.locator('[data-test="platform-origin-query"]').fill('fresh');
+    await page.locator('[data-test="platform-origin-query-submit"]').click();
+    await page.getByText(raceOrigin.origin, { exact: true }).waitFor();
+    await page.waitForTimeout(1000);
+    assert.equal(
+      await page.getByText(raceOrigin.origin, { exact: true }).count(),
+      1,
+      'fresh Origin response must remain after a late older response',
+    );
+    assert.equal(
+      await page.getByText(origin.origin, { exact: true }).count(),
+      0,
+      'late older Origin response must not overwrite the fresh response',
+    );
   } finally {
     await page.unroute(originRoute);
   }
@@ -1859,6 +2127,457 @@ async function exerciseSettingsLifecycleMatrix(page) {
     await createdKeyRow.getByText('revoked', { exact: true }).waitFor();
   } finally {
     await page.unroute(keyRoute);
+  }
+}
+
+async function exerciseAdminResourceFailureMatrix(page) {
+  const now = new Date().toISOString();
+  const planEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}/plans`;
+  const planId = crypto.randomUUID();
+  const plan = {
+    plan_id: planId,
+    code: 't16-r2-paid',
+    name: 'T16 R2 paid',
+    description: 'T16 R2 resource matrix plan',
+    kind: 'paid',
+    features: { max_projects: 3 },
+    status: 'active',
+    is_default: false,
+    created_at: now,
+    updated_at: now,
+  };
+  let planListMode = 'rate';
+  let planWriteCount = 0;
+  const planRoute = (url) => new URL(url).pathname === planEndpoint;
+  await page.route(planRoute, async (route) => {
+    const method = route.request().method();
+    if (method === 'POST') {
+      planWriteCount += 1;
+      await route.fulfill({
+        status: 412,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: {
+            code: 'PRECONDITION_FAILED',
+            message: 'PRECONDITION_FAILED',
+          },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (method !== 'GET') {
+      await route.continue();
+      return;
+    }
+    if (planListMode === 'rate') {
+      await route.fulfill({
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: { code: 'RATE_LIMITED', message: 'RATE_LIMITED' },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({ data: [plan], request_id: crypto.randomUUID() }),
+    });
+  });
+  try {
+    await page.goto(`${adminUrl}/admin/platforms/${platformAId}/plans`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page
+      .getByRole('heading', { name: '平台计划', exact: true })
+      .waitFor();
+    const plansError = page.locator('[data-test="recoverable-error"]');
+    await plansError
+      .getByText('请求过于频繁，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      plansError,
+      'RATE_LIMITED',
+      'plans list rate limit',
+    );
+    planListMode = 'success';
+    await plansError.locator('[data-test="async-retry"]').click();
+    const planRow = page.locator(`[data-test="plan-row-${planId}"]`);
+    await planRow.waitFor();
+    await planRow.locator(`[data-test="plan-edit-${planId}"]`).click();
+    const [planWriteResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === planEndpoint &&
+          response.request().method() === 'POST',
+      ),
+      page.locator('[data-test="plan-editor-submit"]').click(),
+    ]);
+    assertStatus(planWriteResponse.status(), 412, 'Plan precondition response');
+    const planError = page.locator('[data-test="plan-editor-error"]');
+    await planError
+      .getByText('当前数据已发生变化，请刷新后再提交。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      planError,
+      'PRECONDITION_FAILED',
+      'plan precondition',
+    );
+    assert.equal(planWriteCount, 1, 'Plan 412 must submit exactly once');
+    await page.locator('[data-test="plan-editor-cancel"]').click();
+  } finally {
+    await page.unroute(planRoute);
+  }
+
+  const accountEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}/accounts`;
+  const accountId = crypto.randomUUID();
+  const account = {
+    platform_account_id: accountId,
+    user_id: userId,
+    status: 'active',
+    activated_at: now,
+    suspended_at: null,
+    closed_at: null,
+    created_at: now,
+    updated_at: now,
+  };
+  let accountStatus = 'active';
+  let accountListMode = 'success';
+  let accountActionCount = 0;
+  const accountRoute = (url) => {
+    const pathname = new URL(url).pathname;
+    return (
+      pathname === accountEndpoint || pathname.startsWith(`${accountEndpoint}/`)
+    );
+  };
+  await page.route(accountRoute, async (route) => {
+    const method = route.request().method();
+    const pathname = new URL(route.request().url()).pathname;
+    if (method === 'POST' && pathname.endsWith('/suspend')) {
+      accountActionCount += 1;
+      accountStatus = 'suspended';
+      await route.fulfill({
+        status: 202,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          data: { ...account, status: accountStatus, suspended_at: now },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (method !== 'GET' || pathname !== accountEndpoint) {
+      await route.continue();
+      return;
+    }
+    if (accountListMode === 'unavailable') {
+      await route.fulfill({
+        status: 503,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: {
+            code: 'AUTHORIZATION_UNAVAILABLE',
+            message: 'AUTHORIZATION_UNAVAILABLE',
+          },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: [{ ...account, status: accountStatus }],
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  try {
+    await page.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page
+      .getByRole('heading', { name: '平台账户', exact: true })
+      .waitFor();
+    const accountRow = page.locator(`[data-test="account-row-${accountId}"]`);
+    await accountRow.waitFor();
+    accountListMode = 'unavailable';
+    await page.locator('[data-test="accounts-refresh"]').click();
+    const accountRefreshError = page.locator(
+      '[data-test="accounts-refresh-error"]',
+    );
+    await accountRefreshError
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      accountRefreshError,
+      'AUTHORIZATION_UNAVAILABLE',
+      'accounts refresh unavailable',
+    );
+    await accountRow.waitFor();
+    accountListMode = 'success';
+    await page.locator('[data-test="accounts-refresh"]').click();
+    await accountRow.waitFor();
+    await accountRow.getByRole('button', { name: '暂停', exact: true }).click();
+    await page
+      .locator('[data-test="confirm-action-reason"]')
+      .fill('T16 R2 accepted account suspend');
+    const [accountActionResponse] = await Promise.all([
+      page.waitForResponse((response) =>
+        response.url().endsWith(`/accounts/${accountId}/suspend`),
+      ),
+      page.locator('[data-test="confirm-action-submit"]').click(),
+    ]);
+    assertStatus(
+      accountActionResponse.status(),
+      202,
+      'account suspend accepted',
+    );
+    assert.equal(
+      accountActionCount,
+      1,
+      'account 202 action must submit exactly once',
+    );
+    await accountRow
+      .getByRole('button', { name: '恢复', exact: true })
+      .waitFor();
+    await accountRow.getByText('已暂停', { exact: true }).waitFor();
+  } finally {
+    await page.unroute(accountRoute);
+  }
+
+  const jobsEndpoint = '/api/v1/admin/api/v1/deletion-jobs';
+  const jobId = crypto.randomUUID();
+  let jobListMode = 'unavailable';
+  const job = {
+    job_id: jobId,
+    request_id: crypto.randomUUID(),
+    user_id: userId,
+    state: 'completed',
+    checkpoint: 'auth_deleted',
+    fence: 1,
+    retry_count: 0,
+    next_attempt_at: null,
+    last_error_code: null,
+    created_at: now,
+    completed_at: now,
+  };
+  const jobsRoute = (url) => new URL(url).pathname === jobsEndpoint;
+  await page.route(jobsRoute, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    const status =
+      jobListMode === 'unavailable' ? 503 : jobListMode === 'rate' ? 429 : 200;
+    const code = status === 503 ? 'STORAGE_UNAVAILABLE' : 'RATE_LIMITED';
+    await route.fulfill({
+      status,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify(
+        status === 200
+          ? { data: [job], request_id: crypto.randomUUID() }
+          : {
+              error: { code, message: code },
+              request_id: crypto.randomUUID(),
+            },
+      ),
+    });
+  });
+  try {
+    await page.goto(`${adminUrl}/admin/operations`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page
+      .getByRole('heading', { name: 'Operations', exact: true })
+      .waitFor();
+    const operationsError = page.locator('[data-test="recoverable-error"]');
+    await operationsError
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      operationsError,
+      'STORAGE_UNAVAILABLE',
+      'operations initial unavailable',
+    );
+    jobListMode = 'success';
+    await page.locator('[data-test="operations-refresh"]').click();
+    await page.locator(`[data-test="operation-row-${jobId}"]`).waitFor();
+    jobListMode = 'rate';
+    await page.locator('[data-test="operations-refresh"]').click();
+    const operationsRefreshError = page.locator(
+      '[data-test="operations-refresh-error"]',
+    );
+    await operationsRefreshError
+      .getByText('请求过于频繁，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      operationsRefreshError,
+      'RATE_LIMITED',
+      'operations refresh rate limit',
+    );
+    jobListMode = 'success';
+    await page.locator('[data-test="operations-refresh"]').click();
+    await page.locator(`[data-test="operation-row-${jobId}"]`).waitFor();
+  } finally {
+    await page.unroute(jobsRoute);
+  }
+
+  const subscriptionAccountId = crypto.randomUUID();
+  const subscriptionPlansEndpoint = planEndpoint;
+  const subscriptionEndpoint = `/api/v1/admin/api/v1/subscriptions/${subscriptionAccountId}`;
+  let subscriptionMode = 'precondition';
+  const subscriptionPlan = {
+    ...plan,
+    plan_id: crypto.randomUUID(),
+    code: 't16-r2-subscription',
+  };
+  const subscription = {
+    platform_account_id: subscriptionAccountId,
+    subscription_id: crypto.randomUUID(),
+    status: 'active',
+    plan_id: subscriptionPlan.plan_id,
+    plan_code: subscriptionPlan.code,
+    plan_name: subscriptionPlan.name,
+    features: subscriptionPlan.features,
+    started_at: now,
+    current_period_end: now,
+    next_transition_at: null,
+    last_event_sequence: 1,
+  };
+  const subscriptionPlansRoute = (url) =>
+    new URL(url).pathname === subscriptionPlansEndpoint;
+  const subscriptionRoute = (url) =>
+    new URL(url).pathname === subscriptionEndpoint;
+  await page.route(subscriptionPlansRoute, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: [subscriptionPlan],
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  await page.route(subscriptionRoute, async (route) => {
+    if (subscriptionMode === 'precondition') {
+      await route.fulfill({
+        status: 412,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: {
+            code: 'PRECONDITION_FAILED',
+            message: 'PRECONDITION_FAILED',
+          },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    if (subscriptionMode === 'unavailable') {
+      await route.fulfill({
+        status: 503,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: {
+            code: 'AUTHORIZATION_UNAVAILABLE',
+            message: 'AUTHORIZATION_UNAVAILABLE',
+          },
+          request_id: crypto.randomUUID(),
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: subscription,
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  try {
+    await page.goto(
+      `${adminUrl}/admin/platforms/${platformAId}/subscriptions?account=${subscriptionAccountId}`,
+      { waitUntil: 'domcontentloaded' },
+    );
+    await page
+      .getByRole('heading', { name: '订阅投影', exact: true })
+      .waitFor();
+    const subscriptionError = page.locator('[data-test="recoverable-error"]');
+    await subscriptionError
+      .getByText('当前数据已发生变化，请刷新后再提交。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      subscriptionError,
+      'PRECONDITION_FAILED',
+      'subscription precondition',
+    );
+    subscriptionMode = 'success';
+    await page.locator('[data-test="subscription-refresh"]').click();
+    await page.locator('[data-test="subscription-detail"]').waitFor();
+    subscriptionMode = 'unavailable';
+    await page.locator('[data-test="subscription-refresh"]').click();
+    const subscriptionRefreshError = page.locator(
+      '[data-test="subscription-refresh-error"]',
+    );
+    await subscriptionRefreshError
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      subscriptionRefreshError,
+      'AUTHORIZATION_UNAVAILABLE',
+      'subscription refresh unavailable',
+    );
+    await page.locator('[data-test="subscription-detail"]').waitFor();
+    subscriptionMode = 'success';
+    await page.locator('[data-test="subscription-refresh"]').click();
+    await page.locator('[data-test="subscription-detail"]').waitFor();
+  } finally {
+    await page.unroute(subscriptionRoute);
+    await page.unroute(subscriptionPlansRoute);
   }
 }
 
@@ -2128,6 +2847,7 @@ try {
       csrfAndEtag: 'PASS',
       adminAal1AndSuspend: 'PASS',
       adminErrorCopyMatrix: 'PASS',
+      adminResourceFailureMatrix: 'PASS',
       filesStateMatrix: 'PASS',
       settingsLifecycleMatrix: 'PASS',
       batchReplayBoundaryUi: 'PASS',

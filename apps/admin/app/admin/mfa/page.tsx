@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import Image from 'next/image';
 
 import {
   adminAuthSession,
@@ -231,7 +232,13 @@ export default function AdminMfaPage() {
             用认证器扫描二维码。无法扫码时，可复制下方密钥手动添加。
           </p>
           <div className="totp-qr">
-            <img src={enrollment.qr_code} alt="TOTP 认证器绑定二维码" />
+            <Image
+              src={enrollment.qr_code}
+              alt="TOTP 认证器绑定二维码"
+              width={256}
+              height={256}
+              unoptimized
+            />
           </div>
           <div className="one-time-secret">
             <strong>手动密钥</strong>

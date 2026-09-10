@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -87,11 +87,14 @@ export function PlatformKeysPage() {
   );
   const [secret, setSecret] = useState<string | null>(null);
   const [inspectorKey, setInspectorKey] = useState<PlatformKey | null>(null);
+  const loadGeneration = useRef(0);
 
   useEffect(() => setDraftQuery(query), [query]);
 
   const load = useCallback(
     async (background = false) => {
+      const generation = ++loadGeneration.current;
+      const epoch = adminAuthSession.getEpoch();
       setRefreshing(background);
       setRefreshError(null);
       if (!background) {
@@ -107,6 +110,11 @@ export function PlatformKeysPage() {
           { cache: 'no-store' },
         );
         const payload = await readApiPayload<PlatformKey[]>(response);
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         if (!response.ok || !Array.isArray(payload?.data)) {
           const nextError = resourceError(
             response,
@@ -124,6 +132,11 @@ export function PlatformKeysPage() {
         setState('success');
         return payload.data;
       } catch (caught) {
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         const nextError: ResourceError = {
           title: 'Platform Key 列表读取失败',
           description: sessionErrorMessage(caught),
@@ -136,7 +149,7 @@ export function PlatformKeysPage() {
           setState('error');
         }
       } finally {
-        setRefreshing(false);
+        if (generation === loadGeneration.current) setRefreshing(false);
       }
     },
     [platform.platform_id, query],

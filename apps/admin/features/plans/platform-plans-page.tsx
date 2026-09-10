@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { SessionRetryRequiredError } from '@kit/account-auth-nextjs/browser';
@@ -102,9 +102,12 @@ export function PlatformPlansPage() {
   const [actionState, setActionState] =
     useState<MutationState>('confirm_required');
   const [actionError, setActionError] = useState<ResourceError | null>(null);
+  const loadGeneration = useRef(0);
 
   const load = useCallback(
     async (background = false) => {
+      const generation = ++loadGeneration.current;
+      const epoch = adminAuthSession.getEpoch();
       setRefreshError(null);
       setRefreshing(background);
       if (!background) {
@@ -117,6 +120,11 @@ export function PlatformPlansPage() {
           { cache: 'no-store' },
         );
         const payload = await readApiPayload<Plan[]>(response);
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         if (!response.ok || !Array.isArray(payload?.data)) {
           const nextError = resourceError(response, payload, '计划列表');
           if (background) setRefreshError(nextError);
@@ -129,6 +137,11 @@ export function PlatformPlansPage() {
         setPlans(payload.data);
         setState('success');
       } catch (caught) {
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         const nextError: ResourceError = {
           title: '计划列表读取失败',
           description: sessionErrorMessage(caught),
@@ -141,7 +154,7 @@ export function PlatformPlansPage() {
           setState('error');
         }
       } finally {
-        setRefreshing(false);
+        if (generation === loadGeneration.current) setRefreshing(false);
       }
     },
     [platform.platform_id],

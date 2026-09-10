@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { SessionRetryRequiredError } from '@kit/account-auth-nextjs/browser';
@@ -106,14 +106,24 @@ export function PlatformSubscriptionPage() {
   const [mutationError, setMutationError] = useState<ResourceError | null>(
     null,
   );
+  const plansGeneration = useRef(0);
+  const accountSearchGeneration = useRef(0);
+  const subscriptionGeneration = useRef(0);
 
   const loadPlans = useCallback(async () => {
+    const generation = ++plansGeneration.current;
+    const epoch = adminAuthSession.getEpoch();
     try {
       const response = await adminAuthSession.request(
         resourcePath(platform.platform_id, '/plans'),
         { cache: 'no-store' },
       );
       const payload = await readApiPayload<Plan[]>(response);
+      if (
+        generation !== plansGeneration.current ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       if (response.ok && Array.isArray(payload?.data)) {
         setPlans(payload.data);
         setCommandPlanId(
@@ -128,6 +138,8 @@ export function PlatformSubscriptionPage() {
 
   const loadSubscription = useCallback(
     async (background = false) => {
+      const generation = ++subscriptionGeneration.current;
+      const epoch = adminAuthSession.getEpoch();
       if (!accountId.trim()) return;
       setRefreshError(null);
       setRefreshing(background);
@@ -141,6 +153,11 @@ export function PlatformSubscriptionPage() {
           { cache: 'no-store' },
         );
         const payload = await readApiPayload<Subscription>(response);
+        if (
+          generation !== subscriptionGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         if (!response.ok || !payload?.data) {
           const nextError = resourceError(response, payload, '订阅投影');
           if (background) setRefreshError(nextError);
@@ -153,6 +170,11 @@ export function PlatformSubscriptionPage() {
         setSubscription(payload.data);
         setState('success');
       } catch (caught) {
+        if (
+          generation !== subscriptionGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         const nextError: ResourceError = {
           title: '订阅投影读取失败',
           description: sessionErrorMessage(caught),
@@ -165,7 +187,7 @@ export function PlatformSubscriptionPage() {
           setState('error');
         }
       } finally {
-        setRefreshing(false);
+        if (generation === subscriptionGeneration.current) setRefreshing(false);
       }
     },
     [accountId, platform.platform_id],
@@ -188,6 +210,8 @@ export function PlatformSubscriptionPage() {
 
   async function searchAccounts(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const generation = ++accountSearchGeneration.current;
+    const epoch = adminAuthSession.getEpoch();
     const query = accountQuery.trim();
     if (!query) {
       setAccountCandidates([]);
@@ -200,6 +224,11 @@ export function PlatformSubscriptionPage() {
         { cache: 'no-store' },
       );
       const payload = await readApiPayload<AccountSummary[]>(response);
+      if (
+        generation !== accountSearchGeneration.current ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       if (!response.ok || !Array.isArray(payload?.data)) {
         setAccountCandidates([]);
         setError(resourceError(response, payload, '账户搜索'));
@@ -207,6 +236,7 @@ export function PlatformSubscriptionPage() {
       }
       setAccountCandidates(payload.data);
     } catch (caught) {
+      if (generation !== accountSearchGeneration.current) return;
       setError({
         title: '账户搜索失败',
         description: sessionErrorMessage(caught),
@@ -214,7 +244,8 @@ export function PlatformSubscriptionPage() {
         technicalDetail: null,
       });
     } finally {
-      setSearchingAccounts(false);
+      if (generation === accountSearchGeneration.current)
+        setSearchingAccounts(false);
     }
   }
 
