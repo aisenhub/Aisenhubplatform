@@ -1,6 +1,6 @@
 # Frontend Experience & State Upgrade — Verification Record
 
-> FE-R1（2026-09-10）：产品实现按 `main@54ff797` 维护，最新 FE-V08 测试提交为 `main@a5314fd`；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复、本地验证和 Git 交付已完成，合同级、Hosted/Staging/生产与发布门槛仍按本记录保留为未关闭事实。
+> FE-R1（2026-09-10）：产品实现按 `main@54ff797` 维护，最新 FE-V08/网络未知结果测试提交为 `main@472278c`；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复、本地验证和 Git 交付已完成，合同级、Hosted/Staging/生产与发布门槛仍按本记录保留为未关闭事实。
 
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
@@ -754,6 +754,19 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 
 ---
 
+## VR-0012 — T16-R2 FE-V08 与网络 unknown Local 复跑
+
+- 日期：2026-09-10
+- 阶段：T16-R2 / FE-V08 / FE-V07 supporting evidence
+- 被验证 commit：`472278cc5d0795e203a3088f8bee39f13e86c9bc`（产品实现基线仍为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`）
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Supabase CLI 2.111.0；Local Supabase（Auth/DB/Edge/Storage/Mailpit）；Playwright headless Chrome；runner 管理本地三应用临时端口。
+- 命令：`pnpm run test:e2e:t16-r2`。
+- 结果：退出码 `0`；`batchReplayBoundaryUi` 验证 `replayed_existing` 响应只保留 unknown、显式状态检查、不渲染明文面板且只提交一次；`networkUnknownSensitiveMutation` 验证敏感删除请求浏览器侧中断后进入“结果待确认”、显式检查不猜测且没有自动第二次 POST；原有独立上下文、双平台隔离、Auth/订阅/兑换/文件/Profile/Preferences/CSRF/ETag/Admin/MFA/Close/Delete/bundle 扫描共 16 项均 `PASS`。
+- 未覆盖：迟到响应、409/412/429/503/202 全量故障注入、Admin/Files/Settings 全状态矩阵、Hosted/Staging/生产和正式发布；这些继续保持 PARTIAL、NOT_RUN 或 BLOCKED。
+- 该结果是否仍覆盖当前代码：是；本次为测试增强与 Local 运行证据，未改变产品实现合同。
+
+---
+
 # 12. GitHub 交付记录追加区
 
 | 日期 | 阶段 | 类型 | Branch | Commit SHA | GitHub URL | Push | Remote confirmed | 备注 |
@@ -841,7 +854,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 优先级 | ID / 范围 | 状态 | 关闭条件 |
 |---|---|---|---|
 | P1 | FE-D02 批次重复创建语义 | PASS（Local） | `54ff797` 的受控 API/SQL 探针证明 `creation_operation_id` 重放只返回元数据、明文/receipt 边界成立，异参数返回冲突；Hosted 未运行。 |
-| P1 | FE-V 状态与故障恢复矩阵 | PARTIAL | FE-V08 已有 Local API/SQL 边界与浏览器 `replayed_existing` UI 分支；继续补 409/412/429/503/202、网络 unknown/迟到响应、正向高风险 mutation、Files/Settings 全状态的行为级证据。 |
+| P1 | FE-V 状态与故障恢复矩阵 | PARTIAL | FE-V08 已有 Local API/SQL 边界与浏览器 `replayed_existing` UI 分支，Consumer 敏感 mutation 已有网络 unknown/显式状态检查；继续补迟到响应、409/412/429/503/202 全矩阵、正向高风险 mutation、Files/Settings 全状态的行为级证据。 |
 | P1 | T17-R1～R3 / T18-S / G4-S / M5-05 hosted | BLOCKED / NOT_RUN | 获得 X02/X03/X05 和受控环境/权限，验证 OAuth/SMTP/SSR、executor/TLS/pooler/CA、Storage 迟到写入及双平台 hosted E2E。 |
 | P1 | M4-11 / M6-02～06 / M5-06 | PARTIAL / WAITING | 完成真实备份、恢复、轮换、容量告警、G5-P Registry 发布和 G6/生产授权门槛；不可由 Local PASS 推定。 |
 | P2 | Future diagnostics/search/alerts | NOT_STARTED（计划内） | 真实 Observability、Search、Alert lifecycle、权限和脱敏合同先到位；本期不实施。 |
