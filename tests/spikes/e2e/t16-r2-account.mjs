@@ -867,6 +867,7 @@ async function exerciseAdmin(page, adminTotp) {
   );
   await page.getByRole('heading', { name: '兑换批次' }).waitFor();
   await page.locator('#batch-plan').waitFor();
+  await exerciseBatchReplayUi(page);
   await page.locator('#batch-plan').selectOption(paidPlanAId);
   await page.locator('#batch-name').fill('T16 R2 UI batch');
   await page.locator('#batch-quantity').fill('1');
@@ -902,6 +903,63 @@ async function exerciseAdmin(page, adminTotp) {
     .waitFor({ state: 'detached' });
   await page.waitForTimeout(250);
   return platformAccountId;
+}
+
+async function exerciseBatchReplayUi(page) {
+  const endpoint = `${adminUrl}/api/v1/admin/api/v1/redemption-batches`;
+  let postCount = 0;
+  await page.route(endpoint, async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    postCount += 1;
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: {
+          batch_id: batchAId,
+          status: 'pending_delivery',
+          quantity: 1,
+          creation_state: 'replayed_existing',
+        },
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+
+  try {
+    await page.locator('#batch-plan').selectOption(paidPlanAId);
+    await page.locator('#batch-name').fill('T16 R2 replay UI');
+    await page.locator('#batch-quantity').fill('1');
+    await page.getByRole('button', { name: '复核并创建' }).click();
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (item) => item.url() === endpoint && item.request().method() === 'POST',
+      ),
+      page.locator('[data-test="confirm-action-submit"]').click(),
+    ]);
+    assertStatus(response.status(), 200, 'Admin replayed batch UI response');
+    assert.equal(postCount, 1, 'replayed batch UI must submit only once');
+    await page.getByText('批次已存在，明文无法恢复', { exact: true }).waitFor();
+    assert.equal(
+      await page.locator('[data-test="one-time-secret-panel"]').count(),
+      0,
+      'replayed batch UI must not render plaintext secret panel',
+    );
+    assert.equal(
+      await page.locator('[data-test="confirm-action-check-unknown"]').count(),
+      1,
+      'replayed batch UI must expose explicit state check',
+    );
+  } finally {
+    await page.unroute(endpoint);
+  }
+  await page.locator('[data-test="confirm-action-cancel"]').click();
 }
 
 async function scanBrowserBundles() {
@@ -1169,6 +1227,7 @@ try {
       profilePreferences: 'PASS',
       csrfAndEtag: 'PASS',
       adminAal1AndSuspend: 'PASS',
+      batchReplayBoundaryUi: 'PASS',
       adminBatchConfirmationUi: 'PASS',
       multiTabTerminal: 'PASS',
       ordinaryProof: 'PASS',
