@@ -867,6 +867,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `a974122` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/a974122) | PASS | PASS | 更新当前产品基线至 `94631ff`、新增 VR-0017 Settings 故障恢复证据，并同步总计划、状态、合同、handoff 与 Phase 入口；两个远端分支已核对一致 |
 
 | 2026-09-10 | T16-R2 / FE-V | code+test | `main` | `c9c19f45d97c2f9b7265c62861ed160a2e987dd5` | [GitHub code+test commit](https://github.com/aisenhub/Aisenhubplatform/commit/c9c19f45d97c2f9b7265c62861ed160a2e987dd5) | PASS | PASS | 资源 loader generation/epoch、目录 400/403/404/409/412/428/429/500/503、Plans/Accounts/Operations/Subscriptions/Files/Policy/Settings 代表性 412/429/503/202、Origins 迟到响应与状态收敛；T16-R2 汇总 20 项 PASS |
+| 2026-09-10 | FE-R1 文档维护 | docs | `main` | `457742333692b07e0fa407ab08a49c1f9cebfc1c` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/457742333692b07e0fa407ab08a49c1f9cebfc1c) | PASS | PASS | 同步当前 `c9c19f4` 基线、VR-0018 资源竞态/错误矩阵证据、状态文档与 agent handoff；用户未跟踪架构草稿未纳入 |
 
 ---
 
