@@ -489,7 +489,7 @@ pnpm --version
 8. 记录 branch、SHA、GitHub URL、push 状态；
 9. 只有“实施完成 + 必要验收通过 + push 成功”才能写 `已交付`。
 
-允许正常 commit/push，无需每阶段重复询问；禁止 force push、重写已发布历史、自动合并 main、Release、部署。
+允许正常 commit/push，无需每阶段重复询问；本轮用户明确要求最终核对后合并 main；仍禁止 force push、重写已发布历史、Release、部署。
 
 ## 14. 执行记录入口
 

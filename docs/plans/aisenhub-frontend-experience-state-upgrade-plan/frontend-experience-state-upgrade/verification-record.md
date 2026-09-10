@@ -111,7 +111,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | 05 | Files & Platform Settings | 进行中 | Files/Policy、Platform General、Origins、Keys 平台范围页面；FE-D01 scoped file query；旧 Files/legacy mutation UI 退出；Admin logout 与 T12 正向 flow | 390px、Files/Settings 完整正向与故障矩阵、Phase 01–05 最终交付门槛 | Phase 04 代码批次已推送；FE-D01 已在本地实现并核对 | `7682698` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7682698eb666bc4dfee8e34ac7e971734a70d301) |
 | 06 | Operations + Audit + Overview | 进行中 | Operations 有界 deletion-jobs、Audit 目标跳转、Overview partial refresh/能力边界 | 全状态故障注入、390px 与完整键盘矩阵、前序阶段最终门槛 | Phase 04/05 代码批次已推送；各阶段交付门槛仍待补齐 | `71f3608` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/71f36088595df5470d4114324c96b792d4cf235e) |
 | 07 | Consumer + Registry Adoption | 进行中 | Consumer shell、Account/Subscription/Files 状态闭环、中文页面、独立 tarball 消费者验证 | Admin 完整响应式/a11y、最终 legacy/integration gate | Phase 03/Auth 已核对；Phase 06 代码批次已推送 | `c6d2950` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/c6d295079bf87241e7e47199b33236b8ae7702d3) |
-| 08 | Responsive + Accessibility + Integration + Cleanup | 进行中 | 已开始全局 legacy/语义扫描与最终回归准备 | Admin 完整 viewport/a11y 证据、最终命令与 GitHub/main 交付 | Phase 04 + 05 + 06 + 07 代码批次已推送 | 未记录 | 未验证 | 未记录 |
+| 08 | Responsive + Accessibility + Integration + Cleanup | 进行中 | 五档 70 路由 Admin viewport/a11y smoke、语义表格、reduced-motion、legacy cleanup、最终回归 | docs-only record push、main 合并；hosted/历史未运行门槛按事实保留 | Phase 04 + 05 + 06 + 07 代码批次已推送 | `11aa3f2` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/11aa3f2f95003baa92ec952382f6018f8461358e) |
 
 ### 并行约束记录
 
@@ -490,80 +490,82 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 ## 10.1 阶段元数据
 
-- 状态：**未开始**
-- 所有上游阶段 remote commits：未验证
-- 开始 HEAD：未记录
-- 最终 code commit：未记录
-- Push：未验证
+- 状态：**进行中**
+- 所有上游阶段 remote commits：已验证；Phase 04 `5b25ed9`、Phase 05 `7682698`、Phase 06 `71f3608`、Phase 07 `c6d2950` 均已在任务分支远端
+- 开始 HEAD：`0a6d3601665c22e61317331b6b8062081caf036c`
+- 最终 code commit：`11aa3f2f95003baa92ec952382f6018f8461358e`
+- Push：已验证；远端任务分支已包含 `11aa3f2`
 
 ## 10.2 Responsive / Accessibility 验收
 
 | Surface | Desktop | 768 | 390 | 375 | 320 | Keyboard | Focus | ARIA/semantic | 状态 |
 |---|---|---|---|---|---|---|---|---|---|
-| Admin Shell | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未开始 |
-| Platforms/Workspace | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未开始 |
-| Accounts/Entitlements | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未开始 |
-| Files/Settings | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未开始 |
-| Operations/Audit | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未开始 |
-| Consumer shell/account | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未开始 |
-| Consumer subscription/files | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 | 未开始 |
+| Admin Shell | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 已验证（T12-R2 五档结构 smoke） |
+| Platforms/Workspace | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 已验证（T12-R2 五档结构 smoke） |
+| Accounts/Entitlements | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 已验证（Accounts/Plans/Subscriptions/Batches 路由 smoke；业务正向由 T12/T16 分别覆盖） |
+| Files/Settings | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 已验证（Files/Settings/Keys/Origins 路由 smoke；完整业务故障矩阵仍留历史 NOT_RUN） |
+| Operations/Audit | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 已验证（T12-R2 五档结构 smoke；真实 partial-503 fixture 仍 NOT_RUN） |
+| Consumer shell/account | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 已验证（T16-R2 public/protected flow 与 viewport matrix） |
+| Consumer subscription/files | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 已验证（T16-R2 redemption/file flow 与 viewport matrix） |
 
 ## 10.3 全局语义回归
 
-- Error never rendered as Empty：未验证。
-- background refresh preserves last-known data：未验证。
-- mutation pending action/row-scoped：未验证。
-- no `window.confirm` primary paths：未验证。
-- recent MFA distinct from generic failure：未验证。
-- 202 accepted distinct from completed success：未验证。
-- unknown outcome distinct from failure：未验证。
-- one-time secrets not persisted/leaked：未验证。
-- URL platform/query/cursor deep-link：未验证。
-- no fake System Health/Search/Alerts：未验证。
-- disabled platform warning does not hide diagnostics：未验证。
-- File deleting/unknown does not falsely release quota：未验证。
-- Profile/Preferences conflict does not overwrite stale data：未验证。
+- Error never rendered as Empty：PASS（Admin/Consumer state code review + T16/T12 error paths；无真实全状态 fixture 的范围限制见 NOT_RUN）。
+- background refresh preserves last-known data：PASS（Overview/资源页/Consumer 独立刷新实现与 T16/T12 smoke）。
+- mutation pending action/row-scoped：PASS（现有 shared MutationState、行级 pending 与 T16/T12 操作流）。
+- no `window.confirm` primary paths：PASS（legacy scan 无命中）。
+- recent MFA distinct from generic failure：PASS（shared ConfirmActionDialog/AdminRecentMfaPanel 与 T12 MFA flow）。
+- 202 accepted distinct from completed success：PASS（Files/deletion/Consumer flows 保留 accepted/deleting 语义；故障 fixture 未全量注入）。
+- unknown outcome distinct from failure：PASS（Admin/Consumer mutation state 与 T16 terminal flow）。
+- one-time secrets not persisted/leaked：PASS（registry secretBoundaryScan、T16 browser credentials/secret flow；localStorage scan 仅合法 consent/sidebar/theme）。
+- URL platform/query/cursor deep-link：PASS（route inventory、T12 platform routes、T16 platform isolation；完整 back/forward 人工矩阵仍 NOT_RUN）。
+- no fake System Health/Search/Alerts：PASS（planned-only scan；`adminSystemItem` 仅文档化 non-clickable capability boundary）。
+- disabled platform warning does not hide diagnostics：PASS（PlatformHeader warning path；完整真实 disabled fixture NOT_RUN）。
+- File deleting/unknown does not falsely release quota：PASS（FE-D01/Files state code + T16 file flow；服务端全状态注入 NOT_RUN）。
+- Profile/Preferences conflict does not overwrite stale data：PASS（If-Match/412/428 branch + T16 profile/preferences flow）。
 
 ## 10.4 Legacy Scan
 
 | 旧路径/模式 | 结果 | 文件/证据 | 处理 |
 |---|---|---|---|
-| `AdminNav` flat primary navigation | 未验证 | 未记录 | 未开始 |
-| manual Platform UUID primary UX | 未验证 | 未记录 | 未开始 |
-| page-level catch-all `status` strings | 未验证 | 未记录 | 未开始 |
-| page-level global `busy` for row actions | 未验证 | 未记录 | 未开始 |
-| `window.confirm` destructive flow | 未验证 | 未记录 | 未开始 |
-| one-time secret in generic status/toast | 未验证 | 未记录 | 未开始 |
-| old Entitlements mega-page mutation UI | 未验证 | 未记录 | 未开始 |
-| old deletion-jobs primary route | 未验证 | 未记录 | 未开始 |
-| continued feature hard-coded hex UI | 未验证 | 未记录 | 未开始 |
-| duplicate session/API/auth orchestration | 未验证 | 未记录 | 未开始 |
+| `AdminNav` flat primary navigation | PASS（未命中旧 flat `AdminNav`；命中当前分组 `admin-navigation` 模块） | `apps/admin/components/navigation/*` | 保留当前统一导航模块 |
+| manual Platform UUID primary UX | PASS（扫描无命中；ID 仅在 ResourceId/详情/服务端路由上下文中展示） | Admin platform routes | 保留复制/诊断所需技术 ID |
+| page-level catch-all `status` strings | PASS（命中仅 Admin login/MFA 会话反馈；迁移资源页使用 typed remote/mutation state） | `apps/admin/app/admin/login/page.tsx`, `mfa/page.tsx` | 合法 session 状态保留 |
+| page-level global `busy` for row actions | PASS（扫描无 `const [busy, setBusy]`；操作按行/intent pending） | Admin/Consumer app scan | 无需处理 |
+| `window.confirm` destructive flow | PASS（无命中） | Admin/Consumer scan | 无需处理 |
+| one-time secret in generic status/toast | PASS（OneTimeSecretPanel/secret boundary；无 localStorage/console 明文命中） | shared UI + T16 | 无需处理 |
+| old Entitlements mega-page mutation UI | PASS（`/admin/entitlements` 仅 redirect 到平台工作区） | route smoke/build | 保留兼容 redirect |
+| old deletion-jobs primary route | PASS（`/admin/deletion-jobs` 307 到 `/admin/operations`） | route smoke/build | 保留兼容 redirect |
+| continued feature hard-coded hex UI | PASS（变更目标使用 semantic tokens；detector `[]`） | Phase 08 changed targets | 无需处理 |
+| duplicate session/API/auth orchestration | PASS（Admin/Consumer 各复用既有 scope-specific manager；无第三套） | `_lib/auth-session.ts` + scan | 保留 admin/consumer 隔离 |
 
 ## 10.5 最终命令记录
 
 | 日期 | 代码版本 | 命令 | 环境 | Exit | 摘要 |
 |---|---|---|---|---|---|
-| 未记录 | 未记录 | `pnpm format:check` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm lint` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm typecheck` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm test:unit` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm contracts:check` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter admin build` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter template-preview build` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | Admin/Consumer E2E commands current at execution time | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | Registry/Consumer integration commands current at execution time | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm build` | 未记录 | 未执行 | 未记录 |
-| 未记录 | 未记录 | `git diff --check` | 未记录 | 未执行 | 未记录 |
+| 2026-09-10 | `11aa3f2` | `pnpm lint` | Windows 10 / Node 24.19 / pnpm 11.18 | 0 / PASS | 仅既有 Admin MFA `<img>` warning。 |
+| 2026-09-10 | `11aa3f2` | `pnpm typecheck` | 同上 | 0 / PASS | Turbo 9 tasks successful。 |
+| 2026-09-10 | `11aa3f2` | `pnpm test:unit` | 同上 | 0 / PASS | 全部 package unit tests 通过，包含 template route 9、UI 36。 |
+| 2026-09-10 | `11aa3f2` | `pnpm contracts:check` | 同上 | 0 / PASS | account 18、admin 36 operations；refs/sample/binary/no-store 通过。 |
+| 2026-09-10 | `11aa3f2` | `pnpm docs:check` | 同上 | 0 / PASS | 文档链接、18 task dependency graph、verification IDs 一致。 |
+| 2026-09-10 | `11aa3f2` | `pnpm --filter admin build` | Next 16.3 / webpack | 0 / PASS | Admin 全路由产物构建通过。 |
+| 2026-09-10 | `11aa3f2` | `pnpm --filter template-preview build` | Next 16.3 / webpack | 0 / PASS | Consumer 全路由产物构建通过。 |
+| 2026-09-10 | `11aa3f2` | `T12... pnpm test:e2e:t12-r2` | Local Supabase/Edge + Chrome 152.0.7977.83 | 0 / PASS | 五档 viewport × 14 Admin routes = 70；overflow/semantic controls/Dialog focus/Tab 与原登录/MFA/写入/退出全部通过。 |
+| 2026-09-10 | `11aa3f2` | `pnpm test:e2e:t16-r2` | Local Supabase/Edge + headless Chrome | 0 / PASS | Consumer/Admin dual-origin integration 全部 PASS。 |
+| 2026-09-10 | `11aa3f2` | `pnpm test:registry:m5-04`, `pnpm test:consumer:fe-r1-ui`, `pnpm test:consumer:m5-05` | 独立 tarball install / `E:\AppData\pnpm` | 0 / PASS | manifest/template/route/secret、独立 UI、local dual-origin 全部通过；hosted dual-platform NOT_RUN。 |
+| 2026-09-10 | `11aa3f2` | Phase 08 impeccable detector | changed web UI targets | 0 / PASS | 结果 `[]`；最终修改后运行一次。 |
+| 2026-09-10 | `11aa3f2` | `pnpm format:check` | 全仓 | 1 / FAIL（基线） | 61 个未触及文件存在格式问题；Phase 08 目标文件 `oxfmt --check` 通过。 |
+| 2026-09-10 | `11aa3f2` | `git diff --check`、`git diff --cached --check` | 同上 | 0 / PASS | Phase 08 差异无 whitespace/sensitive diff 问题。 |
 
 ## 10.6 Final GitHub 交付
 
-- final code commit(s)：未记录
-- verification/docs commit：未记录
-- branch：未记录
-- push：未验证
-- remote branch contains all Phase 01–08 commits：未验证
-- GitHub links：未记录
-- merge main：**不属于本任务，未执行**
+- final code commit(s)：`11aa3f2f95003baa92ec952382f6018f8461358e`
+- verification/docs commit：待最终 docs-only commit
+- branch：`codex/frontend-plan-r1`
+- push：PASS；远端任务分支已确认包含 `11aa3f2`
+- remote branch contains all Phase 01–08 commits：Phase 01–08 当前代码/文档批次均已在任务分支历史，最终 remote SHA 待 docs-only commit 后复核
+- GitHub links：[Phase 08 code commit](https://github.com/aisenhub/Aisenhubplatform/commit/11aa3f2f95003baa92ec952382f6018f8461358e)
+- merge main：待所有 docs-only 记录提交并完成 remote 核对后执行
 - Release：**不属于本任务，未执行**
 - Deploy：**不属于本任务，未执行**
 
@@ -696,6 +698,22 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 ---
 
+## VR-0009 — Phase 08 responsive, accessibility and legacy cleanup
+
+- 日期：2026-09-10
+- 阶段：Phase 08
+- 被验证 commit：`11aa3f2f95003baa92ec952382f6018f8461358e`
+- 工作区是否 clean：产品代码已提交并 push；最终 docs-only record 仍待提交；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且未纳入本任务。
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Playwright headless Chrome `152.0.7977.83`；Local Supabase/Edge Runtime。
+- 命令/操作：Admin/Consumer typecheck/build、root lint/typecheck/unit/contracts/docs、registry m5-04、独立 UI install、m5-05、T16-R2；T12-R2 扩展为 320/375/390/768/1440 五档 × 14 Admin routes；Phase 08 changed targets impeccable detector；legacy/security scans；`git diff --check`。
+- Exit code / 浏览器结果：Admin/Consumer build、root typecheck/unit/lint/contracts/docs、registry/UI/m5/T16 全部 PASS；T12 原登录/MFA/写入/退出及新 responsive/a11y matrix 全部 PASS；T12 结果 `routes: 70`、`overflow: PASS`、`semanticControls: PASS`、`dialogFocus: PASS`、`tabNavigation: PASS`。
+- 结果摘要：平板顶栏真实越界已修复；Accounts/Plans/Redemption Batches 改用语义表格并保留窄屏滚动；dead filter/CSS 清理；Consumer 页面级 eyebrow 移除；reduced-motion 保留短状态反馈；无破坏性 confirm、无手工 Platform ID 主 UX、无重复 busy/session orchestration、无 fake planned capability。
+- 失败/未运行项：全仓 `pnpm format:check` 退出 1，仍为 61 个未触及文件基线问题；hosted dual-platform backend NOT_RUN；全状态 partial-503/故障注入与 Staging/生产未执行。未把这些结果写成 PASS。
+- 证据位置：命令 stdout 保留在本次 agent tool 输出；未写入仓库的截图/视频；测试 fixture 使用随机 local/test 数据，不包含真实 secret/用户数据。
+- 该结果是否仍覆盖当前代码：是；之后仅追加本 verification record/plan docs 变更。
+
+---
+
 # 12. GitHub 交付记录追加区
 
 | 日期 | 阶段 | 类型 | Branch | Commit SHA | GitHub URL | Push | Remote confirmed | 备注 |
@@ -706,6 +724,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | 2026-09-10 | Phase 05 | code | `codex/frontend-plan-r1` | `7682698eb666bc4dfee8e34ac7e971734a70d301` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7682698eb666bc4dfee8e34ac7e971734a70d301) | PASS | PASS | 远端 SHA 与本地一致；Phase 05 仍因 390px、完整 Files/Settings 正向与故障矩阵、全阶段门槛未完成保持进行中 |
 | 2026-09-10 | Phase 06 | code | `codex/frontend-plan-r1` | `71f36088595df5470d4114324c96b792d4cf235e` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/71f36088595df5470d4114324c96b792d4cf235e) | PASS | PASS | 远端 SHA 与本地一致；Phase 06 仍因全状态故障注入、390px 与完整键盘矩阵未完成保持进行中 |
 | 2026-09-10 | Phase 07 | code | `codex/frontend-plan-r1` | `c6d295079bf87241e7e47199b33236b8ae7702d3` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/c6d295079bf87241e7e47199b33236b8ae7702d3) | PASS | PASS | 远端 SHA 与本地一致；Consumer/Registry 代码与 T16/m5 验证通过，Admin 全内部响应式/a11y/最终清理留给 Phase 08 |
+| 2026-09-10 | Phase 08 | code | `codex/frontend-plan-r1` | `11aa3f2f95003baa92ec952382f6018f8461358e` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/11aa3f2f95003baa92ec952382f6018f8461358e) | PASS | PASS | 远端 SHA 与本地一致；T12 五档 70 路由、语义/a11y、T16/m5 与 detector 通过；最终 docs/main 交付待完成 |
 
 ---
 
@@ -713,13 +732,13 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 07 Consumer/Registry 代码实现与推送；Phase 08 已开始最终收口**。
-- 下一阶段从哪里开始：进入 Phase 08 全局 legacy/semantic scan、Admin 全内部页响应式/a11y 证据、完整回归和最终 GitHub/main 交付；继续保留前序阶段尚未满足的真实正向/故障门槛，逐项判断能否在本环境复验。
+- 当前最后完成阶段：**Phase 08 代码实现与推送；最终 verification docs 仍待独立提交，之后合并 main**。
+- 下一阶段从哪里开始：提交并推送 Phase 08 docs-only record，核对任务分支 remote SHA，再执行 fast-forward 合并到 `main` 并核对 `origin/main`；保留 hosted/历史故障基线 NOT_RUN/FAIL 事实。
 - 必须先处理：FE-D02 在 Phase 03/04 的批次重复创建核验仍未闭环；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对；Consumer/Registry 独立安装与 T16 已 PASS。Phase 08 不重复实施 FE-D03 或 Consumer 页面。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
-- 当前未提交修改及归属：Phase 07/08 verification record 与 Phase 07 计划待 docs-only commit；产品代码无未提交修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 不属于本任务。
-- 当前 branch / HEAD：`codex/frontend-plan-r1` / Phase 07 code `c6d295079bf87241e7e47199b33236b8ae7702d3`（docs-only commit 后以 Git 为准）。
+- 当前未提交修改及归属：Phase 08 verification record 与计划待 docs-only commit；产品代码无未提交修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 不属于本任务。
+- 当前 branch / HEAD：`codex/frontend-plan-r1` / Phase 08 code `11aa3f2f95003baa92ec952382f6018f8461358e`（docs-only commit 后以 Git 为准）。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -740,7 +759,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 |---|---|---|
 | FE-D01 平台文件查询 | IMPLEMENTED_LOCAL | 05 已完成本地 migration/handler/OpenAPI/权限/分页核对；完整阶段交付仍受浏览器矩阵约束 |
 | FE-D02 批次重复创建核验 | NOT_STARTED | 03核验，04消费 |
-| FE-D03 UI分发最小验证 | PASS | 01已完成本地 tarball consumer install/typecheck/build/browser；07仍需完整产物验证 |
+| FE-D03 UI分发最小验证 | PASS | 01最小验证与07完整独立 tarball consumer install/typecheck/build/local route E2E 已通过；hosted dual-platform NOT_RUN |
 | FE-V01～16 | NOT_RUN | 具体定义见执行合同；逐项记录SHA/环境/用例/结果 |
 | 前端Phase01～08 | Phase01～07代码批次已提交并推送；Phase08进行中 | Phase01～07代码、集成回归与部分浏览器证据已记录；前序真实 session/正向数据/故障矩阵/390px 与最终 a11y 交付门槛仍未全部满足 |
 | Staging/生产/部署 | NOT_RUN | 本轮未执行 |
@@ -759,4 +778,4 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 修订提交：`8a0b81bba716e90c5a3dd05a0130993da1223ba3`。
 - 已push至`origin/codex/frontend-plan-r1`，`git ls-remote origin refs/heads/codex/frontend-plan-r1`返回同一完整SHA，已核对远端包含修订。
 - [GitHub文档提交](https://github.com/aisenhub/Aisenhubplatform/commit/8a0b81bba716e90c5a3dd05a0130993da1223ba3)。本段由后续独立记录提交维护，不反复amend。
-- 下一项满足派发条件：完成 Phase08 全局 legacy/semantic scan、响应式/a11y 与最终回归，逐项保留无法运行的 NOT_RUN 证据；Phase01–07 代码已独立推送，main 尚未合并，未 Release/部署。
+- 下一项满足派发条件：完成本记录 docs-only commit/push，核对任务分支 remote SHA 后 fast-forward 合并 `main`；hosted dual-platform、Staging/生产、历史 M3/M4 与全状态故障注入继续按 NOT_RUN/FAIL 事实交接，未 Release/部署。

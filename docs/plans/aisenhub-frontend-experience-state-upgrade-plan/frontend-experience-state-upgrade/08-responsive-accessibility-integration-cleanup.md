@@ -1,10 +1,19 @@
 # Phase 08 — Responsive、Accessibility、Integration 与 Legacy Cleanup
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 08 已进入最终收口，正式发布仍不在本期范围。
 
-> 状态：**未开始**  
-> 前置：Phase 04、05、06、07 全部必要代码已 push；Integrator 核对 remote commits 后才能开始。  
+> 状态：**进行中**  
+> 前置：Phase 04、05、06、07 全部必要代码已 push；Integrator 已核对任务分支 remote commits，当前进入最终收口。  
 > 本阶段是本期最终收口，结束后停止，不自动实施 Future diagnostics。
+
+## 0.1 当前实施结果（2026-09-10）
+
+- Admin Accounts、Plans、Redemption Batches 的自定义 grid 列表已迁移为带表头的语义 `Table`，保留窄屏横向滚动、ID 复制和行级动作；确认过未引用的旧 `AdminFilterInput` 与死 CSS 已移除。
+- Admin 平板布局已收口：768px 下顶栏切换为当前页/紧凑命令入口，避免面包屑、固定宽快速跳转和退出按钮共同造成横向溢出；Consumer 页面级 eyebrow 装饰已移除，保留必要套餐类型信息。
+- Admin/Consumer reduced-motion 规则改为保留颜色、背景、边框和 opacity 的短反馈，仅压缩动画时长，不以全局 `0.01ms` 抹掉状态层次。
+- Phase 08 T12-R2 使用 headless Chrome `152.0.7977.83`，在 320/375/390/768/1440 五档对 Admin 14 路由共 70 组合实际验证无水平溢出、可见控件命名、表单标签、表格表头；另验证创建 Dialog focus trap、关闭焦点恢复和 Tab 导航。
+- Phase 07 的 Consumer T16-R2、m5-05 与独立 UI install 已在当前前序代码上复测通过；registry manifest/templates 保持 local-only，无新增伪能力或生成物漂移。
+- Phase 08 代码提交为 `11aa3f2f95003baa92ec952382f6018f8461358e`，已推送任务分支；完整命令、legacy 分类、NOT_RUN 边界见 verification record 的 Phase 08 / VR-0009。
 
 ## 1. 目标
 
@@ -287,7 +296,7 @@ Future diagnostics仍留 `future/`。
 - commit，例如：`frontend: phase 08 finalize responsive accessibility and legacy cleanup`；
 - push + remote branch确认；
 - 必要的 record 更新可作为后续独立 docs commit并 push，不反复 amend追自己的 SHA；
-- 不 merge main、不 release、不 deploy。
+- 本轮用户已明确要求在最终 verification docs 提交并核对远端后 fast-forward 合并 `main`；仍不 release、不 deploy。
 
 完成后停止，将 Future diagnostics 和其他类别作为后续任务交接。
 

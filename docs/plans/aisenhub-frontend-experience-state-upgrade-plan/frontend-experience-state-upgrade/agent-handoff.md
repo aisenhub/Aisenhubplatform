@@ -95,7 +95,7 @@ Phase01必须同时迁Audit形成真实闭环，不能只交静态Shell。
 
 【Git授权与禁止】
 - 本提示已授权后续执行agent每阶段正常commit+push，无需重复询问。
-- 不force push，不重写已发布历史，不自动merge main，不创建Release，不deploy。
+- 不 force push、不重写已发布历史；本轮用户明确要求完成最终核对后合并 `main`，不创建 Release、不 deploy。
 - remote不存在/无权限/分支规范实质冲突时才提出具体问题。
 - verification record记录SHA可用后续独立docs commit；不要反复amend追逐自己的最新SHA。
 
