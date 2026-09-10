@@ -11,7 +11,7 @@
 ## 0. 当前执行状态（2026-09-10）
 
 - Phase 01–08 的代码批次均已推送；Phase 08 本地响应式、语义化控件、legacy cleanup 和回归已完成。
-- 任务分支与 `main` 已 fast-forward 合并，当前本地和远端 `main` 均为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`；无正式 Release、Staging/生产部署或生产观察。
+- 任务分支与 `main` 已 fast-forward 合并，FE-D02 代码基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`，代码与文档维护提交均已推送；无正式 Release、Staging/生产部署或生产观察。
 - 本期前端代码交付与 FE-D02 Local 核验已完成，但 FE-R1 总状态仍保持开放：下面的 FE-V 故障矩阵、托管环境和上位 M4–M6 发布门槛不能由 Local PASS 推定完成。
 
 ### 剩余任务审查

@@ -1,6 +1,6 @@
 # Phase 04 — Accounts 与 Entitlements 资源页
 
-> FE-R1（2026-09-10）：按当前 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 04 代码批次已交付；FE-D02 已完成 Local 消费与复验，完整资源状态矩阵仍开放，详见 [verification-record.md](verification-record.md)。
+> FE-R1（2026-09-10）：按当前代码基线 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 04 代码批次已交付；FE-D02 已完成 Local 消费与复验，完整资源状态矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
 > 状态：**进行中**（代码批次已交付；FE-D02 Local 已消费与复验，完整资源矩阵仍开放）  
 > 前置：Phase 01–03 已交付并 push。  

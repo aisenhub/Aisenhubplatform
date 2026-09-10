@@ -4,7 +4,7 @@
 
 ## DP2当前基线（优先于下方历史交接摘要）
 
-2026-09-10 FE-R1/DP2 本地核对：当前 `main` 为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`，Frontend Phase 01–08 代码、FE-D02 Local 修复与验证已完成；不能再按空 main/尚未合并判断。DP2 原规划时实现基线 `31b5142421847c26e61fe733b0df67f2fecd115a`、ASU-R1 旧 main `0d42b4cd44a2c17777c33f616bd393c22ee78f16` 与更早 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。下方原任务 PASS 仍只代表各自报告范围；本次前端审查的剩余项见 [FE-R1 verification record](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/verification-record.md)。
+2026-09-10 FE-R1/DP2 本地核对：当前代码基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`，Frontend Phase 01–08 代码、FE-D02 Local 修复与验证已完成；代码与文档维护提交均已推送，不能再按空 main/尚未合并判断。DP2 原规划时实现基线 `31b5142421847c26e61fe733b0df67f2fecd115a`、ASU-R1 旧 main `0d42b4cd44a2c17777c33f616bd393c22ee78f16` 与更早 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。下方原任务 PASS 仍只代表各自报告范围；本次前端审查的剩余项见 [FE-R1 verification record](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/verification-record.md)。
 
 ## FE-R1 前端当前审查（2026-09-10）
 

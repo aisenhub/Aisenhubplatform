@@ -48,7 +48,7 @@
 | 初始工作区状态 | clean | 已验证 | 阶段开始 `git status --short` 为空 |
 | 初始已有修改 | 无 | 已验证 | 未覆盖归属不明修改 |
 | 远程是否含起始 commit | 是 | 已验证 | code push 后 `git ls-remote` 核对 |
-| 当前本地/远端 `main` | `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea` | 已验证 | `origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；FE-D02 代码已同步 |
+| FE-D02 代码基线（main/任务分支） | `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea` | 已验证 | `origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；文档维护提交不改变该代码基线 |
 
 ### 基线命令记录
 
@@ -64,7 +64,7 @@ git status --short               -> 初始 clean；阶段结束 clean
    git log -1 --oneline             -> `c6d2950 frontend(consumer): phase 07 adopt shared experience states and registry`
 git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
-最终核对（2026-09-10）：
+FE-D02 代码提交后核对（2026-09-10，文档维护提交之前）：
 
 ```text
 git branch --show-current        -> `main`
@@ -759,13 +759,13 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 08 代码与 FE-D02 代码已推送，并已 fast-forward 合并 `main`；本轮文档维护待提交**。
+- 当前最后完成阶段：**Phase 08 代码与 FE-D02 代码已推送并 fast-forward 合并 `main`；本轮文档维护已提交并推送**。
 - 下一阶段从哪里开始：本任务实现与 Git 交付已完成；Future diagnostics、hosted dual-platform、Staging/生产、历史 M3/M4 与全状态故障注入按后续任务/环境条件处理，保留 NOT_RUN/FAIL 事实。
 - 必须先处理：FE-D02 已在 Phase 03/04 完成批次重复创建 Local 核验；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对；Consumer/Registry 独立安装与 T16 已 PASS。下一项为 FE-V08/Phase 03–04 的浏览器与故障恢复复验，Phase 08 不重复实施 FE-D03 或 Consumer 页面。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
-- 当前未提交修改及归属：本轮 FE-R1 状态/计划/验收文档待提交；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
-- 当前代码基线 / branch：FE-D02 代码基线为 `main` / `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对包含该代码 SHA，文档同步提交不改变代码基线。
+- 当前未提交修改及归属：无本任务修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
+- 当前代码基线 / branch：FE-D02 代码基线为 `main` / `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对包含该代码 SHA，文档维护提交已同步到两个远端分支且不改变代码基线。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -819,7 +819,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 |---|---|
 | Phase 01–08 代码 | 已形成独立代码提交并 push；Phase 08 代码为 `11aa3f2`。 |
 | Local 前端回归 | Admin/Consumer typecheck/build、root lint/typecheck/unit/contracts/docs、T12 五档 70 路由、T16、M5/Registry 和最终 detector 均已记录 PASS。 |
-| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea` 已推送 `origin/main`；文档同步提交后核对两个远端分支；未纳入用户已有未跟踪架构文档。 |
+| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea` 与本轮文档维护 commit `2ab55895de25e7bb2936107db2bf1b2dc2066192` 均已推送；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
 | 文档一致性 | `pnpm docs:check` 于本次审查实际运行并通过；当前漂移已在总计划、状态、合同、路线、handoff 和各 Phase 入口修正。 |
 
 ## 15.2 尚未完成的任务

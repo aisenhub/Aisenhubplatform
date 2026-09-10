@@ -1,6 +1,6 @@
 # Phase 03 — High-risk Interaction、Mutation State 与 Secret Flow
 
-> FE-R1（2026-09-10）：按当前 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 03 代码批次已交付；FE-D02 已完成 Local 核验，高风险故障矩阵仍开放，详见 [verification-record.md](verification-record.md)。
+> FE-R1（2026-09-10）：按当前代码基线 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 03 代码批次已交付；FE-D02 已完成 Local 核验，高风险故障矩阵仍开放，详见 [verification-record.md](verification-record.md)。
 
 > 状态：**进行中**（代码批次已交付；FE-D02 Local 已核验，完整故障矩阵仍开放）  
 > 前置：Phase 01、02 已验证、commit、push。  
