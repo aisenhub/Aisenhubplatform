@@ -823,6 +823,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 | 2026-09-10 | T16-R2 / Phase 05 | test | `codex/frontend-plan-r1` | `1c7aaa29d45f0e92da4eb36572686956d628275a` | [GitHub test commit](https://github.com/aisenhub/Aisenhubplatform/commit/1c7aaa29d45f0e92da4eb36572686956d628275a) | PASS | PASS | Settings Origins/Platform Key 生命周期矩阵实现；T16-R2 行为断言已扩展，但当时汇总输出尚未单独列出该矩阵 |
 | 2026-09-10 | T16-R2 / Phase 05 | test | `codex/frontend-plan-r1` | `68d565a992462fe5431b0947b57874c24889086d` | [GitHub test commit](https://github.com/aisenhub/Aisenhubplatform/commit/68d565a992462fe5431b0947b57874c24889086d) | PASS | PASS | 单独暴露 `settingsLifecycleMatrix` 汇总字段；T16-R2 当前共 19 项 Local 浏览器断言通过，两个远端分支均核对一致 |
 | 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `e5d67aa94e3658340c64455d80f5000991861eac` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/e5d67aa94e3658340c64455d80f5000991861eac) | PASS | PASS | 更新当前实现基线、T16-R2 17 项结果、FE-V 剩余矩阵与 Hosted/M4–M6 阻塞清单；两个远端分支已核对一致 |
+| 2026-09-10 | FE-R1 文档维护 | docs | `codex/frontend-plan-r1` | `c489d333c3ae28105fb52f60b9e7cb6ec0dd639e` | [GitHub docs commit](https://github.com/aisenhub/Aisenhubplatform/commit/c489d333c3ae28105fb52f60b9e7cb6ec0dd639e) | PASS | PASS | 更新 T16-R2 19 项结果、VR-0015 Settings 生命周期证据与当前 FE-V 剩余清单；两个远端分支已核对一致 |
 
 ---
 
@@ -830,13 +831,13 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 08 代码、FE-D02 代码与 T16-R2 Admin/Files/Settings Local 验证已推送并 fast-forward 合并 `main`；本轮文档维护待本次审查提交**。
+- 当前最后完成阶段：**Phase 08 代码、FE-D02 代码与 T16-R2 Admin/Files/Settings Local 验证已推送并 fast-forward 合并 `main`；本轮文档维护已提交并推送**。
 - 下一阶段从哪里开始：本任务实现与 Git 交付已完成；Future diagnostics、hosted dual-platform、Staging/生产、历史 M3/M4 与全状态故障注入按后续任务/环境条件处理，保留 NOT_RUN/FAIL 事实。
 - 必须先处理：FE-D02 已在 Phase 03/04 完成批次重复创建 Local 核验；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对；Consumer/Registry 独立安装与 T16 已 PASS。下一项为 FE-V08/Phase 03–05 的迟到响应与完整故障恢复复验；当前 T16 已覆盖 replay UI、网络 unknown、Admin 429/503/409 文案边界、Files 状态/删除 unknown 边界和 Settings Origins/Platform Key 生命周期，Phase 08 不重复实施 FE-D03 或 Consumer 页面。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
-- 当前未提交修改及归属：本次文档维护提交前无本任务代码修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
-- 当前代码基线 / branch：当前产品实现基线为 `main` / `868e069c1e9631cad09021598bc6070db23a694e`；最新 FE-V Local 浏览器回归测试为 `68d565a992462fe5431b0947b57874c24889086d`；FE-D02 批次边界基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对均为 `68d565a`；本次文档维护提交后再核对最终远端 SHA。
+- 当前未提交修改及归属：本次任务无未提交代码/文档修改；用户已有 `docs/Aisenhub_Platform_Optimization_Architecture.md` 保持未跟踪且不属于本任务。
+- 当前代码基线 / branch：当前产品实现基线为 `main` / `868e069c1e9631cad09021598bc6070db23a694e`；最新 FE-V Local 浏览器回归测试为 `68d565a992462fe5431b0947b57874c24889086d`；FE-D02 批次边界基线为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。两个远端分支均已核对包含 `68d565a`，本轮文档维护提交为 `c489d333c3ae28105fb52f60b9e7cb6ec0dd639e`。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -890,7 +891,7 @@ git status --short               -> 仅用户已有未跟踪架构文档，未�
 |---|---|
 | Phase 01–08 代码 | 已形成独立代码提交并 push；Phase 08 代码为 `11aa3f2`，当前产品实现基线为 `868e069`。 |
 | Local 前端回归 | Admin/Consumer typecheck/build、root lint/typecheck/unit/contracts/docs、T12 五档 70 路由、T16 当前 19 项、M5/Registry 和最终 detector 均已记录 PASS。 |
-| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`、本轮 Admin 错误状态代码/测试 commit `868e069c1e9631cad09021598bc6070db23a694e`、Files FE-V09 测试 commit `bb65f1840e8b3f67804a0f8ca3bc36cb9ad4c921`、Settings 生命周期测试 commit `1c7aaa29d45f0e92da4eb36572686956d628275a` / 汇总字段 commit `68d565a992462fe5431b0947b57874c24889086d` 与本次文档维护 commit 均已推送；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
+| Git 交付 | FE-D02 代码 commit `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`、本轮 Admin 错误状态代码/测试 commit `868e069c1e9631cad09021598bc6070db23a694e`、Files FE-V09 测试 commit `bb65f1840e8b3f67804a0f8ca3bc36cb9ad4c921`、Settings 生命周期测试 commit `1c7aaa29d45f0e92da4eb36572686956d628275a` / 汇总字段 commit `68d565a992462fe5431b0947b57874c24889086d` 与文档维护 commit `c489d333c3ae28105fb52f60b9e7cb6ec0dd639e` 均已推送；`origin/main` 与 `origin/codex/frontend-plan-r1` 已核对一致；未纳入用户已有未跟踪架构文档。 |
 | 文档一致性 | `pnpm docs:check` 于本次审查实际运行并通过；当前漂移已在总计划、状态、合同、路线、handoff 和各 Phase 入口修正。 |
 
 ## 15.2 尚未完成的任务
