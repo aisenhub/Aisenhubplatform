@@ -1,6 +1,6 @@
 # Phase 02 — Platform Context 与 Workspace
 
-> FE-R1（2026-09-10）：按当前代码基线 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 02 代码批次已交付；阶段剩余核验以 [verification-record.md](verification-record.md) 为准。
+> FE-R1（2026-09-10）：按当前代码基线 `main@868e069` 维护；Auth 已实施，本期默认简体中文。Phase 02 代码批次已交付；阶段剩余核验以 [verification-record.md](verification-record.md) 为准。
 
 > 状态：**进行中**（代码批次已交付；平台错误/切换行为级证据仍待完整关闭）  
 > 前置：Phase 01 已完成必要验证、commit 并 push；`verification-record.md` 已记录 UI toolchain 和 shell contract。

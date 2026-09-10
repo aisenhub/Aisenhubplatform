@@ -1,10 +1,10 @@
 # Aisenhub Frontend Experience & State 优化架构
 
-> FE-R1：本文件为前端架构唯一维护正文；2026-09-10按当前`main@54ff797`复核。`b563a98`及更早SHA仅为研究历史，不是当前实施基线。Auth已实施，中文优先为本期要求；Local代码交付已形成，但运行验收、Hosted/Staging/生产和发布门槛仍以验证记录为准。具体合同见 [FE-R1执行合同](frontend-experience-state-upgrade/references/fe-r1-execution-contracts.md) 与 [中文UI合同](frontend-experience-state-upgrade/references/chinese-ui-contract.md)。
+> FE-R1：本文件为前端架构唯一维护正文；2026-09-10按当前`main@868e069`复核，FE-D02批次边界仍以`54ff797`为产品基线。`b563a98`及更早SHA仅为研究历史，不是当前实施基线。Auth已实施，中文优先为本期要求；Local代码交付已形成，但运行验收、Hosted/Staging/生产和发布门槛仍以验证记录为准。具体合同见 [FE-R1执行合同](frontend-experience-state-upgrade/references/fe-r1-execution-contracts.md) 与 [中文UI合同](frontend-experience-state-upgrade/references/chinese-ui-contract.md)。
 
 > 文档类型：Frontend Experience & State 专题架构基线  
 > 适用仓库：`aisenhub/Aisenhubplatform`  
-> 代码核对基线：`main @ 54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`（2026-09-10）  
+> 代码核对基线：`main @ 868e069c1e9631cad09021598bc6070db23a694e`（2026-09-10；FE-D02 批次边界基线：`54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`）  
 > 上位架构：`Aisenhub_Platform_Optimization_Architecture.md` / `docs/architecture.md`  
 > 本文重点：Admin 控制台，同时统一 Consumer 的页面状态与交互基础  
 > 本轮性质：架构与实现边界维护；不替代具体环境的运行验收

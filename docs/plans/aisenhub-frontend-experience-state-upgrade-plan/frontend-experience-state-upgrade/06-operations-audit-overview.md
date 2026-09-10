@@ -1,6 +1,6 @@
 # Phase 06 — Operations Center、Audit Inspector 与真实 Overview
 
-> FE-R1（2026-09-10）：按当前代码基线 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 06 本地代码批次已交付；全状态故障注入与阶段关闭条件以 `verification-record.md` 为准。
+> FE-R1（2026-09-10）：按当前代码基线 `main@868e069` 维护；Auth 已实施，本期默认简体中文。Phase 06 本地代码批次已交付；全状态故障注入与阶段关闭条件以 `verification-record.md` 为准。
 
 > 状态：**进行中**  
 > 前置：Phase 01–05 中至少 Phase 04、05 已交付并 push；Operations 需要知道新资源 routes。  

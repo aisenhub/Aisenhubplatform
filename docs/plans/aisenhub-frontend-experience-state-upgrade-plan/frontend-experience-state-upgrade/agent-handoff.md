@@ -1,6 +1,6 @@
 # Frontend Experience & State Upgrade — Agent Handoff
 
-> FE-R1（2026-09-10）：按当前代码基线 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复已完成并合并 `main`；剩余合同、托管和发布门槛以 [verification-record.md](verification-record.md) 及总计划当前状态为准。
+> FE-R1（2026-09-10）：按当前代码基线 `main@868e069` 维护；Auth 已实施，本期默认简体中文。Phase 01–08 代码批次与 FE-D02 Local 修复已完成并合并 `main`；剩余合同、托管和发布门槛以 [verification-record.md](verification-record.md) 及总计划当前状态为准。
 
 > 用途：稳定执行入口，不是日常进度日志。  
 > 执行 agent 必须结合 `00-master-plan.md`、当前阶段文档、`verification-record.md` 和实际代码工作，无需重新做整轮架构讨论。

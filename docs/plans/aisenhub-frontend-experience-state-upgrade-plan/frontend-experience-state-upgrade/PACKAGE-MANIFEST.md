@@ -1,6 +1,6 @@
 # Frontend Experience & State Upgrade — Package Manifest
 
-> FE-R1（2026-09-10）：按当前代码基线 `main@54ff797` 维护；Auth 已实施，本期默认简体中文。原规划快照已产生 Phase 01–08 实施结果，当前状态以 [verification-record.md](verification-record.md) 为准。
+> FE-R1（2026-09-10）：按当前代码基线 `main@868e069` 维护；Auth 已实施，本期默认简体中文。原规划快照已产生 Phase 01–08 实施结果，当前状态以 [verification-record.md](verification-record.md) 为准。
 
 > 本包仍是执行计划索引，不替代实施证据。Phase 01–08 与 FE-D02 Local 已有代码、验证、commit/push 和 `main` 合并；Hosted/Staging/生产、全状态故障注入和正式发布仍按状态记录维护。
 
