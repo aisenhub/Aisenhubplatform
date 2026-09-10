@@ -1,10 +1,20 @@
 # Phase 07 — Consumer Experience 与 Registry Adoption
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 07 已开始实施，正式发布仍不在本期范围。
 
-> 状态：**未开始**  
+> 状态：**进行中**  
 > 前置：Phase 01–03 已交付并 push；若 Authentication & Session Consumer adoption 尚未交付，相关 session transport 工作等待上游，不复制实现。  
 > 可与 Phase 04、05、06 并行，但共享 `packages/ui` contract 只能由 Integrator 修改。
+
+## 0.1 当前实施结果（2026-09-10）
+
+- Consumer protected shell 已落地到 `/account`、`/subscription`、`/files`，复用现有 Auth Session manager 与共享 `@kit/ui` primitives；未新增第二套 SessionManager 或 Admin shell 依赖。
+- Account/Profile/Preferences 已拆分独立加载、草稿与 authoritative server data；保存使用 If-Match，412/428 保留草稿并提供读取最新恢复；Security 通过 ConfirmActionDialog、近期邮件认证、accepted/unknown outcome 表达关闭与全局删除。
+- Subscription entitlement 与公开 Pricing 独立表达；兑换保留 logical intent/idempotency key，业务拒绝与网络不确定不会静默生成新 key。
+- Files 使用真实 BFF/API，Budget 与列表独立加载；upload intent 与 binary PUT 使用各自幂等 key，字节流永不自动重放；delete 采用确认、202/deleting、unknown 与预算保留语义；下载仅经同源 BFF。
+- 登录、注册、找回密码、更新密码、Pricing 与受保护页面完成简体中文适配；共享状态、错误、ID/support detail、空态和确认弹窗来自 `@kit/ui`。
+- 独立消费者分发已补齐 `@kit/shared`、`@kit/ui` tarball、Tailwind/PostCSS/CSS entry 与 `transpilePackages`；Registry manifest/templates 仍保持 local-only，实际 route inventory 未新增需要登记的路径。
+- Phase 07 代码提交为 `c6d295079bf87241e7e47199b33236b8ae7702d3`，已推送任务分支；完整验证与未运行边界见 verification record 的 Phase 07 / VR-0008。
 
 ## 1. 目标
 
