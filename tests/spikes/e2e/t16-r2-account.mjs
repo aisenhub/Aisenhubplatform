@@ -1161,8 +1161,12 @@ async function exerciseFilesStateMatrix(page) {
     file(deletedFileId, 'deleted.json', 'deleted', 'confirmed', 768),
   ];
   let filesResponseCompleted = false;
+  let unknownDeleteCount = 0;
   const filesRoute = (url) => new URL(url).pathname === filesEndpoint;
   const policyRoute = (url) => new URL(url).pathname === policyEndpoint;
+  const unknownDetailEndpoint = `${filesEndpoint}/${unknownFileId}`;
+  const unknownDetailRoute = (url) =>
+    new URL(url).pathname === unknownDetailEndpoint;
   await page.route(filesRoute, async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
@@ -1207,6 +1211,28 @@ async function exerciseFilesStateMatrix(page) {
           over_quota: true,
           updated_at: now,
         },
+        request_id: crypto.randomUUID(),
+      }),
+    });
+  });
+  await page.route(unknownDetailRoute, async (route) => {
+    if (route.request().method() === 'DELETE') {
+      unknownDeleteCount += 1;
+      await route.abort('failed');
+      return;
+    }
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        data: files.find((item) => item.file_id === unknownFileId),
         request_id: crypto.randomUUID(),
       }),
     });
@@ -1281,9 +1307,34 @@ async function exerciseFilesStateMatrix(page) {
       true,
       'deleted file must not allow another delete',
     );
+
+    await unknownRow
+      .locator(`[data-test="platform-file-delete-${unknownFileId}"]`)
+      .click();
+    await page
+      .locator('[data-test="confirm-action-reason"]')
+      .fill('T16 R2 unknown file delete');
+    await page.locator('[data-test="confirm-action-submit"]').click();
+    await page.getByText('删除结果待确认', { exact: false }).waitFor();
+    assert.equal(
+      unknownDeleteCount,
+      1,
+      'unknown file delete must submit exactly once',
+    );
+    await page.locator('[data-test="confirm-action-check-unknown"]').click();
+    await page
+      .getByText('当前状态未证明原请求结果', { exact: false })
+      .waitFor();
+    assert.equal(
+      unknownDeleteCount,
+      1,
+      'unknown file state check must not automatically resubmit delete',
+    );
+    await page.locator('[data-test="confirm-action-cancel"]').click();
   } finally {
     await page.unroute(filesRoute);
     await page.unroute(policyRoute);
+    await page.unroute(unknownDetailRoute);
   }
 }
 
