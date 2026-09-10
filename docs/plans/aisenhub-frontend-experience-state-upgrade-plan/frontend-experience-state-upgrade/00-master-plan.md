@@ -19,7 +19,7 @@
 | 优先级 | 任务 | 当前状态 | 下一步 / 关闭条件 |
 |---|---|---|---|
 | P1 | FE-D02：兑换批次重复创建与明文/receipt 恢复语义 | PASS（Local） | `54ff797` 已完成受控 API/SQL 探针：同 operation 只返回批次元数据，异参数冲突；HTTP/领域合同与 Phase 03/04 已同步。Hosted 未运行。 |
-| P1 | FE-V 状态/失败矩阵补齐 | PARTIAL | 对 409/412/429/503/202、网络 unknown、正向高风险 mutation、Files/Settings 全状态补行为级证据；已有 T12/T16 Local PASS 不替代未运行故障注入。 |
+| P1 | FE-V 状态/失败矩阵补齐 | PARTIAL | FE-V08 已补 Local API/SQL 边界与浏览器 `replayed_existing` UI 分支；继续补 409/412/429/503/202、网络 unknown/迟到响应、正向高风险 mutation、Files/Settings 全状态行为级证据；已有 T12/T16 Local PASS 不替代完整故障注入。 |
 | P1 | Hosted / Staging 上游验收 | BLOCKED / NOT_RUN | 依赖 X02/X03/X05 及受控权限，补 OAuth/SMTP/SSR、独立 executor/TLS/pooler/CA、Storage 迟到写入和双平台 hosted E2E；对应 T17-R1～R3、T18-S、G4-S、G5-L hosted。 |
 | P1 | M4–M6 发布与运维门槛 | WAITING / PARTIAL | M4-11、M6-02 外部备份、M6-03/04 恢复/轮换/容量告警、M5-06 正式 Registry 发布；需 X04/X06、受控恢复目标和明确发布授权。 |
 | P2 | Future diagnostics / Search / Alerts | NOT_STARTED（有意保留） | 等真实 Observability、Search、Alert lifecycle 和权限/脱敏合同；本期不实现假指标、假搜索或假通知。 |
@@ -520,7 +520,7 @@ pnpm --version
 
 ## 15. FE-R1 执行入口与新增门槛
 
-- 当前复核基线 `main@54ff797`；原审查基线 `main@b563a98` 仅保留供追溯。后续实施/验证仍须重新记录 HEAD，冲突以本节及修订合同为准。
+- 当前产品实现基线 `main@54ff797`；最新 FE-V08 测试提交为 `main@a5314fd`；原审查基线 `main@b563a98` 仅保留供追溯。后续实施/验证仍须重新记录 HEAD，冲突以本节及修订合同为准。
 - 先读取 [执行合同与能力矩阵](references/fe-r1-execution-contracts.md) 和 [中文优先UI合同](references/chinese-ui-contract.md)。架构正文唯一维护于上一级同名架构文件，references内同名文件只是入口。
 - FE-D03在Phase01完成独立UI安装最小验证；FE-D02已在Phase03/04完成 Local 核验与消费；FE-D01在Phase05平台Files前通过。三项均有明确目录/合同/测试边界，属于必要依赖，不授权其他后端扩张。
 - 所有页面中文优先，必要英文技术标识保留；公开Auth/Pricing及Registry也在范围内。FE-V01～16均为新的运行验收；当前已有 Phase 08、T12-R2、T16-R2 及相关 Local 集成证据，但完整状态/故障恢复矩阵仍为 PARTIAL，Hosted/Staging/生产项保持 NOT_RUN 或 BLOCKED，详见 [verification-record.md](verification-record.md)。
