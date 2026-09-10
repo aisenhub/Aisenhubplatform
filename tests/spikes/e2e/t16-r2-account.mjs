@@ -240,7 +240,7 @@ async function startLocalServices() {
   };
   const consumerStartArgs = consumerDirectory
     ? ['--dir', consumerDirectory, 'start']
-    : ['--filter', 'template-preview', 'start'];
+    : ['--dir', join(repositoryRoot, 'apps', 'template-preview'), 'start'];
   startProcess(
     'pnpm.cmd',
     consumerStartArgs,
@@ -494,12 +494,12 @@ async function loginConsumer(page, baseUrl, platformId) {
 
 async function exercisePublicTemplateRoutes(page, baseUrl) {
   const routes = [
-    ['/', 'Consumer application shell'],
-    ['/pricing', 'Plans are public, account data is not.'],
-    ['/login', 'Consumer login'],
-    ['/signup', 'Create account'],
-    ['/forgot-password', 'Forgot password'],
-    ['/update-password', 'Set new password'],
+    ['/', '把账户任务做得清楚、可恢复'],
+    ['/pricing', '选择适合你的工作区'],
+    ['/login', '登录你的账户'],
+    ['/signup', '创建账户'],
+    ['/forgot-password', '找回密码'],
+    ['/update-password', '设置新密码'],
   ];
   for (const [path, heading] of routes) {
     const response = await page.goto(`${baseUrl}${path}`, {
@@ -543,9 +543,9 @@ async function exerciseAuthResponsive(page, baseUrl, routes) {
 
 async function exerciseAuthenticatedTemplateRoutes(page, baseUrl) {
   const routes = [
-    ['/subscription', 'Subscription'],
-    ['/account', 'Account settings'],
-    ['/files', 'Configuration files'],
+    ['/subscription', '订阅与兑换'],
+    ['/account', '账户设置'],
+    ['/files', '配置文件'],
   ];
   for (const [path, heading] of routes) {
     const response = await page.goto(`${baseUrl}${path}`, {
@@ -659,13 +659,15 @@ async function exerciseSubscriptionAndFiles(page, baseUrl, redemptionCode) {
     'uploaded file is listed through the BFF',
   );
   await page.goto(`${baseUrl}/files`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Configuration files' }).waitFor();
-  await page.getByRole('heading', { name: 'Budget status' }).waitFor();
+  await page.getByRole('heading', { name: '配置文件' }).waitFor();
+  await page.getByRole('heading', { name: '当前使用情况' }).waitFor();
   await page
-    .getByText(/已占用 · .*可用/u)
+    .getByText(/可用/u)
     .first()
     .waitFor();
-  const fileRow = page.locator('.file-row').filter({ hasText: 't16-r2.ini' });
+  const fileRow = page
+    .locator('.consumer-row')
+    .filter({ hasText: 't16-r2.ini' });
   await fileRow.getByRole('button', { name: '删除', exact: true }).waitFor();
   const downloaded = await browserRequest(
     page,
@@ -674,24 +676,23 @@ async function exerciseSubscriptionAndFiles(page, baseUrl, redemptionCode) {
   assertStatus(downloaded.status, 200, 'file download');
   assert.equal(downloaded.payload?.raw, content);
 
+  await fileRow.getByRole('button', { name: '删除', exact: true }).click();
   const [removed] = await Promise.all([
     page.waitForResponse((item) =>
       item.url().endsWith(`/api/v1/config-files/${fileId}`),
     ),
-    fileRow.getByRole('button', { name: '删除', exact: true }).click(),
+    page.locator('[data-test="confirm-action-submit"]').click(),
   ]);
   assertStatus(removed.status(), 202, 'file delete request');
   await page
-    .getByText(
-      '删除请求已接受；deleting 期间预算仍占用，确认完成前不会显示为已释放。',
-      { exact: true },
-    )
+    .locator('[data-test="confirm-action-dialog"]')
+    .getByRole('button', { name: '已受理', exact: true })
     .waitFor();
 }
 
 async function exerciseAccount(page, baseUrl) {
   await page.goto(`${baseUrl}/account`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Account settings' }).waitFor();
+  await page.getByRole('heading', { name: '账户设置' }).waitFor();
   await page.getByLabel('显示名称').fill('T16 R2 browser user');
   await page.getByLabel('简介').fill('Local browser regression');
   const [profileResponse] = await Promise.all([
@@ -700,6 +701,7 @@ async function exerciseAccount(page, baseUrl) {
   ]);
   assertStatus(profileResponse.status(), 200, 'browser Profile PATCH');
 
+  await page.getByLabel('JSON Merge Patch').waitFor();
   await page
     .getByLabel('JSON Merge Patch')
     .fill('{"theme":"dark","browser":true}');
@@ -729,22 +731,33 @@ async function exerciseAccount(page, baseUrl) {
   });
   assertStatus(stale.status, 412, 'stale profile ETag rejection');
 
-  const requested = await browserRequest(page, '/api/auth/reauth/start', {
-    method: 'POST',
-    headers: {
-      Origin: baseUrl,
-      'X-CSRF-Token': csrf,
-      'Content-Type': 'application/json',
-    },
-  });
-  assertStatus(requested.status, 200, 'consumer email reauth request');
+  await page
+    .getByRole('button', { name: '提交全局删除请求', exact: true })
+    .click();
+  const sensitiveDialog = page.locator('[data-test="confirm-action-dialog"]');
+  const [mfaRequired] = await Promise.all([
+    page.waitForResponse((item) =>
+      item.url().endsWith('/api/v1/identity/delete-request'),
+    ),
+    sensitiveDialog.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(mfaRequired.status(), 403, 'global delete MFA requirement');
+  const [reauthRequested] = await Promise.all([
+    page.waitForResponse((item) =>
+      item.url().endsWith('/api/auth/reauth/start'),
+    ),
+    sensitiveDialog
+      .getByRole('button', { name: '发送验证邮件', exact: true })
+      .click(),
+  ]);
+  assertStatus(reauthRequested.status(), 200, 'consumer email reauth request');
   const tokenHash = await readMailpitToken(userEmail);
   await page.getByPlaceholder('粘贴 token_hash').fill(tokenHash);
   const [verifiedResponse] = await Promise.all([
     page.waitForResponse((item) =>
       item.url().endsWith('/api/auth/reauth/verify'),
     ),
-    page.getByRole('button', { name: '验证并签发 proof' }).click(),
+    page.getByRole('button', { name: '验证并回到确认', exact: true }).click(),
   ]);
   assertStatus(verifiedResponse.status(), 200, 'consumer email reauth verify');
   const cookies = await page.context().cookies();
@@ -754,30 +767,27 @@ async function exerciseAccount(page, baseUrl) {
   assert.ok(proof?.httpOnly, 'consumer proof must be HttpOnly');
   assert.equal(proof?.sameSite, 'Strict');
 
-  const deleteRequest = await browserRequest(
-    page,
-    '/api/v1/identity/delete-request',
-    {
-      method: 'POST',
-      headers: {
-        Origin: baseUrl,
-        'X-CSRF-Token': csrf,
-        'Content-Type': 'application/json',
-      },
-      body: '{}',
-    },
-  );
-  assertStatus(deleteRequest.status, 202, 'global delete request');
-  const close = await browserRequest(page, '/api/v1/account/close', {
-    method: 'POST',
-    headers: {
-      Origin: baseUrl,
-      'X-CSRF-Token': csrf,
-      'Content-Type': 'application/json',
-    },
-    body: '{}',
-  });
-  assertStatus(close.status, 200, 'consumer account close');
+  const [deleteRequest] = await Promise.all([
+    page.waitForResponse((item) =>
+      item.url().endsWith('/api/v1/identity/delete-request'),
+    ),
+    sensitiveDialog.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(deleteRequest.status(), 202, 'global delete request');
+  await sensitiveDialog
+    .getByRole('button', { name: '已受理', exact: true })
+    .waitFor();
+  await sensitiveDialog.locator('[data-test="confirm-action-cancel"]').click();
+
+  await page.getByRole('button', { name: '关闭当前账户', exact: true }).click();
+  const closeDialog = page.locator('[data-test="confirm-action-dialog"]');
+  const [close] = await Promise.all([
+    page.waitForResponse((item) =>
+      item.url().endsWith('/api/v1/account/close'),
+    ),
+    closeDialog.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(close.status(), 200, 'consumer account close');
   const protectedAfterClose = await browserRequest(page, '/api/v1/profile');
   assertStatus(
     protectedAfterClose.status,
@@ -811,17 +821,31 @@ async function exerciseAdmin(page, adminTotp) {
   await page.goto(`${adminUrl}/admin/platforms`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.getByRole('heading', { name: 'Platform operations' }).waitFor();
-  await page.getByRole('button', { name: platformACode, exact: true }).click();
-  await page.waitForTimeout(1_000);
-  await page
-    .getByLabel('账户状态操作原因（必填，勿含个人信息）')
-    .fill('T16 R2 browser suspend');
-  const accountRow = page.locator('li').filter({ hasText: userId });
+  await page.getByRole('heading', { name: '平台目录' }).waitFor();
+  await page.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.getByRole('heading', { name: '平台账户' }).waitFor();
+  const adminAccounts = await browserRequest(
+    page,
+    `/api/v1/admin/api/v1/platforms/${platformAId}/accounts?limit=100`,
+  );
+  assertStatus(adminAccounts.status, 200, 'Admin account list');
+  const platformAccountId = adminAccounts.payload?.data?.find(
+    (account) => account.user_id === userId,
+  )?.platform_account_id;
+  assert.ok(platformAccountId, 'Admin account list includes browser account');
+  const accountRow = page.locator(
+    `[data-test="account-row-${platformAccountId}"]`,
+  );
   await accountRow.getByRole('button', { name: '暂停', exact: true }).waitFor();
+  await accountRow.getByRole('button', { name: '暂停', exact: true }).click();
+  await page
+    .locator('[data-test="confirm-action-reason"]')
+    .fill('T16 R2 browser suspend');
   const [suspendRequest] = await Promise.all([
     page.waitForRequest((item) => item.url().includes(`/accounts/`)),
-    accountRow.getByRole('button', { name: '暂停', exact: true }).click(),
+    page.locator('[data-test="confirm-action-submit"]').click(),
   ]);
   const suspendResponse = await suspendRequest.response();
   assert.ok(suspendResponse, 'Admin account suspend must return a response');
@@ -835,50 +859,49 @@ async function exerciseAdmin(page, adminTotp) {
     audit.payload?.data?.some((entry) => entry.action === 'account.suspend'),
     'Admin audit must expose the suspended account event without raw metadata',
   );
-  await page.goto(`${adminUrl}/admin/entitlements`, {
-    waitUntil: 'domcontentloaded',
-  });
-  await page.getByRole('heading', { name: 'Entitlements console' }).waitFor();
-  await page.getByLabel('Platform ID').fill(platformAId);
-  await page.getByRole('button', { name: '加载', exact: true }).click();
+  await page.goto(
+    `${adminUrl}/admin/platforms/${platformAId}/redemption-batches`,
+    {
+      waitUntil: 'domcontentloaded',
+    },
+  );
+  await page.getByRole('heading', { name: '兑换批次' }).waitFor();
   await page.locator('#batch-plan').waitFor();
   await page.locator('#batch-plan').selectOption(paidPlanAId);
-  await page.getByLabel('Batch name').fill('T16 R2 UI batch');
-  await page.getByLabel('Batch quantity').fill('1');
+  await page.locator('#batch-name').fill('T16 R2 UI batch');
+  await page.locator('#batch-quantity').fill('1');
   const [createBatchResponse] = await Promise.all([
     page.waitForResponse((item) =>
       item.url().endsWith('/api/v1/admin/api/v1/redemption-batches'),
     ),
-    page
-      .getByRole('button', { name: '生成 pending 批次（需近期 MFA）' })
-      .click(),
+    (async () => {
+      await page.getByRole('button', { name: '复核并创建' }).click();
+      await page.locator('[data-test="confirm-action-submit"]').click();
+    })(),
   ]);
   assertStatus(createBatchResponse.status(), 201, 'Admin batch create UI');
-  await page.getByText('仅本次响应显示的明文码', { exact: true }).waitFor();
-  await page
-    .getByText(
-      '批次已创建为 pending_delivery；明文码仅在当前响应显示，先保存再确认交付。',
-      { exact: true },
-    )
-    .waitFor();
-  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByText('兑换码明文仅显示这一次', { exact: true }).waitFor();
+  await page.getByText('批次已创建，等待交付确认', { exact: true }).waitFor();
+  const createPayload = await createBatchResponse.json();
+  const createdBatchId = createPayload?.data?.batch_id;
+  assert.ok(createdBatchId, 'Admin batch create returns batch ID');
+  await page.locator('[data-test="one-time-secret-acknowledge"]').click();
+  const batchRow = page.locator(`[data-test="batch-row-${createdBatchId}"]`);
+  await batchRow.getByRole('button', { name: '确认交付' }).click();
   const [confirmBatchResponse] = await Promise.all([
     page.waitForResponse((item) => item.url().includes('/confirm-delivery')),
-    page
-      .getByRole('button', { name: '确认 T16 R2 UI batch 已保存并交付' })
-      .click(),
+    page.locator('[data-test="confirm-action-submit"]').click(),
   ]);
   assertStatus(confirmBatchResponse.status(), 200, 'Admin batch confirm UI');
   await page
-    .getByText('批次已确认交付；页面已清除本次明文码和 receipt。', {
-      exact: true,
-    })
+    .locator('[data-test="batches-notice"]')
+    .getByText('交付已确认', { exact: true })
     .waitFor();
-  await page.getByText('仅本次响应显示的明文码', { exact: true }).waitFor({
-    state: 'detached',
-  });
+  await page
+    .locator('[data-test="one-time-secret-panel"]')
+    .waitFor({ state: 'detached' });
   await page.waitForTimeout(250);
-  return accountRow;
+  return platformAccountId;
 }
 
 async function scanBrowserBundles() {
@@ -1044,18 +1067,18 @@ try {
   await pageC.goto(`${consumerAUrl}/subscription`, {
     waitUntil: 'domcontentloaded',
   });
-  await pageC.getByRole('heading', { name: 'Subscription' }).waitFor();
-  await pageC.getByText('Pro').waitFor();
+  await pageC.getByRole('heading', { name: '订阅与兑换' }).waitFor();
+  await pageC.getByRole('heading', { name: 'Pro', exact: true }).waitFor();
   await pageA.goto(`${consumerAUrl}/subscription`, {
     waitUntil: 'domcontentloaded',
   });
-  await pageA.getByRole('heading', { name: 'Subscription' }).waitFor();
+  await pageA.getByRole('heading', { name: '订阅与兑换' }).waitFor();
   await Promise.all([
     pageA.waitForURL(/\/login$/u, { waitUntil: 'domcontentloaded' }),
     pageA.getByRole('button', { name: '退出登录', exact: true }).click(),
   ]);
   await pageC
-    .getByText('会话已结束，权益数据已清理。', { exact: true })
+    .getByText(/请登录后继续|登录已失效/u)
     .first()
     .waitFor();
   await loginConsumer(pageA, consumerAUrl, platformAId);
@@ -1094,7 +1117,7 @@ try {
   );
 
   await exerciseAuthResponsive(adminPage, adminUrl, ['/admin/login']);
-  await exerciseAdmin(adminPage, adminTotp);
+  const platformAccountId = await exerciseAdmin(adminPage, adminTotp);
   const [suspendedRow] = await sql`
     select status from public.platform_accounts
     where platform_id = ${platformAId} and user_id = ${userId}
@@ -1109,26 +1132,26 @@ try {
   await adminPage.goto(`${adminUrl}/admin/platforms`, {
     waitUntil: 'domcontentloaded',
   });
-  await adminPage
-    .getByRole('heading', { name: 'Platform operations' })
-    .waitFor();
-  await adminPage
-    .getByRole('button', { name: platformACode, exact: true })
-    .click();
-  await adminPage
-    .getByLabel('账户状态操作原因（必填，勿含个人信息）')
-    .fill('T16 R2 browser restore');
-  const suspendedAccountRow = adminPage
-    .locator('li')
-    .filter({ hasText: userId });
+  await adminPage.getByRole('heading', { name: '平台目录' }).waitFor();
+  await adminPage.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await adminPage.getByRole('heading', { name: '平台账户' }).waitFor();
+  const suspendedAccountRow = adminPage.locator(
+    `[data-test="account-row-${platformAccountId}"]`,
+  );
   await suspendedAccountRow
     .getByRole('button', { name: '恢复', exact: true })
     .waitFor();
+  await suspendedAccountRow
+    .getByRole('button', { name: '恢复', exact: true })
+    .click();
+  await adminPage
+    .locator('[data-test="confirm-action-reason"]')
+    .fill('T16 R2 browser restore');
   const [restoreResponse] = await Promise.all([
     adminPage.waitForResponse((item) => item.url().includes('/restore')),
-    suspendedAccountRow
-      .getByRole('button', { name: '恢复', exact: true })
-      .click(),
+    adminPage.locator('[data-test="confirm-action-submit"]').click(),
   ]);
   assertStatus(restoreResponse.status(), 200, 'Admin account restore');
   await pageA.reload({ waitUntil: 'domcontentloaded' });

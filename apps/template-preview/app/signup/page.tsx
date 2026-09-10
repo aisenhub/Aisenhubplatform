@@ -1,25 +1,37 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
+
+import { ConsumerShell } from '../../components/consumer-shell';
 import {
-  consumerAuthSession,
-  responseErrorCode,
-  sessionErrorMessage,
-} from '../_lib/auth-session';
+  ConsumerNotice,
+  ConsumerStatus,
+  errorFromException,
+  errorFromResponse,
+  type ConsumerError,
+} from '../../components/consumer-state';
+import { consumerAuthSession } from '../_lib/auth-session';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<ConsumerError | null>(null);
+  const [confirmationRequired, setConfirmationRequired] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus('正在创建账户…');
-    let response: Response;
+    setPending(true);
+    setError(null);
+    setConfirmationRequired(false);
     try {
-      response = await consumerAuthSession.request(
+      const response = await consumerAuthSession.request(
         '/api/auth/signup',
         {
           method: 'POST',
@@ -28,61 +40,90 @@ export default function SignupPage() {
         },
         { replay: 'never' },
       );
-    } catch (error) {
-      setStatus(sessionErrorMessage(error));
-      return;
-    }
-    const payload = (await response.json().catch(() => null)) as {
-      data?: { needs_email_confirmation?: boolean };
-      error?: { code?: string };
-    } | null;
-    if (!response.ok) {
-      setStatus(
-        `注册失败：${payload?.error?.code ?? (await responseErrorCode(response))}`,
-      );
-      return;
-    }
-    setStatus(
-      payload?.data?.needs_email_confirmation
-        ? '注册成功，请检查邮箱完成确认。'
-        : '注册成功，正在进入账户…',
-    );
-    if (!payload?.data?.needs_email_confirmation)
+      const payload = (await response.json().catch(() => null)) as {
+        data?: { needs_email_confirmation?: boolean };
+      } | null;
+      if (!response.ok) {
+        setError(await errorFromResponse(response, '注册'));
+        return;
+      }
+      if (payload?.data?.needs_email_confirmation) {
+        setConfirmationRequired(true);
+        return;
+      }
       consumerAuthSession.completeAuthentication();
-    if (!payload?.data?.needs_email_confirmation)
       window.location.assign('/subscription');
+    } catch (caught) {
+      setError(errorFromException('注册', caught));
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
-    <main className="shell">
-      <p className="eyebrow">Template Preview</p>
-      <h1>Create account</h1>
-      <form className="panel stack-form" onSubmit={submit}>
-        <label htmlFor="email">邮箱</label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
+    <ConsumerShell
+      eyebrow="Get started"
+      title="创建账户"
+      description="创建后即可进入账户工作区。你的账户数据不会出现在公开套餐页面。"
+      narrow
+    >
+      {error ? (
+        <ConsumerNotice
+          title={error.title}
+          description={error.description}
+          tone="danger"
+          requestId={error.requestId}
+          technicalDetail={error.technicalDetail}
         />
-        <label htmlFor="password">密码（至少 8 位）</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          minLength={8}
-          required
+      ) : null}
+      {confirmationRequired ? (
+        <ConsumerNotice
+          title="注册成功"
+          description="请检查邮箱完成确认，再返回登录。"
+          tone="success"
         />
-        <button type="submit">注册</button>
-        <span className="muted" role="status">
-          {status}
-        </span>
+      ) : null}
+      <form className="consumer-card consumer-form" onSubmit={submit}>
+        <div className="consumer-field">
+          <Label htmlFor="email">邮箱</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            required
+          />
+        </div>
+        <div className="consumer-field">
+          <Label htmlFor="password">密码（至少 8 位）</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+          <span className="consumer-field-hint">
+            请使用你能安全保存的密码。
+          </span>
+        </div>
+        <div className="consumer-actions">
+          <Button
+            type="submit"
+            disabled={pending}
+            data-test="consumer-signup-submit"
+          >
+            {pending ? '创建中…' : '创建账户'}
+          </Button>
+          <Link className="consumer-inline-link" href="/login">
+            返回登录
+          </Link>
+        </div>
+        {pending ? <ConsumerStatus busy>正在创建账户…</ConsumerStatus> : null}
       </form>
-      <a className="link" href="/login">
-        已有账户？登录
-      </a>
-    </main>
+    </ConsumerShell>
   );
 }

@@ -136,7 +136,6 @@ export function formatUtc(value: string | null | undefined): string {
   return new Intl.DateTimeFormat('zh-CN', {
     dateStyle: 'medium',
     timeStyle: 'short',
-    timeZoneName: 'short',
   }).format(date);
 }
 

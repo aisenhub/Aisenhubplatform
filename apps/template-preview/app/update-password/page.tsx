@@ -1,20 +1,35 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
-import { consumerAuthSession, sessionErrorMessage } from '../_lib/auth-session';
+import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
+
+import { ConsumerShell } from '../../components/consumer-shell';
+import {
+  ConsumerNotice,
+  ConsumerStatus,
+  errorFromException,
+  type ConsumerError,
+} from '../../components/consumer-state';
+import { consumerAuthSession } from '../_lib/auth-session';
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<ConsumerError | null>(null);
+  const [updated, setUpdated] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus('正在更新密码…');
-    let response: Response;
+    setPending(true);
+    setError(null);
+    setUpdated(false);
     try {
-      response = await consumerAuthSession.request(
+      const response = await consumerAuthSession.request(
         '/api/auth/password',
         {
           method: 'POST',
@@ -23,36 +38,75 @@ export default function UpdatePasswordPage() {
         },
         { replay: 'never' },
       );
-    } catch (error) {
-      setStatus(sessionErrorMessage(error));
-      return;
+      if (!response.ok) {
+        setError({
+          title: '密码更新失败',
+          description: '请重新获取重置链接后再试。',
+          requestId: response.headers.get('x-request-id'),
+          technicalDetail: null,
+        });
+        return;
+      }
+      setUpdated(true);
+      setPassword('');
+    } catch (caught) {
+      setError(errorFromException('密码更新', caught));
+    } finally {
+      setPending(false);
     }
-    setStatus(response.ok ? '密码已更新。' : '更新失败，请重新获取重置链接。');
-    if (response.ok) window.location.assign('/login');
   }
 
   return (
-    <main className="shell">
-      <p className="eyebrow">Template Preview</p>
-      <h1>Set new password</h1>
-      <p className="muted">
-        此页面只使用回调设置的 HttpOnly session，不接收或显示 reset token。
-      </p>
-      <form className="panel stack-form" onSubmit={submit}>
-        <label htmlFor="password">新密码（至少 8 位）</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          minLength={8}
-          required
+    <ConsumerShell
+      eyebrow="Recovery session"
+      title="设置新密码"
+      description="此页面只使用回调设置的 HttpOnly session，不接收或显示 reset token。"
+      narrow
+    >
+      {error ? (
+        <ConsumerNotice
+          title={error.title}
+          description={error.description}
+          tone="danger"
+          requestId={error.requestId}
+          technicalDetail={error.technicalDetail}
         />
-        <button type="submit">更新密码</button>
-        <span className="muted" role="status">
-          {status}
-        </span>
+      ) : null}
+      {updated ? (
+        <ConsumerNotice
+          title="密码已更新"
+          description="请使用新密码登录账户。"
+          tone="success"
+          action={<Button render={<Link href="/login" />}>返回登录</Button>}
+        />
+      ) : null}
+      <form className="consumer-card consumer-form" onSubmit={submit}>
+        <div className="consumer-field">
+          <Label htmlFor="password">新密码（至少 8 位）</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+        </div>
+        <div className="consumer-actions">
+          <Button
+            type="submit"
+            disabled={pending}
+            data-test="consumer-password-submit"
+          >
+            {pending ? '更新中…' : '更新密码'}
+          </Button>
+          <Link className="consumer-inline-link" href="/login">
+            返回登录
+          </Link>
+        </div>
+        {pending ? <ConsumerStatus busy>正在更新密码…</ConsumerStatus> : null}
       </form>
-    </main>
+    </ConsumerShell>
   );
 }

@@ -39,6 +39,7 @@ function run(command, args, cwd = repositoryRoot, env = {}) {
       ...env,
       CI: '1',
       COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+      pnpm_config_store_dir: 'E:\\AppData\\pnpm',
     },
     encoding: 'utf8',
     shell: process.platform === 'win32',
@@ -56,8 +57,19 @@ mkdirSync(consumerDirectory, { recursive: true });
 run(packageManager(), ['run', 'sdk:pack'], repositoryRoot, {
   M5_SDK_PACK_DESTINATION: artifactsDirectory,
 });
+for (const packageName of ['@kit/shared', '@kit/ui']) {
+  run(packageManager(), [
+    '--filter',
+    packageName,
+    'pack',
+    '--pack-destination',
+    artifactsDirectory,
+  ]);
+}
 
 const tarballs = {
+  '@kit/shared': join(artifactsDirectory, 'kit-shared-0.1.0.tgz'),
+  '@kit/ui': join(artifactsDirectory, 'kit-ui-0.1.0.tgz'),
   '@kit/domain': join(artifactsDirectory, 'kit-domain-0.1.0.tgz'),
   '@kit/account-auth': join(artifactsDirectory, 'kit-account-auth-0.1.0.tgz'),
   '@kit/account-auth-nextjs': join(
@@ -89,6 +101,8 @@ const packageJson = {
     typecheck: 'tsc --noEmit',
   },
   dependencies: {
+    '@kit/shared': `file:${tarballs['@kit/shared']}`,
+    '@kit/ui': `file:${tarballs['@kit/ui']}`,
     '@kit/domain': `file:${tarballs['@kit/domain']}`,
     '@kit/account-auth': `file:${tarballs['@kit/account-auth']}`,
     '@kit/account-auth-nextjs': `file:${tarballs['@kit/account-auth-nextjs']}`,
@@ -98,9 +112,11 @@ const packageJson = {
     'react-dom': '19.2.8',
   },
   devDependencies: {
+    '@tailwindcss/postcss': '^4.1.14',
     '@types/node': '24.13.3',
     '@types/react': '19.2.18',
     '@types/react-dom': '19.2.4',
+    tailwindcss: '4.3.3',
     typescript: '7.0.2',
     vitest: '4.1.10',
   },
@@ -138,7 +154,7 @@ writeFileSync(
 const localTarballPath = (name) => tarballs[name].replaceAll('\\', '/');
 writeFileSync(
   join(consumerDirectory, 'pnpm-workspace.yaml'),
-  `packages: []\noverrides:\n  "@kit/domain": "file:${localTarballPath('@kit/domain')}"\n  "@kit/account-auth": "file:${localTarballPath('@kit/account-auth')}"\n  "@kit/account-auth-nextjs": "file:${localTarballPath('@kit/account-auth-nextjs')}"\n  "@kit/account-server": "file:${localTarballPath('@kit/account-server')}"\n`,
+  `packages: []\noverrides:\n  "@kit/shared": "file:${localTarballPath('@kit/shared')}"\n  "@kit/domain": "file:${localTarballPath('@kit/domain')}"\n  "@kit/account-auth": "file:${localTarballPath('@kit/account-auth')}"\n  "@kit/account-auth-nextjs": "file:${localTarballPath('@kit/account-auth-nextjs')}"\n  "@kit/account-server": "file:${localTarballPath('@kit/account-server')}"\n`,
 );
 
 run(

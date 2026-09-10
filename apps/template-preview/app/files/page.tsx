@@ -1,11 +1,34 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { SessionRetryRequiredError } from '@kit/account-auth-nextjs/browser';
+import { AsyncState } from '@kit/ui/async-state';
+import { Button } from '@kit/ui/button';
+import { ConfirmActionDialog } from '@kit/ui/confirm-action-dialog';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
+import type { MutationState } from '@kit/ui/mutation-state';
+import { ResourceId } from '@kit/ui/resource-id';
+import { ResourceInspector } from '@kit/ui/resource-inspector';
+import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
 
 import {
+  ConsumerLogoutButton,
+  ConsumerShell,
+} from '../../components/consumer-shell';
+import {
+  ConsumerEmptyState,
+  ConsumerNotice,
+  ConsumerRemoteStateView,
+  ConsumerStatus,
+  errorFromException,
+  errorFromResponse,
+  type ConsumerError,
+  type ConsumerRemoteState,
+} from '../../components/consumer-state';
+import {
   consumerAuthSession,
-  responseErrorCode,
-  sessionErrorMessage,
   useConsumerSessionSnapshot,
 } from '../_lib/auth-session';
 
@@ -36,25 +59,136 @@ type Budget = {
   over_quota: boolean;
 };
 
-function formatBytes(value: number): string {
+type FilesPayload = { items?: ConfigFile[]; budget?: Budget };
+type DeleteIntent = { file: ConfigFile; idempotencyKey: string };
+
+function formatBytes(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
   if (value < 1024) return `${value} B`;
-  return `${(value / 1024).toFixed(1)} KiB`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MiB`;
 }
 
-function statusLabel(file: ConfigFile): string {
-  if (file.write_outcome === 'unknown') return '未知写入结果';
-  if (file.cancel_requested_at) return '已请求取消';
-  return file.status;
+function fileStatus(file: ConfigFile): { label: string; tone: StatusTone } {
+  if (file.write_outcome === 'unknown')
+    return { label: '结果待确认', tone: 'unknown' };
+  if (file.cancel_requested_at) return { label: '已请求删除', tone: 'warning' };
+  switch (file.status) {
+    case 'active':
+      return { label: '可用', tone: 'success' };
+    case 'receiving':
+      return { label: '接收中', tone: 'info' };
+    case 'storing':
+      return { label: '保存中', tone: 'info' };
+    case 'deleting':
+      return { label: '删除中', tone: 'warning' };
+    case 'deleted':
+      return { label: '已删除', tone: 'neutral' };
+    case 'failed':
+      return { label: '处理失败', tone: 'danger' };
+    case 'expired':
+      return { label: '已过期', tone: 'neutral' };
+    default:
+      return { label: '状态待确认', tone: 'unknown' };
+  }
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('zh-CN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
 }
 
 export default function FilesPage() {
   const sessionSnapshot = useConsumerSessionSnapshot();
   const [files, setFiles] = useState<ConfigFile[]>([]);
   const [budget, setBudget] = useState<Budget | null>(null);
+  const [loadState, setLoadState] = useState<ConsumerRemoteState>('loading');
+  const [loadError, setLoadError] = useState<ConsumerError | null>(null);
+  const [refreshError, setRefreshError] = useState<ConsumerError | null>(null);
   const [selectedReplace, setSelectedReplace] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [status, setStatus] = useState('正在读取配置文件…');
-  const [busy, setBusy] = useState(false);
+  const [uploadPending, setUploadPending] = useState(false);
+  const [uploadError, setUploadError] = useState<ConsumerError | null>(null);
+  const [rowPending, setRowPending] = useState<
+    Record<string, 'download' | 'delete'>
+  >({});
+  const [deleteIntent, setDeleteIntent] = useState<DeleteIntent | null>(null);
+  const [deleteState, setDeleteState] =
+    useState<MutationState>('confirm_required');
+  const [deleteError, setDeleteError] = useState<ConsumerError | null>(null);
+  const [inspectorFileId, setInspectorFileId] = useState<string | null>(null);
+  const [inspectedFile, setInspectedFile] = useState<ConfigFile | null>(null);
+  const [inspectorState, setInspectorState] =
+    useState<ConsumerRemoteState>('loading');
+  const [inspectorError, setInspectorError] = useState<ConsumerError | null>(
+    null,
+  );
+  const generationRef = useRef(0);
+
+  const load = useCallback(async (background = false) => {
+    const generation = ++generationRef.current;
+    const epoch = consumerAuthSession.getEpoch();
+    if (background) setRefreshError(null);
+    else {
+      setLoadState('loading');
+      setLoadError(null);
+    }
+    try {
+      const response = await consumerAuthSession.request(
+        '/api/v1/config-files?limit=20',
+        { cache: 'no-store' },
+      );
+      const payload = (
+        response.ok ? await response.json().catch(() => null) : null
+      ) as {
+        data?: FilesPayload;
+      } | null;
+      if (
+        generation !== generationRef.current ||
+        !consumerAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
+      if (
+        !response.ok ||
+        !payload?.data ||
+        !Array.isArray(payload.data.items)
+      ) {
+        const nextError = await errorFromResponse(response, '文件');
+        if (background) setRefreshError(nextError);
+        else {
+          setLoadError(nextError);
+          setLoadState(nextError.title === '需要登录' ? 'access' : 'error');
+        }
+        return;
+      }
+      setFiles(payload.data.items);
+      setBudget(payload.data.budget ?? null);
+      setLoadState('success');
+      setLoadError(null);
+      setRefreshError(null);
+    } catch (caught) {
+      if (
+        generation !== generationRef.current ||
+        !consumerAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
+      const nextError = errorFromException('文件', caught);
+      if (background) setRefreshError(nextError);
+      else {
+        setLoadError(nextError);
+        setLoadState('error');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (
@@ -66,45 +200,16 @@ export default function FilesPage() {
     setBudget(null);
     setSelectedReplace('');
     setSelectedFile(null);
-    setStatus('会话已结束，文件与预算数据已清理。');
+    setDeleteIntent(null);
+    setInspectorFileId(null);
+    setLoadState('access');
   }, [sessionSnapshot.resolved, sessionSnapshot.state]);
 
-  const load = useCallback(async () => {
-    const epoch = consumerAuthSession.getEpoch();
-    let response: Response;
-    try {
-      response = await consumerAuthSession.request(
-        '/api/v1/config-files?limit=20',
-      );
-    } catch (error) {
-      if (consumerAuthSession.isCurrentEpoch(epoch))
-        setStatus(sessionErrorMessage(error));
-      return;
-    }
-    if (!response.ok) {
-      const code = await responseErrorCode(response);
-      if (consumerAuthSession.isCurrentEpoch(epoch))
-        setStatus(`文件状态读取失败：${code}`);
-      return;
-    }
-    const payload = (await response.json()) as {
-      data?: { items?: ConfigFile[]; budget?: Budget };
-    };
-    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
-    setFiles(payload.data?.items ?? []);
-    setBudget(payload.data?.budget ?? null);
-    setStatus('状态已从 Account API 刷新；页面不会自动重试未完成上传。');
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   async function upload() {
-    if (!selectedFile) return;
-    const epoch = consumerAuthSession.getEpoch();
-    setBusy(true);
-    setStatus('正在预约并上传…');
+    const file = selectedFile;
+    if (!file || uploadPending) return;
+    setUploadPending(true);
+    setUploadError(null);
     try {
       const intentResponse = await consumerAuthSession.request(
         '/api/v1/config-files/upload-intent',
@@ -115,248 +220,603 @@ export default function FilesPage() {
             'Idempotency-Key': crypto.randomUUID(),
           },
           body: JSON.stringify({
-            name: selectedFile.name,
-            size: selectedFile.size,
-            content_type: selectedFile.type || 'application/octet-stream',
+            name: file.name,
+            size: file.size,
+            content_type: file.type || 'application/octet-stream',
             purpose: 'config',
             replaces_file_id: selectedReplace || null,
           }),
         },
         { replay: 'never' },
       );
-      const intent = (await intentResponse.json().catch(() => null)) as {
+      const intentPayload = (
+        intentResponse.ok ? await intentResponse.json().catch(() => null) : null
+      ) as {
         data?: { upload_path?: string };
       } | null;
-      if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
-      if (!intentResponse.ok || !intent?.data?.upload_path) {
-        setStatus('预约失败：配额不足、策略关闭或文件输入不符合限制。');
+      if (!intentResponse.ok || !intentPayload?.data?.upload_path) {
+        setUploadError(await errorFromResponse(intentResponse, '上传预约'));
         return;
       }
       const uploadResponse = await consumerAuthSession.request(
-        `/api${intent.data.upload_path}`,
+        `/api${intentPayload.data.upload_path}`,
         {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/octet-stream',
             'Idempotency-Key': crypto.randomUUID(),
           },
-          body: selectedFile,
+          body: file,
         },
         { replay: 'never' },
       );
-      if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
-      setStatus(
-        uploadResponse.ok
-          ? '上传已结算；请以文件状态和预算占用为准。'
-          : '上传未完成，请刷新状态后按状态处理，不会自动重发字节流。',
-      );
-      if (uploadResponse.ok) {
-        setSelectedFile(null);
-        setSelectedReplace('');
-        await load();
+      if (!uploadResponse.ok) {
+        setUploadError({
+          title: '上传结果待确认',
+          description: '字节流没有完成。请先刷新文件状态，不会自动重发字节流。',
+          requestId: uploadResponse.headers.get('x-request-id'),
+          technicalDetail: null,
+        });
+        return;
       }
-    } catch (error) {
-      if (consumerAuthSession.isCurrentEpoch(epoch))
-        setStatus(sessionErrorMessage(error));
+      setSelectedFile(null);
+      setSelectedReplace('');
+      await load(true);
+    } catch (caught) {
+      if (caught instanceof SessionRetryRequiredError) {
+        setUploadError({
+          title: '会话已恢复，请重新提交',
+          description: '为避免重复上传，字节流没有自动重放；请先刷新状态。',
+          requestId: null,
+          technicalDetail: null,
+        });
+      } else {
+        setUploadError({
+          title: '上传结果待确认',
+          description: '网络在字节流完成前中断。请先刷新状态，不要立即重传。',
+          requestId: null,
+          technicalDetail: null,
+        });
+      }
     } finally {
-      setBusy(false);
+      setUploadPending(false);
     }
   }
 
-  async function remove(fileId: string) {
-    const epoch = consumerAuthSession.getEpoch();
-    setBusy(true);
-    let response: Response;
+  function openDelete(file: ConfigFile) {
+    setDeleteIntent({ file, idempotencyKey: crypto.randomUUID() });
+    setDeleteState('confirm_required');
+    setDeleteError(null);
+  }
+
+  function closeDelete() {
+    if (deleteState === 'pending') return;
+    setDeleteIntent(null);
+    setDeleteState('confirm_required');
+    setDeleteError(null);
+  }
+
+  async function submitDelete() {
+    if (!deleteIntent) return;
+    setDeleteState('pending');
+    setDeleteError(null);
+    setRowPending((current) => ({
+      ...current,
+      [deleteIntent.file.file_id]: 'delete',
+    }));
     try {
-      response = await consumerAuthSession.request(
-        `/api/v1/config-files/${fileId}`,
+      const response = await consumerAuthSession.request(
+        `/api/v1/config-files/${encodeURIComponent(deleteIntent.file.file_id)}`,
         {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            'Idempotency-Key': crypto.randomUUID(),
+            'Idempotency-Key': deleteIntent.idempotencyKey,
           },
           body: '{}',
         },
         { replay: 'never' },
       );
-    } catch (error) {
-      if (consumerAuthSession.isCurrentEpoch(epoch))
-        setStatus(sessionErrorMessage(error));
-      setBusy(false);
-      return;
+      if (!response.ok) {
+        setDeleteState('failure');
+        setDeleteError(await errorFromResponse(response, '删除请求'));
+        return;
+      }
+      setDeleteState(response.status === 202 ? 'accepted' : 'success');
+      await load(true);
+    } catch (caught) {
+      if (caught instanceof SessionRetryRequiredError) {
+        setDeleteState('failure');
+        setDeleteError({
+          title: '会话已恢复，请重新提交',
+          description: '为避免重复提交，本次删除请求没有自动重放。',
+          requestId: null,
+          technicalDetail: null,
+        });
+      } else {
+        setDeleteState('unknown_outcome');
+        setDeleteError({
+          title: '删除结果待确认',
+          description:
+            '网络在服务端响应前中断。请先检查文件状态，不要立即重新提交。',
+          requestId: null,
+          technicalDetail: null,
+        });
+      }
+    } finally {
+      setRowPending((current) => {
+        const next = { ...current };
+        if (deleteIntent) delete next[deleteIntent.file.file_id];
+        return next;
+      });
     }
-    if (!consumerAuthSession.isCurrentEpoch(epoch)) {
-      setBusy(false);
-      return;
+  }
+
+  async function checkDeleteUnknown() {
+    if (!deleteIntent) return;
+    try {
+      const response = await consumerAuthSession.request(
+        `/api/v1/config-files/${encodeURIComponent(deleteIntent.file.file_id)}`,
+        { cache: 'no-store' },
+      );
+      const payload = (
+        response.ok ? await response.json().catch(() => null) : null
+      ) as {
+        data?: ConfigFile;
+      } | null;
+      if (!response.ok || !payload?.data) {
+        setDeleteError(await errorFromResponse(response, '文件状态检查'));
+        return;
+      }
+      setFiles((current) =>
+        current.map((file) =>
+          file.file_id === payload.data!.file_id ? payload.data! : file,
+        ),
+      );
+      const status = fileStatus(payload.data);
+      if (payload.data.status === 'deleted') {
+        setDeleteState('success');
+        setDeleteError({
+          title: '删除状态已确认',
+          description:
+            '服务端已确认文件删除完成；预算是否释放仍以最新预算为准。',
+          requestId: null,
+          technicalDetail: null,
+        });
+      } else if (payload.data.status === 'deleting') {
+        setDeleteState('accepted');
+        setDeleteError({
+          title: '删除请求已受理',
+          description: `文件当前为“${status.label}”；预算在完成前仍可能占用。`,
+          requestId: null,
+          technicalDetail: null,
+        });
+      } else {
+        setDeleteError({
+          title: '状态仍待确认',
+          description: '服务端状态还不能证明原删除请求结果；页面不会重复提交。',
+          requestId: null,
+          technicalDetail: payload.data.status,
+        });
+      }
+      await load(true);
+    } catch (caught) {
+      setDeleteError(errorFromException('文件状态检查', caught));
     }
-    setStatus(
-      response.ok
-        ? '删除请求已接受；deleting 期间预算仍占用，确认完成前不会显示为已释放。'
-        : '删除请求被拒绝，请刷新状态。',
-    );
-    await load();
-    setBusy(false);
   }
 
   async function download(file: ConfigFile) {
-    const epoch = consumerAuthSession.getEpoch();
-    let response: Response;
+    if (rowPending[file.file_id]) return;
+    setRowPending((current) => ({ ...current, [file.file_id]: 'download' }));
     try {
-      response = await consumerAuthSession.request(
-        `/api/v1/config-files/${file.file_id}/content`,
+      const response = await consumerAuthSession.request(
+        `/api/v1/config-files/${encodeURIComponent(file.file_id)}/content`,
+        { cache: 'no-store' },
       );
-    } catch (error) {
-      setStatus(sessionErrorMessage(error));
-      return;
+      if (!response.ok) {
+        setUploadError(await errorFromResponse(response, '下载'));
+        return;
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = file.original_name ?? 'config-file';
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (caught) {
+      setUploadError(errorFromException('下载', caught));
+    } finally {
+      setRowPending((current) => {
+        const next = { ...current };
+        delete next[file.file_id];
+        return next;
+      });
     }
-    if (!response.ok) {
-      if (consumerAuthSession.isCurrentEpoch(epoch))
-        setStatus('下载失败：文件可能正在删除、账户已暂停或对象需要恢复。');
-      return;
-    }
-    const blob = await response.blob();
-    if (!consumerAuthSession.isCurrentEpoch(epoch)) return;
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = file.original_name ?? 'config-file';
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setStatus('下载流已完成；这不代表客户端已保存文件。');
   }
 
+  async function openInspector(fileId: string) {
+    setInspectorFileId(fileId);
+    setInspectedFile(null);
+    setInspectorError(null);
+    setInspectorState('loading');
+    try {
+      const response = await consumerAuthSession.request(
+        `/api/v1/config-files/${encodeURIComponent(fileId)}`,
+        { cache: 'no-store' },
+      );
+      const payload = (
+        response.ok ? await response.json().catch(() => null) : null
+      ) as {
+        data?: ConfigFile;
+      } | null;
+      if (!response.ok || !payload?.data || payload.data.file_id !== fileId) {
+        setInspectorError(await errorFromResponse(response, '文件详情'));
+        setInspectorState(response.status === 401 ? 'access' : 'error');
+        return;
+      }
+      setInspectedFile(payload.data);
+      setInspectorState('success');
+    } catch (caught) {
+      setInspectorError(errorFromException('文件详情', caught));
+      setInspectorState('error');
+    }
+  }
+
+  const activeFiles = files.filter(
+    (file) => file.status === 'active' && file.write_outcome === 'confirmed',
+  );
+
   return (
-    <main className="shell wide-shell">
-      <p className="eyebrow">Template Preview · M4</p>
-      <h1>Configuration files</h1>
-      <p className="muted">
-        文件只经同源 BFF 进入 Account API；页面展示真实预算和状态，不直接访问
-        Storage。
-      </p>
-      <p className="muted" role="status">
-        {status}
-      </p>
-      {budget ? (
-        <section className="panel">
-          <h2>Budget status</h2>
-          <div className="data-list">
-            <div>
-              <strong>字节</strong>
-              <span>
-                {formatBytes(budget.reserved_bytes)} 已占用 ·{' '}
-                {formatBytes(budget.available_bytes)} 可用
-              </span>
-            </div>
-            <div>
-              <strong>文件数</strong>
-              <span>
-                {budget.reserved_count} 已占用 · {budget.available_count} 可用
-              </span>
-            </div>
-            <div>
-              <strong>策略</strong>
-              <span>
-                {budget.enabled ? 'enabled' : 'disabled'} · 单文件上限{' '}
-                {formatBytes(budget.max_file_bytes)}
-              </span>
-            </div>
-          </div>
-          {budget.over_quota ? (
-            <p className="warning">
-              当前策略低于已占用量；已有文件保留，新上传和 Replace 会被拒绝。
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-      <section className="panel stack-form">
-        <h2>上传或 Replace</h2>
-        <label htmlFor="config-file">配置文件</label>
-        <input
-          id="config-file"
-          type="file"
-          onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+    <ConsumerShell
+      eyebrow="File workspace"
+      title="配置文件"
+      description="预算和文件状态分别表达。上传字节流不会自动重传，删除接受后预算仍可能占用，最终以服务端状态为准。"
+      headerActions={<ConsumerLogoutButton />}
+    >
+      {refreshError ? (
+        <ConsumerNotice
+          title="文件数据可能已过期"
+          description={refreshError.description}
+          tone="warning"
+          requestId={refreshError.requestId}
+          technicalDetail={refreshError.technicalDetail}
+          action={<Button onClick={() => void load(true)}>刷新状态</Button>}
         />
-        <label htmlFor="replace-file">Replace 目标（可选）</label>
-        <select
-          id="replace-file"
-          value={selectedReplace}
-          onChange={(event) => setSelectedReplace(event.target.value)}
-        >
-          <option value="">新文件</option>
-          {files
-            .filter((file) => file.status === 'active')
-            .map((file) => (
-              <option key={file.file_id} value={file.file_id}>
-                {file.original_name ?? file.file_id}
-              </option>
-            ))}
-        </select>
-        <button
-          type="button"
-          disabled={!selectedFile || busy}
-          onClick={() => void upload()}
-        >
-          预约并上传
-        </button>
-      </section>
-      <section className="panel">
-        <div className="section-heading">
-          <h2>File states</h2>
-          <button type="button" onClick={() => void load()}>
-            刷新状态
-          </button>
-        </div>
-        {files.length === 0 ? (
-          <p className="muted">暂无配置文件。</p>
-        ) : (
-          <div className="data-list">
-            {files.map((file) => (
-              <div key={file.file_id} className="file-row">
+      ) : null}
+      {uploadError ? (
+        <ConsumerNotice
+          title={uploadError.title}
+          description={uploadError.description}
+          tone="warning"
+          requestId={uploadError.requestId}
+          technicalDetail={uploadError.technicalDetail}
+        />
+      ) : null}
+      {loadState === 'error' || loadState === 'access' ? (
+        <ConsumerRemoteStateView
+          state={loadState}
+          error={loadError}
+          onRetry={() => void load()}
+        />
+      ) : null}
+      {loadState === 'loading' ? (
+        <ConsumerRemoteStateView state="loading" />
+      ) : null}
+      {loadState === 'success' ? (
+        <>
+          {budget ? (
+            <section className="consumer-card" data-test="consumer-budget">
+              <div className="consumer-card-header">
                 <div>
-                  <strong>{file.original_name ?? 'unnamed file'}</strong>
-                  <small>
-                    {file.file_id} · {formatBytes(file.size)} ·{' '}
-                    {file.content_type}
-                  </small>
+                  <p className="consumer-eyebrow">Storage budget</p>
+                  <h2 className="mt-2">当前使用情况</h2>
                 </div>
-                <div className="file-actions">
-                  <span>
-                    {statusLabel(file)} · reserved{' '}
-                    {formatBytes(file.reserved_bytes)}
+                <StatusBadge
+                  label={budget.enabled ? '策略已启用' : '策略已关闭'}
+                  tone={budget.enabled ? 'success' : 'warning'}
+                  rawValue={budget.enabled ? 'enabled' : 'disabled'}
+                />
+              </div>
+              <div className="consumer-stat-grid">
+                <div className="consumer-stat">
+                  <span className="consumer-stat-label">空间</span>
+                  <span className="consumer-stat-value text-base">
+                    {formatBytes(budget.reserved_bytes)} /{' '}
+                    {formatBytes(budget.max_total_bytes)}
                   </span>
-                  <button
-                    type="button"
-                    disabled={
-                      busy ||
-                      file.status !== 'active' ||
-                      file.write_outcome !== 'confirmed'
-                    }
-                    onClick={() => void download(file)}
-                  >
-                    下载
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy || file.status === 'deleted'}
-                    onClick={() => void remove(file.file_id)}
-                  >
-                    删除
-                  </button>
+                  <span className="consumer-help">
+                    可用 {formatBytes(budget.available_bytes)}
+                  </span>
+                </div>
+                <div className="consumer-stat">
+                  <span className="consumer-stat-label">文件数</span>
+                  <span className="consumer-stat-value text-base">
+                    {budget.reserved_count} / {budget.max_files}
+                  </span>
+                  <span className="consumer-help">
+                    可用 {budget.available_count} 个
+                  </span>
+                </div>
+                <div className="consumer-stat">
+                  <span className="consumer-stat-label">单文件上限</span>
+                  <span className="consumer-stat-value text-base">
+                    {formatBytes(budget.max_file_bytes)}
+                  </span>
+                  <span className="consumer-help">服务端策略</span>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-      <nav className="actions" aria-label="File navigation">
-        <a className="link" href="/account">
-          返回账户设置
-        </a>
-        <a className="link" href="/">
-          返回首页
-        </a>
-      </nav>
-    </main>
+              {budget.over_quota ? (
+                <ConsumerNotice
+                  title="当前超出策略额度"
+                  description="已有文件保留；新上传和 Replace 会被服务端拒绝。删除完成前，预算不会提前释放。"
+                  tone="warning"
+                />
+              ) : null}
+            </section>
+          ) : null}
+
+          <section className="consumer-card" data-test="consumer-upload">
+            <div>
+              <h2>上传或 Replace</h2>
+              <p className="consumer-card-description">
+                先创建 upload
+                intent，再提交有界字节流；两步失败时都不会自动重放。
+              </p>
+            </div>
+            <div className="consumer-form">
+              <div className="consumer-field">
+                <Label htmlFor="config-file">配置文件</Label>
+                <Input
+                  id="config-file"
+                  type="file"
+                  onChange={(event) =>
+                    setSelectedFile(event.target.files?.[0] ?? null)
+                  }
+                />
+              </div>
+              <div className="consumer-field">
+                <Label htmlFor="replace-file">Replace 目标（可选）</Label>
+                <select
+                  id="replace-file"
+                  value={selectedReplace}
+                  onChange={(event) => setSelectedReplace(event.target.value)}
+                >
+                  <option value="">新文件</option>
+                  {activeFiles.map((file) => (
+                    <option key={file.file_id} value={file.file_id}>
+                      {file.original_name ?? file.file_id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="consumer-actions">
+                <Button
+                  type="button"
+                  onClick={() => void upload()}
+                  disabled={!selectedFile || uploadPending}
+                >
+                  {uploadPending ? '上传中…' : '预约并上传'}
+                </Button>
+                {uploadPending ? (
+                  <ConsumerStatus busy>
+                    正在预约并上传；断线不会自动重传。
+                  </ConsumerStatus>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="consumer-card" data-test="consumer-files">
+            <div className="consumer-card-header">
+              <div>
+                <h2>文件状态</h2>
+                <p className="consumer-card-description">
+                  点击“查看详情”读取单个文件的权威状态。
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void load(true)}
+              >
+                刷新状态
+              </Button>
+            </div>
+            {files.length === 0 ? (
+              <ConsumerEmptyState
+                title="还没有配置文件"
+                description="上传第一个文件后，它会出现在这里。"
+              />
+            ) : (
+              <div className="consumer-data-list">
+                {files.map((file) => {
+                  const status = fileStatus(file);
+                  const pending = rowPending[file.file_id];
+                  return (
+                    <article key={file.file_id} className="consumer-row">
+                      <div className="min-w-0">
+                        <div className="consumer-row-title">
+                          <span className="break-all">
+                            {file.original_name ?? '未命名文件'}
+                          </span>
+                          <StatusBadge
+                            label={status.label}
+                            tone={status.tone}
+                            rawValue={
+                              file.write_outcome === 'unknown'
+                                ? 'unknown'
+                                : file.status
+                            }
+                          />
+                        </div>
+                        <span className="consumer-row-meta">
+                          {formatBytes(file.size)} · {file.content_type} ·
+                          预算占用 {formatBytes(file.reserved_bytes)}
+                        </span>
+                        <span className="consumer-row-meta">
+                          更新时间 {formatDate(file.updated_at)} · ID{' '}
+                          <span className="consumer-code">{file.file_id}</span>
+                        </span>
+                        {file.write_outcome === 'unknown' ||
+                        file.status === 'deleting' ? (
+                          <span className="consumer-row-meta text-warning-foreground">
+                            结果或删除仍在确认中；预算不会被页面提前释放。
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="consumer-row-actions">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void openInspector(file.file_id)}
+                        >
+                          查看详情
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void download(file)}
+                          disabled={
+                            Boolean(pending) ||
+                            file.status !== 'active' ||
+                            file.write_outcome !== 'confirmed'
+                          }
+                        >
+                          {pending === 'download' ? '下载中…' : '下载'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDelete(file)}
+                          disabled={
+                            Boolean(pending) || file.status === 'deleted'
+                          }
+                        >
+                          {pending === 'delete' ? '提交中…' : '删除'}
+                        </Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </>
+      ) : null}
+
+      {deleteIntent ? (
+        <ConfirmActionDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) closeDelete();
+          }}
+          title="删除配置文件"
+          targetIdentity={deleteIntent.file.file_id}
+          impact="删除是异步操作；文件进入 deleting 后预算仍可能占用，页面不会提前显示为已释放。"
+          reversible={false}
+          state={deleteState}
+          error={deleteError}
+          onCheckUnknown={
+            deleteState === 'unknown_outcome' ? checkDeleteUnknown : undefined
+          }
+          onConfirm={() => void submitDelete()}
+        />
+      ) : null}
+
+      <ResourceInspector
+        open={Boolean(inspectorFileId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInspectorFileId(null);
+            setInspectedFile(null);
+          }
+        }}
+        title={inspectedFile?.original_name ?? '文件详情'}
+        description="只显示服务端返回的文件元数据和状态；不在浏览器直接预览二进制。"
+      >
+        {inspectorState === 'loading' ? <AsyncState state="loading" /> : null}
+        {inspectorState === 'error' || inspectorState === 'access' ? (
+          <ConsumerRemoteStateView
+            state={inspectorState}
+            error={inspectorError}
+            onRetry={() =>
+              inspectorFileId && void openInspector(inspectorFileId)
+            }
+          />
+        ) : null}
+        {inspectorState === 'success' && inspectedFile ? (
+          <>
+            <div className="consumer-actions">
+              <StatusBadge
+                label={fileStatus(inspectedFile).label}
+                tone={fileStatus(inspectedFile).tone}
+                rawValue={inspectedFile.status}
+              />
+              <ResourceId value={inspectedFile.file_id} />
+            </div>
+            <dl className="consumer-detail-grid">
+              <Detail label="状态" value={inspectedFile.status} />
+              <Detail label="写入结果" value={inspectedFile.write_outcome} />
+              <Detail
+                label="文件大小"
+                value={formatBytes(inspectedFile.size)}
+              />
+              <Detail
+                label="实际大小"
+                value={formatBytes(inspectedFile.actual_size_bytes)}
+              />
+              <Detail label="内容类型" value={inspectedFile.content_type} />
+              <Detail
+                label="预算占用"
+                value={formatBytes(inspectedFile.reserved_bytes)}
+              />
+              <Detail
+                label="创建时间"
+                value={formatDate(inspectedFile.created_at)}
+              />
+              <Detail
+                label="更新时间"
+                value={formatDate(inspectedFile.updated_at)}
+              />
+            </dl>
+            <div className="consumer-actions">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void download(inspectedFile)}
+                disabled={
+                  inspectedFile.status !== 'active' ||
+                  inspectedFile.write_outcome !== 'confirmed'
+                }
+              >
+                下载
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => openDelete(inspectedFile)}
+                disabled={inspectedFile.status === 'deleted'}
+              >
+                删除
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </ResourceInspector>
+    </ConsumerShell>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="consumer-stat">
+      <dt className="consumer-detail-label">{label}</dt>
+      <dd className="mt-1 break-all text-sm text-foreground">{value}</dd>
+    </div>
   );
 }
