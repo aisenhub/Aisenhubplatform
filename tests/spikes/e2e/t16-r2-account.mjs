@@ -1867,6 +1867,7 @@ try {
       adminAal1AndSuspend: 'PASS',
       adminErrorCopyMatrix: 'PASS',
       filesStateMatrix: 'PASS',
+      settingsLifecycleMatrix: 'PASS',
       batchReplayBoundaryUi: 'PASS',
       adminBatchConfirmationUi: 'PASS',
       multiTabTerminal: 'PASS',
