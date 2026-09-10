@@ -117,6 +117,24 @@ function assertStatus(actual, expected, label) {
   );
 }
 
+async function assertTechnicalDetailIsNotSummary(locator, code, label) {
+  const summaryText = await locator.evaluate((element) => {
+    const clone = element.cloneNode(true);
+    clone.querySelectorAll('details').forEach((details) => details.remove());
+    return clone.textContent ?? '';
+  });
+  assert.equal(
+    summaryText.includes(code),
+    false,
+    `${label} technical code must stay out of user-facing copy`,
+  );
+  assert.equal(
+    await locator.locator('details').getByText(code, { exact: true }).count(),
+    1,
+    `${label} technical code must remain available in technical details`,
+  );
+}
+
 function decodeBase32(value) {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const bits = value
@@ -993,24 +1011,6 @@ async function exerciseBatchReplayUi(page) {
 }
 
 async function exerciseAdminErrorCopyMatrix(page) {
-  async function assertTechnicalDetailIsNotSummary(locator, code, label) {
-    const summaryText = await locator.evaluate((element) => {
-      const clone = element.cloneNode(true);
-      clone.querySelectorAll('details').forEach((details) => details.remove());
-      return clone.textContent ?? '';
-    });
-    assert.equal(
-      summaryText.includes(code),
-      false,
-      `${label} technical code must stay out of user-facing copy`,
-    );
-    assert.equal(
-      await locator.locator('details').getByText(code, { exact: true }).count(),
-      1,
-      `${label} technical code must remain available in technical details`,
-    );
-  }
-
   const directoryEndpoint = '/api/v1/admin/api/v1/platforms';
   const directoryRoute = (url) => new URL(url).pathname === directoryEndpoint;
   await page.route(directoryRoute, async (route) => {
@@ -1089,9 +1089,16 @@ async function exerciseAdminErrorCopyMatrix(page) {
     waitUntil: 'domcontentloaded',
   });
   await page.getByRole('heading', { name: '平台设置' }).waitFor();
+  let settingsPatchMode = 'conflict';
+  let settingsPatchCount = 0;
   await page.route(workspaceRoute, async (route) => {
     if (route.request().method() !== 'PATCH') {
       await route.continue();
+      return;
+    }
+    settingsPatchCount += 1;
+    if (settingsPatchMode === 'unknown') {
+      await route.abort('failed');
       return;
     }
     await route.fulfill({
@@ -1121,6 +1128,25 @@ async function exerciseAdminErrorCopyMatrix(page) {
       page.locator('[data-test="confirm-action-error"]'),
       'IDEMPOTENCY_CONFLICT',
       'conflict',
+    );
+    assert.equal(settingsPatchCount, 1, 'settings conflict must submit once');
+    await page.locator('[data-test="confirm-action-cancel"]').click();
+
+    settingsPatchMode = 'unknown';
+    await page.locator('[data-test="platform-settings-toggle"]').click();
+    await page.locator('[data-test="confirm-action-submit"]').click();
+    await page.getByText('平台状态结果待确认', { exact: true }).waitFor();
+    assert.equal(
+      settingsPatchCount,
+      2,
+      'settings network unknown must not automatically resubmit',
+    );
+    await page.locator('[data-test="confirm-action-check-unknown"]').click();
+    await page.getByText('已请求重新读取平台状态', { exact: true }).waitFor();
+    assert.equal(
+      settingsPatchCount,
+      2,
+      'settings state check must not resubmit the original mutation',
     );
     await page.locator('[data-test="confirm-action-cancel"]').click();
   } finally {
@@ -1531,6 +1557,7 @@ async function exerciseSettingsLifecycleMatrix(page) {
   };
   let originCreateCount = 0;
   let originCreated = false;
+  let originListMode = 'success';
   const originRoute = (url) => new URL(url).pathname === originEndpoint;
   await page.route(originRoute, async (route) => {
     if (route.request().method() === 'POST') {
@@ -1551,6 +1578,23 @@ async function exerciseSettingsLifecycleMatrix(page) {
     }
     if (route.request().method() !== 'GET') {
       await route.continue();
+      return;
+    }
+    if (originListMode === 'unavailable') {
+      await route.fulfill({
+        status: 503,
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          error: {
+            code: 'STORAGE_UNAVAILABLE',
+            message: 'STORAGE_UNAVAILABLE',
+          },
+          request_id: crypto.randomUUID(),
+        }),
+      });
       return;
     }
     await route.fulfill({
@@ -1593,6 +1637,22 @@ async function exerciseSettingsLifecycleMatrix(page) {
     await page.locator('[data-test="platform-origin-create-submit"]').click();
     await page.getByText(createdOrigin.origin, { exact: true }).waitFor();
     assert.equal(originCreateCount, 1, 'Origin create must submit once');
+
+    originListMode = 'unavailable';
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.getByRole('heading', { name: 'Origins', exact: true }).waitFor();
+    const originError = page.locator('[data-test="recoverable-error"]');
+    await originError
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      originError,
+      'STORAGE_UNAVAILABLE',
+      'origin list unavailable',
+    );
+    originListMode = 'success';
+    await originError.locator('[data-test="async-retry"]').click();
+    await page.getByText(createdOrigin.origin, { exact: true }).waitFor();
   } finally {
     await page.unroute(originRoute);
   }
@@ -1621,6 +1681,7 @@ async function exerciseSettingsLifecycleMatrix(page) {
   let keyDeployed = false;
   let keyRevoked = false;
   let keyCreateCount = 0;
+  let keyListMode = 'success';
   const createdKey = () => ({
     key_id: createdKeyId,
     platform_id: platformAId,
@@ -1643,6 +1704,23 @@ async function exerciseSettingsLifecycleMatrix(page) {
     const method = route.request().method();
     const pathname = new URL(route.request().url()).pathname;
     if (method === 'GET' && pathname === keyEndpoint) {
+      if (keyListMode === 'unavailable') {
+        await route.fulfill({
+          status: 503,
+          headers: {
+            'content-type': 'application/json',
+            'x-request-id': crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            error: {
+              code: 'AUTHORIZATION_UNAVAILABLE',
+              message: 'AUTHORIZATION_UNAVAILABLE',
+            },
+            request_id: crypto.randomUUID(),
+          }),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         headers: {
@@ -1761,6 +1839,24 @@ async function exerciseSettingsLifecycleMatrix(page) {
     assertStatus(revokeResponse.status(), 200, 'Platform Key revoke');
     await createdKeyRow.getByText('revoked', { exact: true }).waitFor();
     await page.locator('[data-test="confirm-action-cancel"]').click();
+
+    keyListMode = 'unavailable';
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page
+      .getByRole('heading', { name: 'Platform Keys', exact: true })
+      .waitFor();
+    const keyError = page.locator('[data-test="recoverable-error"]');
+    await keyError
+      .getByText('服务暂时不可用，请稍后重试。', { exact: false })
+      .waitFor();
+    await assertTechnicalDetailIsNotSummary(
+      keyError,
+      'AUTHORIZATION_UNAVAILABLE',
+      'platform key list unavailable',
+    );
+    keyListMode = 'success';
+    await keyError.locator('[data-test="async-retry"]').click();
+    await createdKeyRow.getByText('revoked', { exact: true }).waitFor();
   } finally {
     await page.unroute(keyRoute);
   }

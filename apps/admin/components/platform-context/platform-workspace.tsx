@@ -69,102 +69,110 @@ export function PlatformWorkspace({
     sessionSnapshot.resolved &&
     ['unauthenticated', 'expired'].includes(sessionSnapshot.state);
 
-  const load = useCallback(async () => {
-    const generation = generationRef.current + 1;
-    generationRef.current = generation;
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
-    const epoch = adminAuthSession.getEpoch();
+  const load = useCallback(
+    async (preserveCurrent = false) => {
+      const generation = generationRef.current + 1;
+      generationRef.current = generation;
+      controllerRef.current?.abort();
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      const epoch = adminAuthSession.getEpoch();
+      const keepCurrentContext = preserveCurrent;
 
-    setPlatform(null);
-    setError(null);
-    setState('loading');
-
-    try {
-      const response = await adminAuthSession.request(
-        `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}`,
-        { cache: 'no-store', signal: controller.signal },
-      );
-      const payload = (await response
-        .json()
-        .catch(() => null)) as PlatformResponse | null;
-      const requestId =
-        response.headers.get('x-request-id') ?? payload?.request_id ?? null;
-
-      if (
-        generation !== generationRef.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-
-      if (!response.ok || !payload?.data) {
-        const nextError: WorkspaceError =
-          response.status === 401
-            ? {
-                title: '会话已结束',
-                description: '请重新登录后再打开平台工作区。',
-                requestId,
-                technicalDetail:
-                  payload?.error?.code ?? `HTTP_${response.status}`,
-              }
-            : response.status === 403
-              ? {
-                  title: '没有平台访问权限',
-                  description: '当前管理员账号不能访问这个平台上下文。',
-                  requestId,
-                  technicalDetail: payload?.error?.code ?? 'FORBIDDEN',
-                }
-              : response.status === 404
-                ? {
-                    title: '平台不存在',
-                    description:
-                      'URL 中的平台 ID 未找到。页面不会回退到其他平台或继续显示旧数据。',
-                    requestId,
-                    technicalDetail:
-                      payload?.error?.code ?? 'PLATFORM_NOT_FOUND',
-                  }
-                : {
-                    title: '平台上下文暂时不可用',
-                    description: apiErrorDescription(
-                      response,
-                      payload,
-                      '请检查网络或服务状态后重试；当前页面不会显示不属于此平台的数据。',
-                    ),
-                    requestId,
-                    technicalDetail:
-                      payload?.error?.code ?? `HTTP_${response.status}`,
-                  };
-
-        setError(nextError);
-        setState(
-          response.status === 401 || response.status === 403
-            ? 'access'
-            : response.status === 404
-              ? 'not-found'
-              : 'error',
-        );
-        return;
+      setError(null);
+      if (!keepCurrentContext) {
+        setPlatform(null);
+        setState('loading');
       }
 
-      setPlatform(payload.data);
-      setState('success');
-    } catch (caught) {
-      if (controller.signal.aborted) return;
-      if (
-        generation !== generationRef.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      setError({
-        title: '平台上下文读取失败',
-        description: sessionErrorMessage(caught),
-        requestId: null,
-        technicalDetail: null,
-      });
-      setState('error');
-    }
-  }, [platformId]);
+      try {
+        const response = await adminAuthSession.request(
+          `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}`,
+          { cache: 'no-store', signal: controller.signal },
+        );
+        const payload = (await response
+          .json()
+          .catch(() => null)) as PlatformResponse | null;
+        const requestId =
+          response.headers.get('x-request-id') ?? payload?.request_id ?? null;
+
+        if (
+          generation !== generationRef.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+
+        if (!response.ok || !payload?.data) {
+          const nextError: WorkspaceError =
+            response.status === 401
+              ? {
+                  title: '会话已结束',
+                  description: '请重新登录后再打开平台工作区。',
+                  requestId,
+                  technicalDetail:
+                    payload?.error?.code ?? `HTTP_${response.status}`,
+                }
+              : response.status === 403
+                ? {
+                    title: '没有平台访问权限',
+                    description: '当前管理员账号不能访问这个平台上下文。',
+                    requestId,
+                    technicalDetail: payload?.error?.code ?? 'FORBIDDEN',
+                  }
+                : response.status === 404
+                  ? {
+                      title: '平台不存在',
+                      description:
+                        'URL 中的平台 ID 未找到。页面不会回退到其他平台或继续显示旧数据。',
+                      requestId,
+                      technicalDetail:
+                        payload?.error?.code ?? 'PLATFORM_NOT_FOUND',
+                    }
+                  : {
+                      title: '平台上下文暂时不可用',
+                      description: apiErrorDescription(
+                        response,
+                        payload,
+                        '请检查网络或服务状态后重试；当前页面不会显示不属于此平台的数据。',
+                      ),
+                      requestId,
+                      technicalDetail:
+                        payload?.error?.code ?? `HTTP_${response.status}`,
+                    };
+
+          setError(nextError);
+          if (!keepCurrentContext) {
+            setState(
+              response.status === 401 || response.status === 403
+                ? 'access'
+                : response.status === 404
+                  ? 'not-found'
+                  : 'error',
+            );
+          }
+          return;
+        }
+
+        setPlatform(payload.data);
+        setState('success');
+      } catch (caught) {
+        if (controller.signal.aborted) return;
+        if (
+          generation !== generationRef.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        setError({
+          title: '平台上下文读取失败',
+          description: sessionErrorMessage(caught),
+          requestId: null,
+          technicalDetail: null,
+        });
+        if (!keepCurrentContext) setState('error');
+      }
+    },
+    [platformId],
+  );
 
   useEffect(() => {
     if (!sessionIsTerminal) return;
@@ -190,7 +198,7 @@ export function PlatformWorkspace({
   }, [load, sessionIsTerminal]);
 
   const contextValue = useMemo(
-    () => (platform ? { platform, reload: () => void load() } : null),
+    () => (platform ? { platform, reload: () => void load(true) } : null),
     [load, platform],
   );
 
@@ -257,6 +265,18 @@ export function PlatformWorkspace({
     <PlatformWorkspaceContext.Provider value={contextValue}>
       <main className="shell wide-shell" data-test="platform-workspace">
         <PlatformHeader platform={platform} />
+        {error ? (
+          <div className="mb-5">
+            <AsyncState
+              state="error"
+              title={error.title}
+              description={error.description}
+              requestId={error.requestId}
+              technicalDetail={error.technicalDetail}
+              onRetry={() => void load(true)}
+            />
+          </div>
+        ) : null}
         {children}
       </main>
     </PlatformWorkspaceContext.Provider>
