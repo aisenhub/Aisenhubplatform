@@ -1,10 +1,10 @@
 # Frontend Experience & State Upgrade — Verification Record
 
-> FE-R1（2026-09-10）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01–04 已完成当前代码批次并推送，但均尚未满足全部阶段交付门槛。
+> FE-R1（2026-09-10）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01–05 已完成当前代码批次并推送，但均尚未满足全部阶段交付门槛。
 
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
-> 计划创建状态：Phase 01–04 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 05–08 仍为 **未开始 / 未验证 / 未记录**。  
+> 计划创建状态：Phase 01–05 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 06–08 仍为 **未开始 / 未验证 / 未记录**。
 > 禁止把 `references/`、`docs/development/status.md`、历史 evidence、研究快照或别的分支的 PASS 直接复制为本任务验证结果。
 
 ---
@@ -31,7 +31,7 @@
 ## 1.1 本次目标与实施范围
 
 - 目标：按 `00-master-plan.md` 将 Frontend Experience & State 架构实施到 Admin、Consumer/Registry，并完成 Phase 01–08。
-- 本期范围：**Phase 01、Phase 02、Phase 03、Phase 04 进行中；Phase 05–08 未开始**。
+- 本期范围：**Phase 01、Phase 02、Phase 03、Phase 04、Phase 05 进行中；Phase 06–08 未开始**。
 - Future/第二期：`future/01-diagnostics-search-alerts.md`，本期 **不实施**。
 - 计划目录：`docs/plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/`（执行时确认实际放置位置）。
 
@@ -44,7 +44,7 @@
 | 工作分支 | `codex/frontend-plan-r1` | 已验证 | 任务分支 |
 | upstream branch | `origin/codex/frontend-plan-r1` | 已验证 | `git rev-parse @{u}` |
 | 起始 commit | `5e408286c36ed5b2708e5be55415fb80be51602e` | 已验证 | 阶段开始 HEAD |
-| 当前 HEAD | `5b25ed9659e906a633e1589571cf29db36772d62` | 已验证 | Phase 04 code commit |
+| Phase 05 code commit | `7682698eb666bc4dfee8e34ac7e971734a70d301` | 已验证 | 代码提交；verification docs 随后独立提交 |
 | 初始工作区状态 | clean | 已验证 | 阶段开始 `git status --short` 为空 |
 | 初始已有修改 | 无 | 已验证 | 未覆盖归属不明修改 |
 | 远程是否含起始 commit | 是 | 已验证 | code push 后 `git ls-remote` 核对 |
@@ -108,8 +108,8 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | 02 | Platform Context + Workspace | 进行中 | Platform Directory、URL 平台上下文、Switcher、Header、Overview、嵌套路由骨架、legacy settings 兼容入口 | 真实 Admin session 下的成功/403/404/disabled/切换正向数据、390px 与最终阶段门槛 | Phase 01 必要基础已存在；Phase 01 正向 session/390px 仍待补齐 | `e9c5c9f` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/e9c5c9fa096b9a193c59e08e233923f8908c75a2) |
 | 03 | High-risk State & Interactions | 进行中 | MutationState、确认弹窗、近期 MFA step-up、accepted/unknown outcome、一次性密钥、账户/Key 高风险动作、安全总览代码 | 真实 Admin session、正向高风险 mutation、409/412/429/503/202/网络歧义、390px 与最终阶段门槛 | Phase 02 代码批次已推送；Auth 依赖按实际核对 | `f4026bf` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/f4026bffa920cf7c6ceec27907d72ea380f97a19) |
 | 04 | Accounts & Entitlements Resource Pages | 进行中 | Accounts、Plans、Subscriptions detail、Redemption Batches 真实 API 页面；URL 状态、行级 mutation、MFA/冲突/未知结果、一次性密文交付；旧入口退出 | 真实 Admin session 下资源正向矩阵、M3 批次 SQL 探针合同修复/复验、390px 与最终阶段门槛 | Phase 03 代码批次已推送；API 能力矩阵已按当前本地实现核对 | `5b25ed9` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/5b25ed9659e906a633e1589571cf29db36772d62) |
-| 05 | Files & Platform Settings | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；阶段验收门槛仍待补齐 | 未记录 | 未验证 | 未记录 |
-| 06 | Operations + Audit + Overview | 未开始 | 无 | 全部 | Phase 04 + 05 已交付 | 未记录 | 未验证 | 未记录 |
+| 05 | Files & Platform Settings | 进行中 | Files/Policy、Platform General、Origins、Keys 平台范围页面；FE-D01 scoped file query；旧 Files/legacy mutation UI 退出；Admin logout 与 T12 正向 flow | 390px、Files/Settings 完整正向与故障矩阵、Phase 01–05 最终交付门槛 | Phase 04 代码批次已推送；FE-D01 已在本地实现并核对 | `7682698` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7682698eb666bc4dfee8e34ac7e971734a70d301) |
+| 06 | Operations + Audit + Overview | 未开始 | 无 | 全部 | Phase 04/05 代码批次已推送；各阶段交付门槛仍待补齐 | 未记录 | 未验证 | 未记录 |
 | 07 | Consumer + Registry Adoption | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；Auth 依赖按实际核对 | 未记录 | 未验证 | 未记录 |
 | 08 | Responsive + Accessibility + Integration + Cleanup | 未开始 | 无 | 全部 | Phase 04 + 05 + 06 + 07 已交付 | 未记录 | 未验证 | 未记录 |
 
@@ -352,37 +352,46 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 ## 7.1 阶段元数据
 
-- 状态：**未开始**
-- 开始 HEAD：未记录
-- 代码 commit：未记录
-- Push：未验证
+- 状态：**进行中**
+- 开始 HEAD：`c072f58c16378b3430b8d2284bdf0e2f4d179f06`
+- 代码 commit：`7682698eb666bc4dfee8e34ac7e971734a70d301`
+- Push：已验证；`git ls-remote origin refs/heads/codex/frontend-plan-r1` 返回同一 SHA
 
 ## 7.2 实施范围
 
-- Files Usage/Policy/Table/Inspector：未开始。
-- row-level upload/delete/download pending：未开始。
-- 202 accepted / deleting / unknown outcome recovery：未开始。
-- File Policy 归 Files：未开始。
-- Platform General / Origins / Keys final pages：未开始。
-- old `/admin/files` / platform mega-page routes exit：未开始。
+- Files Usage/Policy/Table/Inspector：已实现；文件列表由服务端 `platform_id` 范围分页，策略与文件列表独立加载，Inspector 二次校验平台归属。
+- row-level upload/delete/download pending：已实现下载/删除行级 pending；删除保留稳定 Idempotency-Key，并区分 accepted、unknown outcome 与权威状态检查。
+- 202 accepted / deleting / unknown outcome recovery：已实现；页面不把 deleting 当作物理删除或容量释放，不提供绕过状态机的释放/重复上传入口。
+- File Policy 归 Files：已实现 enabled、max_file_bytes、max_files、max_total_bytes、usage/over-quota 展示和 recent MFA step-up。
+- Platform General / Origins / Keys final pages：已实现真实 API 页面；Origins 只提供真实 create/list 能力，Keys 复用一次性明文面板并保留 deployment/revoke 状态。
+- old `/admin/files` / platform mega-page routes exit：已实现 `/admin/files` → `/admin/platforms` redirect；旧 platform settings mutation UI 删除；Admin Overview 入口改到平台目录。
+- FE-D01：新增 `admin_file_list_v3` scoped SQL wrapper 与可选 `platform_id` handler 参数，保留无参数 global compatibility；同步 OpenAPI、合同和权限/分页测试。
 
 ## 7.3 验证记录
 
 | 日期 | 代码版本 | 命令/场景 | 退出码/结果 | 摘要 |
 |---|---|---|---|---|
-| 未记录 | 未记录 | `pnpm --filter admin typecheck` | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter admin build` | 未执行 | 未记录 |
-| 未记录 | 未记录 | file/API/SQL commands selected from current scripts | 未执行 | 未记录 |
-| 未记录 | 未记录 | upload binary no-auto-replay / delete accepted / unknown / quota/policy | 未验证 | 未记录 |
-| 未记录 | 未记录 | Origins/Keys lifecycle | 未验证 | 未记录 |
+| 2026-09-10 | `7682698` | `pnpm --filter admin typecheck` | 0 / PASS | Admin 类型检查通过 |
+| 2026-09-10 | `7682698` | `pnpm --filter admin build` | 0 / PASS | Next webpack build 通过；Files、Settings/Origins/Keys 和 legacy redirect routes 均生成 |
+| 2026-09-10 | `7682698` | 定向 `pnpm exec oxfmt --check`、`git diff --check` | 0 / PASS | 本阶段触及文件格式与差异检查通过 |
+| 2026-09-10 | `7682698` | `pnpm format:check` | 1 / FAIL (baseline) | 全仓仍报告 66 个未触及文件格式问题；未扩大改动范围 |
+| 2026-09-10 | `7682698` | `pnpm lint` | 0 / PASS with warning | 仅既有 MFA 二维码 `<img>` 的 `next/no-img-element` warning |
+| 2026-09-10 | `7682698` | `pnpm typecheck`、`pnpm test:unit`、`pnpm docs:check`、`pnpm contracts:check` | 0 / PASS | 根 typecheck、unit、文档检查、OpenAPI 合同检查通过 |
+| 2026-09-10 | `7682698` | Deno account-api unit；`supabase test db --local supabase/tests/t17_admin_resource_search.sql` | 0 / PASS | Edge 19/19；FE-D01 pgTAP 11/11 |
+| 2026-09-10 | `7682698` | FE-D01 local scoped query + cross-platform cursor DO probe | 0 / PASS | 两个平台范围无串行行；跨平台 cursor 被 `22023` 拒绝 |
+| 2026-09-10 | `7682698` | `pnpm test:sql:m4-03-file-intent`、`pnpm test:api:m4-04-upload`、`pnpm test:api:m4-07-file-query-download`、`pnpm test:sql:m4-06-replace-switch` | 0 / PASS | 文件意图、上传、查询/下载、替换切换链路通过 |
+| 2026-09-10 | `7682698` | `pnpm test:sql:m4-05-file-cleanup` | 1 / FAIL (既有/未由本阶段引入) | `tests/spikes/sql/m4-05-file-cleanup.mjs:248` 期望 `unknown_write`、实际 `delete_backlog`；失败保留，未修改相关后端清理逻辑 |
+| 2026-09-10 | `7682698` | `T12_ADMIN_APP_URL=http://localhost:3000 T12_ALLOW_SYSTEM_ADMIN_SWAP=1 pnpm test:e2e:t12-r2` | 0 / PASS | 登录、AAL1 拒绝、MFA、近期证明、真实 Plan 创建、退出及旧 JWT 拒绝通过；Files 无独立真实数据正向矩阵 |
+| 2026-09-10 | `7682698` | Phase 05 impeccable detector | 0 / PASS | 最终 UI 修改后运行一次，结果为 `[]` |
+| 2026-09-10 | `7682698` | 390px viewport / 完整键盘与浏览器故障注入矩阵 | NOT_RUN | 当前 CUA 不提供 viewport override；本地正向 E2E 未覆盖所有文件状态/高风险 mutation |
 
 ## 7.4 GitHub / 交接
 
-- code commit：未记录
-- push：未验证
-- remote confirmation：未验证
-- 给 Phase 06 的 file attention/operation source：未记录
-- 未提交修改：未记录
+- code commit：`7682698eb666bc4dfee8e34ac7e971734a70d301`
+- push：已验证
+- remote confirmation：已验证；远端 `origin/codex/frontend-plan-r1` 与代码 SHA 一致
+- 给 Phase 06 的 file attention/operation source：平台 Files 列表已能按 `platform_id` 有界读取；`deleting`/`write_outcome=unknown` 可在平台范围内投影，Global Operations 仍需 Phase 06 按 bounded source 设计
+- 未提交修改：verification record 与 Phase 05 计划更新将形成 docs-only commit
 - 需要用户决定：无
 
 ---
@@ -632,6 +641,22 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 未运行项：真实 Admin session 下四资源页成功/403/404/disabled/切换正向矩阵、完整 409/412/429/503/202/网络歧义浏览器矩阵、390px 视口和完整键盘矩阵。M3 需修正现有探针 receipt fixture 与后端合同后复验。
 - 该结果是否仍覆盖当前代码：是；之后仅追加本 verification record docs 变更。
 
+## VR-0006 — Phase 05 files and platform settings
+
+- 日期：2026-09-10
+- 阶段：Phase 05
+- 被验证 commit：`7682698eb666bc4dfee8e34ac7e971734a70d301`
+- 工作区是否 clean：是（code commit/push 后、docs-only record commit 前）
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Deno 2.1.4；Supabase CLI 2.111.0；本地 Supabase/Edge Runtime；Admin production server `http://localhost:3000`
+- 命令/操作：Admin/root typecheck、build、unit、lint、contracts、docs、目标文件格式/diff、Phase 05 impeccable detector；FE-D01 migration/local pgTAP、scoped/cross-platform cursor SQL、M4-03/M4-04/M4-06/M4-07 文件回归、M4-05 cleanup probe；T12 Admin browser flow。
+- Exit code / 浏览器结果：目标文件定向格式、lint、typecheck、build、unit、contracts、docs、Edge 19/19、pgTAP 11/11、FE-D01 scope probe、M4-03/M4-04/M4-06/M4-07、T12 browser 和 detector 全部 PASS；全仓 `pnpm format:check` 仍为 baseline FAIL；M4-05 cleanup 仍为 FAIL，见下方。
+- 结果摘要：Files/Policy/Inspector、Platform General、Origins、Keys 已进入 platform-scoped routes；文件列表通过 server-side `platform_id` + cursor；202/deleting/unknown outcome、受控删除、binary download、MFA step-up、一次性 Key secret 和 logout UX 均有对应状态表达；旧 `/admin/files` 与 legacy settings mutation UI 退出。
+- FE-D01 证据：新 migration `20260910024057_admin_file_platform_scope.sql` 已由固定版本 CLI 生成并 local apply；global 无参数兼容、两平台范围无串行行、跨平台 cursor `22023` 拒绝、invalid UUID 400、OpenAPI/handler/pgTAP/Edge test 均已核对。
+- 失败原因：`pnpm format:check` 报告全仓 66 个未触及文件格式问题；`m4-05-file-cleanup` 在既有清理探针第 248 行期望 `unknown_write`、实际 `delete_backlog`，本阶段未修改清理领域逻辑。
+- 未运行项：390px viewport、完整键盘/焦点矩阵、Files/Policy/Origins/Keys 全状态的真实浏览器正向与故障注入矩阵；当前工具/本地数据条件不足，均不伪造为 PASS。
+- 修复与复测：修正 T12 对 `data-test` 的定位并添加管理员顶栏退出按钮；重新 build 后 T12 全链路 PASS。
+- 该结果是否仍覆盖当前代码：是；之后仅追加 verification record/plan docs 变更。
+
 ---
 
 # 12. GitHub 交付记录追加区
@@ -641,6 +666,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | 2026-09-09 | Phase 01 | code | `codex/frontend-plan-r1` | `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) | PASS | PASS | 远端 SHA 与本地一致；Phase 01 仍因未完成正向 session/390 验收保持进行中 |
 | 2026-09-10 | Phase 03 | code | `codex/frontend-plan-r1` | `f4026bffa920cf7c6ceec27907d72ea380f97a19` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/f4026bffa920cf7c6ceec27907d72ea380f97a19) | PASS | PASS | 远端 SHA 与本地一致；Phase 03 仍因真实高风险正向矩阵/390px 未完成保持进行中 |
 | 2026-09-10 | Phase 04 | code | `codex/frontend-plan-r1` | `5b25ed9659e906a633e1589571cf29db36772d62` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/5b25ed9659e906a633e1589571cf29db36772d62) | PASS | PASS | 远端 SHA 与本地一致；Phase 04 仍因真实资源正向矩阵、M3 探针合同和 390px 未完成保持进行中 |
+| 2026-09-10 | Phase 05 | code | `codex/frontend-plan-r1` | `7682698eb666bc4dfee8e34ac7e971734a70d301` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7682698eb666bc4dfee8e34ac7e971734a70d301) | PASS | PASS | 远端 SHA 与本地一致；Phase 05 仍因 390px、完整 Files/Settings 正向与故障矩阵、全阶段门槛未完成保持进行中 |
 
 ---
 
@@ -648,13 +674,13 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 04 代码实现与推送；Phase 01、Phase 02、Phase 03、Phase 04 均仍进行中**。
-- 下一阶段从哪里开始：补齐可用 Admin session 后复验 Phase 01–04 正向场景；开始实现 Phase 05 Files 与 Platform Settings，先核对 FE-D01 平台文件查询依赖。
-- 必须先处理：FE-D02 在 Phase 03 核验批次重复创建；FE-D01 在 Phase 05 平台 Files 前通过。FE-D03 最小验证已 PASS，完整 Consumer/Registry 安装仍留给 Phase 07。
+- 当前最后完成阶段：**Phase 05 代码实现与推送；Phase 01、Phase 02、Phase 03、Phase 04、Phase 05 均仍进行中**。
+- 下一阶段从哪里开始：核对 Phase 06 的 operations/audit 数据源边界，基于 deletion jobs 与平台文件 attention 实现有界 Operations；同时保留前序阶段未完成的正向/390px/故障门槛。
+- 必须先处理：FE-D02 在 Phase 03/04 的批次重复创建核验仍未闭环；FE-D01 已在 Phase 05 本地实现并通过范围/权限核对。FE-D03 最小验证已 PASS，完整 Consumer/Registry 安装仍留给 Phase 07。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
-- 当前未提交修改及归属：verification record 待 docs-only commit；产品代码无未提交修改。
-- 当前 branch / HEAD：`codex/frontend-plan-r1` / `5b25ed9659e906a633e1589571cf29db36772d62`。
+- 当前未提交修改及归属：verification record 与 Phase 05 计划待 docs-only commit；产品代码无未提交修改。
+- 当前 branch / HEAD：`codex/frontend-plan-r1` / Phase 05 code `7682698eb666bc4dfee8e34ac7e971734a70d301`（docs-only commit 后以 Git 为准）。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -673,11 +699,11 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 | 项目 | 状态 | 说明 |
 |---|---|---|
-| FE-D01 平台文件查询 | NOT_STARTED | 05前硬依赖 |
+| FE-D01 平台文件查询 | IMPLEMENTED_LOCAL | 05 已完成本地 migration/handler/OpenAPI/权限/分页核对；完整阶段交付仍受浏览器矩阵约束 |
 | FE-D02 批次重复创建核验 | NOT_STARTED | 03核验，04消费 |
 | FE-D03 UI分发最小验证 | PASS | 01已完成本地 tarball consumer install/typecheck/build/browser；07仍需完整产物验证 |
 | FE-V01～16 | NOT_RUN | 具体定义见执行合同；逐项记录SHA/环境/用例/结果 |
-| 前端Phase01～08 | Phase01～04进行中；05～08未开始 | Phase01～04代码批次已提交并推送；各阶段真实 session/正向数据/390px 等交付门槛仍未全部满足 |
+| 前端Phase01～08 | Phase01～05进行中；06～08未开始 | Phase01～05代码批次已提交并推送；各阶段真实 session/正向数据/390px 等交付门槛仍未全部满足 |
 | Staging/生产/部署 | NOT_RUN | 本轮未执行 |
 
 ## FE-R1 文档静态验证
@@ -694,4 +720,4 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 修订提交：`8a0b81bba716e90c5a3dd05a0130993da1223ba3`。
 - 已push至`origin/codex/frontend-plan-r1`，`git ls-remote origin refs/heads/codex/frontend-plan-r1`返回同一完整SHA，已核对远端包含修订。
 - [GitHub文档提交](https://github.com/aisenhub/Aisenhubplatform/commit/8a0b81bba716e90c5a3dd05a0130993da1223ba3)。本段由后续独立记录提交维护，不反复amend。
-- 下一项满足派发条件：继续实现 Phase05 Files 与 Platform Settings；同时保留 Phase01–04 真实 session、正向资源数据、故障矩阵、M3 探针合同对齐和 390px 验收为阶段交付门槛。Phase04代码已独立推送，main未合并，未Release/部署。
+- 下一项满足派发条件：继续实现 Phase06 Operations、Audit 与 Overview；同时保留 Phase01–05 真实 session/正向数据、故障矩阵、M3/M4 已知失败处理和 390px 验收为阶段交付门槛。Phase05代码已独立推送，main未合并，未Release/部署。

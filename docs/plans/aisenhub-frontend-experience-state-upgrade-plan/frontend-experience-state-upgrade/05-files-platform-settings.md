@@ -1,9 +1,9 @@
 # Phase 05 — Files、File Policy 与 Platform Settings
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；产品实施仍未开始。
+> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 05 产品实现已开始，验收记录以 `verification-record.md` 为准。
 
-> 状态：**未开始**  
-> 前置：Phase 01–03 已交付并 push。  
+> 状态：**进行中**  
+> 前置：Phase 01–04 代码批次已推送；Phase 05 的 FE-D01 已在本地实现并通过 SQL/handler 静态核对，完整阶段验收仍待本阶段提交后的记录确认。  
 > 可与 Phase 04、07 并行。  
 > 文件所有权建议：`apps/admin/features/files|platform-settings|origins|platform-keys/**` 及对应 nested routes；不要修改 Entitlements/Consumer/shared contract。
 
@@ -334,7 +334,13 @@ pnpm test:api:m4-04-upload
 
 只运行与实际改动风险相关且当前 package.json 真存在的命令；不要把没有修改 backend 的测试 failure 隐瞒为 UI pass。Admin browser flow 优先扩展现有 Playwright；执行时核对 `test:e2e:t12-r2` 是否覆盖对应路径。
 
-## 19. 完成门槛与 Git
+## 19. 当前实施状态
+
+- Files/Policy、Platform General、Origins、Keys 已迁移到平台上下文路由；旧 `/admin/files` 仅保留到平台目录的兼容 redirect。
+- FE-D01 已新增受控 `admin_file_list_v3`：可选 `platform_id` 在 cursor 分页前过滤；无效 UUID、未知平台和跨平台 cursor 均有稳定拒绝语义，旧无参数全局查询保持兼容。
+- Phase 05 代码与测试已完成本地批次，真实 Admin/MFA/Plan browser flow 已通过；`verification-record.md` 仍需在代码 push 后据实填入 SHA、全量命令结果与未运行项。
+
+## 20. 完成门槛与 Git
 
 - Files/Policy/General/Origins/Keys 新 scope 实际可用；
 - file 202/unknown/deleting 语义正确；
@@ -350,7 +356,7 @@ pnpm test:api:m4-04-upload
 
 ## FE-R1 阶段补充：平台文件查询硬依赖
 
-- 平台Files依赖FE-D01实际通过。当前API不支持platform_id精确列表，禁止延续global page再client filter；必验交错多平台、多页、空平台和跨平台cursor。
+- 平台Files依赖FE-D01实际通过。当前 API 已支持 `platform_id` 精确列表，过滤在服务端 cursor 分页前执行；仍须保持交错多平台、多页、空平台和跨平台 cursor 的验收证据。
 - 文件列表排除deleted，列表消失不能证明物理删除。通过detail/领域合同确认状态；404本身不得写“容量已释放”。
 - 没有真实usage来源时仅展示策略，不从有界文件页汇总假额度/总量。global file attention保持后续能力，不借FE-D01扩成统一运维feed。
 - 文件策略字段按当前enabled/max_file_bytes/max_files/max_total_bytes，中文标签与单位统一，原API字段不翻译。
