@@ -1,10 +1,10 @@
 # Frontend Experience & State Upgrade — Verification Record
 
-> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01 与 Phase 02 已完成当前代码批次并推送，但均尚未满足全部阶段交付门槛。
+> FE-R1（2026-09-09）：按本地 main@b563a98 校准，Auth 已实施；本期默认简体中文。执行须读取 [FE-R1 执行合同](references/fe-r1-execution-contracts.md) 和 [中文 UI 合同](references/chinese-ui-contract.md)。本修订替代旧快照中的冲突描述；Phase 01–03 已完成当前代码批次并推送，但均尚未满足全部阶段交付门槛。
 
 > 用途：本文件是 **Phase 01–08 实施期间的实际执行、验证、GitHub 交付与交接记录**。  
 > 它不是架构文档，也不是计划说明。新 agent 接手时必须先读本文件，再核对 Git 与实际代码。  
-> 计划创建状态：Phase 01 与 Phase 02 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 03–08 仍为 **未开始 / 未验证 / 未记录**。  
+> 计划创建状态：Phase 01–03 已有实际实施、测试、commit、push 和部分浏览器验收记录；Phase 04–08 仍为 **未开始 / 未验证 / 未记录**。  
 > 禁止把 `references/`、`docs/development/status.md`、历史 evidence、研究快照或别的分支的 PASS 直接复制为本任务验证结果。
 
 ---
@@ -31,7 +31,7 @@
 ## 1.1 本次目标与实施范围
 
 - 目标：按 `00-master-plan.md` 将 Frontend Experience & State 架构实施到 Admin、Consumer/Registry，并完成 Phase 01–08。
-- 本期范围：**Phase 01、Phase 02 进行中；Phase 03–08 未开始**。
+- 本期范围：**Phase 01、Phase 02、Phase 03 进行中；Phase 04–08 未开始**。
 - Future/第二期：`future/01-diagnostics-search-alerts.md`，本期 **不实施**。
 - 计划目录：`docs/plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/`（执行时确认实际放置位置）。
 
@@ -44,7 +44,7 @@
 | 工作分支 | `codex/frontend-plan-r1` | 已验证 | 任务分支 |
 | upstream branch | `origin/codex/frontend-plan-r1` | 已验证 | `git rev-parse @{u}` |
 | 起始 commit | `5e408286c36ed5b2708e5be55415fb80be51602e` | 已验证 | 阶段开始 HEAD |
-| 当前 HEAD | `e9c5c9fa096b9a193c59e08e233923f8908c75a2` | 已验证 | Phase 02 code commit |
+| 当前 HEAD | `f4026bffa920cf7c6ceec27907d72ea380f97a19` | 已验证 | Phase 03 code commit |
 | 初始工作区状态 | clean | 已验证 | 阶段开始 `git status --short` 为空 |
 | 初始已有修改 | 无 | 已验证 | 未覆盖归属不明修改 |
 | 远程是否含起始 commit | 是 | 已验证 | code push 后 `git ls-remote` 核对 |
@@ -106,11 +106,11 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 |---|---|---|---|---|---|---|---|---|
 | 01 | Experience Foundation + Admin Shell + Audit vertical slice | 进行中 | UI toolchain、shared state primitives、AdminShell、导航命令面板、Audit URL/state/inspector 代码、FE-D03 独立安装探针 | 真实 Admin session、Audit success/empty/inspector 正向数据、390px 实机验收 | 无 | `7b3f64d` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) |
 | 02 | Platform Context + Workspace | 进行中 | Platform Directory、URL 平台上下文、Switcher、Header、Overview、嵌套路由骨架、legacy settings 兼容入口 | 真实 Admin session 下的成功/403/404/disabled/切换正向数据、390px 与最终阶段门槛 | Phase 01 必要基础已存在；Phase 01 正向 session/390px 仍待补齐 | `e9c5c9f` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/e9c5c9fa096b9a193c59e08e233923f8908c75a2) |
-| 03 | High-risk State & Interactions | 未开始 | 无 | 全部 | Phase 02 已交付；Auth 依赖按实际核对 | 未记录 | 未验证 | 未记录 |
-| 04 | Accounts & Entitlements Resource Pages | 未开始 | 无 | 全部 | Phase 03 已交付 | 未记录 | 未验证 | 未记录 |
-| 05 | Files & Platform Settings | 未开始 | 无 | 全部 | Phase 03 已交付 | 未记录 | 未验证 | 未记录 |
+| 03 | High-risk State & Interactions | 进行中 | MutationState、确认弹窗、近期 MFA step-up、accepted/unknown outcome、一次性密钥、账户/Key 高风险动作、安全总览代码 | 真实 Admin session、正向高风险 mutation、409/412/429/503/202/网络歧义、390px 与最终阶段门槛 | Phase 02 代码批次已推送；Auth 依赖按实际核对 | `f4026bf` | 已验证 | [code commit](https://github.com/aisenhub/Aisenhubplatform/commit/f4026bffa920cf7c6ceec27907d72ea380f97a19) |
+| 04 | Accounts & Entitlements Resource Pages | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；阶段验收门槛仍待补齐 | 未记录 | 未验证 | 未记录 |
+| 05 | Files & Platform Settings | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；阶段验收门槛仍待补齐 | 未记录 | 未验证 | 未记录 |
 | 06 | Operations + Audit + Overview | 未开始 | 无 | 全部 | Phase 04 + 05 已交付 | 未记录 | 未验证 | 未记录 |
-| 07 | Consumer + Registry Adoption | 未开始 | 无 | 全部 | Phase 03 已交付；Auth 依赖按实际核对 | 未记录 | 未验证 | 未记录 |
+| 07 | Consumer + Registry Adoption | 未开始 | 无 | 全部 | Phase 03 代码批次已推送；Auth 依赖按实际核对 | 未记录 | 未验证 | 未记录 |
 | 08 | Responsive + Accessibility + Integration + Cleanup | 未开始 | 无 | 全部 | Phase 04 + 05 + 06 + 07 已交付 | 未记录 | 未验证 | 未记录 |
 
 ### 并行约束记录
@@ -256,43 +256,50 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 ## 5.1 阶段元数据
 
-- 状态：**未开始**
-- Auth/Session 上游实际状态：未验证
-- 开始 HEAD：未记录
-- 代码 commit：未记录
-- Push：未验证
+- 状态：**进行中**
+- Auth/Session 上游实际状态：已核对；复用现有 `adminAuthSession` 与 `/api/auth/mfa/*` BFF，不新增 session/API transport
+- 开始 HEAD：`e9c5c9fa096b9a193c59e08e233923f8908c75a2`
+- 验证代码版本：`f4026bffa920cf7c6ceec27907d72ea380f97a19`
+- 代码 commit：`f4026bffa920cf7c6ceec27907d72ea380f97a19`
+- Push：已验证；远程分支 SHA 一致
 
 ## 5.2 实施与契约
 
-- MutationState / ConfirmActionDialog：未开始。
-- Recent MFA presentation / step-up：未开始。
-- `accepted` / `unknown_outcome`：未开始。
-- OneTimeSecretPanel：未开始。
-- Accounts 高风险 action 纵切：未开始。
-- API Keys 生命周期纵切：未开始。
-- Admin Security surface：未开始。
-- Idempotency / replay 与 Auth contract 偏差：未记录。
+- MutationState / ConfirmActionDialog：已实现；状态覆盖 `confirm_required / step_up_required / pending / accepted / success / failure / unknown_outcome`，原因字段和未知结果检查均为同页流程。
+- Recent MFA presentation / step-up：已实现；`RECENT_MFA_REQUIRED` 进入同页 MFA 面板，验证成功后只恢复确认态，不自动重放原 mutation。
+- `accepted` / `unknown_outcome`：已实现；202 明确显示“已受理”，网络歧义不立即重发并提供权威状态检查。
+- OneTimeSecretPanel：已实现；Key 明文只进入一次性内存面板，复制和显式确认后清除。
+- Accounts 高风险 action 纵切：已接入暂停/恢复/关闭确认窗口，原因只在当前确认窗口提交，账户行级 pending。
+- API Keys 生命周期纵切：已接入创建/部署确认/撤销确认，创建缺少一次性明文时不会二次创建。
+- Admin Security surface：已实现 `/admin/security`，展示 session/MFA 摘要和管理 MFA 入口；未授权错误已转为用户可理解文案。
+- Idempotency / replay 与 Auth contract 偏差：高风险请求使用现有 `adminAuthSession.request(..., { replay: 'never' })`；当前合同未要求新增 idempotency 字段，未自行扩展公共 API。
 
 ## 5.3 验证记录
 
 | 日期 | 代码版本 | 命令/场景 | 退出码/结果 | 摘要 |
 |---|---|---|---|---|
-| 未记录 | 未记录 | `pnpm --filter @kit/ui typecheck`（若改 shared UI） | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter @kit/ui test:unit`（若改 shared UI） | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter admin typecheck` | 未执行 | 未记录 |
-| 未记录 | 未记录 | `pnpm --filter admin build` | 未执行 | 未记录 |
-| 未记录 | 未记录 | Admin E2E / MFA/high-risk | 未验证 | 未记录 |
-| 未记录 | 未记录 | double-click / network / accepted / unknown / secret reload | 未验证 | 未记录 |
+| 2026-09-10 | `f4026bf` | `pnpm --filter @kit/ui typecheck` | 0 / PASS | shared makerkit 状态组件与 exports 类型检查通过 |
+| 2026-09-10 | `f4026bf` | `pnpm --filter @kit/ui test:unit` | 0 / PASS | 3 files、36 tests 全部通过，包含 mutation state label 测试 |
+| 2026-09-10 | `f4026bf` | `pnpm --filter admin typecheck` | 0 / PASS | Security page、同页 MFA、settings 高风险流程类型检查通过 |
+| 2026-09-10 | `f4026bf` | `pnpm --filter admin build` | 0 / PASS | Next 16.3.0 webpack 构建通过；包含 `/admin/security` 与 13 个静态/动态页面生成 |
+| 2026-09-10 | `f4026bf` | `pnpm contracts:check` | 0 / PASS | account 18、admin 36 operations；未新增公共 API |
+| 2026-09-10 | `f4026bf` | `pnpm lint` | 0 / PASS with existing warning | 仅 MFA 旧二维码 `<img>` 的 next/no-img-element warning |
+| 2026-09-10 | `f4026bf` | changed-file `oxfmt --write` + `git diff --check` | 0 / PASS | 本阶段目标文件格式化与差异检查通过 |
+| 2026-09-10 | `f4026bf` | `node .../impeccable/scripts/detect.mjs --json` changed targets | 0 / PASS | detector 0 findings |
+| 2026-09-10 | `f4026bf` | Admin production browser：`/admin/security` 未授权错误态与视觉检查 | PASS | 友好中文错误、原始 `UNAUTHORIZED` 不可见；browser error/warning 为空；页面层级正常 |
+| 2026-09-10 | `f4026bf` | Admin high-risk positive session / 202 / 409 / 412 / 429 / 503 / network ambiguous / one-time secret reload | NOT_RUN | 当前无真实 Admin session、正向资源数据与可控故障注入环境；代码路径已实现，不能以静态检查替代 |
+| 2026-09-10 | `f4026bf` | Admin 390px responsive / keyboard full matrix | NOT_RUN | 当前 CUA browser backend 未提供 viewport override；基础语义控件已在桌面页面观察，完整矩阵留待 Phase 08 |
 
 ## 5.4 GitHub / 并行交接
 
-- code commit：未记录
-- push：未验证
-- remote confirmation：未验证
-- Phase 04 owner：未记录
-- Phase 05 owner：未记录
-- Phase 07 owner：未记录
-- Shared files frozen at commit：未记录
+- code commit：`f4026bffa920cf7c6ceec27907d72ea380f97a19`
+- push：PASS
+- remote confirmation：PASS；`git ls-remote origin refs/heads/codex/frontend-plan-r1` 返回同一 SHA
+- Phase 04 owner：Integrator（同一任务分支连续推进）
+- Phase 05 owner：Integrator（同一任务分支连续推进）
+- Phase 07 owner：Integrator（同一任务分支连续推进）
+- Shared files frozen at commit：`packages/ui/src/makerkit/*` 的 Phase 03 状态基础组件；后续仅通过兼容 exports 扩展，不修改已应用公共合同
+- 未完成/未验证：真实 Admin session 正向 mutation、MFA proof、202/冲突/限流/服务不可用/网络歧义、390px 与完整键盘矩阵；因此本阶段保持 `进行中`
 - 需要用户决定：无
 
 ---
@@ -593,6 +600,20 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 未运行项：真实 Admin session 下 valid success、403/404/disabled、A→B switch、refresh/back、390px；这些不伪造为 PASS。
 - 该结果是否仍覆盖当前代码：是；之后仅追加 verification record docs 变更。
 
+## VR-0004 — Phase 03 high-risk interaction states
+
+- 日期：2026-09-10
+- 阶段：Phase 03
+- 被验证 commit：`f4026bffa920cf7c6ceec27907d72ea380f97a19`
+- 工作区是否 clean：是（code commit 后、docs-only record commit 前）
+- 环境：Windows 10 家庭中文版；Node v24.19.0；pnpm 11.18.0；Next 16.3.0；Codex In-app Browser；Admin production server `http://localhost:3000`
+- 命令/操作：shared UI/Admin typecheck、UI unit、Admin webpack build、contracts、lint、目标文件 oxfmt/diff、impeccable detector；`/admin/security` 未授权错误态和截图检查。
+- Exit code / 浏览器结果：typecheck/build/unit/contracts/目标格式/diff/detector PASS；lint 0 with existing warning；安全页浏览器 PASS，error/warning 日志为空，原始 `UNAUTHORIZED` 不可见。
+- stdout/stderr/截图/日志位置：本次 agent tool 输出与浏览器截图；未写入仓库，未包含敏感数据。
+- 结果摘要：高风险 settings 动作统一进入可解释确认窗口；账户原因不离开确认窗口；近期 MFA 同页 step-up 不自动重放；202 与 unknown outcome 分离；一次性 Key 明文进入专用内存面板。
+- 未运行项：真实 Admin session、正向 mutation、MFA proof、409/412/429/503/202/网络歧义、双击并发、secret reload、390px 和完整键盘矩阵。当前浏览器后端不提供 viewport override，后端也未提供安全故障注入/正向凭据，均保持 NOT_RUN。
+- 该结果是否仍覆盖当前代码：是；之后仅追加 verification record docs 变更。
+
 ---
 
 # 12. GitHub 交付记录追加区
@@ -600,6 +621,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | 日期 | 阶段 | 类型 | Branch | Commit SHA | GitHub URL | Push | Remote confirmed | 备注 |
 |---|---|---|---|---|---|---|---|---|
 | 2026-09-09 | Phase 01 | code | `codex/frontend-plan-r1` | `7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/7b3f64d301aa5e3ce9bccae53cb2e0d4e0ab30ee) | PASS | PASS | 远端 SHA 与本地一致；Phase 01 仍因未完成正向 session/390 验收保持进行中 |
+| 2026-09-10 | Phase 03 | code | `codex/frontend-plan-r1` | `f4026bffa920cf7c6ceec27907d72ea380f97a19` | [GitHub code commit](https://github.com/aisenhub/Aisenhubplatform/commit/f4026bffa920cf7c6ceec27907d72ea380f97a19) | PASS | PASS | 远端 SHA 与本地一致；Phase 03 仍因真实高风险正向矩阵/390px 未完成保持进行中 |
 
 ---
 
@@ -607,13 +629,13 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 
 > 每阶段收尾更新本节，使下一 agent 不需要靠聊天记录猜当前状态。
 
-- 当前最后完成阶段：**Phase 02 代码实现与推送；Phase 01、Phase 02 均仍进行中**。
-- 下一阶段从哪里开始：补齐可用 Admin session 后复验 Phase 01/02 正向场景；随后进入 Phase 03 的高风险 mutation/确认状态，使用本阶段的 `usePlatformContext` 与 settings 兼容 API。
+- 当前最后完成阶段：**Phase 03 代码实现与推送；Phase 01、Phase 02、Phase 03 均仍进行中**。
+- 下一阶段从哪里开始：补齐可用 Admin session 后复验 Phase 01–03 正向场景；实现 Phase 04 Accounts、Plans、Subscriptions、Redemption Batches 资源页面，复用本阶段的确认/状态组件。
 - 必须先处理：FE-D02 在 Phase 03 核验批次重复创建；FE-D01 在 Phase 05 平台 Files 前通过。FE-D03 最小验证已 PASS，完整 Consumer/Registry 安装仍留给 Phase 07。
 - 可直接复用的已完成接口/能力：`@kit/ui/styles.css`、Shared Async/Status/ResourceId/Error 组件、AdminShell/navigation、Audit URL state。
 - 不应重复实施的本任务工作：FE-D03 最小 tarball consumer probe、Admin Shell 初始接入、Audit error≠empty 基础闭环。
 - 当前未提交修改及归属：verification record 待 docs-only commit；产品代码无未提交修改。
-- 当前 branch / HEAD：`codex/frontend-plan-r1` / `e9c5c9fa096b9a193c59e08e233923f8908c75a2`。
+- 当前 branch / HEAD：`codex/frontend-plan-r1` / `f4026bffa920cf7c6ceec27907d72ea380f97a19`。
 - 需要用户决定的事项：**无**。
 
 如果执行时记录与 Git/代码不一致：
@@ -636,7 +658,7 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 | FE-D02 批次重复创建核验 | NOT_STARTED | 03核验，04消费 |
 | FE-D03 UI分发最小验证 | PASS | 01已完成本地 tarball consumer install/typecheck/build/browser；07仍需完整产物验证 |
 | FE-V01～16 | NOT_RUN | 具体定义见执行合同；逐项记录SHA/环境/用例/结果 |
-| 前端Phase01～08 | Phase01进行中；02～08未开始 | 本次已提交 Phase01 代码；未满足阶段全部交付门槛 |
+| 前端Phase01～08 | Phase01～03进行中；04～08未开始 | Phase01～03代码批次已提交并推送；各阶段真实 session/正向数据/390px 等交付门槛仍未全部满足 |
 | Staging/生产/部署 | NOT_RUN | 本轮未执行 |
 
 ## FE-R1 文档静态验证
@@ -653,4 +675,4 @@ git rev-parse @{u}               -> `origin/codex/frontend-plan-r1`
 - 修订提交：`8a0b81bba716e90c5a3dd05a0130993da1223ba3`。
 - 已push至`origin/codex/frontend-plan-r1`，`git ls-remote origin refs/heads/codex/frontend-plan-r1`返回同一完整SHA，已核对远端包含修订。
 - [GitHub文档提交](https://github.com/aisenhub/Aisenhubplatform/commit/8a0b81bba716e90c5a3dd05a0130993da1223ba3)。本段由后续独立记录提交维护，不反复amend。
-- 下一项满足派发条件：补齐 Phase01/02 真实 session、正向资源数据和 390px 验收后，再推进 Phase03；Phase02 代码已独立推送，main未合并，未Release/部署。
+- 下一项满足派发条件：继续实现 Phase04 资源页面；同时保留 Phase01–03 真实 session、正向资源数据、故障矩阵和 390px 验收为阶段交付门槛。Phase03代码已独立推送，main未合并，未Release/部署。
