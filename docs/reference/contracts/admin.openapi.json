@@ -1,0 +1,704 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Aisenhub Admin API",
+    "version": "1.0.0",
+    "description": "Admin API contract. Mutations require an administrator session and high-risk operations require server-side step-up proof."
+  },
+  "servers": [{ "url": "https://admin.example.invalid" }],
+  "paths": {
+    "/admin/api/v1/auth/recent-proof": {
+      "post": {
+        "operationId": "adminIssueRecentAuthProof",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/MfaFactorId" }],
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms": {
+      "get": {
+        "operationId": "adminListPlatforms",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "adminCreatePlatform",
+        "security": [{ "adminBearer": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}": {
+      "get": {
+        "operationId": "adminGetPlatform",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "operationId": "adminPatchPlatform",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/origins": {
+      "get": {
+        "operationId": "adminListOrigins",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/SearchQuery" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateOrigin",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/accounts": {
+      "get": {
+        "operationId": "adminListAccounts",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/accounts/{accountId}": {
+      "get": {
+        "operationId": "adminGetAccount",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/AccountId" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "operationId": "adminPatchAccount",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/AccountId" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/suspend": {
+      "post": {
+        "operationId": "adminSuspendAccount",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/AccountId" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/restore": {
+      "post": {
+        "operationId": "adminRestoreAccount",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/AccountId" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/close": {
+      "post": {
+        "operationId": "adminCloseAccount",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/AccountId" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "202": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/keys": {
+      "get": {
+        "operationId": "adminListPlatformKeys",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/SearchQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+      },
+      "post": {
+        "operationId": "adminCreatePlatformKey",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/keys/{keyId}/revoke": {
+      "post": {
+        "operationId": "adminRevokePlatformKey",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/KeyId" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/keys/{keyId}/confirm-deployment": {
+      "post": {
+        "operationId": "adminConfirmPlatformKeyDeployment",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/KeyId" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/plans": {
+      "get": {
+        "operationId": "adminListPlans",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+      },
+      "post": {
+        "operationId": "adminCreatePlan",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "201": { "$ref": "#/components/responses/Object" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/admin/api/v1/redemption-batches": {
+      "get": {
+        "operationId": "adminListRedemptionBatches",
+        "security": [{ "adminBearer": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+      },
+      "post": {
+        "operationId": "adminCreateRedemptionBatch",
+        "security": [{ "adminBearer": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/admin/api/v1/redemption-batches/{batchId}/confirm-delivery": {
+      "post": {
+        "operationId": "adminConfirmRedemptionDelivery",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/redemption-batches/{batchId}/disable": {
+      "post": {
+        "operationId": "adminDisableRedemptionBatch",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/subscriptions/{accountId}": {
+      "get": {
+        "operationId": "adminGetSubscription",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AccountId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/subscriptions/{accountId}/commands": {
+      "post": {
+        "operationId": "adminApplySubscriptionCommand",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AccountId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/config-files": {
+      "get": {
+        "operationId": "adminListConfigFiles",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "platform_id",
+            "in": "query",
+            "required": false,
+            "description": "精确平台范围；过滤在服务端游标分页前执行。提供时 cursor 必须属于同一平台。",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/SearchQuery" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/config-files/{fileId}": {
+      "get": {
+        "operationId": "adminGetConfigFile",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/FileId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "operationId": "adminDeleteConfigFile",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/FileId" }],
+        "responses": {
+          "202": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/file-policy": {
+      "get": {
+        "operationId": "adminGetFilePolicy",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "operationId": "adminUpdateFilePolicy",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/config-files/{fileId}/content": {
+      "get": {
+        "operationId": "adminDownloadConfigFileContent",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/FileId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Binary" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/audit": {
+      "get": {
+        "operationId": "adminListAuditLogs",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/api/v1/deletion-jobs": {
+      "get": {
+        "operationId": "adminListDeletionJobs",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+      },
+      "post": {
+        "operationId": "adminStartDeletionJob",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "202": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/deletion-jobs/{jobId}": {
+      "get": {
+        "operationId": "adminGetDeletionJob",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/deletion-jobs/{jobId}/retry": {
+      "post": {
+        "operationId": "adminRetryDeletionJob",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobId" }],
+        "responses": {
+          "202": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "adminBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "parameters": {
+      "MfaFactorId": {
+        "name": "X-Mfa-Factor-Id",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "PlatformId": {
+        "name": "platformId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "maxLength": 128 }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "AccountId": {
+        "name": "accountId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "KeyId": {
+        "name": "keyId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "BatchId": {
+        "name": "batchId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "FileId": {
+        "name": "fileId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "JobId": {
+        "name": "jobId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      }
+    },
+    "requestBodies": {
+      "Json": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": true,
+              "maxProperties": 100
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Object": {
+        "description": "JSON response with data and request_id.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": { "$ref": "#/components/schemas/Envelope" }
+        }
+      },
+      "Page": {
+        "description": "Cursor page with data, next_cursor, and request_id.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": { "$ref": "#/components/schemas/Page" }
+        }
+      },
+      "Binary": {
+        "description": "Binary download.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/octet-stream": {
+            "schema": { "type": "string", "format": "binary" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid input.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing or invalid admin session.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Admin authorization denied.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "StepUpRequired": {
+        "description": "Fresh server-side step-up proof is required.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Business conflict.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      }
+    },
+    "headers": {
+      "NoStore": { "schema": { "type": "string", "const": "no-store" } }
+    },
+    "schemas": {
+      "Envelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {},
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Page": {
+        "type": "object",
+        "required": ["data", "next_cursor", "request_id"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "type": "object", "additionalProperties": true }
+          },
+          "next_cursor": { "type": ["string", "null"] },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["error", "request_id"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      }
+    }
+  }
+}

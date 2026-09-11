@@ -1,16 +1,7 @@
-# Aisenhub Registry（Local preview）
+# 本地 Registry
 
-这里是 M5-04 的本地 Registry 元数据，不是 npm/正式 Registry，也不包含发布凭据或 tarball。`manifest.json` 固定模板源、Node/pnpm/Next 版本和 SDK 兼容范围；SDK tarball 的实际 SHA-256 记录在 `docs/development/evidence/M5-02.md`。
+manifest.json 保存工具链和 SDK 兼容元数据；templates.json 是安装脚本读取的模板清单。它们不是已发布的 npm 或生产 Registry。
 
-模板只复制页面、同源 BFF 路由和 SDK glue，不复制 Supabase service key、领域函数、权益/配额/日期计算或 Storage 删除算法。配置由部署环境注入；浏览器端不读取 server-only platform key。
+SDK tarball 和对应 SHA-256 由 `pnpm sdk:pack` 写入 artifacts/sdk/manifest.json；不要用文档中其他构建的 hash 验证当前产物。
 
-当前可验证命令：
-
-```text
-pnpm run test:registry:m5-04
-pnpm --filter template-preview typecheck
-pnpm --filter template-preview test:unit
-pnpm --filter template-preview build
-```
-
-正式 scope、Registry host、发布地址和凭据属于 X05；在授权到位前只能记录 Local 结果，不能声称可从 npm 获取。
+模板清单包含当前参考应用不存在的登录路由，实际页面以 apps/template-preview/app 为准。使用方法与边界见 [SDK 与 Registry](../docs/reference/sdk.md)。

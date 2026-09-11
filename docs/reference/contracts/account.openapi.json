@@ -1,0 +1,1076 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Aisenhub Account API",
+    "version": "1.0.0",
+    "description": "Account API contract. Runtime routes are defined in supabase/functions/account-api/index.ts."
+  },
+  "servers": [{ "url": "https://account.example.invalid" }],
+  "tags": [
+    { "name": "plans" },
+    { "name": "account" },
+    { "name": "profile" },
+    { "name": "preferences" },
+    { "name": "subscription" },
+    { "name": "files" },
+    { "name": "identity" }
+  ],
+  "paths": {
+    "/v1/plans": {
+      "get": {
+        "operationId": "listPublicPlans",
+        "tags": ["plans"],
+        "security": [{ "platformKey": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Plans" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/account/principal": {
+      "get": {
+        "operationId": "getPrincipal",
+        "tags": ["account"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Principal" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/auth/recent-proof": {
+      "post": {
+        "operationId": "issueRecentAuthProof",
+        "tags": ["account"],
+        "x-reauthentication-event": "supabase-auth-email-otp-session",
+        "x-proof-binding": "original-user-session",
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/ReauthAccessToken" }
+        ],
+        "responses": {
+          "201": { "$ref": "#/components/responses/RecentAuthProof" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/account/activate": {
+      "post": {
+        "operationId": "activateAccount",
+        "tags": ["account"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Principal" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/account/close": {
+      "post": {
+        "operationId": "closeAccount",
+        "tags": ["account"],
+        "x-requires-recent-auth": true,
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/RecentAuthProof" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Principal" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/profile": {
+      "get": {
+        "operationId": "getProfile",
+        "tags": ["profile"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Profile" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      },
+      "patch": {
+        "operationId": "patchProfile",
+        "tags": ["profile"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/IfMatch" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/ProfilePatch" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Profile" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" },
+          "428": { "$ref": "#/components/responses/PreconditionRequired" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/preferences": {
+      "get": {
+        "operationId": "getPreferences",
+        "tags": ["preferences"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Preferences" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      },
+      "patch": {
+        "operationId": "patchPreferences",
+        "tags": ["preferences"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/IfMatch" }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PreferencesPatch"
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Preferences" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" },
+          "428": { "$ref": "#/components/responses/PreconditionRequired" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/subscription": {
+      "get": {
+        "operationId": "getSubscription",
+        "tags": ["subscription"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Subscription" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/subscription/redeem": {
+      "post": {
+        "operationId": "redeemSubscriptionCode",
+        "tags": ["subscription"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/Redeem" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Subscription" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/config-files/upload-intent": {
+      "post": {
+        "operationId": "createUploadIntent",
+        "tags": ["files"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/UploadIntent" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/UploadIntent" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/config-files/{fileId}/content": {
+      "put": {
+        "operationId": "uploadConfigFileContent",
+        "tags": ["files"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/FileId" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/BinaryUpload" },
+        "responses": {
+          "202": { "$ref": "#/components/responses/File" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      },
+      "get": {
+        "operationId": "downloadConfigFileContent",
+        "tags": ["files"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/FileId" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/BinaryFile" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/config-files": {
+      "get": {
+        "operationId": "listConfigFiles",
+        "tags": ["files"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/FileCursor" },
+          { "$ref": "#/components/parameters/FileLimit" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Files" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/config-files/{fileId}": {
+      "get": {
+        "operationId": "getConfigFile",
+        "tags": ["files"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/FileId" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/File" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteConfigFile",
+        "tags": ["files"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/FileId" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/components/responses/File" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/identity/delete-request": {
+      "post": {
+        "operationId": "createIdentityDeleteRequest",
+        "tags": ["identity"],
+        "x-requires-recent-auth": true,
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/RecentAuthProof" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/components/responses/DeleteRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "platformKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Platform-Key"
+      }
+    },
+    "parameters": {
+      "PlatformKey": {
+        "name": "X-Platform-Key",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "minLength": 32 }
+      },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "minLength": 1 }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[\\x20-\\x7E]+$"
+        }
+      },
+      "FileId": {
+        "name": "fileId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "FileCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "FileLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "ReauthAccessToken": {
+        "name": "X-Reauth-Access-Token",
+        "in": "header",
+        "required": true,
+        "description": "Short-lived server-to-server token for the independently verified email-auth event. Never returned to the browser.",
+        "schema": { "type": "string", "minLength": 16, "maxLength": 4096 }
+      },
+      "RecentAuthProof": {
+        "name": "X-Recent-Auth-Proof",
+        "in": "header",
+        "required": true,
+        "description": "Opaque server-issued proof bound to the current account session.",
+        "schema": { "type": "string", "format": "uuid" }
+      }
+    },
+    "requestBodies": {
+      "ProfilePatch": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ProfilePatch" },
+            "examples": {
+              "displayName": { "value": { "display_name": "Example" } }
+            }
+          }
+        }
+      },
+      "PreferencesPatch": {
+        "required": true,
+        "content": {
+          "application/merge-patch+json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": true,
+              "maxProperties": 100
+            }
+          }
+        }
+      },
+      "Redeem": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["code"],
+              "properties": {
+                "code": { "type": "string", "minLength": 26, "maxLength": 64 }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "UploadIntent": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/UploadIntentInput" }
+          }
+        }
+      },
+      "BinaryUpload": {
+        "required": true,
+        "content": {
+          "application/octet-stream": {
+            "schema": {
+              "type": "string",
+              "format": "binary",
+              "maxLength": 1048576
+            }
+          }
+        }
+      }
+    },
+    "headers": {
+      "NoStore": {
+        "description": "V1 responses are not shared or ISR cached.",
+        "schema": { "type": "string", "const": "no-store" }
+      },
+      "ETag": {
+        "description": "Opaque row-version validator.",
+        "schema": { "type": "string", "minLength": 1 }
+      },
+      "RequestId": { "schema": { "type": "string", "format": "uuid" } }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "$ref": "#/components/schemas/ApiErrorCode" },
+          "message": { "type": "string" },
+          "details": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ApiErrorCode": {
+        "type": "string",
+        "enum": [
+          "INVALID_INPUT",
+          "UPLOAD_SIZE_MISMATCH",
+          "PAYLOAD_TOO_LARGE",
+          "UNAUTHORIZED",
+          "PLATFORM_CREDENTIAL_INVALID",
+          "SESSION_REVOKED",
+          "PLATFORM_DISABLED",
+          "ACCOUNT_SUSPENDED",
+          "ACCOUNT_CLOSED",
+          "ADMIN_REQUIRED",
+          "MFA_REQUIRED",
+          "RECENT_MFA_REQUIRED",
+          "GLOBAL_DELETE_PENDING",
+          "ACCOUNT_NOT_ACTIVATED",
+          "ACTIVATION_DISABLED",
+          "PLAN_CONFLICT",
+          "ENTITLEMENT_PERPETUAL",
+          "ENTITLEMENT_SUSPENDED",
+          "IDEMPOTENCY_CONFLICT",
+          "OPERATION_IN_PROGRESS",
+          "FILE_BUSY",
+          "FILE_CONTENT_CONFLICT",
+          "REPLACEMENT_CAPACITY_REQUIRED",
+          "QUOTA_EXCEEDED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_CODE",
+          "CODE_EXPIRED",
+          "UPLOAD_INTENT_EXPIRED",
+          "CODE_DISABLED",
+          "CODE_ALREADY_REDEEMED",
+          "PRECONDITION_FAILED",
+          "PRECONDITION_REQUIRED",
+          "RATE_LIMITED",
+          "AUTHORIZATION_UNAVAILABLE",
+          "STORAGE_UNAVAILABLE"
+        ]
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["error", "request_id"],
+        "properties": {
+          "error": { "$ref": "#/components/schemas/ApiError" },
+          "request_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
+      },
+      "Plan": {
+        "type": "object",
+        "required": ["code", "name", "description", "kind", "features"],
+        "properties": {
+          "code": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "kind": { "type": "string", "enum": ["free", "paid"] },
+          "features": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false,
+        "examples": [
+          {
+            "code": "free",
+            "name": "Free",
+            "description": null,
+            "kind": "free",
+            "features": {}
+          }
+        ]
+      },
+      "PlanList": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Plan" }
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Principal": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "platform_id",
+          "platform_account_id",
+          "platform_status",
+          "account_status"
+        ],
+        "properties": {
+          "user_id": { "type": "string", "format": "uuid" },
+          "platform_id": { "type": "string", "format": "uuid" },
+          "platform_account_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "platform_status": {
+            "type": "string",
+            "enum": ["active", "disabled"]
+          },
+          "account_status": {
+            "type": "string",
+            "enum": ["active", "suspended", "closed", "not_activated"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "Profile": {
+        "type": "object",
+        "required": [
+          "display_name",
+          "avatar_url",
+          "bio",
+          "locale",
+          "timezone",
+          "metadata",
+          "row_version"
+        ],
+        "properties": {
+          "display_name": { "type": ["string", "null"] },
+          "avatar_url": { "type": ["string", "null"] },
+          "bio": { "type": ["string", "null"] },
+          "locale": { "type": ["string", "null"] },
+          "timezone": { "type": ["string", "null"] },
+          "metadata": { "type": "object", "additionalProperties": true },
+          "row_version": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": false
+      },
+      "ProfilePatch": {
+        "type": "object",
+        "properties": {
+          "display_name": { "type": ["string", "null"] },
+          "avatar_url": { "type": ["string", "null"] },
+          "bio": { "type": ["string", "null"] },
+          "locale": { "type": ["string", "null"] },
+          "timezone": { "type": ["string", "null"] },
+          "metadata": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false,
+        "maxProperties": 6
+      },
+      "Preferences": {
+        "type": "object",
+        "required": ["preferences", "row_version"],
+        "properties": {
+          "preferences": { "type": "object", "additionalProperties": true },
+          "row_version": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": false
+      },
+      "Entitlement": {
+        "type": "object",
+        "required": [
+          "effective_status",
+          "entitlement_kind",
+          "plan",
+          "features",
+          "started_at",
+          "current_period_end",
+          "evaluated_at",
+          "next_transition_at"
+        ],
+        "properties": {
+          "effective_status": {
+            "type": "string",
+            "enum": ["active", "none", "suspended"]
+          },
+          "entitlement_kind": {
+            "type": "string",
+            "enum": ["free", "term", "perpetual", "none"]
+          },
+          "plan": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/Plan" },
+              { "type": "null" }
+            ]
+          },
+          "features": { "type": "object", "additionalProperties": true },
+          "started_at": { "type": ["string", "null"], "format": "date-time" },
+          "current_period_end": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "evaluated_at": { "type": "string", "format": "date-time" },
+          "next_transition_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "examples": [
+          {
+            "effective_status": "none",
+            "entitlement_kind": "none",
+            "plan": null,
+            "features": {},
+            "started_at": null,
+            "current_period_end": null,
+            "evaluated_at": "2026-01-01T00:00:00Z",
+            "next_transition_at": null
+          }
+        ]
+      },
+      "Subscription": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Entitlement" },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "UploadIntentInput": {
+        "type": "object",
+        "required": ["name", "size", "content_type", "purpose"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255 },
+          "size": { "type": "integer", "minimum": 0, "maximum": 1048576 },
+          "content_type": { "type": "string", "maxLength": 127 },
+          "purpose": { "type": "string", "const": "config" },
+          "replaces_file_id": { "type": ["string", "null"], "format": "uuid" }
+        },
+        "additionalProperties": false
+      },
+      "ConfigFile": {
+        "type": "object",
+        "required": [
+          "file_id",
+          "status",
+          "write_outcome",
+          "size",
+          "reserved_bytes",
+          "reserved_count",
+          "actual_size_bytes",
+          "original_name",
+          "content_type",
+          "created_at",
+          "updated_at",
+          "cancel_requested_at"
+        ],
+        "properties": {
+          "file_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "write_outcome": { "type": "string" },
+          "size": { "type": "integer", "minimum": 0 },
+          "reserved_bytes": { "type": "integer", "minimum": 0 },
+          "reserved_count": { "type": "integer", "minimum": 0, "maximum": 1 },
+          "actual_size_bytes": { "type": ["integer", "null"], "minimum": 0 },
+          "original_name": { "type": ["string", "null"] },
+          "content_type": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "cancel_requested_at": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      },
+      "ConfigFileList": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["items", "next_cursor"],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/ConfigFile" }
+              },
+              "next_cursor": { "type": ["string", "null"], "format": "uuid" },
+              "budget": {
+                "type": "object",
+                "required": [
+                  "enabled",
+                  "max_file_bytes",
+                  "max_files",
+                  "max_total_bytes",
+                  "reserved_bytes",
+                  "reserved_count",
+                  "available_bytes",
+                  "available_count",
+                  "over_quota"
+                ],
+                "properties": {
+                  "platform_id": {
+                    "type": ["string", "null"],
+                    "format": "uuid"
+                  },
+                  "enabled": { "type": "boolean" },
+                  "max_file_bytes": { "type": "integer", "minimum": 0 },
+                  "max_files": { "type": "integer", "minimum": 0 },
+                  "max_total_bytes": { "type": "integer", "minimum": 0 },
+                  "reserved_bytes": { "type": "integer", "minimum": 0 },
+                  "reserved_count": { "type": "integer", "minimum": 0 },
+                  "available_bytes": { "type": "integer", "minimum": 0 },
+                  "available_count": { "type": "integer", "minimum": 0 },
+                  "over_quota": { "type": "boolean" },
+                  "updated_at": {
+                    "type": ["string", "null"],
+                    "format": "date-time"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "UploadIntent": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["file_id", "upload_path", "expires_at"],
+            "properties": {
+              "file_id": { "type": "string", "format": "uuid" },
+              "upload_path": { "type": "string" },
+              "expires_at": { "type": "string", "format": "date-time" }
+            }
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "DeleteRequest": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["request_id", "state"],
+            "properties": {
+              "request_id": { "type": "string", "format": "uuid" },
+              "state": { "type": "string", "const": "pending_admin" }
+            }
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "RecentAuthProof": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["proof_id", "expires_at"],
+            "properties": {
+              "proof_id": { "type": "string", "format": "uuid" },
+              "expires_at": { "type": "string", "format": "date-time" }
+            },
+            "additionalProperties": false
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "Plans": {
+        "description": "Public active plans.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "X-Request-Id": { "$ref": "#/components/headers/RequestId" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/PlanList" }
+          }
+        }
+      },
+      "Principal": {
+        "description": "Account principal or diagnostic state.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Principal" }
+          }
+        }
+      },
+      "RecentAuthProof": {
+        "description": "Recent-auth proof bound to the original account session.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/RecentAuthProof" }
+          }
+        }
+      },
+      "Profile": {
+        "description": "Profile DTO.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "ETag": { "$ref": "#/components/headers/ETag" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Profile" }
+          }
+        }
+      },
+      "Preferences": {
+        "description": "Preferences DTO.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "ETag": { "$ref": "#/components/headers/ETag" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Preferences" }
+          }
+        }
+      },
+      "Subscription": {
+        "description": "Standard entitlement DTO.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Subscription" }
+          }
+        }
+      },
+      "UploadIntent": {
+        "description": "Upload reservation.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/UploadIntent" }
+          }
+        }
+      },
+      "File": {
+        "description": "File metadata or asynchronous state.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ConfigFile" }
+          }
+        }
+      },
+      "Files": {
+        "description": "File list.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ConfigFileList" }
+          }
+        }
+      },
+      "DeleteRequest": {
+        "description": "Pending global delete request.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/DeleteRequest" }
+          }
+        }
+      },
+      "BinaryFile": {
+        "description": "Private download stream.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "Content-Disposition": { "schema": { "type": "string" } },
+          "X-Content-Type-Options": {
+            "schema": { "type": "string", "const": "nosniff" }
+          }
+        },
+        "content": {
+          "application/octet-stream": {
+            "schema": { "type": "string", "format": "binary" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid input.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "Request exceeds the bounded body or byte limit.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication or platform credential failure.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authorization or lifecycle refusal.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found without cross-tenant existence disclosure.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "State, idempotency, quota or content conflict.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "PreconditionFailed": {
+        "description": "If-Match did not match.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "PreconditionRequired": {
+        "description": "If-Match is required.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limited; response includes Retry-After when available.",
+        "headers": {
+          "Retry-After": { "schema": { "type": "integer", "minimum": 1 } }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "Authorization or Storage dependency unavailable.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      }
+    }
+  }
+}

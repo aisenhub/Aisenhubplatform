@@ -1,0 +1,17 @@
+# 项目文档
+
+- [系统概览](architecture/overview.md)
+- [运行拓扑](architecture/deployment.md)
+- [身份与安全](architecture/modules/identity-security.md)
+- [权益与兑换](architecture/modules/entitlements.md)
+- [文件与任务](architecture/modules/files-jobs.md)
+- [管理端与平台参考页面](architecture/modules/frontends.md)
+- [本地开发](guides/development.md)
+- [测试](guides/testing.md)
+- [运维操作](guides/operations.md)
+- [API](reference/api.md)
+- [SDK 与 Registry](reference/sdk.md)
+- [数据模型](reference/data-model.md)
+- [配置](reference/configuration.md)
+- [工具链](reference/toolchain.md)
+- [文档维护规则](agents.md)

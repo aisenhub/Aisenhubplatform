@@ -16,7 +16,7 @@
       "@kit/account-auth-nextjs@0.1.0",
       "@kit/account-server@0.1.0"
     ],
-    "checksums": "docs/development/evidence/M5-02.md"
+    "checksums": "artifacts/sdk/manifest.json"
   },
   "templates": "registry/templates.json",
   "install": {

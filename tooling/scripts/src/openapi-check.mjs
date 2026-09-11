@@ -3,8 +3,14 @@ import path from 'node:path';
 import process from 'node:process';
 
 const root = process.cwd();
-const accountFile = path.join(root, 'docs/contracts/account.openapi.json');
-const adminFile = path.join(root, 'docs/contracts/admin.openapi.json');
+const accountFile = path.join(
+  root,
+  'docs/reference/contracts/account.openapi.json',
+);
+const adminFile = path.join(
+  root,
+  'docs/reference/contracts/admin.openapi.json',
+);
 
 function fail(message) {
   throw new Error(message);
