@@ -36,6 +36,8 @@
 
 平台核心业务，例如 Agent、Chat、Workflow、CRM、文章和业务用量计费，由各平台维护。平台独立部署登录、注册、Pricing、账户设置和业务 API；本项目不部署统一普通用户 Account Center、Login Portal 或跨域 Auth Broker。
 
+当前工作树中的 `apps/template-preview` 是 Aisenhub 平台端的本地参考页面与 API 接入示例，不是要求下游用户再开发一个产品并与本平台集成的用户应用模板。它只用于展示平台侧的账户设置、配置文件和订阅交互；不作为生产部署物，也不代表对应后端接口、支付回调或兑换结算已经完成。当前页面范围和验证边界以本段说明及 `apps/template-preview` 实际源码为准。
+
 ## 3. 部署与领域边界
 
 ~~~text
@@ -111,7 +113,7 @@ docs/                       v1.2 架构合同
 
 统一发布 account-auth、account-auth-nextjs、account-server，不发布未存在的 account-browser 兼容别名。模板只复制 UI，不复制授权、订阅计算、兑换或配额逻辑。
 
-模板提供登录、注册、OAuth、密码重置、公开套餐、Profile、Preferences、权益、兑换和文件管理；品牌及 UI 可改。Pricing 显示套餐、权益、兑换入口与联系购买，不包含 Checkout。
+架构层仍保留可复用模板和 SDK 的能力边界，但不能把它与当前平台端参考页面混为一谈。当前 `apps/template-preview` 只维护平台端页面参考：`/account` 账户设置、`/files` 配置文件、`/subscription` 订阅方案与激活码，根路径重定向到配置文件页，不再提供总览页。页面中的 Supabase Auth 验证、爱发电跳转、激活码格式校验和本地演示状态均是参考实现；它们不构成完整用户应用集成、生产支付回调或生产兑换 API 的验收。若未来要支持外部用户应用接入，必须另行派发任务并明确合同、权限和验收范围。
 
 ## 7. 实施顺序
 

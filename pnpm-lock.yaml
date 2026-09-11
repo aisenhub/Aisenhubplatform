@@ -216,6 +216,9 @@ importers:
 
   apps/template-preview:
     dependencies:
+      '@kit/account-auth-nextjs':
+        specifier: workspace:*
+        version: link:../../packages/account-auth-nextjs
       '@kit/ui':
         specifier: workspace:*
         version: link:../../packages/ui

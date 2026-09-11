@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
-import { ConsumerFooter } from '../components/consumer-shell';
-
 export const metadata: Metadata = {
-  title: 'Aisenhub Template Preview',
-  description: '公开的跨平台页面参考模板与 API 接入示例',
+  title: 'Aisenhub · 配置工作区',
+  description: '管理账户、配置文件和订阅方案的个人工作区',
 };
 
 export default function RootLayout({
@@ -13,10 +11,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body>
-        {children}
-        <ConsumerFooter />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
