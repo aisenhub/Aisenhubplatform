@@ -1,6 +1,6 @@
 # BILL-04 — Checkout、订单、Inbox 与持久任务
 
-> 状态：未开始。文档已按最新架构修订，不代表功能实施或联调完成。
+> 状态：本地 G-DEV 已完成；真实 Provider、权威订单验证和生产运维仍未运行。
 
 ## 1. 目标与依赖
 
@@ -46,7 +46,7 @@ POST checkout仅product_code+Idempotency-Key；拒绝注入platform/account/pric
 
 测试99年快照不可变、NULL时长注入拒绝、99年可续购与Admin真永久禁购；测试提交后响应丢失、并发同键、异参数、清理7天缓存后重放、到期granted不降级、密钥轮换/缺失、同平台跨账户FK、旧价新版本并存。
 
-测试ACK前DB失败、ACK后崩溃、接管fence、任务重复、极大/非法Payload、URL不入日志/缓存、Auth删除与入站竞态。完成本地products→checkout→持久inbox/job→接管链，真实授权留BILL-05，不假报granted。
+测试ACK前DB失败、ACK后崩溃、接管fence、任务重复、极大/非法Payload、URL不入日志/缓存、Auth删除与入站竞态。当前已完成本地products→checkout→持久inbox/job→接管链；真实 Provider、权威查询、自动结算和granted 仍留BILL-05，不假报购买成功。
 
 
 ## 执行纪律与交付

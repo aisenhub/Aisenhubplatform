@@ -1,12 +1,12 @@
 # 实施与验证记录
 
-> BILL-01～BILL-03 已记录本地 G-DEV 结果；真实 Provider、运维和生产证据仍保持独立状态。
+> BILL-01～BILL-04 已记录本地 G-DEV 结果；真实 Provider、运维和生产证据仍保持独立状态。
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本阶段实施基线 HEAD：`fdd106f`。
-- 计划：[总计划](00-master-plan.md)；本阶段实施基线 HEAD：`fdd106f`。
-- 工作目录/branch/HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `2d058a4` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；开始前工作区 clean。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本阶段实现代码 commits：`7169183`, `c3b99b3`。
+- 计划：[总计划](00-master-plan.md)；本阶段实现代码 commits：`7169183`, `c3b99b3`。
+- 工作目录/branch/HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `c3b99b3` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；BILL-04 开始前工作区为 BILL-03 文档提交后的 clean 状态。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；`pnpm format:check` FAIL（既有54个文件）；`pnpm lint` FAIL（既有 `apps/template-preview/app/subscription/page.tsx:64` 未使用变量）；`pnpm test:api` 未运行且为占位入口。
 - 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
@@ -19,7 +19,7 @@
 | BILL-01 | G-DEV 已完成 | Provider-neutral 合同、虚构适配器夹具、Node/Deno MD5/HMAC 向量已验证；G-PROVIDER 未运行 | `20a28ed` / `4abb87b`，已 push |
 | BILL-02 | 本地验收已交付 | 固定商品目录、期限语义、平台商品配置、切换 preflight、Account API/SDK/OpenAPI/Admin UI 已实现；Provider 映射未配置，真实购买关闭 | `503f14c` / `fdd106f`，已 push |
 | BILL-03 | 本地验收已交付 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入已实现；真实结算未运行 | `5dba4bd`，已 push |
-| BILL-04 | 未开始 | 全部 | 未记录 |
+| BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push；本记录文档提交待完成 |
 | BILL-05 | 未开始 | 全部 | 未记录 |
 | BILL-06 | 未开始 | 全部 | 未记录 |
 | BILL-07 | 未开始 | 全部 | 未记录 |
@@ -30,7 +30,7 @@
 
 | 门槛 | 状态 | 证据/缺口 |
 |---|---|---|
-| G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作版本和结算状态；BILL-02 增加固定商品目录、平台配置、切换 preflight、OpenAPI/SDK/Admin UI；BILL-03 增加 Redemption V2 snapshot、码规范化和 correction 链；虚构 Provider adapter fixture；Node/Deno 固定向量均通过 |
+| G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作版本和结算状态；BILL-02 增加固定商品目录、平台配置、切换 preflight、OpenAPI/SDK/Admin UI；BILL-03 增加 Redemption V2 snapshot、码规范化和 correction 链；BILL-04 增加 Checkout/Order/Inbox/Job schema、Account checkout DTO/SDK、验签 hash-only webhook 和 lease/fence maintenance；虚构 Provider adapter fixture；Node/Deno 固定向量均通过 |
 | G-PROVIDER | NOT_RUN | 真实渠道未验证 |
 | G-OPS | NOT_RUN | 调度/恢复/开关未验证 |
 
@@ -82,6 +82,17 @@
 - 代码commit：`5dba4bd`（`feat(billing): add redemption v2 lifecycle and corrections`）；已 push 到 `origin/codex/billing-architecture-review`，远端 SHA 核对为 `5dba4bd33fc4786debbce4ff525001b1ae7ef226`。
 - 未完成/阻塞/下一满足依赖任务：BILL-03 不提供商业永久/Free claim；下一项为 BILL-04，建立可恢复 Checkout、Order、Inbox 与持久任务。
 
+### BILL-04/2026-09-11/当前 Agent
+
+- 实际变更文件：`supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql`、`supabase/tests/bill_04_checkout_order_inbox_jobs.sql`、`supabase/functions/_shared/billing.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.ts`、`supabase/functions/maintenance/index.test.ts`、`supabase/functions/maintenance/schedule.json`、`packages/domain/src/contracts/api.ts`、`packages/account-server/src/index.ts`、`docs/reference/contracts/account.openapi.json` 及对应合同/架构文档。
+- 实现行为：新增 Provider Account/Product mapping、不可变价格/期限 Checkout snapshot、可关联或暂不关联的 Order、hash-only Webhook Inbox、Processing Job lease/fence、Settlement 与 billing grant 强FK；Account POST 只接收固定 `product_code` 与 Idempotency-Key，缺失 verified mapping 时返回 `CHECKOUT_UNAVAILABLE`；GET 仅返回自身状态，永不返回 token/Secret；webhook 验签后同事务写 Inbox+Job，重复事件按 hash 幂等 ACK；maintenance 通过 job_executor claim/finish。
+- 并发/失败边界：Inbox 使用唯一键加 `ON CONFLICT DO NOTHING` 后锁定既有事件，避免重复回调竞态；processing job 使用 `FOR UPDATE SKIP LOCKED`、60秒 lease 和递增 fence；旧 fence、异 payload duplicate 和直接表 DML 均有拒绝测试；真实 Provider 查询、订单事实验证、权益结算仍不在本阶段。
+- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（31 files/579 tests）；`pnpm exec deno test --allow-env supabase/functions/account-api/index.test.ts` PASS（22 tests）；`pnpm exec deno test --allow-env supabase/functions/billing-webhook/index.test.ts supabase/functions/maintenance/index.test.ts` PASS（10 tests）；`pnpm --filter account-server test` PASS；`pnpm --filter domain test` PASS；`pnpm --filter admin typecheck` PASS；`pnpm contracts:check` PASS（account=21/admin=38）；`pnpm docs:check` PASS（44 documents）；`git diff --check` PASS。
+- Supabase lint：`pnpm exec supabase db lint --local --fail-on error` 未通过，但输出只有仓库既有 `admin_account_*`、`admin_file_policy_update`、`admin_deletion_job_*` 等函数的既有 error/warning；BILL-04 新增函数未出现 lint error。全量 format/lint 的既有失败不改写为 PASS。
+- 覆盖范围：本地空库迁移、pgTAP、Deno/Node API 与 job 测试、SDK/domain/admin 类型、OpenAPI、文档和差异检查；未覆盖真实 Provider、真实付款、Provider 权威订单验证、自动结算、生产迁移、调度观察和生产恢复。
+- 代码commit：`7169183`（`feat(billing): add checkout inbox and processing foundations`）与 `c3b99b3`（`fix(billing): harden webhook and worker fences`）；均已 push 到 `origin/codex/billing-architecture-review`，远端最终 SHA 为 `c3b99b3`。
+- 未完成/阻塞/下一满足依赖任务：保持真实购买关闭；下一项为 BILL-05，完成 Provider 权威验证、双进度对账和共享 `entitlement_apply` 结算入口。
+
 ## 5. 要求覆盖与实际测试
 
 | 要求ID（总计划R01～R17） | 测试路径/用例 | 环境/被测commit | 命令/exit code | 结果/证据 |
@@ -89,6 +100,7 @@
 | BILL-01 G-DEV | `packages/domain/tests/billing.test.ts`、`tests/spikes/billing/crypto-vectors.mjs` | 本地 Node/Deno；工作区当前改动 | `pnpm test:billing:crypto`; `pnpm test:billing:crypto:deno`; `pnpm --filter @kit/domain test:unit --run`; `pnpm --filter @kit/domain typecheck` | PASS；真实 Provider 仍 NOT_RUN |
 | BILL-02 catalog/config | `supabase/tests/bill_02_subscription_product_catalog.sql`、`supabase/functions/account-api/index.test.ts`、`packages/account-server/tests/client.test.ts` | 本地 Docker DB、Deno、Node；当前工作区 | `pnpm test:db`; `pnpm exec deno test -A supabase/functions/account-api/index.test.ts`; `pnpm --filter @kit/account-server test:unit` | PASS；Provider/生产仍 NOT_RUN |
 | BILL-03 redemption/correction | `supabase/tests/bill_03_redemption_v2_lifecycle.sql`、`packages/domain/tests/billing.test.ts`、`supabase/functions/account-api/index.test.ts` | 本地 Docker DB、Deno、Node；当前工作区 | `pnpm test:db`; `pnpm --filter @kit/domain test:unit --run`; `pnpm exec deno test -A supabase/functions/account-api/index.test.ts` | PASS；真实结算/生产仍 NOT_RUN |
+| BILL-04 checkout/inbox/job | `supabase/tests/bill_04_checkout_order_inbox_jobs.sql`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.test.ts`、Account API/SDK tests | 本地 Docker DB、Deno、Node；代码 commits `7169183` + `c3b99b3` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted Deno/SDK/domain/admin tests; `pnpm contracts:check`; `pnpm docs:check` | PASS（579 SQL assertions、22 Account、3 webhook、7 maintenance）；真实 Provider/结算/生产 NOT_RUN |
 
 重点独立记录：Checkout长幂等/响应丢失、两笔真实款、finalized重放、ACK后崩溃、lease/fence、分页移动与处理重试、99年顺延/到期/跨世纪日期、Admin真永久兼容及通用替代链、删除/归档/批次并发、服务端故障授权。
 
@@ -111,6 +123,6 @@
 
 ## 8. 最终结论与交接
 
-实现覆盖：BILL-01～BILL-03 的本地 G-DEV 范围已完成；文档/合同检查：`docs:check` 与 `contracts:check` 待本阶段提交前复核；真实渠道：NOT_RUN；生产观察：NOT_RUN且不在默认范围。Proposal Completed：否，BILL-04～BILL-07 尚未完成。
+实现覆盖：BILL-01～BILL-04 的本地 G-DEV 范围已完成；`docs:check` 与 `contracts:check` 均已 PASS；真实渠道：NOT_RUN；生产观察：NOT_RUN且不在默认范围。Proposal Completed：否，BILL-05～BILL-07 尚未完成。
 
 记录当时未提交修改归属、需用户决策事项、已解决与剩余失败；不得将本地模拟成功转换为真实支付可用。
