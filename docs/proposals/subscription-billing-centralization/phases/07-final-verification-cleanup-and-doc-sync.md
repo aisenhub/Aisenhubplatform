@@ -1,6 +1,6 @@
 # BILL-07 — 完整验收、迁移恢复与发布准备
 
-> 状态：未开始。文档已按最新架构修订，不代表功能实施或联调完成。
+> 状态：本地最终检查已完成；G-DEV PASS，G-PROVIDER/G-OPS/生产 NOT_RUN。文档已同步当前实现事实，整体方案仍不能标记 Completed。
 
 ## 1. 目标与前置
 
@@ -36,7 +36,7 @@ PII检查覆盖数据库、日志、错误、浏览器bundle和URL埋点；Webho
 
 ## 6. 命令与旧路径退出
 
-核对并运行docs:check、contracts:check、format:check、lint、typecheck、test:unit、runtime:probe、build、test:db、test:maintenance及实际新增billing SQL/API/Deno、SDK/安装/浏览器测试。pnpm test:api占位不计通过。代码变化影响结果须复测。
+核对并运行 docs:check、contracts:check、typecheck、构建、领域单测、运行时和数据库检查；本次实际完成本地 reset、33 个 SQL 测试文件/648 条断言、Account API/maintenance/Afdian 定向测试、SDK/Admin/Template typecheck/build、合同与文档检查。format/lint 的全仓结果仍按实际输出区分；真实升级 fixture、Provider、运维调度和生产观察 NOT_RUN。`pnpm test:api` 等不存在命令不计通过。
 
 使用rg核查旧16位默认、Free claim本期实现、旧Checkout状态、默认零元接受、单高水位、硬编码价格/URL、前端授权、重复期限算法、任意DML和日志PII；历史码兼容与第二期说明不是需要删除的旧功能。
 

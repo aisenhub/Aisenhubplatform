@@ -2,7 +2,7 @@
 
 ## Admin
 
-[apps/admin](../../../apps/admin)使用 Next.js App Router。平台目录与平台上下文组织账户、套餐、兑换批次、订阅、文件、Origin、Key 和设置；operations 集中审计与删除任务。登录、MFA、安全页面管理管理员会话。
+[apps/admin](../../../apps/admin)使用 Next.js App Router。平台目录与平台上下文组织账户、套餐、兑换批次、订阅、文件、Origin、Key 和设置；operations 集中审计与删除任务；中央 Billing 页面提供 Provider 订单、结算、积压指标和受控重查入口。登录、MFA、安全页面管理管理员会话。
 
 资源页由 apps/admin/features 实现，通过同源 /api/v1/... 代理访问中央 /admin/api/v1/...。平台文件列表的 platform_id 在 SQL 分页前过滤，游标带平台范围。敏感操作由服务端认证和近期 MFA 检查决定，页面按钮不构成权限边界。
 
@@ -15,10 +15,10 @@
 | / | 重定向到 /files |
 | /files | 本地文件列表、上传和删除参考交互 |
 | /account | 本地账户资料与可选 Supabase 验证操作 |
-| /subscription | 固定套餐、激活码与支付跳转参考交互 |
+| /subscription | 从中央 API 读取商品/权益，使用同源 BFF 创建 Checkout、轮询真实状态和兑换激活码 |
 | /pricing | 重定向到 /subscription |
 
-ReferenceApiCard 展示接口调用示例，不执行示例代码。账户页可在配置公开 Auth 参数后执行部分验证；订阅、文件及资料演示不等同于中央账户数据。页面没有支付回调或完整普通用户登录／业务 BFF。
+ReferenceApiCard 展示接口调用示例，不执行示例代码。账户页可在配置公开 Auth 参数后执行部分验证；文件及资料仍是参考页面。订阅页不伪造支付成功，`granted` 之前不会显示为已开通；BFF 仅代理白名单路径，Provider 回调和真实会话生命周期仍需对应环境配置。
 
 ## 共享 UI 与安装元数据
 

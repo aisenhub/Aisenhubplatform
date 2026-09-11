@@ -67,7 +67,9 @@ Auth完全不可用时不绕过认证开放Admin网页；通过基础设施运�
 
 ## 5. Durable任务与容量
 
-清理/删除重试每分钟运行，对象对账每小时分批运行，联合备份每天运行。任务用数据库job lease、fencing_token、retry_count和next_attempt_at，禁止将Edge响应后的未跟踪Promise作为可靠任务。
+清理/删除重试每分钟运行，对象对账每小时分批运行，联合备份每天运行。Billing processing 使用独立的 job lease/fencing：`/maintenance/v1/billing/jobs/claim` 领取批次，`/maintenance/v1/billing/jobs/process` 在事务外调用 Provider adapter 后进入 `billing_order_query_target`/`billing_order_verify_and_settle`，`/maintenance/v1/billing/jobs/finish` 以 lease 结算成功/失败；Provider 网络等待不持有数据库事务。任务用数据库job lease、fencing_token、retry_count和next_attempt_at，禁止将Edge响应后的未跟踪Promise作为可靠任务。
+
+当前仓库调度清单只声明每分钟领取最多20个 Billing job；process/finish 由同一受控 worker 在领取后完成，不能仅凭存在HTTP入口宣称已自动调度。发现游标和处理游标独立记录，Admin metrics 同时展示两者的最后成功时间、pending/retryable/manual_review 和 oldest pending。真实调度密钥、Provider 限流预算、告警接收人和停机恢复演练属于 G-OPS，当前 NOT_RUN。
 
 数据库临界区短事务，不跨Storage网络等待。失效lease的worker不能提交新状态；不把fencing等同Storage的写入取消。未知Storage写入保留配额直到确认结算，无法确认时转人工，不无限释放预算重试。
 

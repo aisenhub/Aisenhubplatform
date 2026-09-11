@@ -51,6 +51,9 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.admin_plan_upsert | Entitlements/Admin | Admin ctx+平台+计划字段+默认Free动作 → 计划生命周期与默认计划原子更新 |
 | private.platform_key_verify_presented | Account | key id+HMAC+版本 → active platform/key metadata；只授予account_executor，不开放Key表读取 |
 | private.admin_plan_list / admin_batch_list / admin_subscription_read | Entitlements/Admin | Admin ctx+目标范围 → 只读计划、兑换批次、订阅投影；不授予基础表读取 |
+| private.admin_billing_order_list / admin_billing_order_read / admin_billing_metrics / admin_billing_provider_product_list | Billing/Admin | Admin ctx → Provider 事实、订单结算状态、积压/对账指标和商品映射只读投影；不开放 Billing 表读取 |
+| private.admin_billing_order_requery | Billing/Admin | Admin ctx+订单+operation_id+expected_version+reason → 幂等 reconciliation job 与审计；不直接查询 Provider |
+| private.admin_billing_order_resolve | Billing/Admin | Admin ctx+订单+operation_id+expected_version+decision+reason → 受控最终结案与审计；不冒充退款 API 或绕过 `entitlement_apply` |
 | private.admin_step_up_valid | Admin | user+session+proof → 5分钟内有效性；敏感写操作必须通过统一包装 |
 | private.admin_batch_create / confirm / disable | Entitlements/Admin | 生成的hash列表/receipt hash与状态，禁止接收明文持久字段 |
 | private.file_intent_create | Files/Account | ctx+metadata+size+replaceId+idem → file_id/预约 |
@@ -81,6 +84,7 @@ Admin路径固定为/admin/api/v1，具体动作：
 - plans：创建/更新/归档，默认Free通过platform更新。
 - redemption-batches：创建、读取、confirm-delivery、disable；codes只读mask和按码disable。
 - subscriptions：读取与commands，拒绝直接PATCH Projection。
+- billing：中央订单、Provider 商品映射、积压/对账指标、订单详情、重查和结案；敏感动作需要近期MFA、`operation_id`、`If-Match` 与 reason。
 - config-files：metadata、受控download、delete。
 - audit：只读筛选分页；deletion-jobs：只读状态、Admin start/retry；不提供任意checkpoint编辑。
 
@@ -88,11 +92,11 @@ Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文�
 
 ## 5. OpenAPI 与 DTO 合同
 
-Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含21个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账接口需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计和删除任务资源。所有未实现的操作不得暴露成功假数据。
+Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含21个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账接口需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。Billing Admin 的订单列表使用服务端时间游标，详情返回归一化 Provider facts，写操作声明近期 MFA、`If-Match`、`operation_id`、reason 和 412/403 等失败边界。所有未实现的操作不得暴露成功假数据。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证必须使用服务端 session-bound proof；OpenAPI 的存在不代表路由、Provider 或真实会话生命周期已经完成。
 
-BILL-01 的 Provider-neutral 计费草案位于`packages/domain/src/contracts/billing.ts`，冻结四种商品的期限语义、定点金额字符串、不可变 Checkout snapshot、Provider 订单观察、操作来源/版本和结算状态。该文件不创建支付表、不实现权益写入、不证明 Afdian 已联调；真实 Provider 适配器必须在后续阶段以授权的协议证据为准。
+BILL-01 的 Provider-neutral 计费草案位于`packages/domain/src/contracts/billing.ts`，冻结四种商品的期限语义、定点金额字符串、不可变 Checkout snapshot、Provider 订单观察、操作来源/版本和结算状态。BILL-05 的 Provider adapter 只在 maintenance 的事务外完成 query/normalize，SQL wrapper 负责验证、结算和唯一 `entitlement_apply` 写入口；BILL-06 的 Consumer BFF 只在服务端持有 Platform Key，浏览器不能直接连接中央 API。该文件不证明 Afdian 已联调；真实 Provider 适配器必须以授权的协议证据为准。
 
 ## 6. 时间、事务和失败边界
 

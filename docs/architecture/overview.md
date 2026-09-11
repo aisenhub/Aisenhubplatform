@@ -7,7 +7,7 @@ Aisenhubplatform 为多个自营平台提供共享身份、平台账户、订阅
 | 位置 | 职责 |
 | --- | --- |
 | apps/admin | Next.js 管理控制台与同源认证、资源代理 |
-| apps/template-preview | 账户、配置文件、订阅的本地参考页面 |
+| apps/template-preview | 账户、配置文件、订阅的 Consumer 参考页面；订阅通过同源 server-only BFF |
 | packages/account-auth | Auth 接口、会话和认证意图类型 |
 | packages/account-auth-nextjs | Supabase Auth、Cookie、刷新、回调适配 |
 | packages/account-server | 服务端 Account API 客户端 |
@@ -37,12 +37,13 @@ flowchart TD
   Worker[Maintenance HTTP worker] --> SQL
   Worker --> Storage
   Worker --> Auth
-  Preview[平台端参考页面] --> Local[页面本地状态]
+  Preview[Consumer 浏览器] --> PreviewBff[同源 Consumer BFF]
+  PreviewBff --> API
   Preview --> OptionalAuth[可选 Supabase Auth 操作]
 ```
 
 Admin API 与 Account API 在同一 Edge 源文件中分派，分别切换数据库 executor 角色。管理端资源请求由 Next.js 转发到该服务，管理端本身不直接连接 SQL。
 
-权益和配额写入通过共享数据库过程完成；业务 DTO 与密钥材料工具不承担第二套权益计算。BILL-04 已建立服务端定价的 Checkout snapshot、Provider Order/Settlement 关系、hash-only Webhook Inbox 和可接管的 processing job 基础；没有 verified Provider mapping 时购买仍关闭，权威订单验证与最终结算由后续 BILL-05 完成。系统没有组织／团队服务、微服务消息总线或跨域自动登录服务。
+权益和配额写入通过共享数据库过程完成；业务 DTO 与密钥材料工具不承担第二套权益计算。BILL-04 建立了服务端定价 Checkout snapshot、Provider Order/Settlement 关系、hash-only Webhook Inbox 和可接管的 processing job 基础；BILL-05 增加 Provider-neutral 事实归一化、权威验证/结算、双游标对账与 `entitlement_apply` 统一写入；BILL-06 增加中央 Billing Admin wrapper、If-Match/operation_id 结案边界、Consumer 同源 BFF 与服务端权益授权辅助。没有 verified Provider mapping 时购买仍关闭，真实 Provider 与生产观察保持独立门槛。系统没有组织／团队服务、微服务消息总线或跨域自动登录服务。
 
 详见[身份与安全](modules/identity-security.md)、[权益](modules/entitlements.md)、[文件任务](modules/files-jobs.md)及[运行拓扑](deployment.md)。

@@ -1,6 +1,6 @@
 # BILL-06 — 中央 Admin、Consumer SDK/BFF 与服务端授权
 
-> 状态：未开始。文档已按最新架构修订，不代表功能实施或联调完成。
+> 状态：本地 G-DEV 已验收；真实 Consumer 会话、Provider、生产 NOT_RUN。中央 Billing Admin、Consumer BFF、Checkout/兑换页面和服务端授权辅助已实现。
 
 ## 1. 目标与依赖
 
@@ -22,9 +22,9 @@ Orders展示付款事实、归属、结算/修正链、暂时阻塞或人工原�
 
 ## 4. SDK/BFF
 
-保留flat methods，可添加subscription facade但不复制HTTP实现。支持products/current/create/get/redeem及稳定错误/request_id；POST仅同Idempotency-Key重试，确定性业务冲突不盲重试。
+保留flat methods，可添加subscription facade但不复制HTTP实现。支持products/current/create/get/redeem及稳定错误/request_id；POST仅同Idempotency-Key重试，确定性业务冲突不盲重试。`@kit/account-server` 增加 `authorizeProtectedFeature`，只以中央 entitlement 为权威，不在本地重算到期或信任浏览器字段。
 
-Browser→同源BFF/Server Action→server-only SDK→Central API；Key仅server env，会话/Origin/CSRF/method按现有认证合同。Auth allowlist、callback、returnTo与账户显式激活有完整路径；不声称跨域自动登录。
+Browser→同源 BFF→Central API；BFF 只暴露订阅/Checkout/兑换白名单路径，Key 仅 server env，会话/Origin/CSRF/method 按现有认证合同。Auth allowlist、callback、returnTo 与账户显式激活仍以现有应用配置为准；不声称跨域自动登录。
 
 ## 5. 用户页面
 
@@ -48,7 +48,7 @@ Registry只列真实路由，复制BFF/SDK/授权示例与必要配置；先核�
 
 测试无登录Pricing、激活/关闭/暂停、missing mapping、MFA/412、popup blocked、未知响应、人工状态、31位和历史码、支付后刷新；浏览器只读结果不直接授权。服务端测试允许/到期/暂停/中央超时，检查bundle无Key/SQL/token，API no-store。
 
-运行实际SDK/registry/consumer安装测试和浏览器用例，窄屏/桌面及已有主题；命令可参考现有test:sdk:m5-02、test:registry:m5-04、test:consumer:m5-05，但需核实覆盖，新增缺失定向测试。
+已运行 account-server typecheck/unit、Template/Admin typecheck/build、Account API 定向测试、contracts/docs 检查；浏览器真实 Auth/Provider 会话、Registry 安装和生产购买仍 NOT_RUN。命令可参考现有test:sdk:m5-02、test:registry:m5-04、test:consumer:m5-05，但需在对应环境核实覆盖。
 
 
 ## 执行纪律与交付

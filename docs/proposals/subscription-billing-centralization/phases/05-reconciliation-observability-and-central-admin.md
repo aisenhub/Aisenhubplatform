@@ -1,6 +1,6 @@
 # BILL-05 — Provider 验证、结算与双进度对账
 
-> 状态：未开始。文档已按最新架构修订，不代表功能实施或联调完成。
+> 状态：本地 G-DEV 已验收；G-PROVIDER/生产 NOT_RUN。Provider-neutral 适配、验证结算、双进度游标和 maintenance worker 已实现，真实渠道证据仍缺失。
 
 ## 1. 目标与依赖
 
@@ -52,7 +52,7 @@ fixture跑完整checkout→持久任务→query权威验证→order→Grant/Even
 
 测试错plan/type/count/month/币种/优惠、零元未批准转人工、映射调价/停平台/归档/删除竞态、未关联付款。测试页移动、迟到旧单、page cap、头部不饿死、游标推进后旧任务失败恢复、fence过期及Provider超时。
 
-完成SQL/API/Deno/maintenance实际测试与Admin命令合同，交BILL-06；真实Provider联调结果独立记录，不能用fake宣称已连接。
+已完成SQL/API/Deno/maintenance实际测试与 Admin 命令合同，并交付 BILL-06。真实 Provider 联调结果独立记录，不能用 fake 宣称已连接；当前真实渠道仍 NOT_RUN。
 
 
 ## 执行纪律与交付
