@@ -135,6 +135,28 @@
 
 ## 5. 要求覆盖与实际测试
 
+### R01–R17 逐项证据映射
+
+| 要求 | Local 证据 | 当前结论与剩余边界 |
+|---|---|---|
+| R01 中央自营/BFF 边界 | `tests/spikes/consumer/m5-05-install.mjs`、`tests/spikes/e2e/t16-r2-account.mjs` 的独立平台与 bundle 凭据扫描；Consumer BFF allowlist | Local PASS；Hosted 双平台仍 NOT_RUN |
+| R02 目录与 Free 单源 | `supabase/tests/bill_02_subscription_product_catalog.sql`、`bill_08_purchase_readiness.sql`、Account API 商品测试 | Local PASS；真实 Provider 映射未联调 |
+| R03 Provider 权威 | `supabase/tests/bill_05_provider_verification_settlement.sql`、`supabase/functions/_shared/afdian.test.ts`、crypto vectors | G-DEV/模拟 PASS；G-PROVIDER 真实签名、query-order、限流仍 NOT_RUN |
+| R04 调价与版本发布 | BILL-02 catalog/config、BILL-04 checkout snapshot、Account checkout API 测试 | Local PASS；真实渠道旧链接结算未验证 |
+| R05 Checkout 恢复 | `supabase/tests/bill_04_checkout_order_inbox_jobs.sql`、`bill_09_idempotency_cleanup.sql`、checkout API 测试 | Local PASS；生产恢复观察未运行 |
+| R06 结算与租户隔离 | BILL-04/BILL-05 SQL、BILL-06 SQL、Account API 平台/账户负向测试 | Local PASS；真实订单事实未验证 |
+| R07 Inbox/任务恢复 | `supabase/functions/billing-webhook/index.test.ts`、`maintenance/index.test.ts`、BILL-04 SQL lease/fence 用例 | Local PASS；真实调度接管未验证 |
+| R08 优惠/数量/金额合同 | BILL-05 SQL、`packages/domain/tests/billing.test.ts`、Afdian normalizer tests | Local PASS；真实 discount/redeem/零元行为 NOT_RUN |
+| R09 99 年与通用修正 | BILL-03/BILL-05/BILL-06 SQL、Domain calendar/correction tests、T16 Admin flow | Local PASS；真实退款/撤销定位未验证 |
+| R10 旧码兼容 | `supabase/tests/bill_03_redemption_v2_lifecycle.sql`、`bill_07_upgrade_compatibility.sql`、Domain redemption tests | Local PASS；真实生产数据分布未验证 |
+| R11 SDK 状态与页面 | `tests/spikes/sdk/m5-02-packages.mjs`、`consumer/m5-05-install.mjs`、T16/T12 浏览器流程 | Local PASS；Hosted/生产页面观察未运行 |
+| R12 Admin 结案边界 | BILL-06 SQL、`packages/account-server/tests/authorization.test.ts`、T12 MFA/AAL2 与 T16 Admin flow | Local PASS；真实运维责任/生产审计未验证 |
+| R13 双进度对账 | BILL-05 SQL、`maintenance/index.test.ts`、Admin operations UI | Local 模拟 PASS；Provider 分页/限流和生产告警仍 NOT_RUN |
+| R14 生命周期与删除 | BILL-03/BILL-04/BILL-07 SQL、M4 retention/delete tests、T16 close/delete flow | Local PASS；真实恢复点与生产保留观察未运行 |
+| R15 服务端授权 | `packages/account-server/tests/authorization.test.ts`、BILL-06 SQL、T16 suspended/expired/central failure matrix | Local PASS；Hosted/生产延迟与可用性未验证 |
+| R16 最小权限与旧写路径退出 | `supabase/tests/t10_role_negative.sql`、BILL-04/BILL-06 SQL、maintenance role tests | Local PASS；生产角色/密钥轮换未验证 |
+| R17 上线与恢复 | BILL-07 upgrade/stop-switch、`tests/spikes/ops/m6-02-local-backup.mjs`、Local E2E | Local PARTIAL_LOCAL；G-PROVIDER、G-OPS、外部备份、生产迁移/观察仍 NOT_RUN |
+
 | 要求ID（总计划R01～R17） | 测试路径/用例 | 环境/被测commit | 命令/exit code | 结果/证据 |
 |---|---|---|---|---|
 | BILL-01 G-DEV | `packages/domain/tests/billing.test.ts`、`tests/spikes/billing/crypto-vectors.mjs` | 本地 Node/Deno；工作区当前改动 | `pnpm test:billing:crypto`; `pnpm test:billing:crypto:deno`; `pnpm --filter @kit/domain test:unit --run`; `pnpm --filter @kit/domain typecheck` | PASS；真实 Provider 仍 NOT_RUN |
