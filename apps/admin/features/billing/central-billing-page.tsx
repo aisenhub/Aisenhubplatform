@@ -56,6 +56,11 @@ type BillingMetrics = {
   processing_last_success_at: string | null;
 };
 
+type ResolutionDecision =
+  | 'refund_confirmed'
+  | 'closed_anomaly'
+  | 'manual_correction';
+
 function tone(value: string | null): StatusTone {
   if (value === 'granted' || value === 'finalized') return 'success';
   if (value === 'manual_review' || value === 'review_required')
@@ -74,6 +79,8 @@ export function CentralBillingPage() {
   const [metrics, setMetrics] = useState<BillingMetrics | null>(null);
   const [selected, setSelected] = useState<BillingOrderDetail | null>(null);
   const [reason, setReason] = useState('管理员确认后重新查询 Provider 订单');
+  const [decision, setDecision] =
+    useState<ResolutionDecision>('closed_anomaly');
   const [state, setState] = useState<'loading' | 'success' | 'error'>(
     'loading',
   );
@@ -168,6 +175,42 @@ export function CentralBillingPage() {
     } catch (caught) {
       setActionError({
         title: '订单重查失败',
+        description: sessionErrorMessage(caught),
+        requestId: null,
+        technicalDetail: null,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resolve() {
+    if (!selected) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      const response = await adminAuthSession.request(
+        `/api/v1/admin/api/v1/billing/orders/${selected.order_id}/resolve`,
+        {
+          method: 'POST',
+          headers: { 'If-Match': `W/"${selected.admin_version}"` },
+          body: JSON.stringify({
+            operation_id: crypto.randomUUID(),
+            decision,
+            reason,
+          }),
+        },
+      );
+      const payload = await readApiPayload(response);
+      if (!response.ok) {
+        if (response.status === 403) setNeedsMfa(true);
+        setActionError(resourceError(response, payload, '订单结案'));
+        return;
+      }
+      await Promise.all([load(), inspect(selected.order_id)]);
+    } catch (caught) {
+      setActionError({
+        title: '订单结案失败',
         description: sessionErrorMessage(caught),
         requestId: null,
         technicalDetail: null,
@@ -334,6 +377,33 @@ export function CentralBillingPage() {
                     onClick={() => void requery()}
                   >
                     请求 Provider 重查
+                  </Button>
+                  <label
+                    className="mt-4 block text-sm font-medium"
+                    htmlFor="billing-decision"
+                  >
+                    结案动作
+                  </label>
+                  <select
+                    className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    id="billing-decision"
+                    onChange={(event) =>
+                      setDecision(event.target.value as ResolutionDecision)
+                    }
+                    value={decision}
+                  >
+                    <option value="closed_anomaly">关闭异常</option>
+                    <option value="refund_confirmed">外部退款已确认</option>
+                    <option value="manual_correction">人工修正</option>
+                  </select>
+                  <Button
+                    className="mt-2 w-full"
+                    disabled={busy || selected.resolution_status === 'resolved'}
+                    onClick={() => void resolve()}
+                  >
+                    {selected.resolution_status === 'resolved'
+                      ? '订单已结案'
+                      : '提交受控结案'}
                   </Button>
                 </>
               ) : (
