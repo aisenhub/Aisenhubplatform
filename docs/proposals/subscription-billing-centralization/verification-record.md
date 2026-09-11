@@ -82,6 +82,13 @@
 - 代码commit：`5dba4bd`（`feat(billing): add redemption v2 lifecycle and corrections`）；已 push 到 `origin/codex/billing-architecture-review`，远端 SHA 核对为 `5dba4bd33fc4786debbce4ff525001b1ae7ef226`。
 - 未完成/阻塞/下一满足依赖任务：BILL-03 不提供商业永久/Free claim；下一项为 BILL-04，建立可恢复 Checkout、Order、Inbox 与持久任务。
 
+### BILL-03 correction forward-fix/2026-09-12/当前 Agent
+
+- 实际变更文件：`supabase/migrations/20260911221011_bill_03_correction_replay_idempotency.sql`、`tests/spikes/sql/m3-entitlement-ledger.mjs`；并修正 `supabase/tests/bill_07_upgrade_compatibility.sql` 将 V1 计数限定在 fixture platform，消除跨测试数据造成的顺序依赖。
+- 实现行为：Admin correction 在持有平台/账户/订阅锁后先按 `platform_id + operation_id` 检查已提交结果，再检查原始事件序列；因此首次原子 revoke+grant 推进序列后，携带旧快照序列的重试仍返回 `replayed`。operation 对应账户/原 Grant 不一致时拒绝为 `idempotency_conflict`，不放宽替代链唯一性或共享权益写入口。
+- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；Local M3 entitlement ledger 脚本 PASS（correction preview、atomic replacement、replay、stale precondition、single replacement、concurrent winner/loser）；`pnpm test:db` PASS（36 files/695 tests）；定向 `oxfmt --check` 与 `git diff --check` PASS。
+- 证据边界：以上为本地 Docker/Auth fixture 与 SQL 事务并发证据；真实退款/Provider、Hosted、生产调度、密钥轮换和删除竞态仍未验证，Proposal 仍不可标记 Completed。
+
 ### BILL-04/2026-09-11/当前 Agent
 
 - 实际变更文件：`supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql`、`supabase/tests/bill_04_checkout_order_inbox_jobs.sql`、`supabase/functions/_shared/billing.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.ts`、`supabase/functions/maintenance/index.test.ts`、`supabase/functions/maintenance/schedule.json`、`packages/domain/src/contracts/api.ts`、`packages/account-server/src/index.ts`、`docs/reference/contracts/account.openapi.json` 及对应合同/架构文档。

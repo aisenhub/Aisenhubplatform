@@ -118,7 +118,9 @@ select is((select product_code from public.redemption_code_batches where id = '0
 select is((select term_kind_snapshot from public.redemption_code_batches where id = '00000000-0000-4000-8000-000000000713'), 'finite', 'new batch snapshots term');
 select is((select duration_value_snapshot from public.redemption_code_batches where id = '00000000-0000-4000-8000-000000000713'), 1, 'new batch snapshots duration');
 select is((select count(*)::integer from public.redemption_code_batches where platform_id = '00000000-0000-4000-8000-000000000702'), 2, 'legacy and new batches coexist');
-select is((select count(*)::integer from public.redemption_code_batches where model_version = 1), 1, 'legacy batch remains the only V1 row');
+select is((select count(*)::integer from public.redemption_code_batches
+  where platform_id = '00000000-0000-4000-8000-000000000702' and model_version = 1),
+  1, 'legacy batch remains the only V1 row for the fixture platform');
 select throws_ok(
   $$update public.redemption_code_batches set product_code = 'yearly' where id = '00000000-0000-4000-8000-000000000713'$$,
   'P0001', 'redemption_batch_snapshot_immutable', 'new batch snapshot cannot be rewritten'

@@ -23,6 +23,8 @@ let concurrentUser;
 let multiCodeUser;
 let grantRaceUser;
 let hmacRotationUser;
+let correctionUser;
+let correctionRaceUser;
 const [existingSystemAdmin] = await sql`
   select user_id from private.system_admin where singleton_id = 1
 `;
@@ -230,6 +232,118 @@ try {
   assert(
     replayed.outcome === 'replayed' && replayed.grant_id === grant.grant_id,
     'admin grant operation is idempotent',
+  );
+  correctionUser = await signup('m3-correction');
+  const correctionContext = () =>
+    sql`row(${correctionUser.user}, ${correctionUser.session}, ${platformId}, ${keyId}, ${crypto.randomUUID()})::private.account_context`;
+  const [correctionAccount] = await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.account_activate(${correctionContext()})`,
+  );
+  const [correctionOriginal] = await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_entitlement_command(${adminContext()}, ${platformId}, ${correctionAccount.platform_account_id}, 'grant', ${crypto.randomUUID()}, ${paidPlanId}, 30, 'day', null, 'M3 correction original')`,
+  );
+  const [correctionPreview] = await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_entitlement_correction_preview(${adminContext()}, ${platformId}, ${correctionAccount.platform_account_id}, ${correctionOriginal.grant_id})`,
+  );
+  assert(
+    correctionPreview.original_grant_id === correctionOriginal.grant_id &&
+      correctionPreview.already_revoked === false &&
+      Number(correctionPreview.current_event_sequence) === 1 &&
+      Number(correctionPreview.later_grant_count) === 0,
+    'correction preview returns the current grant and event precondition',
+  );
+  const correctionOperationId = crypto.randomUUID();
+  const [correctionApplied] = await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_entitlement_correction_apply(${adminContext()}, ${platformId}, ${correctionAccount.platform_account_id}, ${correctionOriginal.grant_id}, 1, ${otherPlanId}, 1, 'month', ${correctionOperationId}, 'M3 correction')`,
+  );
+  assert(
+    correctionApplied.outcome === 'applied' &&
+      correctionApplied.original_grant_id === correctionOriginal.grant_id &&
+      Number(correctionApplied.event_sequence) === 3,
+    'correction atomically revokes the original grant and creates a replacement',
+  );
+  const [correctionReplacement] = await sql`
+    select g.plan_id, exists (
+      select 1 from public.subscription_events e
+      where e.grant_id = ${correctionOriginal.grant_id} and e.event_type = 'revoked'
+    ) as original_revoked
+    from public.subscription_grants g
+    where g.id = ${correctionApplied.replacement_grant_id}
+  `;
+  assert(
+    correctionReplacement.plan_id === otherPlanId &&
+      correctionReplacement.original_revoked === true,
+    'correction chain links the replacement and revoked original grant',
+  );
+  const [correctionReplay] = await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_entitlement_correction_apply(${adminContext()}, ${platformId}, ${correctionAccount.platform_account_id}, ${correctionOriginal.grant_id}, 1, ${otherPlanId}, 1, 'month', ${correctionOperationId}, 'M3 correction')`,
+  );
+  assert(
+    correctionReplay.outcome === 'replayed' &&
+      correctionReplay.replacement_grant_id ===
+        correctionApplied.replacement_grant_id,
+    'correction replay returns the recorded replacement despite the advanced event sequence',
+  );
+  await expectSqlState(
+    () =>
+      asRole(
+        'admin_executor',
+        (transaction) =>
+          transaction`select * from private.admin_entitlement_correction_apply(${adminContext()}, ${platformId}, ${correctionAccount.platform_account_id}, ${correctionOriginal.grant_id}, 1, ${otherPlanId}, 1, 'month', ${crypto.randomUUID()}, 'M3 correction conflict')`,
+      ),
+    '40001',
+    'correction rejects a stale event precondition',
+  );
+  await expectSqlState(
+    () =>
+      asRole(
+        'admin_executor',
+        (transaction) =>
+          transaction`select * from private.admin_entitlement_correction_apply(${adminContext()}, ${platformId}, ${correctionAccount.platform_account_id}, ${correctionOriginal.grant_id}, 3, ${otherPlanId}, 1, 'month', ${crypto.randomUUID()}, 'M3 correction conflict')`,
+      ),
+    '23505',
+    'correction chain permits only one replacement for an original grant',
+  );
+  correctionRaceUser = await signup('m3-correction-race');
+  const correctionRaceContext = () =>
+    sql`row(${correctionRaceUser.user}, ${correctionRaceUser.session}, ${platformId}, ${keyId}, ${crypto.randomUUID()})::private.account_context`;
+  const [correctionRaceAccount] = await asRole(
+    'account_executor',
+    (transaction) =>
+      transaction`select * from private.account_activate(${correctionRaceContext()})`,
+  );
+  const [correctionRaceOriginal] = await asRole(
+    'admin_executor',
+    (transaction) =>
+      transaction`select * from private.admin_entitlement_command(${adminContext()}, ${platformId}, ${correctionRaceAccount.platform_account_id}, 'grant', ${crypto.randomUUID()}, ${paidPlanId}, 30, 'day', null, 'M3 correction race original')`,
+  );
+  const correctionRaceResults = await Promise.all(
+    [crypto.randomUUID(), crypto.randomUUID()].map((operationId) =>
+      asRole(
+        'admin_executor',
+        (transaction) =>
+          transaction`select * from private.admin_entitlement_correction_apply(${adminContext()}, ${platformId}, ${correctionRaceAccount.platform_account_id}, ${correctionRaceOriginal.grant_id}, 1, ${otherPlanId}, 1, 'month', ${operationId}, 'M3 correction race')`,
+      )
+        .then(([result]) => ({ result }))
+        .catch((error) => ({ error })),
+    ),
+  );
+  assert(
+    correctionRaceResults.filter((entry) => entry.result?.outcome === 'applied')
+      .length === 1 &&
+      correctionRaceResults.filter((entry) => entry.error?.code === '40001')
+        .length === 1,
+    'concurrent corrections have one winner and one stale-sequence loser',
   );
   await expectSqlState(
     () =>
@@ -637,6 +751,11 @@ try {
       hmacVersionOverlap: 'PASS',
       lostDeliveryResponseRetry: 'PASS',
       planManagement: 'PASS',
+      correctionPreview: 'PASS',
+      correctionAtomic: 'PASS',
+      correctionReplay: 'PASS',
+      correctionPrecondition: 'PASS',
+      correctionSingleReplacement: 'PASS',
     }),
   );
 } finally {
@@ -644,6 +763,9 @@ try {
     () => undefined,
   );
   await sql`delete from public.subscription_events where platform_id = ${platformId}`.catch(
+    () => undefined,
+  );
+  await sql`delete from public.subscription_grant_corrections where platform_id = ${platformId}`.catch(
     () => undefined,
   );
   await sql`delete from public.subscription_grants where platform_id = ${platformId}`.catch(
@@ -700,6 +822,16 @@ try {
     }).catch(() => undefined);
   if (hmacRotationUser?.user)
     await fetch(`${localUrl}/auth/v1/admin/users/${hmacRotationUser.user}`, {
+      method: 'DELETE',
+      headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
+    }).catch(() => undefined);
+  if (correctionUser?.user)
+    await fetch(`${localUrl}/auth/v1/admin/users/${correctionUser.user}`, {
+      method: 'DELETE',
+      headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
+    }).catch(() => undefined);
+  if (correctionRaceUser?.user)
+    await fetch(`${localUrl}/auth/v1/admin/users/${correctionRaceUser.user}`, {
       method: 'DELETE',
       headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
     }).catch(() => undefined);
