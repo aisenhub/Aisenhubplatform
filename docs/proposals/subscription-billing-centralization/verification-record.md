@@ -145,6 +145,14 @@
 - 验证命令：`pnpm test:e2e:t12-r2` PASS（Admin 登录、AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝、70 条路由×5 视口；测试用户/平台/配置清理为 0）；`pnpm exec oxfmt --check`（9 个变更文件）PASS；`pnpm --filter admin typecheck` PASS；`pnpm lint` PASS；`git diff --check` PASS；测试进程清理核对 PASS。
 - 代码提交：`7e318a3`（`fix(admin): preserve link button semantics`）已 push，并核对 `origin/codex/billing-architecture-review` 远端 SHA 为 `7e318a38c5f5dffcfbc302c05331218a92082c10`。
 
+### Local R15 授权压力探针/2026-09-12/当前 Agent
+
+- 实际变更文件：`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`tests/spikes/perf/r15-local-authority.mjs`、`package.json`、`docs/reference/configuration.md`。
+- 代码提交：`ba053a4`（`perf(account-api): coalesce auth verification work`；待本轮文档提交后一起 push）。
+- 实现行为：同一 access token 的并发 Auth 验证只共享进行中的请求，验证完成立即移除，不缓存验证结果；每个业务请求仍执行数据库 session、平台 Key 与权限检查。平台 HMAC CryptoKey 在进程内复用；数据库连接池上限新增受限配置 `ACCOUNT_API_DB_POOL_MAX`（4–64，默认 8），未改变默认值。
+- 验证结果：Account API Deno 测试 `26 passed`；并发 Auth 合并用例 PASS；10 req/s 短 smoke 为 20/20、错误率 0%、p95 225.82ms。默认连接池 8 下执行 100 req/s×60s 早停压力探针为 6000/6000、错误率 0%、实际 98.36 req/s、p95 884.08ms，未达到 p95≤500ms；连接池 32 对照为实际 85.32 req/s、p95 1455.32ms，同样未通过，未将其作为推荐配置。15 分钟完整窗口未伪造为通过。
+- 结论：功能授权链路 PASS；R15 性能目标当前 `NOT_PASS/待容量优化`，该结果不转换为 G-OPS 或生产通过。探针只操作 Local fixture，未修改 staging/生产。
+
 ## 5. 要求覆盖与实际测试
 
 ### R01–R17 逐项证据映射
@@ -165,9 +173,9 @@
 | R12 Admin 结案边界 | BILL-06 SQL、`packages/account-server/tests/authorization.test.ts`、T12 MFA/AAL2 与 T16 Admin flow | Local PASS；真实运维责任/生产审计未验证 |
 | R13 双进度对账 | BILL-05 SQL、`maintenance/index.test.ts`、Admin operations UI | Local 模拟 PASS；Provider 分页/限流和生产告警仍 NOT_RUN |
 | R14 生命周期与删除 | BILL-03/BILL-04/BILL-07 SQL、M4 retention/delete tests、T16 close/delete flow | Local PASS；真实恢复点与生产保留观察未运行 |
-| R15 服务端授权 | `packages/account-server/tests/authorization.test.ts`、BILL-06 SQL、T16 suspended/expired/central failure matrix | Local PASS；Hosted/生产延迟与可用性未验证 |
+| R15 服务端授权 | `packages/account-server/tests/authorization.test.ts`、BILL-06 SQL、T16 suspended/expired/central failure matrix、`tests/spikes/perf/r15-local-authority.mjs` | Local 功能授权 PASS；补充的 100 req/s 本地压力探针 p95 884.08ms，未达到探针设定门槛；Hosted/生产延迟与可用性未验证 |
 | R16 最小权限与旧写路径退出 | `supabase/tests/t10_role_negative.sql`、BILL-04/BILL-06 SQL、maintenance role tests | Local PASS；生产角色/密钥轮换未验证 |
-| R17 上线与恢复 | BILL-07 upgrade/stop-switch、`tests/spikes/ops/m6-02-local-backup.mjs`、Local E2E | Local PARTIAL_LOCAL；G-PROVIDER、G-OPS、外部备份、生产迁移/观察仍 NOT_RUN |
+| R17 上线与恢复 | BILL-07 upgrade/stop-switch、`tests/spikes/ops/m6-02-local-backup.mjs`、Local E2E、R15 补充压力探针 | Local PARTIAL_LOCAL；补充压力探针门槛未通过；G-PROVIDER、G-OPS、外部备份、生产迁移/观察仍 NOT_RUN |
 
 | 要求ID（总计划R01～R17） | 测试路径/用例 | 环境/被测commit | 命令/exit code | 结果/证据 |
 |---|---|---|---|---|
