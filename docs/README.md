@@ -1,6 +1,7 @@
 # 项目文档
 
 - [系统概览](architecture/overview.md)
+- [优化设计与实施计划](proposals/README.md)
 - [运行拓扑](architecture/deployment.md)
 - [身份与安全](architecture/modules/identity-security.md)
 - [权益与兑换](architecture/modules/entitlements.md)
