@@ -6,7 +6,7 @@
 
 - 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`。
 - 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`。
-- 工作目录/branch/实现代码HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `560fb77` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；公共文档同步提交为 `560fb77`，已 push；此修订仅校正文档中的提交指针。
+- 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `d71a259` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Consumer 功能提交 `d71a259`、公共文档同步提交 `e78c5e9` 均已 push。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（72个文件，10个本轮变更文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
 - 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
