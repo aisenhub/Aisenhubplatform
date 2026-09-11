@@ -163,13 +163,20 @@
 - 验证结果：Account API Deno 测试 `27 passed`；完整 Local DB reset 后 `pnpm test:db` PASS（36 files/695 tests），含新增函数存在性、SECURITY DEFINER、search_path 和最小权限断言；10 req/s 短 smoke 为 20/20、错误率 0%、p95 225.82ms。当前单次授权路径、默认事务角色模式/连接池 8 下自包含执行 100 req/s×60s 为 6000/6000、错误率 0%、实际 97.61 req/s、p95 760.70ms；此前无单次路径的同窗口基线为 p95 820.58ms。启用 startup 角色模式、连接池 8 后同窗口为 6000/6000、错误率 0%、实际 100.03 req/s、p95 619.00ms、p99 785.61ms，仍未达到 p95≤500ms；15 分钟完整窗口未伪造为通过。
 - 负载对照：同一 startup + pool8 配置在 50 req/s×60s 为 3000/3000、错误率 0%、实际 50.16 req/s、p95 332.50ms、p99 425.62ms，满足该负载下的 p95≤500ms 门槛；这不能替代 100 req/s 目标，当前证据显示 Local 在两档负载之间发生延迟饱和。
 - 证据边界：startup 角色模式仅在 Local 经过验证，未改变默认配置；连接池 4 + startup 角色的 60 秒对照 p95 969.24ms，连接池 12 + startup 角色的对照 p95 1601.58ms、实际 77.03 req/s，连接池 32 的历史对照 p95 1455.32ms，均不作为推荐配置。当前 Local 最优测得组合为 startup + pool8；结果不转换为 G-OPS 或生产通过。
-- 结论：功能授权链路 PASS；R15 性能目标当前 `NOT_PASS/待容量优化`，该结果不转换为 G-OPS 或生产通过。探针只操作 Local fixture，未修改 staging/生产。
+- 结论（远程 Auth 验证基线）：功能授权链路 PASS；该基线的 R15 性能目标为 `NOT_PASS/待容量优化`，失败结果保留并由后续本地 JWT/JWKS 优化复测；探针只操作 Local fixture，未修改 staging/生产。
 
 ### Local G-OPS 停机恢复回归/2026-09-12/当前 Agent
 
 - 实际变更文件：`supabase/functions/maintenance/index.test.ts`。
 - 验证结果：新增用例覆盖后台处理开关关闭时不领取积压任务、积压保持可见、开关恢复后重新领取并按 fence 完成；Webhook/maintenance 定向测试 `15 passed`，定向 `oxfmt --check` 与 `git diff --check` PASS。
 - 证据边界：这是本地 handler/数据库边界模拟，不代表真实 scheduler、Provider 限流、密钥托管/轮换、告警或生产恢复已经通过；这些仍保持 G-OPS/生产 NOT_RUN。
+
+### Local R15 JWT 验证优化/2026-09-12/当前 Agent
+
+- 实际变更文件：`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`tests/spikes/perf/r15-local-authority.mjs`、`docs/reference/configuration.md`。
+- 实现行为：Account API 支持 HS256 可选 Secret 和 Supabase Auth ES256 JWKS 的本地签名校验；JWKS 公钥仅短期缓存，验证结果不缓存，每个业务请求仍进入 `account_principal_presented` 检查活动 session/revocation。JWKS 不可用时回退 Auth `/user`，不改变 fail-closed 语义。
+- 验证命令：Account API Deno 测试 `29 passed`；startup role + pool8、`100 req/s × 60s` 为 `6000/6000`、错误率 `0`、实际 `100.66 req/s`、p95 `289.87ms`、p99 `376.69ms`，R15 探针 `pass=true`；此前同口径优化路径复测为 p95 `379.65ms` 和 `301.85ms`，均通过门槛；定向 `oxfmt --check`、`pnpm lint`、`pnpm contracts:check`、`pnpm docs:check` 与 `git diff --check` PASS。
+- 对照与边界：此前同一 startup + pool8、远程 Auth 验证路径 p95 `619.00ms` 的失败结果保留；本次仅操作 Local fixture，未把本地性能结果外推为 Hosted/生产容量或 G-OPS 通过。
 
 ## 5. 要求覆盖与实际测试
 
@@ -191,9 +198,9 @@
 | R12 Admin 结案边界 | BILL-06 SQL、`packages/account-server/tests/authorization.test.ts`、T12 MFA/AAL2 与 T16 Admin flow | Local PASS；真实运维责任/生产审计未验证 |
 | R13 双进度对账 | BILL-05 SQL、`maintenance/index.test.ts`、Admin operations UI | Local 模拟 PASS；Provider 分页/限流和生产告警仍 NOT_RUN |
 | R14 生命周期与删除 | BILL-03/BILL-04/BILL-07 SQL、M4 retention/delete tests、T16 close/delete flow | Local PASS；真实恢复点与生产保留观察未运行 |
-| R15 服务端授权 | `packages/account-server/tests/authorization.test.ts`、BILL-06 SQL、T16 suspended/expired/central failure matrix、`tests/spikes/perf/r15-local-authority.mjs` | Local 功能授权 PASS；补充的 100 req/s 本地压力探针（startup 角色模式最佳）p95 619.00ms，未达到探针设定门槛；Hosted/生产延迟与可用性未验证 |
+| R15 服务端授权 | `packages/account-server/tests/authorization.test.ts`、BILL-06 SQL、T16 suspended/expired/central failure matrix、`tests/spikes/perf/r15-local-authority.mjs` | Local 功能与优化后压力授权 PASS；startup 角色模式 + pool8、100 req/s×60s 为 6000/6000、错误率 0、p95 289.87ms；Hosted/生产延迟与可用性未验证 |
 | R16 最小权限与旧写路径退出 | `supabase/tests/t10_role_negative.sql`、BILL-04/BILL-06 SQL、maintenance role tests | Local PASS；生产角色/密钥轮换未验证 |
-| R17 上线与恢复 | BILL-07 upgrade/stop-switch、`tests/spikes/ops/m6-02-local-backup.mjs`、Local E2E、R15 补充压力探针 | Local PARTIAL_LOCAL；startup 角色模式下补充压力探针门槛仍未通过；G-PROVIDER、G-OPS、外部备份、生产迁移/观察仍 NOT_RUN |
+| R17 上线与恢复 | BILL-07 upgrade/stop-switch、`tests/spikes/ops/m6-02-local-backup.mjs`、Local E2E、R15 补充压力探针 | Local PARTIAL_LOCAL；R15 优化后本地压力门槛通过；G-PROVIDER、G-OPS、外部备份、生产迁移/观察仍 NOT_RUN |
 
 | 要求ID（总计划R01～R17） | 测试路径/用例 | 环境/被测commit | 命令/exit code | 结果/证据 |
 |---|---|---|---|---|

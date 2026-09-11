@@ -26,6 +26,7 @@
 | --- | --- |
 | SUPABASE_URL | Auth 与 Storage 地址 |
 | SUPABASE_ANON_KEY、SUPABASE_PUBLISHABLE_KEY | Auth 验证优先使用前者，后者为回退 |
+| ACCOUNT_API_JWT_SECRET | 可选 HS256 JWT 验证 Secret；ES256 access token 使用 `SUPABASE_URL` 的 Auth JWKS。两者均保留数据库 session/revocation 检查；公钥不可用时回退 Auth `/user` |
 | ACCOUNT_DB_URL | Account 独立数据库连接 |
 | ADMIN_DB_URL | Admin 独立数据库连接 |
 | ACCOUNT_API_DB_URL、SUPABASE_DB_URL | 独立连接缺失时依次回退 |

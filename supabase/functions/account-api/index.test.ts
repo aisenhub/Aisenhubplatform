@@ -24,6 +24,89 @@ function fakeJwt(
   return `${encode({ alg: 'none' })}.${encode({ sub: tokenUserId, session_id: tokenSessionId, aal })}.x`;
 }
 
+async function signedJwt(secret: string): Promise<string> {
+  const encode = (value: unknown) =>
+    btoa(JSON.stringify(value))
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      .replaceAll('=', '');
+  const header = encode({ alg: 'HS256', typ: 'JWT' });
+  const payload = encode({
+    aud: 'authenticated',
+    sub: userId,
+    session_id: sessionId,
+    aal: 'aal1',
+    exp: Math.floor(Date.now() / 1000) + 300,
+  });
+  const input = `${header}.${payload}`;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = new Uint8Array(
+    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(input)),
+  );
+  let binary = '';
+  for (const byte of signature) binary += String.fromCharCode(byte);
+  return `${input}.${btoa(binary)}`
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '');
+}
+
+async function signedEcdsaJwt(): Promise<{
+  readonly token: string;
+  readonly jwk: JsonWebKey & { readonly kid: string };
+}> {
+  const encodeJson = (value: unknown) =>
+    btoa(JSON.stringify(value))
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      .replaceAll('=', '');
+  const encodeBytes = (value: Uint8Array) => {
+    let binary = '';
+    for (const byte of value) binary += String.fromCharCode(byte);
+    return btoa(binary)
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      .replaceAll('=', '');
+  };
+  const keyPair = await crypto.subtle.generateKey(
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    true,
+    ['sign', 'verify'],
+  );
+  const kid = `test-${crypto.randomUUID()}`;
+  const jwk = {
+    ...(await crypto.subtle.exportKey('jwk', keyPair.publicKey)),
+    kid,
+    alg: 'ES256',
+    use: 'sig',
+    key_ops: ['verify'],
+  } as JsonWebKey & { readonly kid: string };
+  const header = encodeJson({ alg: 'ES256', typ: 'JWT', kid });
+  const payload = encodeJson({
+    aud: 'authenticated',
+    iss: 'http://local-jwks/auth/v1',
+    sub: userId,
+    session_id: sessionId,
+    aal: 'aal1',
+    exp: Math.floor(Date.now() / 1000) + 300,
+  });
+  const input = `${header}.${payload}`;
+  const signature = new Uint8Array(
+    await crypto.subtle.sign(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      keyPair.privateKey,
+      new TextEncoder().encode(input),
+    ),
+  );
+  return { token: `${input}.${encodeBytes(signature)}`, jwk };
+}
+
 function fakeDatabase(onQuery?: (query: string) => void) {
   return {
     async begin<T>(
@@ -806,6 +889,111 @@ Deno.test('Account API coalesces concurrent Auth verification for one token', as
     else Deno.env.set('SUPABASE_URL', previousUrl);
     if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY');
     else Deno.env.set('SUPABASE_ANON_KEY', previousKey);
+  }
+});
+
+Deno.test('Account API can verify a signed JWT locally without Auth round-trip', async () => {
+  const previousSecret = Deno.env.get('ACCOUNT_API_JWT_SECRET');
+  const originalFetch = globalThis.fetch;
+  let authCalls = 0;
+  const secret = 'm3-local-jwt-secret';
+  Deno.env.set('ACCOUNT_API_JWT_SECRET', secret);
+  globalThis.fetch = async (input, init) => {
+    if (String(input) === 'http://local/auth/v1/user') authCalls += 1;
+    return originalFetch(input, init);
+  };
+  try {
+    const token = await signedJwt(secret);
+    const request = (accessToken: string) =>
+      handleRequest(
+        new Request(
+          'http://local/functions/v1/account-api/v1/account/principal',
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+            },
+          },
+        ),
+        {
+          database: fakeDatabase(),
+          platformKeySecret: 'm3-test-platform-secret',
+        },
+      );
+    const valid = await request(token);
+    assertEquals(valid.status, 200);
+    assertEquals(authCalls, 0);
+
+    const tokenParts = token.split('.');
+    tokenParts[2] = `${tokenParts[2]!.startsWith('A') ? 'B' : 'A'}${tokenParts[2]!.slice(1)}`;
+    const tampered = tokenParts.join('.');
+    const invalid = await request(tampered);
+    assertEquals(invalid.status, 401);
+    assertEquals((await invalid.json()).error.code, 'UNAUTHORIZED');
+    assertEquals(authCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousSecret === undefined) Deno.env.delete('ACCOUNT_API_JWT_SECRET');
+    else Deno.env.set('ACCOUNT_API_JWT_SECRET', previousSecret);
+  }
+});
+
+Deno.test('Account API verifies ES256 JWTs from cached Supabase JWKS', async () => {
+  const previousUrl = Deno.env.get('SUPABASE_URL');
+  const previousKey = Deno.env.get('SUPABASE_ANON_KEY');
+  const previousSecret = Deno.env.get('ACCOUNT_API_JWT_SECRET');
+  const originalFetch = globalThis.fetch;
+  let authCalls = 0;
+  const { token, jwk } = await signedEcdsaJwt();
+  Deno.env.set('SUPABASE_URL', 'http://local-jwks');
+  Deno.env.set('SUPABASE_ANON_KEY', 'local-publishable-key');
+  Deno.env.delete('ACCOUNT_API_JWT_SECRET');
+  globalThis.fetch = async (input, init) => {
+    if (String(input) === 'http://local-jwks/auth/v1/.well-known/jwks.json')
+      return new Response(JSON.stringify({ keys: [jwk] }), { status: 200 });
+    if (String(input) === 'http://local-jwks/auth/v1/user') {
+      authCalls += 1;
+      return new Response(JSON.stringify({ user: { id: userId } }), {
+        status: 200,
+      });
+    }
+    return originalFetch(input, init);
+  };
+  try {
+    const request = (accessToken: string) =>
+      handleRequest(
+        new Request(
+          'http://local/functions/v1/account-api/v1/account/principal',
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+            },
+          },
+        ),
+        {
+          database: fakeDatabase(),
+          platformKeySecret: 'm3-test-platform-secret',
+        },
+      );
+    const valid = await request(token);
+    assertEquals(valid.status, 200);
+    assertEquals(authCalls, 0);
+    const tokenParts = token.split('.');
+    tokenParts[2] = `${tokenParts[2]!.startsWith('A') ? 'B' : 'A'}${tokenParts[2]!.slice(1)}`;
+    const tampered = tokenParts.join('.');
+    const invalid = await request(tampered);
+    assertEquals(invalid.status, 401);
+    assertEquals((await invalid.json()).error.code, 'UNAUTHORIZED');
+    assertEquals(authCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousUrl === undefined) Deno.env.delete('SUPABASE_URL');
+    else Deno.env.set('SUPABASE_URL', previousUrl);
+    if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY');
+    else Deno.env.set('SUPABASE_ANON_KEY', previousKey);
+    if (previousSecret === undefined) Deno.env.delete('ACCOUNT_API_JWT_SECRET');
+    else Deno.env.set('ACCOUNT_API_JWT_SECRET', previousSecret);
   }
 });
 

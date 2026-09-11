@@ -105,12 +105,14 @@ function jsonObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function base64UrlDecode(value: string): string {
+function base64UrlBytes(value: string): Uint8Array {
   const normalized = value.replaceAll('-', '+').replaceAll('_', '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-  const bytes = Uint8Array.from(atob(padded), (character) =>
-    character.charCodeAt(0),
-  );
+  return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+}
+
+function base64UrlDecode(value: string): string {
+  const bytes = base64UrlBytes(value);
   return new TextDecoder().decode(bytes);
 }
 
@@ -147,6 +149,13 @@ const accessTokenVerificationInFlight = new Map<
   Promise<string | null>
 >();
 const platformHmacKeyCache = new Map<string, Promise<CryptoKey>>();
+const jwtVerificationKeyCache = new Map<string, Promise<CryptoKey>>();
+const jwksCryptoKeyCache = new Map<string, Promise<CryptoKey>>();
+let jwksCache:
+  | { readonly expiresAt: number; readonly keys: Map<string, JsonWebKey> }
+  | undefined;
+let jwksFetchInFlight: Promise<Map<string, JsonWebKey> | null> | undefined;
+let jwksUnavailableUntil = 0;
 
 function platformHmacKey(secret: string): Promise<CryptoKey> {
   const existing = platformHmacKeyCache.get(secret);
@@ -170,6 +179,156 @@ function platformHmacKey(secret: string): Promise<CryptoKey> {
       platformHmacKeyCache.delete(secret);
   });
   return key;
+}
+
+function jwtVerificationKey(secret: string): Promise<CryptoKey> {
+  const existing = jwtVerificationKeyCache.get(secret);
+  if (existing) return existing;
+
+  const key = crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  );
+  jwtVerificationKeyCache.set(secret, key);
+  while (jwtVerificationKeyCache.size > 2) {
+    const oldest = jwtVerificationKeyCache.keys().next().value;
+    if (oldest === undefined) break;
+    jwtVerificationKeyCache.delete(oldest);
+  }
+  void key.catch(() => {
+    if (jwtVerificationKeyCache.get(secret) === key)
+      jwtVerificationKeyCache.delete(secret);
+  });
+  return key;
+}
+
+async function loadJwks(): Promise<Map<string, JsonWebKey> | null> {
+  const now = Date.now();
+  if (jwksCache && jwksCache.expiresAt > now) return jwksCache.keys;
+  if (jwksUnavailableUntil > now) return null;
+  if (jwksFetchInFlight) return jwksFetchInFlight;
+
+  const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
+  if (!url) return null;
+  const fetchPromise = (async () => {
+    try {
+      const publishableKey =
+        Deno.env.get('SUPABASE_ANON_KEY') ??
+        Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+      const response = await fetch(`${url}/auth/v1/.well-known/jwks.json`, {
+        headers: publishableKey ? { apikey: publishableKey } : undefined,
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        jwksUnavailableUntil = Date.now() + 10_000;
+        return null;
+      }
+      const payload = objectValue(await response.json().catch(() => null));
+      const keys = new Map<string, JsonWebKey>();
+      for (const candidate of Array.isArray(payload.keys) ? payload.keys : []) {
+        const jwk = objectValue(candidate);
+        const kid = stringValue(jwk.kid);
+        if (kid && jwk.kty === 'EC' && jwk.crv === 'P-256')
+          keys.set(kid, jwk as JsonWebKey);
+      }
+      jwksUnavailableUntil = 0;
+      jwksCache = { expiresAt: Date.now() + 5 * 60_000, keys };
+      return keys;
+    } catch {
+      jwksUnavailableUntil = Date.now() + 10_000;
+      return null;
+    }
+  })();
+  jwksFetchInFlight = fetchPromise;
+  try {
+    return await fetchPromise;
+  } finally {
+    if (jwksFetchInFlight === fetchPromise) jwksFetchInFlight = undefined;
+  }
+}
+
+async function jwksVerificationKey(
+  kid: string,
+): Promise<CryptoKey | undefined> {
+  const keys = await loadJwks();
+  const jwk = keys?.get(kid);
+  if (!jwk) return undefined;
+  const cacheKey = `${kid}:${jwk.x ?? ''}:${jwk.y ?? ''}`;
+  const existing = jwksCryptoKeyCache.get(cacheKey);
+  if (existing) return existing;
+  const key = crypto.subtle.importKey(
+    'jwk',
+    jwk,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['verify'],
+  );
+  jwksCryptoKeyCache.set(cacheKey, key);
+  while (jwksCryptoKeyCache.size > 4) {
+    const oldest = jwksCryptoKeyCache.keys().next().value;
+    if (oldest === undefined) break;
+    jwksCryptoKeyCache.delete(oldest);
+  }
+  void key.catch(() => {
+    if (jwksCryptoKeyCache.get(cacheKey) === key)
+      jwksCryptoKeyCache.delete(cacheKey);
+  });
+  return key;
+}
+
+async function verifyAccessTokenLocally(
+  accessToken: string,
+): Promise<string | null | undefined> {
+  const hmacSecret =
+    Deno.env.get('ACCOUNT_API_JWT_SECRET') ??
+    Deno.env.get('SUPABASE_JWT_SECRET');
+
+  try {
+    const parts = accessToken.split('.');
+    if (parts.length !== 3) return null;
+    const header = objectValue(JSON.parse(base64UrlDecode(parts[0]!)));
+    if (header.alg !== 'HS256' && header.alg !== 'ES256') return undefined;
+    if (header.alg === 'HS256' && !hmacSecret) return undefined;
+    const claims = objectValue(JSON.parse(base64UrlDecode(parts[1]!)));
+    if (claims.aud !== 'authenticated') return null;
+    const authUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
+    if (authUrl && claims.iss !== `${authUrl}/auth/v1`) return null;
+    const now = Math.floor(Date.now() / 1000);
+    const expiresAt = Number(claims.exp);
+    const notBefore = claims.nbf === undefined ? null : Number(claims.nbf);
+    if (
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= now ||
+      (notBefore !== null && (!Number.isFinite(notBefore) || notBefore > now))
+    )
+      return null;
+
+    const signatureBytes = base64UrlBytes(parts[2]!);
+    const signature = new ArrayBuffer(signatureBytes.byteLength);
+    new Uint8Array(signature).set(signatureBytes);
+    const key =
+      header.alg === 'HS256'
+        ? await jwtVerificationKey(hmacSecret!)
+        : await jwksVerificationKey(stringValue(header.kid) ?? '');
+    if (!key) return undefined;
+    const valid = await crypto.subtle.verify(
+      header.alg === 'HS256' ? 'HMAC' : { name: 'ECDSA', hash: 'SHA-256' },
+      key,
+      signature,
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+    );
+    if (!valid) return null;
+    const userId = uuidValue(claims.sub);
+    const sessionId = uuidValue(claims.session_id ?? claims.sid);
+    const aal =
+      claims.aal === 'aal2' ? 'aal2' : claims.aal === 'aal1' ? 'aal1' : null;
+    return userId && sessionId && aal ? userId : null;
+  } catch {
+    return null;
+  }
 }
 
 async function verifyAccessTokenWithAuthRemote(
@@ -207,7 +366,12 @@ async function verifyAccessTokenWithAuth(
   const existing = accessTokenVerificationInFlight.get(accessToken);
   if (existing) return existing;
 
-  const verification = verifyAccessTokenWithAuthRemote(accessToken);
+  const verification = (async () => {
+    const local = await verifyAccessTokenLocally(accessToken);
+    return local === undefined
+      ? verifyAccessTokenWithAuthRemote(accessToken)
+      : local;
+  })();
   accessTokenVerificationInFlight.set(accessToken, verification);
   try {
     return await verification;
