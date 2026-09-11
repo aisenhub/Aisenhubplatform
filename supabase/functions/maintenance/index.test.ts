@@ -48,17 +48,21 @@ function database(): TestDatabase {
                           ? 'auth-prepare'
                           : query.includes('account_retention_candidates')
                             ? 'retention-candidates'
-                          : query.includes('account_retention_cleanup')
-                            ? 'retention-cleanup'
-                            : query.includes('billing_processing_job_claim')
-                              ? 'billing-claim'
-                              : query.includes('billing_processing_job_finish')
-                                ? 'billing-finish'
-                              : query.includes(
-                                    'deletion_job_backup_barrier_guard',
-                                  )
-                                ? 'barrier-guard'
-                                : 'finish',
+                            : query.includes('account_retention_cleanup')
+                              ? 'retention-cleanup'
+                              : query.includes('billing_processing_job_claim')
+                                ? 'billing-claim'
+                                : query.includes('billing_processing_job_finish')
+                                  ? 'billing-finish'
+                                  : query.includes('billing_order_query_target')
+                                    ? 'billing-target'
+                                    : query.includes('billing_order_verify_and_settle')
+                                      ? 'billing-verify'
+                                      : query.includes(
+                                          'deletion_job_backup_barrier_guard',
+                                        )
+                                        ? 'barrier-guard'
+                                        : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -104,6 +108,23 @@ function database(): TestDatabase {
             ] as unknown as T[];
           if (query.includes('billing_processing_job_finish'))
             return [{ job_id: jobId, state: 'completed', fence: 3 }] as unknown as T[];
+          if (query.includes('billing_order_query_target'))
+            return [
+              {
+                provider_account_id: accountId,
+                provider_order_no: 'provider-order-1',
+              },
+            ] as unknown as T[];
+          if (query.includes('billing_order_verify_and_settle'))
+            return [
+              {
+                order_id: jobId,
+                verification_status: 'verified',
+                entitlement_status: 'granted',
+                settlement_state: 'finalized',
+                decision_code: 'granted',
+              },
+            ] as unknown as T[];
           if (query.includes('deletion_job_backup_barrier_guard'))
             return [
               { can_proceed: false, error_code: 'backup_barrier' },
@@ -319,6 +340,55 @@ Deno.test('maintenance claims and finishes billing jobs with a worker lease', as
     'begin',
     'role',
     'billing-finish',
+  ]);
+});
+
+Deno.test('maintenance performs provider I/O outside the settlement transaction', async () => {
+  events.length = 0;
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/process', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ job_id: jobId, order_id: jobId, fence: 3 }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: database(),
+      billingProviderAdapter: {
+        async queryOrder(orderNo) {
+          events.push(`provider-query:${orderNo}`);
+          return {
+            status: 'found',
+            facts: {
+              status: 'paid',
+              provider_user_id: 'provider-user',
+              external_plan_id: 'plan-monthly',
+              product_type: 'subscription',
+              sku_ids: [],
+              purchase_months: 1,
+              total_amount: '19.90',
+              show_amount: '19.90',
+              currency: 'CNY',
+              custom_order_id: 'checkout-1',
+            },
+          };
+        },
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(events, [
+    'begin',
+    'role',
+    'billing-target',
+    'provider-query:provider-order-1',
+    'begin',
+    'role',
+    'billing-verify',
   ]);
 });
 

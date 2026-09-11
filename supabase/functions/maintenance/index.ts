@@ -7,6 +7,7 @@ import {
   type StorageAdapter,
 } from '../_shared/storage.ts';
 import { readBoundedBody, UploadFault } from '../_shared/upload.ts';
+import { normalizeAfdianOrder, toBillingOrderFacts } from '../_shared/afdian.ts';
 
 type Row = Record<string, unknown>;
 
@@ -24,10 +25,19 @@ interface MaintenanceDependencies {
   readonly authAdapter?: AuthAdminAdapter;
   readonly jobToken?: string;
   readonly workerId?: string;
+  readonly billingProviderAdapter?: BillingProviderAdapter;
 }
 
 interface AuthAdminAdapter {
   deleteUser(userId: string): Promise<void>;
+}
+
+interface BillingProviderAdapter {
+  queryOrder(providerOrderNo: string): Promise<{
+    readonly status: 'found' | 'not_found' | 'temporarily_unavailable';
+    readonly order?: unknown;
+    readonly facts?: Record<string, unknown>;
+  }>;
 }
 
 const UUID =
@@ -559,6 +569,62 @@ async function billingJobFinish(
   return response(200, { result: result ?? null, request_id: id });
 }
 
+async function billingJobProcess(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  const orderId = uuid(input.order_id);
+  const fence = Number(input.fence);
+  if (
+    !jobId ||
+    !orderId ||
+    !Number.isSafeInteger(fence) ||
+    Object.keys(input).some((key) => !['job_id', 'order_id', 'fence'].includes(key))
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const adapter = dependencies.billingProviderAdapter;
+  if (!adapter)
+    return response(503, { error: { code: 'PROVIDER_NOT_CONFIGURED' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id, fence);
+  const [target] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_order_query_target(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint)',
+      [...jobContext, jobId, orderId, fence],
+    ),
+  );
+  if (!target)
+    return response(503, { error: { code: 'JOB_UNAVAILABLE' }, request_id: id });
+
+  // Provider network I/O is deliberately outside the database transaction.
+  const observed = await adapter.queryOrder(String(target.provider_order_no));
+  let facts: Record<string, unknown>;
+  if (observed.status !== 'found') {
+    facts = { status: 'pending' };
+  } else if (observed.facts) {
+    facts = observed.facts;
+  } else {
+    const normalized = normalizeAfdianOrder(observed.order);
+    if (!normalized)
+      return response(503, { error: { code: 'PROVIDER_RESPONSE_INVALID' }, request_id: id });
+    facts = toBillingOrderFacts(normalized);
+  }
+  const [result] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_order_verify_and_settle(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::jsonb)',
+      [...jobContext, jobId, orderId, fence, JSON.stringify(facts)],
+    ),
+  );
+  return response(200, { result: result ?? null, request_id: id });
+}
+
 async function retentionRun(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -627,6 +693,8 @@ export async function handleMaintenanceRequest(
       return await billingJobClaim(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/finish')
       return await billingJobFinish(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/jobs/process')
+      return await billingJobProcess(request, dependencies, id);
     if (path === '/maintenance/v1/accounts/retention')
       return await retentionRun(request, dependencies, id);
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });
