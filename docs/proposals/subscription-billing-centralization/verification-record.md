@@ -6,7 +6,7 @@
 
 - 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`。
 - 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`。
-- 工作目录/branch/HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `fa3083e` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；当前工作区为本地最终文档同步，文档提交 SHA 另记。
+- 工作目录/branch/实现代码HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `fa3083e` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；公共文档同步提交为 `7b85e5f`，已 push。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（72个文件，10个本轮变更文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
 - 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
@@ -22,7 +22,7 @@
 | BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push |
 | BILL-05 | 本地验收已交付 | Provider-neutral 事实归一化、权威验证/结算、重复款/合同冲突、双进度游标、maintenance Provider I/O 边界已实现；真实 Provider 未运行 | `d587ca4`，已 push |
 | BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer BFF、动态订阅 Checkout/兑换页面、服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；真实 Consumer/生产未运行 | `b91800f` + `fa3083e`，已 push |
-| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级 fixture、G-PROVIDER、G-OPS、生产观察未运行 | 文档同步提交待完成 |
+| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级 fixture、G-PROVIDER、G-OPS、生产观察未运行 | 文档同步 `7b85e5f`，已 push |
 
 状态可用未开始/进行中/已阻塞/验证失败/验收通过待推送/已交付。已交付仅指该阶段明确范围，真实渠道和运维门槛另列；整体未满足不能Completed。
 
@@ -117,7 +117,7 @@
 - 实际变更文件：`docs/architecture/overview.md`、`docs/architecture/modules/frontends.md`、`docs/reference/contracts.md`、`docs/reference/sdk.md`、`docs/guides/operations.md`、BILL-05～07 Proposal 状态和本记录；未修改已应用迁移。
 - 本地最终验证：重新执行 `pnpm exec supabase db reset --local --yes` 与 `pnpm test:db`，结果为 33 files/648 tests PASS；并复跑 Account API、Afdian、maintenance、account-server、Template/Admin typecheck/build、`pnpm contracts:check`、`pnpm docs:check`，均 PASS。`pnpm exec supabase db lint --local --fail-on error` 仍因既有函数错误返回非零，BILL-05/06 无新增错误。
 - 状态边界：G-DEV PASS；G-PROVIDER、G-OPS、真实升级 fixture、浏览器真实会话、真实付款、生产迁移/观察 NOT_RUN。整体 Proposal 仍为 In Progress，不能标记 Completed。
-- 文档提交：本记录与公共文档同步提交后补写 commit/push SHA，不把工作区修改提前视为已交付。
+- 文档提交：`7b85e5f`（`docs(billing): record BILL-05 through BILL-07 verification`），已 push；不把未提交工作区修改视为已交付。
 
 ## 5. 要求覆盖与实际测试
 
