@@ -1,6 +1,6 @@
 # 统一订阅与中央支付 — Agent 实施计划
 
-> 状态：Proposed / 仅计划已修订；所有功能阶段未开始。
+> 状态：In Progress / BILL-01 本地开发门槛已完成；真实 Provider 与运维门槛仍未运行。
 
 唯一目标设计：[架构文档](AisenFlow_Subscription_Billing_Architecture.md)。本目录将设计转换为可派发任务，不保留旧架构副本或第二套冻结规则。当前代码事实仍以 architecture/reference 与实际源码为准。
 

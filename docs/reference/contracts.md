@@ -92,6 +92,8 @@ Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证必须使用服务端 session-bound proof；OpenAPI 的存在不代表路由、Provider 或真实会话生命周期已经完成。
 
+BILL-01 的 Provider-neutral 计费草案位于`packages/domain/src/contracts/billing.ts`，冻结四种商品的期限语义、定点金额字符串、不可变 Checkout snapshot、Provider 订单观察、操作来源/版本和结算状态。该文件不创建支付表、不实现权益写入、不证明 Afdian 已联调；真实 Provider 适配器必须在后续阶段以授权的协议证据为准。
+
 ## 6. 时间、事务和失败边界
 
 Postgres生成operation_now；生产函数不得接受用户自定当前时间。测试时钟只在隔离测试入口使用，不授予生产executor。重放用例的as_of是只读/测试能力，不开放给用户改变授权时刻。

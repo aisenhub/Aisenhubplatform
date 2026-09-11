@@ -18,6 +18,8 @@
     "test": "pnpm run test:unit",
     "test:unit": "turbo test:unit --cache-dir=.turbo",
     "test:upload": "node tests/spikes/upload/controlled-receiver.mjs",
+    "test:billing:crypto": "node tests/spikes/billing/crypto-vectors.mjs",
+    "test:billing:crypto:deno": "D:\\APP\\Codex\\Deno\\bin\\deno.exe run tests/spikes/billing/crypto-vectors.mjs",
     "test:db": "pnpm run --filter scripts supabase db --local",
     "test:api": "node tooling/scripts/src/not-enabled.mjs 'API tests' T04-T16",
     "test:e2e:t12-r2": "node tests/spikes/e2e/t12-r2-admin.mjs",
