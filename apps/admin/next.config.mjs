@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   typescript: { ignoreBuildErrors: false },
   transpilePackages: ['@kit/ui', '@kit/shared'],
+  allowedDevOrigins: ['127.0.0.1'],
 };
 
 export default nextConfig;

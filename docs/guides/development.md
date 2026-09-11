@@ -20,7 +20,7 @@ pnpm --filter template-preview dev --port 3001
 pnpm --filter admin dev --port 3000
 ```
 
-管理端需配置 Auth、ADMIN_ORIGIN 和 ACCOUNT_API_URL。只有页面启动，不代表中央 API 与数据库同时启动。
+管理端本地配置可复制 `apps/admin/.env.example` 到 `.env.local`，并使用本地 Supabase 的公开密钥。`ADMIN_ORIGIN` 必须与浏览器地址完全一致；例如访问 `http://127.0.0.1:3000/admin` 时就不能配置成 `http://localhost:3101`。只有页面启动，不代表中央 API 与数据库同时启动。
 
 ## 后端本地依赖
 
