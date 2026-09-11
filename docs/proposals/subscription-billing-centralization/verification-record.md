@@ -69,7 +69,7 @@
 - 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（29 files/473 tests）；`pnpm contracts:check` PASS（account=19/admin=38）；`pnpm docs:check` PASS（44 documents）；`pnpm exec deno test -A supabase/functions/account-api/index.test.ts` PASS（21 tests）；`pnpm --filter @kit/account-server test:unit` PASS（2 files/14 tests）；`pnpm sdk:pack` PASS；domain/account-server/admin typecheck PASS；`git diff --check` PASS。
 - Supabase lint：`pnpm exec supabase db lint --local --fail-on error` 未通过，但仅报告已有 `admin_account_*`、`admin_file_policy_update`、`admin_deletion_job_*` 等函数的既有 error，以及本阶段函数的未使用变量 warning；BILL-02 无新增 lint error。全量 lint/format 的既有失败继续保留，不改写为 PASS。
 - 覆盖范围：本地迁移 reset、pgTAP、API 单测、SDK 单测、类型、OpenAPI 和文档；未覆盖真实 Provider、真实付款、Webhook、调度、生产迁移与生产观察。
-- 代码commit：待当前阶段提交后补记；push 状态待核对。
+- 代码commit：`503f14c`（`feat(billing): implement subscription catalog and config`）；已 push 到 `origin/codex/billing-architecture-review`，远端 SHA 核对为 `503f14cd8c04d8b1d7c551c0acf1e68cf0bb37ad`。
 - 未完成/阻塞/下一满足依赖任务：BILL-02 不启用真实购买；下一项为 BILL-03，继续补齐兑换码模型版本快照、生命周期与校正链。
 
 ## 5. 要求覆盖与实际测试
