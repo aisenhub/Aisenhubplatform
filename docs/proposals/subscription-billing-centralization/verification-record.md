@@ -150,9 +150,10 @@
 - 实际变更文件：`supabase/migrations/20260911211649_account_api_principal_presented_fast_path.sql`、`supabase/tests/t13_platform_key_principal.sql`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`tests/spikes/perf/r15-local-authority.mjs`、`package.json`、`docs/reference/configuration.md`。
 - 代码提交：`ba053a4`（`perf(account-api): coalesce auth verification work`；已与本条验证记录一起 push）。
 - 本轮追加代码提交：`8ef9596`（`perf(account-api): collapse principal authorization lookup`；包含 SQL fast path、权限断言、可自启动压力探针和当前版本复测结果）。
-- 实现行为：同一 access token 的并发 Auth 验证只共享进行中的请求，验证完成立即移除，不缓存验证结果；普通认证 Account API 路径通过 `private.account_principal_presented` 在一次数据库调用内完成呈现 Key、会话和平台账户授权，公开资源与近期认证证明仍保留原有 Key 验证边界。每个业务请求仍执行数据库 session、平台 Key 与权限检查。平台 HMAC CryptoKey 在进程内复用；数据库连接池上限新增受限配置 `ACCOUNT_API_DB_POOL_MAX`（4–64，默认 8），未改变默认值。压力探针支持 `R15_START_API=1` 自行启动并清理 Local Account API。
-- 验证结果：Account API Deno 测试 `27 passed`；完整 Local DB reset 后 `pnpm test:db` PASS（36 files/695 tests），含新增函数存在性、SECURITY DEFINER、search_path 和最小权限断言；10 req/s 短 smoke 为 20/20、错误率 0%、p95 225.82ms。当前单次授权路径、默认连接池 8 下自包含执行 100 req/s×60s 为 6000/6000、错误率 0%、实际 97.61 req/s、p95 760.70ms、p99 1264.11ms，仍未达到 p95≤500ms；此前无单次路径的同窗口基线为 p95 820.58ms。15 分钟完整窗口未伪造为通过。
-- 证据边界：单次数据库调用降低了本地 p95 基线，但尚未达到补充探针门槛；连接池 4 的 60 秒对照 p95 816.27ms、连接池 32 的对照 p95 1455.32ms，均不作为推荐配置。结果不转换为 G-OPS 或生产通过。
+- 本轮追加代码提交：`9f778bd`（`perf(account-api): support startup executor roles`；startup 角色模式仅作为显式 Local/运维调优项验证，默认保持事务角色模式）。
+- 实现行为：同一 access token 的并发 Auth 验证只共享进行中的请求，验证完成立即移除，不缓存验证结果；普通认证 Account API 路径通过 `private.account_principal_presented` 在一次数据库调用内完成呈现 Key、会话和平台账户授权，公开资源与近期认证证明仍保留原有 Key 验证边界。每个业务请求仍执行数据库 session、平台 Key 与权限检查。平台 HMAC CryptoKey 在进程内复用；数据库连接池上限新增受限配置 `ACCOUNT_API_DB_POOL_MAX`（4–64，默认 8），未改变默认值；`ACCOUNT_API_DB_ROLE_MODE=startup` 可让独立连接池在连接建立时固定 executor 角色，默认仍为 `transaction`，需单独确认连接用户允许 `SET ROLE`。压力探针支持 `R15_START_API=1` 自行启动并清理 Local Account API。
+- 验证结果：Account API Deno 测试 `27 passed`；完整 Local DB reset 后 `pnpm test:db` PASS（36 files/695 tests），含新增函数存在性、SECURITY DEFINER、search_path 和最小权限断言；10 req/s 短 smoke 为 20/20、错误率 0%、p95 225.82ms。当前单次授权路径、默认事务角色模式/连接池 8 下自包含执行 100 req/s×60s 为 6000/6000、错误率 0%、实际 97.61 req/s、p95 760.70ms；此前无单次路径的同窗口基线为 p95 820.58ms。启用 startup 角色模式、连接池 8 后同窗口为 6000/6000、错误率 0%、实际 100.03 req/s、p95 619.00ms、p99 785.61ms，仍未达到 p95≤500ms；15 分钟完整窗口未伪造为通过。
+- 证据边界：startup 角色模式仅在 Local 经过验证，未改变默认配置；连接池 4 + startup 角色的 60 秒对照 p95 969.24ms，连接池 32 的历史对照 p95 1455.32ms，均不作为推荐配置。结果不转换为 G-OPS 或生产通过。
 - 结论：功能授权链路 PASS；R15 性能目标当前 `NOT_PASS/待容量优化`，该结果不转换为 G-OPS 或生产通过。探针只操作 Local fixture，未修改 staging/生产。
 
 ## 5. 要求覆盖与实际测试
@@ -175,9 +176,9 @@
 | R12 Admin 结案边界 | BILL-06 SQL、`packages/account-server/tests/authorization.test.ts`、T12 MFA/AAL2 与 T16 Admin flow | Local PASS；真实运维责任/生产审计未验证 |
 | R13 双进度对账 | BILL-05 SQL、`maintenance/index.test.ts`、Admin operations UI | Local 模拟 PASS；Provider 分页/限流和生产告警仍 NOT_RUN |
 | R14 生命周期与删除 | BILL-03/BILL-04/BILL-07 SQL、M4 retention/delete tests、T16 close/delete flow | Local PASS；真实恢复点与生产保留观察未运行 |
-| R15 服务端授权 | `packages/account-server/tests/authorization.test.ts`、BILL-06 SQL、T16 suspended/expired/central failure matrix、`tests/spikes/perf/r15-local-authority.mjs` | Local 功能授权 PASS；补充的 100 req/s 本地压力探针（单次授权路径）p95 760.70ms，未达到探针设定门槛；Hosted/生产延迟与可用性未验证 |
+| R15 服务端授权 | `packages/account-server/tests/authorization.test.ts`、BILL-06 SQL、T16 suspended/expired/central failure matrix、`tests/spikes/perf/r15-local-authority.mjs` | Local 功能授权 PASS；补充的 100 req/s 本地压力探针（startup 角色模式最佳）p95 619.00ms，未达到探针设定门槛；Hosted/生产延迟与可用性未验证 |
 | R16 最小权限与旧写路径退出 | `supabase/tests/t10_role_negative.sql`、BILL-04/BILL-06 SQL、maintenance role tests | Local PASS；生产角色/密钥轮换未验证 |
-| R17 上线与恢复 | BILL-07 upgrade/stop-switch、`tests/spikes/ops/m6-02-local-backup.mjs`、Local E2E、R15 补充压力探针 | Local PARTIAL_LOCAL；单次授权路径补充压力探针门槛未通过；G-PROVIDER、G-OPS、外部备份、生产迁移/观察仍 NOT_RUN |
+| R17 上线与恢复 | BILL-07 upgrade/stop-switch、`tests/spikes/ops/m6-02-local-backup.mjs`、Local E2E、R15 补充压力探针 | Local PARTIAL_LOCAL；startup 角色模式下补充压力探针门槛仍未通过；G-PROVIDER、G-OPS、外部备份、生产迁移/观察仍 NOT_RUN |
 
 | 要求ID（总计划R01～R17） | 测试路径/用例 | 环境/被测commit | 命令/exit code | 结果/证据 |
 |---|---|---|---|---|
