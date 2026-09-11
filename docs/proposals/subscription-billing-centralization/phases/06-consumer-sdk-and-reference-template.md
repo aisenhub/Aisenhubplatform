@@ -18,7 +18,7 @@
 
 Orders展示付款事实、归属、结算/修正链、暂时阻塞或人工原因、解决状态。实现BILL-05命令UI：重查、重试、外部退款确认、关闭异常与受控续购/修正。敏感操作先展示具体影响，unknown outcome保留operation_id并读取结果；不得仅增加“查看失败订单”页面就验收结案闭环。
 
-撤销/修正预览未来永久空档并验证版本；退款与撤权益独立显示，不把payment改成未付款。列表过滤/分页在服务器，权限、MFA、412、重复提交和错误提示都测试。
+撤销/修正预览普通有限授权空档（含99年）并验证版本；退款与撤权益独立显示，不把payment改成未付款。列表过滤/分页在服务器，权限、MFA、412、重复提交和错误提示都测试。
 
 ## 4. SDK/BFF
 
@@ -30,11 +30,11 @@ Browser→同源BFF/Server Action→server-only SDK→Central API；Key仅server
 
 当前权益、四档展示、三付费购买、兑换输入。价格/copy从API；默认新码31、历史合法输入兼容；无Free claim入口。
 
-Checkout显示pending/expired/paid/verified/granted/review_required/resolved，paid不写“已开通”，人工处理显示原因与下一动作。永久已生效或排期禁购；同Checkout第二笔异常不覆盖首笔成功。已付或过期重放不再重新展示付款链接，刷新仍保留真实状态。
+Checkout显示pending/expired/paid/verified/granted/review_required/resolved，paid不写“已开通”，人工处理显示原因与下一动作。99年已生效或排期仍允许有限续购；只有已有Admin真永久授权才禁购。lifetime显示99年套餐与真实截止日期，SDK返回term而非perpetual；同Checkout第二笔异常不覆盖首笔成功。已付或过期重放不再重新展示付款链接，刷新仍保留真实状态。
 
 仅对服务端本次允许签发的URL提供打开/弹窗阻止回退；不存到分析日志或持久客户端记录。丢失响应用同键恢复，不靠新Checkout解决。状态轮询有上限/退避，关闭页面不影响后台结算。
 
-删除旧硬编码prices/afdianPaymentUrl、confirmPayment、联系管理员永久购买、独立16位regex、假setTimeout兑换；未配置环境明确报未配置，不保留默认演示成功路径。
+删除旧硬编码prices/afdianPaymentUrl、confirmPayment、联系管理员永久购买旧入口、独立16位regex、假setTimeout兑换；未配置环境明确报未配置，不保留默认演示成功路径。
 
 ## 6. 服务端受保护操作示例
 
@@ -53,7 +53,7 @@ Registry只列真实路由，复制BFF/SDK/授权示例与必要配置；先核�
 
 ## 执行纪律与交付
 
-开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
+开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
 
 只执行用户实际派发阶段；计划不是后续开发、生产部署、真实付款或费用变更的自动授权。每阶段工作前核对 remote、branch、HEAD、status，保护其他修改；已授权仓库为 https://github.com/aisenhub/Aisenhubplatform.git。沿用任务分支，缺失时使用 codex/ 前缀。
 

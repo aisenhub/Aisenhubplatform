@@ -4,7 +4,7 @@
 
 ## 1. 目标与前置
 
-依赖BILL-02。扩展商业永久、历史兑换兼容与可审计修正，并冻结Billing生命周期/锁合同。源代码已有correct UI不代表新永久排期修正已支持。
+依赖BILL-02。接入99年有限期商品、历史兑换兼容与通用可审计修正，并冻结Billing生命周期/锁合同。不新增商业永久排期或起点提前专用流程；已有correct UI不证明Billing修正关联已支持。
 
 ## 2. 源码与文件
 
@@ -20,11 +20,11 @@ batch增加model_version和不可变product/plan/term/duration snapshot；旧行
 
 保留两阶段交付、明文仅首次返回、receipt/session绑定、禁用不可复活、同码一次消费、确定性失败不消费。新创建合同原子切换API/SQL/UI，保留旧行读取/兑换但不双写新批次。
 
-## 4. 永久与修正链
+## 4. 99 年有限期与通用修正链
 
-商业永久在同Plan有限尾部开始；已有未来/当前未撤销永久也阻止新兑换/Checkout；Admin原严格永久规则保留。不同Plan冲突和暂停校验仍由统一领域过程执行。
+lifetime固定finite/99/year，复用UTC日历加法和同Plan有限尾部顺延，ends_at必须有限；API返回term和真实截止日期。已有99年授权允许继续月/年/99年续购；仅已有Admin真永久授权阻止新兑换/Checkout，Admin原严格永久规则保留。不同Plan冲突和暂停校验仍由统一领域过程执行。
 
-撤销前置Grant后不自动移动未来永久，允许明确的历史空档。Admin预览返回影响及版本；执行时锁后重新核实预览版本，漂移返回冲突。
+撤销前置有限Grant后不自动移动后续99年Grant，沿用普通有限期空档语义。通用Admin撤销/修正预览返回影响及版本；执行时锁后重新核实，漂移返回冲突。不开发永久起点专用修正。
 
 设计受控correction命令：独立operation_id、reason、原Grant/原始结算引用、被替代Grant、替代Grant、单一有效替代链；撤销与新增同事务，失败全部回滚。原订单仍最多一次原结算，替代不是第二次billing_order原始授权。建议独立correction关联事实/事件，不修改source_id为弱文本，也不把operation_id再设成原order.id。
 
@@ -40,14 +40,14 @@ batch增加model_version和不可变product/plan/term/duration snapshot；旧行
 
 ## 6. 验收
 
-历史fixture升级而非只空库reset；旧码可兑、新默认31、非法字符拒绝、交付丢失/禁用/过期/同码抢兑回归。finite→yearly/永久、UTC月末/闰年、未来永久拒绝重复、不同Plan冲突。
+历史fixture升级而非只空库reset；旧码可兑、新默认31、非法字符拒绝、交付丢失/禁用/过期/同码抢兑回归。finite→yearly/99年、99年→月/年/99年顺延、UTC月末/闰年/跨世纪、真实截止日期和到期回退、Admin真永久拒绝续购、不同Plan冲突。日期越界不得写NULL或消耗兑换码。
 
 增加前置撤销空档、修正预览漂移、原子修正失败、并发修正、撤销替代后重放等SQL用例。完成生命周期/FK/锁决策表才交BILL-04；缺口具体记录，不用“后续考虑”作为通过。
 
 
 ## 执行纪律与交付
 
-开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
+开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
 
 只执行用户实际派发阶段；计划不是后续开发、生产部署、真实付款或费用变更的自动授权。每阶段工作前核对 remote、branch、HEAD、status，保护其他修改；已授权仓库为 https://github.com/aisenhub/Aisenhubplatform.git。沿用任务分支，缺失时使用 codex/ 前缀。
 

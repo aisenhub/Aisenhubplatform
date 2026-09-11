@@ -24,7 +24,7 @@ schema采用expand/受控启用/forward-fix，明确旧API与新schema的兼容�
 
 ## 4. 完整故障矩阵
 
-执行总计划R01～R17并保存每项用例/代码/结果映射，重点：同Checkout两笔款、永久并发、前置撤销+替代链+退款定位、暂停恢复、finalized重放、映射/Plan切换与可兑批次、ACK后崩溃、游标推进后失败重试、页移动/历史迟到、跨平台及同平台跨账户负向权限。
+执行总计划R01～R17并保存每项用例/代码/结果映射，重点：同Checkout两笔款、99年并发顺延、Admin真永久兼容、跨世纪日期及到期回退、前置撤销+替代链+退款定位、暂停恢复、finalized重放、映射/Plan切换与可兑批次、ACK后崩溃、游标推进后失败重试、页移动/历史迟到、跨平台及同平台跨账户负向权限。
 
 PII检查覆盖数据库、日志、错误、浏览器bundle和URL埋点；Webhook executor/Account/Admin/job不得任意写表。临时加密白名单清理必须验证，不能把“非永久保存”写成没有清理实现。
 
@@ -49,7 +49,7 @@ PII检查覆盖数据库、日志、错误、浏览器bundle和URL埋点；Webho
 
 ## 执行纪律与交付
 
-开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
+开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
 
 只执行用户实际派发阶段；计划不是后续开发、生产部署、真实付款或费用变更的自动授权。每阶段工作前核对 remote、branch、HEAD、status，保护其他修改；已授权仓库为 https://github.com/aisenhub/Aisenhubplatform.git。沿用任务分支，缺失时使用 codex/ 前缀。
 

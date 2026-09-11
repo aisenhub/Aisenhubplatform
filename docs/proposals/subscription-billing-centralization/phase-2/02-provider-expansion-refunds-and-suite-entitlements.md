@@ -10,4 +10,4 @@ Suite/All Access定义显式scope和fan-out一致性，不能隐式扩大现有�
 
 Free claim只有明确邀请/活动业务才独立建Claim事实，不放松现有付费兑换成功FK。授权缓存只有明确最大暂停/撤销延迟、next_transition截止与失效协议后评审；本期保持服务端实时权威检查。
 
-依据 [唯一架构](../../AisenFlow_Subscription_Billing_Architecture.md)，不把第二期内容重新混入BILL验收。
+依据 [唯一架构](../AisenFlow_Subscription_Billing_Architecture.md)，不把第二期内容重新混入BILL验收。

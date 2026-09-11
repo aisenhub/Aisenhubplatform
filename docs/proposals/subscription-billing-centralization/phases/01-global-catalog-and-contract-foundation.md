@@ -17,6 +17,7 @@
 - 在 verification-record 的协议矩阵保存官方来源、核验日期、协议字段、脱敏证据与结论；真实凭据不写文档。
 - 固定 Adapter 输入/输出草案和明显虚构的 Provider fixture；建议 tests/spikes/billing/ 存本地协议探针。
 - 可新增 _shared/afdian.crypto.test.ts 验证固定向量；不得把密码算法测试当真实Webhook协议证明。
+- 冻结lifetime=finite/99/year、普通续购与Admin真永久兼容；确认渠道商品映射和数量验证不将99年本地权益误作渠道month，不新增永久起点专用修正。
 - 补充迁移前决策：长期Checkout绑定、结算终态分类、correction链、保留/删除、旧链接行为和调度责任；权威定义写架构，具体参数写合同。
 
 ## 4. G-DEV 开发门槛
@@ -47,7 +48,7 @@
 
 ## 执行纪律与交付
 
-开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
+开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
 
 只执行用户实际派发阶段；计划不是后续开发、生产部署、真实付款或费用变更的自动授权。每阶段工作前核对 remote、branch、HEAD、status，保护其他修改；已授权仓库为 https://github.com/aisenhub/Aisenhubplatform.git。沿用任务分支，缺失时使用 codex/ 前缀。
 

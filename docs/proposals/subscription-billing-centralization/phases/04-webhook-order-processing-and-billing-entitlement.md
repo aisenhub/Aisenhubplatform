@@ -16,6 +16,7 @@ CLI新增provider accounts/products版本、checkout、orders、inbox、processi
 
 - Provider Account V1仅一套active；secret_reference为逻辑配置名，密钥不入表。
 - Mapping具有不可变revision、price_version、验证状态、plan/type、SKU全集/count、month、金额/币种/优惠策略；同account/product/revision唯一，当前有效发布指针唯一，不能以account/product唯一阻止历史版本。
+- lifetime快照固定finite/99/year，不接收客户端自定义时长；已有99年授权不禁购，已有Admin真永久仍阻止Checkout。渠道month/SKU数量按已验证mapping核验，不将本地99年时长直接当作渠道month。
 - Checkout保存不可变商业snapshot、provider/plan/account复合关联、token_key_version、token_digest唯一及派生输入、付款窗口；状态由本地事实派生。
 - Order以provider account/order_no唯一；unlinked允许归属组为空，关联后由复合FK保证同platform/account/checkout。未知渠道时间为空，不用接收时间冒充付款时间。
 - 结算表/事实将原订单、Checkout自动结算槽位、效果和后续修正关联；同Checkout最多一笔自动结算，不限制第二笔真实订单入库。
@@ -43,14 +44,14 @@ POST checkout仅product_code+Idempotency-Key；拒绝注入platform/account/pric
 
 ## 7. 验证与交接
 
-测试提交后响应丢失、并发同键、异参数、清理7天缓存后重放、到期granted不降级、密钥轮换/缺失、同平台跨账户FK、旧价新版本并存。
+测试99年快照不可变、NULL时长注入拒绝、99年可续购与Admin真永久禁购；测试提交后响应丢失、并发同键、异参数、清理7天缓存后重放、到期granted不降级、密钥轮换/缺失、同平台跨账户FK、旧价新版本并存。
 
 测试ACK前DB失败、ACK后崩溃、接管fence、任务重复、极大/非法Payload、URL不入日志/缓存、Auth删除与入站竞态。完成本地products→checkout→持久inbox/job→接管链，真实授权留BILL-05，不假报granted。
 
 
 ## 执行纪律与交付
 
-开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
+开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
 
 只执行用户实际派发阶段；计划不是后续开发、生产部署、真实付款或费用变更的自动授权。每阶段工作前核对 remote、branch、HEAD、status，保护其他修改；已授权仓库为 https://github.com/aisenhub/Aisenhubplatform.git。沿用任务分支，缺失时使用 codex/ 前缀。
 

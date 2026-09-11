@@ -22,7 +22,7 @@ Adapter仅buildCheckoutUrl/sign/query/normalize，期限和冲突仍SQL统一入
 
 区分：retryable/blocked（暂时故障、可恢复暂停）、review_required（重复款/合同冲突/关闭删除）、finalized（已授权或受控结案）。不把所有无Grant当永久终态。恢复暂停后允许受控重试；已退款/结案不得被自动任务复活。
 
-统一wrapper接收order id和受控job context，锁后读取可信order/snapshot与当前生命周期，再竞争Checkout自动结算槽位。首笔合规款一次原结算；同Checkout第二笔真实款duplicate_payment，不同Checkout有限续购正常顺延，永久并发仅一笔生效。
+统一wrapper接收order id和受控job context，锁后读取可信order/snapshot与当前生命周期，再竞争Checkout自动结算槽位。首笔合规款一次原结算；同Checkout第二笔真实款duplicate_payment，不同Checkout有限续购正常顺延，不同Checkout的99年并发付款各顺延99年；已有Admin真永久才进入already_perpetual人工结案。
 
 Grant/Event/Projection、结算决定、订单效果和审计同事务。已撤销原Grant的旧order重放仍返回原结算历史，不重新发放。billing原结算operation_id=order.id；correction走独立受控链，不违反原结算唯一性。
 
@@ -48,7 +48,7 @@ Grant/Event/Projection、结算决定、订单效果和审计同事务。已撤�
 
 ## 8. 验收
 
-fixture跑完整checkout→持久任务→query权威验证→order→Grant/Event/Projection→GET状态。测试重复10次、Webhook/对账并发、同Checkout两笔真实款、不同Checkout永久并发、Grant事务崩溃、撤销后重放、暂停恢复重试和finalized不可复活。
+fixture跑完整checkout→持久任务→query权威验证→order→Grant/Event/Projection→GET状态。测试重复10次、Webhook/对账并发、同Checkout两笔真实款、不同Checkout的99年并发各顺延、已有Admin真永久冲突、Grant事务崩溃、撤销后重放、暂停恢复重试和finalized不可复活。
 
 测试错plan/type/count/month/币种/优惠、零元未批准转人工、映射调价/停平台/归档/删除竞态、未关联付款。测试页移动、迟到旧单、page cap、头部不饿死、游标推进后旧任务失败恢复、fence过期及Provider超时。
 
@@ -57,7 +57,7 @@ fixture跑完整checkout→持久任务→query权威验证→order→Grant/Even
 
 ## 执行纪律与交付
 
-开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
+开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
 
 只执行用户实际派发阶段；计划不是后续开发、生产部署、真实付款或费用变更的自动授权。每阶段工作前核对 remote、branch、HEAD、status，保护其他修改；已授权仓库为 https://github.com/aisenhub/Aisenhubplatform.git。沿用任务分支，缺失时使用 codex/ 前缀。
 

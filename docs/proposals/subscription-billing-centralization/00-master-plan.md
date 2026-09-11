@@ -2,11 +2,11 @@
 
 > 状态：Proposed。全部功能阶段未开始；本轮仅完成计划修订。
 
-目标依据：[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)；[设计差距](design.md)；[交接](agent-handoff.md)；[证据](verification-record.md)；[Afdian 调试参考](afdian-debug-reference.md)。
+目标依据：[最新架构](AisenFlow_Subscription_Billing_Architecture.md)；[设计差距](design.md)；[交接](agent-handoff.md)；[证据](verification-record.md)；[Afdian 调试参考](afdian-debug-reference.md)。
 
 ## 1. 目标与边界
 
-在现有中央共享后台上增加统一商品、中央支付、可恢复结算和真实 Consumer 接入。保留默认 Free 单一来源、同 Pro 不同周期、平台账户隔离、SQL 唯一权益写入口和旧接口兼容。
+在现有中央共享后台上增加统一商品、中央支付、可恢复结算和真实 Consumer 接入。lifetime固定为99年有限期（finite/99/year），允许普通同Plan续购，不再新增商业永久起点修正；保留现有Admin真永久兼容与通用审计修正。保留默认 Free 单一来源、同 Pro 不同周期、平台账户隔离、SQL 唯一权益写入口和旧接口兼容。
 
 本期不实现 Free claim、OAuth/历史认领、更多支付渠道、自动退款、Suite 或授权缓存；第二期有独立入口。真实付款、部署、渠道商品/价格/密钥变更和生产恢复需实际授权，计划自身不授予。
 
@@ -58,7 +58,7 @@ G-DEV 允许 Provider-neutral 和模拟器开发；G-PROVIDER 证明真实渠道
 | R06 | §13/21/22 结算与隔离 | 04/05 | 同order一次原结算；同Checkout两笔款只一笔自动结算；同平台跨账户FK拒绝 |
 | R07 | §15/16/17/18/41 Inbox任务 | 04/05 | 提交后ACK；崩溃/接管可恢复；网络不持锁 |
 | R08 | §19 优惠/数量/金额 | 04/05 | 只接受snapshot批准规则；币种/月数/SKU数量完整验证 |
-| R09 | §23/24/42 永久与修正 | 03/05/06 | 尾部排期、空档预览、替代链、退款定位当前有效替代 |
+| R09 | §23/24/42 99年有限期与通用修正 | 03/05/06 | 99年日历顺延、重复续购、到期回退、Admin真永久兼容、通用撤销/修正及退款定位 |
 | R10 | §26～28 旧码兼容 | 03/06 | 新默认31、合法旧码可兑、付费success强FK不放松 |
 | R11 | §29～35/48 SDK状态与页面 | 04/06 | paid不冒充granted；review/resolved可理解；旧接口兼容 |
 | R12 | §36～39/49 Admin结案 | 05/06 | MFA/operation_id/版本；撤权益不冒充退款；异常可闭环 |

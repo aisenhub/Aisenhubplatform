@@ -1,6 +1,6 @@
 # 目标设计入口与当前实现差距
 
-> 状态：Proposed。唯一目标依据为 [最新架构](../AisenFlow_Subscription_Billing_Architecture.md)。
+> 状态：Proposed。唯一目标依据为 [最新架构](AisenFlow_Subscription_Billing_Architecture.md)。
 
 本文件不再复制架构正文和旧34条冻结项；冲突必须回到唯一架构修订，再同步计划与消费者，不能在局部阶段偷偷选择另一套规则。
 
@@ -10,7 +10,7 @@
 |---|---|---|
 | 中央身份、平台账户、Admin 与 PostgreSQL private 领域过程 | 商业目录与支付闭环 | BILL-02～06 |
 | 默认 Free 已在 platforms.default_plan_id | 不再创建第二个 Free 配置源 | BILL-02 |
-| 当前 Grant source 为 admin/redemption_code；日历计算和尾部顺延在 SQL | billing source、结算决定、商业永久与 correction 链 | BILL-03～05 |
+| 当前 Grant source 为 admin/redemption_code；日历计算和尾部顺延在 SQL | billing source、结算决定、99年有限期商品接入与通用 correction 链 | BILL-03～05 |
 | 普通幂等记录最长7天 | Checkout 长期操作绑定与动态状态重放 | BILL-04 |
 | generator 默认31位、允许16–128参数；页面旧格式不一致 | 保留31位新默认、兼容合法旧码、统一显示验证 | BILL-03、06 |
 | Maintenance 有 HTTP 入口和租约模式 | 可恢复支付任务、调度合同、双进度对账 | BILL-04、05、07 |

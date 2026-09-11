@@ -44,9 +44,9 @@ Aisenhubplatform 当前已经具备中央共享身份、平台账户、权益和
 
 ### 1.1 文档权威与实施边界
 
-本文件是本轮订阅与中央支付优化的唯一目标设计来源；当前实现仍以源码、迁移和 [现行架构](../architecture/overview.md)、[跨模块合同](../reference/contracts.md) 为准。本文不是实施完成证明，也不自动授权开发、生产部署、真实付款或费用变更。
+本文件是本轮订阅与中央支付优化的唯一目标设计来源；当前实现仍以源码、迁移和 [现行架构](../../architecture/overview.md)、[跨模块合同](../../reference/contracts.md) 为准。本文不是实施完成证明，也不自动授权开发、生产部署、真实付款或费用变更。
 
-[配套实施计划](subscription-billing-centralization/00-master-plan.md)已按本文同步；design.md仅引用本文件，不复制旧冻结项。计划采用BILL编号，历史文件名仅为稳定导航。后续目标决策先修本文，再同步阶段与验收，计划修订不代表功能已实现。
+[配套实施计划](00-master-plan.md)已按本文同步；design.md仅引用本文件，不复制旧冻结项。计划采用BILL编号，历史文件名仅为稳定导航。后续目标决策先修本文，再同步阶段与验收，计划修订不代表功能已实现。
 
 任务标识采用 BILL-ARCH-REVIEW；未来阶段使用 BILL-01 等独立编号，避免与已有文件/任务模块 M4 编号混淆。
 
@@ -169,7 +169,7 @@ Platform Key 只配置在 Consumer 服务端 SDK/BFF，不能进入浏览器 bun
 | Subscription Product | 用户如何购买 Pro | Monthly / Yearly / Lifetime |
 | Billing Provider Product | 支付渠道中的实际商品 | 爱发电 plan / SKU |
 
-### 4.2 “月 / 年 / 永久”不是三个不同权益等级
+### 4.2 “月 / 年 / 99 年”不是三个不同权益等级
 
 对于能力相同的付费用户：
 
@@ -244,7 +244,7 @@ lifetime
 Free      ¥0
 Monthly   ¥9.9 / month
 Yearly    ¥19.9 / year
-Lifetime  ¥29.9
+Lifetime  ¥29.9 / 99 years
 ```
 
 价格不应硬编码在 Consumer 页面中。
@@ -263,7 +263,7 @@ subscription_products
 id
 code                    free | monthly | yearly | lifetime
 name
-term_kind               free | finite | perpetual
+term_kind               free | finite
 duration_value          nullable
 duration_unit           day | month | year | null
 price_amount             numeric
@@ -282,6 +282,8 @@ unique(code)
 ```
 
 普通 Admin 不创建第五个标准订阅 Product。
+
+固定合同：free 的 term_kind=free、duration_value/duration_unit=NULL；monthly 为 finite/1/month，yearly 为 finite/1/year，lifetime 为 finite/99/year。保留 lifetime 商品 code 与 lifetime_enabled 配置名，含义固定为 99 年有限期，不新增第五个商品、不用 perpetual 表示该商品。购买页、订单和订阅页显示“99 年套餐”及真实期限，不能仅显示“永久”或“永不过期”。商品时长不可由 Admin 修改，批次和 Checkout 均保存不可变时长快照。
 
 ---
 
@@ -360,7 +362,7 @@ Aisen All Access
 ```text
 Aisen 月度会员
 Aisen 年度会员
-Aisen 永久会员
+Aisen 99 年会员
 ```
 
 所有平台共同使用。
@@ -556,7 +558,7 @@ updated_at
 
 POST 必须带 Idempotency-Key；服务端以 platform/account/operation 组成 scope，规范化 product_code 计算 request_hash。同键同参数返回同一 Checkout，不同参数返回 IDEMPOTENCY_CONFLICT；重放前仍须重新鉴权。
 
-短事务校验 session/platform/account active、未暂停、商品和映射可售、无冲突及未拥有未撤销同 Plan 永久 Grant，再写入不可变 snapshot、Token 派生版本、幂等结果和审计。Free 不创建 Checkout。
+短事务校验 session/platform/account active、未暂停、商品和映射可售、无冲突及未拥有未撤销同 Plan Admin 真永久 Grant，再写入不可变 snapshot、Token 派生版本、幂等结果和审计。Free 不创建 Checkout。
 
 事务提交后构造 payment_url；幂等缓存只存 Checkout ID 与非敏感结果，不存包含 Token 的完整 URL。响应丢失时按第11节重建同一有效链接。重放始终返回当前权威状态：仅未确认付款且窗口已结束时显示 expired；paid/verified/granted 等状态不因时间到期回退。已确认付款、已结算或不允许付款时不再返回 payment_url；新的购买操作须新键。
 
@@ -968,7 +970,7 @@ Provider API 重复返回
 
 同一 Provider Order 的重复通知与同一 Checkout 的第二笔付款是两种情况。V1 一个 Checkout 最多自动结算一笔符合合同的真实订单；以事务内锁定 Checkout 和唯一自动结算绑定保证。每一笔外部订单均独立留存，不能用 checkout_id 唯一约束阻止第二笔付款事实入库。
 
-同 Checkout 的第二笔真实付款标记 duplicate_payment，进入人工结案，不再自动发 Grant。不同 Checkout 的正常有限续购继续顺延。不同 Checkout 并发购买永久权益时，在账户锁下只有一次生效，另一笔进入 already_perpetual 人工处理。
+同 Checkout 的第二笔真实付款标记 duplicate_payment，进入人工结案，不再自动发 Grant。不同 Checkout 的正常有限续购继续顺延。不同 Checkout 并发购买 99 年套餐时，按普通有限续购在账户锁下串行顺延，两笔合规付款各授予 99 年；同 Checkout 重复款仍不得自动授予第二次。already_perpetual 仅适用于已有 Admin 真永久授权的账户，不用于拦截 99 年套餐续购。
 
 订单即使没有产生 Grant，也必须保存不可重复的结算决定；撤销首笔 Grant 后重放旧订单不能重新发放。人工退款/转为有效续购必须是有原因、独立 operation_id、受控且可审计的命令，不直接改订单归属。
 
@@ -1041,21 +1043,25 @@ starts_at = max(now, max(active/future same-plan ends_at))
 
 ---
 
-## 24. Lifetime 排期与撤销规则
+## 24. Lifetime：99 年有限期套餐
 
-本提案继续选择“同 Plan 有限期尾部之后开始永久权益”，以保持单一时间线；这是明确的商业策略，不声称立即永久生效必然吞掉已付时间。所有历史 Grant 保留，不因永久购买删除有限期。
+商业 lifetime 商品采用 99 年有限期，term_kind=finite、duration_value=99、duration_unit=year。它与 monthly/yearly 使用同一 Plan 和同一有限期领域规则；不是 ends_at=NULL 的真永久，也不是固定截止到 2099 年。
 
-商业 billing/redemption 的永久 starts_at=max(DB now, 未撤销同 Plan 有限 Grant 的最大 ends_at)，ends_at=NULL。已有未撤销同 Plan 永久 Grant（含未来排期）时拒绝新 Checkout/兑换；真实付款仍记录并进入 already_perpetual 人工结案。
+授权 starts_at=max(DB now, 未撤销同 Plan 有限 Grant 的最大 ends_at)，ends_at=现有 UTC 日历加法(starts_at, 99, year)，必须为有限时间。沿用月末/闰年夹取规则，不用 99×365 天代替。例：现有权益结束于 2027-03-01T00:00:00Z，续购后的新增 Grant 为 [2027-03-01T00:00:00Z, 2126-03-01T00:00:00Z)。
 
-### 24.1 前置 Grant 撤销
+### 24.1 续购、撤销与展示
 
-永久 Grant 的开始时间一经写入不自动移动。撤销前置有限 Grant 可能形成空档；Admin 撤销前必须预览影响并明确确认，审计记录受影响的未来永久授权。原永久 Grant 仍按原时间生效。
+已有当前或未来的 99 年 Grant 不阻止月/年/99 年续购与兑换，全部在同 Plan 尾部顺延；不同 Checkout 的两笔合规 99 年付款各增加 99 年，同 Checkout 第二笔真实款仍走 duplicate_payment 人工结案。结算读取可信快照并在账户锁下重算尾部，不能沿用 Checkout 创建时的到期时间。
 
-需要提前永久起点时，通过现有受控 correction 方向设计独立命令：撤销原排期 Grant、追加关联原事实的替代 Grant，并保持完整事件链、幂等和审计；不能原地修改历史 starts_at，也不能由后台重放自动压缩空档。具体 correction 合同与测试是实施门槛。
+撤销仅撤销目标 Grant，不改变其他历史或未来 Grant 的起止时间，也不自动压缩空档；这是现有有限期规则。通用撤销预览、审计修正和订单关联保留，但不新增商业永久起点提前的专用命令或专用替代链。需要修正时继续遵守通用原子 correction 合同。
 
-### 24.2 现有 Admin 行为
+API 返回 entitlement_kind=term 和真实 current_period_end；页面显示“99 年套餐”及实际到期日期，不能按 code=lifetime 或日期很远就改成 perpetual。到期后正常回退 Free/none。日期计算、序列化和页面须覆盖跨世纪、闰日与续购结果；超出支持日期范围应在领域事务内确定拒绝，不得溢出、写 NULL 或消费兑换码，已收款则进入可追踪人工处理。
 
-当前 Admin 首次永久授权要求没有未结束付费 Grant；本期保留该严格语义。商业永久授权属于新增受控入口，不允许调用方通过伪造 source 绕过 Admin 限制。第42节的“核心保留”指唯一写入口和 Ledger 原则，不能解读为现有函数无需扩展。
+### 24.2 现有 Admin 真永久兼容
+
+已有 Admin 真永久授权仍以 ends_at=NULL 表达，保持现有首次授予限制、读取和撤销语义，不迁移为 99 年。已有未撤销同 Plan 真永久（含未来授权）仍阻止新 Checkout/兑换；到账后若出现该冲突，记录订单并进入 already_perpetual 人工结案。不同 Plan 冲突、暂停和生命周期校验继续保留。
+
+商业 billing/redemption 入口只接受商品快照定义的有限时长，不能伪造 source 或 NULL 时长获得真永久。现有 Grant/旧批次按原事实解释，不反推或改写。第42节核心保留指唯一写入口与 Ledger 原则，Billing source、快照和权限扩展仍需实现。
 
 ---
 
@@ -1176,7 +1182,7 @@ POST /v1/subscription/redeem
 - 当前 Status
 - starts_at
 - ends_at
-- 是否 Lifetime
+- entitlement_kind（99 年授权为 term；仅 Admin 真永久为 perpetual），不新增含糊的 is_lifetime 判断
 - Feature
 - future scheduled entitlement（如有）
 
@@ -1529,7 +1535,7 @@ Reconciliation
 
 ## 38. Plan 页面重新定位
 
-当前 Admin 的 `Plans` 页面不再承担“月 / 年 / 永久定价”的职责。
+当前 Admin 的 `Plans` 页面不再承担“月 / 年 / 99 年定价”的职责。
 
 建议重命名概念为：
 
@@ -1923,7 +1929,7 @@ Checkout 用户状态由持久事实派生：
 | review_required | 已付款但重复、冲突、生命周期阻塞或合同异常 | 受控重试 / resolved |
 | resolved | 人工处理已结案 | 展示具体处理原因 |
 
-签名失败只是事件事实，不直接使已成功 Checkout 失败。暂时网络故障保留待处理状态和重试信息，不终结为“未付款”。already_perpetual 属于无新增权益效果且需要结案，不等同 granted。
+签名失败只是事件事实，不直接使已成功 Checkout 失败。暂时网络故障保留待处理状态和重试信息，不终结为“未付款”。已有 Admin 真永久授权导致的 already_perpetual 属于无新增权益效果且需要结案，不等同 granted。
 
 同 Checkout 多订单时以既有成功结算为主状态，额外展示 duplicate_payment 问题，不能让第二笔异常订单覆盖首笔 granted。订单状态升级与结算决定必须在锁和唯一约束下完成；Grant/Event/Projection、订单权益效果、审计同事务提交。
 
@@ -1962,7 +1968,7 @@ append revoked event
 仍不修改历史 Grant。
 
 
-人工撤销前必须展示对未来排期的影响，特别是第24节的永久起点空档。Admin Revoke 仅撤销权益，不等于渠道已退款；退款确认、金额/币种、外部处理参考和结案原因独立记录且脱敏。保留原订单的已结算决定，避免通知重放后再次授权。
+人工撤销前必须展示对未来排期的影响，包括第24节普通有限授权撤销造成的空档。Admin Revoke 仅撤销权益，不等于渠道已退款；退款确认、金额/币种、外部处理参考和结案原因独立记录且脱敏。保留原订单的已结算决定，避免通知重放后再次授权。
 
 ---
 
@@ -2025,7 +2031,7 @@ Domain 的“规则集中”仅指 DTO、输入校验与序列化；生产期限
 |---|---|---|
 | BILL-01 | 同步唯一设计、Provider 合同与决策 | 先交付G-DEV；第8.2节真实证据作为G-PROVIDER独立跟踪，联调须实际授权 |
 | BILL-02 | Catalog、平台映射、公共合同 | G-DEV通过；固定商品/期限、Free单源、旧Plan映射策略；真实购买未就绪保持关闭 |
-| BILL-03 | Ledger 扩展与 Redemption V2 | 历史批次/码兼容、永久排期和撤销、source FK、生命周期与权限矩阵 |
+| BILL-03 | Ledger 扩展与 Redemption V2 | 历史批次/码兼容、99 年有限期顺延和撤销、source FK、生命周期与权限矩阵 |
 | BILL-04 | Checkout、Token 恢复、订单、Inbox 和任务 | 幂等重放能恢复 URL；持久接收与最小权限；重复付款结算约束 |
 | BILL-05 | Provider 接入、统一订单处理、对账 | 权威验证、优惠策略、并发/崩溃恢复、双进度对账和人工结案闭环 |
 | BILL-06 | Admin、SDK、Consumer | no-store、BFF Key 边界、服务端授权、故障策略、状态展示、价格 API |
@@ -2046,7 +2052,7 @@ OAuth、历史订单 Claim、更多 Provider、自动退款、suite、Free claim
 | Checkout 重放 | DB 已提交但响应丢失；同键重试恢复同 Checkout/有效 URL；异参数冲突；过期不再签发付款链接 |
 | Token 生命周期 | key version 轮换、旧链接迟到付款、密钥缺失恢复失败；日志/缓存无完整 Token/URL |
 | 通知幂等 | exact replay、不同 payload、Webhook 与对账并发；同 order 一次结算且最多一个 Grant |
-| 重复付款 | 同 Checkout 两个 order_no、不同 Checkout 并发永久付款；全部订单保留，只有允许的一笔自动结算 |
+| 重复付款 | 同 Checkout 两个 order_no、不同 Checkout 并发 99 年付款；同 Checkout 仅一笔自动结算，不同 Checkout 合规付款分别顺延 |
 | 撤销后重放 | Grant 被撤销后旧通知重放不得再次授权；已无 Grant 的处理决定也保持幂等 |
 | 可信验证 | 无签名、错误签名、API 查无订单、错误 Provider Account；未验证字段不得污染已验证事实 |
 | 商品合同 | 错误 plan/type/SKU/count/month、币种/精度、零元/折扣/渠道兑换；只接受 snapshot 批准规则 |
@@ -2054,7 +2060,7 @@ OAuth、历史订单 Claim、更多 Provider、自动退款、suite、Free claim
 | Inbox 恢复 | 接收提交前失败不 ACK；ACK 后 worker 崩溃任务可恢复；只存摘要时仍可查回足够事实 |
 | 对账发现 | 分页新增订单、page cap、中断续扫、旧订单迟到；头部预算与历史补扫均执行 |
 | 对账处理 | high-water 推进后旧授权失败仍重试；过期 fence 不得写游标/结算；扫描成功不冒充处理成功 |
-| 权益 | 月→年同 Plan 顺延；UTC 月末/闰年；有限→未来永久；前置撤销空档和受控 correction |
+| 权益 | 月→年同 Plan 顺延；UTC 月末/闰年；有限→99 年、99 年→月/年/99 年顺延；真实截止日期、到期回退、前置撤销空档和通用受控 correction |
 | 生命周期 | Checkout 后 pause/close/delete/归档/停平台；记录付款但不恢复账号；删除后通知不创建新身份 |
 | 数据约束 | 跨平台及同平台跨账户非法 FK；Billing 新表不阻塞既有合法清理/恢复流程 |
 | Redemption | 旧批次原语义可兑换；历史16–128合法长度兼容；新默认31位；HMAC 与交付/消费不变 |
@@ -2212,7 +2218,7 @@ Platform-specific Feature Copy
 11. **支付先成为 Billing Order，再通过 Entitlement Ledger 授权。**
 12. **Webhook + Provider API Reconciliation 双通道。**
 13. **Billing Order 和 Entitlement Apply 都必须幂等。**
-14. **Lifetime 采用固定排期策略；前置撤销可能形成空档，提前生效必须经可审计 correction。**
+14. **Lifetime 固定为 finite/99/year，复用有限期顺延、撤销和到期回退；不再设计商业永久起点修正。Admin 真永久保持兼容，通用审计修正仍保留。**
 15. **Free 是 fallback，不创建 Paid Grant。**
 16. **新兑换批次采用 Subscription Product + Snapshot，历史批次与已发码保留原验证语义。**
 17. **Consumer UI 不知道 Afdian，只知道 `payment_url` 和 Checkout Status。**

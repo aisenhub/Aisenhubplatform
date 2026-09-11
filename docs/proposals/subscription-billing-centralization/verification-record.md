@@ -4,7 +4,7 @@
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](../AisenFlow_Subscription_Billing_Architecture.md)；实施时记录其commit或文件摘要：未记录。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；实施时记录其commit或文件摘要：未记录。
 - 计划：[总计划](00-master-plan.md)；版本/commit：未记录。
 - 工作目录/branch/HEAD/remote/工作区归属：未验证。
 - Node/pnpm/Supabase/Deno/OS、Local DB/Docker、可用调度：未验证。
@@ -66,7 +66,7 @@
 |---|---|---|---|---|
 | 全部 | 未记录 | 未记录 | 未运行 | NOT_RUN |
 
-重点独立记录：Checkout长幂等/响应丢失、两笔真实款、finalized重放、ACK后崩溃、lease/fence、分页移动与处理重试、永久替代链、删除/归档/批次并发、服务端故障授权。
+重点独立记录：Checkout长幂等/响应丢失、两笔真实款、finalized重放、ACK后崩溃、lease/fence、分页移动与处理重试、99年顺延/到期/跨世纪日期、Admin真永久兼容及通用替代链、删除/归档/批次并发、服务端故障授权。
 
 ## 6. 迁移与保留
 

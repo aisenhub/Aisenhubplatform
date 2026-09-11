@@ -14,7 +14,7 @@
 
 ## 3. 数据与版本
 
-subscription_products固定free/monthly/yearly/lifetime；code/term/duration不可由Admin修改。Free price=0/term=free；monthly=1month、yearly=1year、lifetime=perpetual。金额numeric(12,2)/CNY、API十进制字符串；价格版本、文案白名单、状态和row_version受控更新。
+subscription_products固定free/monthly/yearly/lifetime；code/term/duration不可由Admin修改。Free price=0/term=free；monthly=1month、yearly=1year、lifetime=finite/99/year（monthly/yearly同为finite）。金额numeric(12,2)/CNY、API十进制字符串；价格版本、文案白名单、状态和row_version受控更新。
 
 platform_subscription_config以platform_id为PK；paid_plan_id使用同平台FK；开关与copy override白名单。Free仅来自platforms.default_plan_id。仅恰好一个active paid Plan可自动回填；其余null且购买关闭，不猜测/删除历史Plan。
 
@@ -36,14 +36,14 @@ Admin subscription-config GET/PATCH复用现有Admin上下文、recent MFA、If-
 
 ## 6. 实施与验证
 
-先只读预检→schema/约束/SQL wrapper→SQL负向测试→DTO/OpenAPI→API/SDK→最小Admin UI。测试四商品不变量、跨平台FK、RLS/任意DML拒绝、历史Plan保留、切换与批次创建并发、价格版本/412、旧plans回归。
+先只读预检→schema/约束/SQL wrapper→SQL负向测试→DTO/OpenAPI→API/SDK→最小Admin UI。测试四商品不变量、lifetime固定99year且拒绝NULL/其他时长、展示99年而非真永久、跨平台FK、RLS/任意DML拒绝、历史Plan保留、切换与批次创建并发、价格版本/412、旧plans回归。
 
 运行对应SQL/API/SDK和Admin最小闭环；本阶段完成时交出固定schema/DTO与待BILL-04扩展的Billing preflight接口，purchasable不得伪造。
 
 
 ## 执行纪律与交付
 
-开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
+开始前读取根 AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)、[总计划](../00-master-plan.md)、[交接规则](../agent-handoff.md)、[验证记录](../verification-record.md)，再读本阶段列出的合同和实际源码。文件名沿用历史路径，仅便于导航；任务编号与内容以当前 BILL 标题为准，不按旧 Phase 含义实施。
 
 只执行用户实际派发阶段；计划不是后续开发、生产部署、真实付款或费用变更的自动授权。每阶段工作前核对 remote、branch、HEAD、status，保护其他修改；已授权仓库为 https://github.com/aisenhub/Aisenhubplatform.git。沿用任务分支，缺失时使用 codex/ 前缀。
 

@@ -2,7 +2,7 @@
 
 > 状态：Proposed / 仅计划已修订；所有功能阶段未开始。
 
-唯一目标设计：[架构文档](../AisenFlow_Subscription_Billing_Architecture.md)。本目录将设计转换为可派发任务，不保留旧架构副本或第二套冻结规则。当前代码事实仍以 architecture/reference 与实际源码为准。
+唯一目标设计：[架构文档](AisenFlow_Subscription_Billing_Architecture.md)。本目录将设计转换为可派发任务，不保留旧架构副本或第二套冻结规则。当前代码事实仍以 architecture/reference 与实际源码为准。
 
 执行导航：[设计入口](design.md) · [唯一总计划](00-master-plan.md) · [兼容入口](plan.md) · [Agent 交接](agent-handoff.md) · [验证记录](verification-record.md) · [Afdian 调试参考](afdian-debug-reference.md) · [Checkout 链接分析](afdian-checkout-link-analysis.md)。
 

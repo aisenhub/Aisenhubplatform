@@ -7,7 +7,7 @@
 ~~~text
 请实施用户本次明确指定的 BILL-XX 阶段，仅执行该阶段及必要依赖检查。
 先读取根AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、
-docs/proposals/AisenFlow_Subscription_Billing_Architecture.md、
+docs/proposals/subscription-billing-centralization/AisenFlow_Subscription_Billing_Architecture.md、
 本目录00-master-plan.md、verification-record.md及对应phases文件，再读源码和合同。
 最新架构是唯一目标依据；旧Phase编号/历史文件名不是执行内容。
 核对pwd、remote、branch、HEAD、status、固定工具与现有测试入口，保护其他修改。
@@ -22,6 +22,7 @@ G-DEV通过可开展独立本地实现；G-PROVIDER未通过禁止真实购买�
 - 未冻结可信签名合同前query-order权威确认；优惠必须snapshot批准。
 - Inbox+任务提交后ACK；后台最终执行不依赖进程内存。发现和处理进度分离。
 - 原订单一次原结算；同Checkout第二笔真实款保存并人工处理；无Grant不能一律终态化。
+- lifetime是99年有限期，复用日历顺延、真实截止日期与到期回退；允许续购，保留Admin真永久限制，不开发商业永久起点专用流程。
 - correction独立操作关联替代链，退款定位当前有效授权；不能绕过幂等。
 - 旧Checkout/未结订单/可兑Batch均参与Plan切换；生命周期与删除不能被付款绕过。
 - Key仅BFF/server；受保护业务服务端授权；中央故障不伪装Free、不放行。
