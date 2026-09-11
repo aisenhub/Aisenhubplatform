@@ -26,3 +26,5 @@ M5_SDK_PACK_DESTINATION 可覆盖目标；打包会清空目标目录并重建�
 实际页面与适配边界见[前端模块](../architecture/modules/frontends.md)。安装脚本位于 tests/spikes/registry 和 tests/spikes/consumer；执行前应核对其路由假设。
 
 `apps/template-preview` 的 `/api/v1/[...path]` 是同源 Consumer BFF：只代理当前订阅/Checkout/兑换白名单路径，服务端读取 Auth cookie 并注入 Platform Key，写请求校验 Origin/CSRF。Platform Key 不进入浏览器 bundle、URL、日志或客户端持久存储。
+
+Consumer Auth 路由位于 `/api/auth/login`、`/api/auth/callback`、`/api/auth/refresh` 和 `/api/auth/logout`；`/login` 页面只提交邮箱/密码，浏览器不接触 access/refresh token。`/api/protected/advanced-config` 是最小服务端授权示例：先通过 scoped session gate，再用 `authorizeProtectedFeature` 调用中央 `getSubscription`，中央不可用、暂停或无权益不会降级为 Free 放行。

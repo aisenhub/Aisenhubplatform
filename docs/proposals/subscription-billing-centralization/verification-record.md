@@ -4,9 +4,9 @@
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`。
 - 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`。
-- 工作目录/branch/实现代码HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `f1bfba1` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；公共文档同步提交为 `7b85e5f`，已 push。
+- 工作目录/branch/实现代码HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `d71a259` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；本次公共文档同步提交待生成，代码 `d71a259` 已 push。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（72个文件，10个本轮变更文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
 - 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
@@ -21,7 +21,7 @@
 | BILL-03 | 本地验收已交付 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入已实现；真实结算未运行 | `5dba4bd`，已 push |
 | BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push |
 | BILL-05 | 本地验收已交付 | Provider-neutral 事实归一化、权威验证/结算、重复款/合同冲突、双进度游标、maintenance Provider I/O 边界已实现；真实 Provider 未运行 | `d587ca4`，已 push |
-| BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer BFF、动态订阅 Checkout/兑换页面、服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；真实 Consumer/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1`，已 push |
+| BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer Auth/BFF、动态订阅 Checkout/兑换页面、服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；浏览器真实 Consumer/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1` + `d71a259`，已 push |
 | BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级 fixture、G-PROVIDER、G-OPS、生产观察未运行 | 文档同步 `7b85e5f`，已 push |
 
 状态可用未开始/进行中/已阻塞/验证失败/验收通过待推送/已交付。已交付仅指该阶段明确范围，真实渠道和运维门槛另列；整体未满足不能Completed。
@@ -30,7 +30,7 @@
 
 | 门槛 | 状态 | 证据/缺口 |
 |---|---|---|
-| G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作来源/版本和结算状态；BILL-02 增加固定商品目录/配置与合同；BILL-03 增加 Redemption V2 snapshot、码规范化和 correction 链；BILL-04 增加 Checkout/Order/Inbox/Job schema、Account checkout DTO/SDK、hash-only webhook 和 lease/fence maintenance；BILL-05 增加 Provider-neutral 归一化、验证/结算、游标和 worker；BILL-06 增加中央 Billing Admin、Consumer BFF、服务端授权和动态订阅页；Node/Deno/SQL/前端固定测试通过 |
+| G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作来源/版本和结算状态；BILL-02 增加固定商品目录/配置与合同；BILL-03 增加 Redemption V2 snapshot、码规范化和 correction 链；BILL-04 增加 Checkout/Order/Inbox/Job schema、Account checkout DTO/SDK、hash-only webhook 和 lease/fence maintenance；BILL-05 增加 Provider-neutral 归一化、验证/结算、游标和 worker；BILL-06 增加中央 Billing Admin、Consumer Auth/BFF、服务端授权和动态订阅页；Node/Deno/SQL/前端固定测试通过 |
 | G-PROVIDER | NOT_RUN | 真实渠道未验证 |
 | G-OPS | NOT_RUN | 调度/恢复/开关未验证 |
 
@@ -105,11 +105,11 @@
 
 ### BILL-06/2026-09-11/当前 Agent
 
-- 实际变更文件：`supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql`、`supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`packages/account-server/src/index.ts`、`packages/account-server/tests/authorization.test.ts`、`apps/admin/app/admin/billing/page.tsx`、`apps/admin/features/billing/central-billing-page.tsx`、`apps/template-preview/app/api/v1/[...path]/route.ts`、`apps/template-preview/app/subscription/page.tsx`、`docs/reference/contracts/admin.openapi.json` 及导航/配置。
-- 实现行为：Admin 通过私有 wrapper 读取订单/Provider 映射/指标并以近期 MFA、`operation_id`、`If-Match`、reason 触发重查/结案；直接 Billing 表 DML 保持拒绝，订单 admin_version 由触发器推进。Consumer BFF 只代理订阅白名单路径，服务端注入 Platform Key、校验 Auth cookie/Origin/CSRF；页面从服务端商品和 Checkout 状态读取，不伪造支付成功；`authorizeProtectedFeature` 只使用中央 entitlement 结果。
-- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（33 files/648 tests）；Account API PASS（23 tests）；Afdian normalizer PASS（2 tests）；maintenance PASS（8 tests）；`@kit/account-server` typecheck/unit PASS（16 tests）；Template/Admin typecheck PASS；Template/Admin production build PASS（Admin 保留既有 account-auth/browser 导出 warning）；`pnpm contracts:check` PASS（account=21/admin=44）；`pnpm docs:check` PASS。
+- 实际变更文件：`supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql`、`supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`packages/account-server/src/index.ts`、`packages/account-server/tests/authorization.test.ts`、`apps/admin/app/admin/billing/page.tsx`、`apps/admin/features/billing/central-billing-page.tsx`、`apps/template-preview/app/api/auth/*`、`apps/template-preview/app/api/protected/advanced-config/route.ts`、`apps/template-preview/app/api/v1/[...path]/route.ts`、`apps/template-preview/app/login/page.tsx`、`apps/template-preview/app/subscription/page.tsx`、`docs/reference/contracts/admin.openapi.json` 及导航/配置。
+- 实现行为：Admin 通过私有 wrapper 读取订单/Provider 映射/指标并以近期 MFA、`operation_id`、`If-Match`、reason 触发重查/结案；直接 Billing 表 DML 保持拒绝，订单 admin_version 由触发器推进。Consumer Auth 使用同源 scoped cookies，login/refresh/logout 校验 Origin/CSRF 约束；BFF 只代理订阅白名单路径，服务端注入 Platform Key；页面从服务端商品和 Checkout 状态读取，不伪造支付成功；`authorizeProtectedFeature` 只使用中央 entitlement 结果，受保护示例不信任浏览器 plan 字段。
+- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（33 files/648 tests）；Account API PASS（23 tests）；Afdian normalizer PASS（2 tests）；maintenance PASS（8 tests）；`@kit/account-server` typecheck/unit PASS（16 tests）；Template typecheck PASS；Template Auth 动态路由 production build PASS；Admin typecheck/build PASS（既有 account-auth/browser 导出 warning）；`pnpm lint` PASS；新增 Auth/受保护文件定向 `oxfmt --check` PASS；`pnpm contracts:check` PASS（account=21/admin=44）；`pnpm docs:check` PASS。
 - Supabase lint：未通过，但仅保留仓库既有函数的 error/warning；BILL-06 新增函数无 lint error。真实 Consumer Auth、Provider、生产未运行。
-- 代码commit：`b91800f`（`feat(billing): add central admin and consumer boundaries`）、`fa3083e`（`fix(billing): make admin resolution idempotent`）与 `f1bfba1`（`feat(billing): expose admin resolution controls`）；均已 push 到 `origin/codex/billing-architecture-review`，远端最终 SHA 为 `f1bfba159e09060b3400c243709ca34ca09fa99c`。
+- 代码commit：`b91800f`（`feat(billing): add central admin and consumer boundaries`）、`fa3083e`（`fix(billing): make admin resolution idempotent`）、`f1bfba1`（`feat(billing): expose admin resolution controls`）与 `d71a259`（`feat(consumer): add authenticated reference boundary`）；均已 push 到 `origin/codex/billing-architecture-review`，当前远端最终 SHA 为 `d71a259`。
 - 未完成/阻塞/下一满足依赖任务：BILL-07 本地最终检查与文档同步；升级 fixture、真实 Provider/G-OPS 和生产观察保持 NOT_RUN。
 
 ### BILL-07/2026-09-11/当前 Agent
