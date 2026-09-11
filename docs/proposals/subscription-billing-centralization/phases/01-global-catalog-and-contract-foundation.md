@@ -8,7 +8,7 @@
 
 ## 2. 阅读与核实
 
-核对 package.json、pnpm-lock.yaml、supabase/config.toml、functions/_shared、maintenance、packages/domain/src/redemption.ts、最新SQL函数及 docs/reference/contracts.md、data-model.md、configuration.md、toolchain.md、guides/operations.md。
+核对 package.json、pnpm-lock.yaml、supabase/config.toml、functions/_shared、maintenance、packages/domain/src/redemption.ts、最新SQL函数及 docs/reference/contracts.md、data-model.md、configuration.md、toolchain.md、guides/operations.md；必读用户提供的 [Afdian 调试参考](../afdian-debug-reference.md)。
 
 记录源码HEAD、依赖固定版本、实际命令与已有基线失败。历史 d3c25e9 仅作研究背景。
 
@@ -27,7 +27,7 @@
 
 ## 5. G-PROVIDER 真实渠道门槛
 
-逐项核验并保留脱敏证据：
+逐项核验并保留脱敏证据。用户当前调试样例没有 `custom_order_id`，因此在真实回传确认前不得自动绑定或授予权益：
 
 | 项目 | 必须明确 |
 |---|---|

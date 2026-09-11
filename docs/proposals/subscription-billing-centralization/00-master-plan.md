@@ -2,7 +2,7 @@
 
 > 状态：Proposed。全部功能阶段未开始；本轮仅完成计划修订。
 
-目标依据：[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)；[设计差距](design.md)；[交接](agent-handoff.md)；[证据](verification-record.md)。
+目标依据：[最新架构](../AisenFlow_Subscription_Billing_Architecture.md)；[设计差距](design.md)；[交接](agent-handoff.md)；[证据](verification-record.md)；[Afdian 调试参考](afdian-debug-reference.md)。
 
 ## 1. 目标与边界
 
