@@ -116,7 +116,7 @@
 
 - 实际变更文件：`supabase/tests/bill_07_upgrade_compatibility.sql`、`supabase/functions/_shared/billing.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/maintenance/index.ts` 及定向测试、`packages/domain/tests/billing.test.ts`、运行配置/Proposal 文档。
 - 本地最终验证：`pnpm test:db` PASS（34 files/678 tests）；Account API PASS（25 tests）；Webhook PASS（4 tests）；maintenance PASS（9 tests）；Domain PASS（8 tests）；独立 stop switch 验证了 Checkout（含缺省关闭）、Webhook ingress、后台领取和自动结算的停机边界；`pnpm contracts:check`、`pnpm docs:check`、定向格式与 lint PASS。`pnpm exec supabase db lint --local --fail-on error` 仍因既有非 Billing 函数错误返回非零。
-- 状态边界：G-DEV PASS；本地 G-OPS 证据 PARTIAL_LOCAL；真实生产等价数据、G-PROVIDER、真实调度/告警/密钥轮换、浏览器真实会话、真实付款、生产迁移/观察仍 NOT_RUN。整体 Proposal 仍为 In Progress，不能标记 Completed。
+- 状态边界：G-DEV PASS；本地 G-OPS 证据 PARTIAL_LOCAL；真实生产等价数据、G-PROVIDER、真实调度/告警/密钥轮换、浏览器真实会话、真实付款、生产迁移/观察仍 NOT_RUN。`pnpm test:e2e:t16-r2` 已尝试但因现有参考模板与旧 E2E 路由/文案不一致，在首页标题断言处 FAIL，不计作浏览器会话 PASS；整体 Proposal 仍为 In Progress，不能标记 Completed。
 - 代码提交：`b7ec484`（`feat(billing): add upgrade fixture and stop controls`）与 `7b46695`（`fix(billing): fail closed for checkout issuance`），均已 push；文档同步随本记录提交。
 
 ## 5. 要求覆盖与实际测试
@@ -129,7 +129,7 @@
 | BILL-04 checkout/inbox/job | `supabase/tests/bill_04_checkout_order_inbox_jobs.sql`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.test.ts`、Account API/SDK tests | 本地 Docker DB、Deno、Node；代码 commits `7169183` + `c3b99b3` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted Deno/SDK/domain/admin tests; `pnpm contracts:check`; `pnpm docs:check` | PASS（579 SQL assertions、22 Account、3 webhook、7 maintenance）；真实 Provider/结算/生产 NOT_RUN |
 | BILL-05 verification/settlement | `supabase/tests/bill_05_provider_verification_settlement.sql`、Afdian normalizer、maintenance worker tests | 本地 Docker DB、Deno；代码 commit `d587ca4` | `pnpm test:db`; targeted Afdian/maintenance Deno tests; local Supabase lint | PASS（618 SQL assertions、2 Afdian、8 maintenance）；真实 Provider/生产 NOT_RUN |
 | BILL-06 Admin/Consumer boundary | `supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql`、Account API/SDK tests、Template/Admin build | 本地 Docker DB、Deno、Node、Next build；代码 commits `b91800f` + `fa3083e` | `pnpm test:db`; Account API/Afdian/maintenance; account-server unit/typecheck; Template/Admin typecheck/build; `pnpm contracts:check`; `pnpm docs:check` | PASS（648 SQL assertions、23 Account、2 Afdian、8 maintenance、16 SDK）；真实 Consumer/Provider/生产 NOT_RUN |
-| BILL-07 final/local docs | 本记录、架构/合同/运维文档 | 本地工作区；代码 `b7ec484` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted regression; `pnpm contracts:check`; `pnpm docs:check` | Local G-DEV PASS；升级兼容 fixture/stop switch PASS；真实生产升级、G-PROVIDER/G-OPS/生产 NOT_RUN |
+| BILL-07 final/local docs | 本记录、架构/合同/运维文档 | 本地工作区；代码 `b7ec484` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted regression; `pnpm contracts:check`; `pnpm docs:check` | Local G-DEV PASS；升级兼容 fixture/stop switch PASS；`pnpm test:e2e:t16-r2` 在现有参考模板与旧 E2E 路由/文案不一致处 FAIL；真实生产升级、G-PROVIDER/G-OPS/生产 NOT_RUN |
 
 重点独立记录：Checkout长幂等/响应丢失、两笔真实款、finalized重放、ACK后崩溃、lease/fence、分页移动与处理重试、99年顺延/到期/跨世纪日期、Admin真永久兼容及通用替代链、删除/归档/批次并发、服务端故障授权。
 
@@ -137,7 +137,7 @@
 
 - 旧Plan/Grant/Event/Batch/Code 的等价迁移 fixture、V1/V2 批次共存、旧HMAC及16–128长度边界：本地已由 `supabase/tests/bill_07_upgrade_compatibility.sql` 与 Domain 测试验证；真实数据分布仍未验证。
 - FK/锁顺序/匿名保留/保留期/责任人/清理checkpoint决策：未冻结。
-- CLI命令与迁移文件、升级fixture/空库reset：未执行。
+- CLI `supabase migration new` 命令、升级fixture与空库 reset 已在本地执行；本轮没有需要保留的 schema migration 文件，生产等价升级迁移/恢复仍未执行。
 - 普通7天幂等清理与长期绑定、删除后迟到通知：未验证。
 - correction链及退款目标、任务/结算/删除竞态：未验证。
 - schema兼容窗口、forward-fix/恢复演练：未验证。
