@@ -432,6 +432,108 @@ Deno.test('maintenance stop switches leave leases and provider state untouched',
   assertEquals(providerQueries, 0);
 });
 
+Deno.test('maintenance backlog remains claimable after the worker switch restarts', async () => {
+  events.length = 0;
+  let backlog = 1;
+  const recoveryDatabase: TestDatabase = {
+    async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
+      events.push('begin');
+      return callback({
+        async unsafe<T extends TestRow = TestRow>(query: string): Promise<T[]> {
+          if (query.startsWith('set local role')) {
+            events.push('role');
+            return [] as T[];
+          }
+          if (query.includes('billing_processing_job_claim')) {
+            events.push('billing-claim');
+            if (backlog === 0) return [] as T[];
+            backlog -= 1;
+            return [
+              {
+                job_id: jobId,
+                job_kind: 'webhook_order_discovery',
+                fence: 4,
+                lease_until: '2026-09-11T00:01:00Z',
+              },
+            ] as unknown as T[];
+          }
+          if (query.includes('billing_processing_job_finish')) {
+            events.push('billing-finish');
+            return [
+              { job_id: jobId, state: 'completed', fence: 4 },
+            ] as unknown as T[];
+          }
+          return [] as T[];
+        },
+      });
+    },
+  };
+
+  const stopped = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/claim', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ limit: 10 }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: recoveryDatabase,
+      backgroundProcessingEnabled: false,
+    },
+  );
+  assertEquals(stopped.status, 503);
+  assertEquals(backlog, 1);
+
+  const resumed = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/claim', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ limit: 10 }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: recoveryDatabase,
+      backgroundProcessingEnabled: true,
+    },
+  );
+  assertEquals(resumed.status, 200);
+  assertEquals((await resumed.json()).data.jobs.length, 1);
+  assertEquals(backlog, 0);
+
+  const finished = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/finish', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ job_id: jobId, fence: 4, state: 'completed' }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: recoveryDatabase,
+    },
+  );
+  assertEquals(finished.status, 200);
+  assertEquals(events, [
+    'begin',
+    'role',
+    'billing-claim',
+    'begin',
+    'role',
+    'billing-finish',
+  ]);
+});
+
 Deno.test('maintenance performs provider I/O outside the settlement transaction', async () => {
   events.length = 0;
   const response = await handleMaintenanceRequest(

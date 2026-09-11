@@ -32,7 +32,7 @@
 |---|---|---|
 | G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作来源/版本和结算状态；BILL-02 增加固定商品目录/配置与合同；BILL-03 增加 Redemption V2 snapshot、码规范化和 correction 链；BILL-04 增加 Checkout/Order/Inbox/Job schema、Account checkout DTO/SDK、hash-only webhook 和 lease/fence maintenance；BILL-05 增加 Provider-neutral 归一化、验证/结算、游标和 worker；BILL-06 增加中央 Billing Admin、Consumer Auth/BFF、服务端授权和动态订阅页；Node/Deno/SQL/前端固定测试通过 |
 | G-PROVIDER | NOT_RUN | 真实渠道未验证 |
-| G-OPS | PARTIAL_LOCAL | 本地 stop switch、停机不写库/不查 Provider、lease 可恢复路径已由 maintenance/webhook/API fixture 验证；真实调度密钥、限流预算、告警责任人与恢复演练仍未运行 |
+| G-OPS | PARTIAL_LOCAL | 本地 stop switch、停机不写库/不查 Provider、停机后积压保持并可在重启后重新领取、lease 可恢复路径已由 maintenance/webhook/API fixture 验证；真实调度密钥、限流预算、告警责任人与恢复演练仍未运行 |
 
 | 协议项目 | 官方来源/日期/版本 | 脱敏操作与结果 | 状态 |
 |---|---|---|---|
@@ -156,6 +156,12 @@
 - 负载对照：同一 startup + pool8 配置在 50 req/s×60s 为 3000/3000、错误率 0%、实际 50.16 req/s、p95 332.50ms、p99 425.62ms，满足该负载下的 p95≤500ms 门槛；这不能替代 100 req/s 目标，当前证据显示 Local 在两档负载之间发生延迟饱和。
 - 证据边界：startup 角色模式仅在 Local 经过验证，未改变默认配置；连接池 4 + startup 角色的 60 秒对照 p95 969.24ms，连接池 12 + startup 角色的对照 p95 1601.58ms、实际 77.03 req/s，连接池 32 的历史对照 p95 1455.32ms，均不作为推荐配置。当前 Local 最优测得组合为 startup + pool8；结果不转换为 G-OPS 或生产通过。
 - 结论：功能授权链路 PASS；R15 性能目标当前 `NOT_PASS/待容量优化`，该结果不转换为 G-OPS 或生产通过。探针只操作 Local fixture，未修改 staging/生产。
+
+### Local G-OPS 停机恢复回归/2026-09-12/当前 Agent
+
+- 实际变更文件：`supabase/functions/maintenance/index.test.ts`。
+- 验证结果：新增用例覆盖后台处理开关关闭时不领取积压任务、积压保持可见、开关恢复后重新领取并按 fence 完成；Webhook/maintenance 定向测试 `15 passed`，定向 `oxfmt --check` 与 `git diff --check` PASS。
+- 证据边界：这是本地 handler/数据库边界模拟，不代表真实 scheduler、Provider 限流、密钥托管/轮换、告警或生产恢复已经通过；这些仍保持 G-OPS/生产 NOT_RUN。
 
 ## 5. 要求覆盖与实际测试
 
