@@ -4,9 +4,9 @@
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`。
-- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`。
-- 工作目录/branch/实现代码HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `fa3083e` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；公共文档同步提交为 `7b85e5f`，已 push。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`。
+- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`。
+- 工作目录/branch/实现代码HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `f1bfba1` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；公共文档同步提交为 `7b85e5f`，已 push。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（72个文件，10个本轮变更文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
 - 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
@@ -21,7 +21,7 @@
 | BILL-03 | 本地验收已交付 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入已实现；真实结算未运行 | `5dba4bd`，已 push |
 | BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push |
 | BILL-05 | 本地验收已交付 | Provider-neutral 事实归一化、权威验证/结算、重复款/合同冲突、双进度游标、maintenance Provider I/O 边界已实现；真实 Provider 未运行 | `d587ca4`，已 push |
-| BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer BFF、动态订阅 Checkout/兑换页面、服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；真实 Consumer/生产未运行 | `b91800f` + `fa3083e`，已 push |
+| BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer BFF、动态订阅 Checkout/兑换页面、服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；真实 Consumer/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1`，已 push |
 | BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级 fixture、G-PROVIDER、G-OPS、生产观察未运行 | 文档同步 `7b85e5f`，已 push |
 
 状态可用未开始/进行中/已阻塞/验证失败/验收通过待推送/已交付。已交付仅指该阶段明确范围，真实渠道和运维门槛另列；整体未满足不能Completed。
@@ -109,7 +109,7 @@
 - 实现行为：Admin 通过私有 wrapper 读取订单/Provider 映射/指标并以近期 MFA、`operation_id`、`If-Match`、reason 触发重查/结案；直接 Billing 表 DML 保持拒绝，订单 admin_version 由触发器推进。Consumer BFF 只代理订阅白名单路径，服务端注入 Platform Key、校验 Auth cookie/Origin/CSRF；页面从服务端商品和 Checkout 状态读取，不伪造支付成功；`authorizeProtectedFeature` 只使用中央 entitlement 结果。
 - 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（33 files/648 tests）；Account API PASS（23 tests）；Afdian normalizer PASS（2 tests）；maintenance PASS（8 tests）；`@kit/account-server` typecheck/unit PASS（16 tests）；Template/Admin typecheck PASS；Template/Admin production build PASS（Admin 保留既有 account-auth/browser 导出 warning）；`pnpm contracts:check` PASS（account=21/admin=44）；`pnpm docs:check` PASS。
 - Supabase lint：未通过，但仅保留仓库既有函数的 error/warning；BILL-06 新增函数无 lint error。真实 Consumer Auth、Provider、生产未运行。
-- 代码commit：`b91800f`（`feat(billing): add central admin and consumer boundaries`）与 `fa3083e`（`fix(billing): make admin resolution idempotent`）；均已 push 到 `origin/codex/billing-architecture-review`，远端最终 SHA 为 `fa3083e4399c025fb8632a9c5bd82ec3b1ff4ec0`。
+- 代码commit：`b91800f`（`feat(billing): add central admin and consumer boundaries`）、`fa3083e`（`fix(billing): make admin resolution idempotent`）与 `f1bfba1`（`feat(billing): expose admin resolution controls`）；均已 push 到 `origin/codex/billing-architecture-review`，远端最终 SHA 为 `f1bfba159e09060b3400c243709ca34ca09fa99c`。
 - 未完成/阻塞/下一满足依赖任务：BILL-07 本地最终检查与文档同步；升级 fixture、真实 Provider/G-OPS 和生产观察保持 NOT_RUN。
 
 ### BILL-07/2026-09-11/当前 Agent
