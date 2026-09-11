@@ -1,9 +1,10 @@
 begin;
 
-select plan(14);
+select plan(16);
 
 select has_function('private', 'platform_key_verify', array['text', 'integer'], 'Platform Key verifier exists');
 select has_function('private', 'account_principal', array['private.account_context'], 'Principal resolver exists');
+select has_function('private', 'account_principal_presented', array['uuid', 'uuid', 'uuid', 'text', 'integer'], 'presented-key Principal fast path exists');
 select has_function('private', 'admin_platform_update', array['private.admin_context', 'uuid', 'text', 'boolean'], 'Admin platform update exists');
 select has_function('private', 'admin_platform_key_revoke', array['private.admin_context', 'uuid', 'uuid'], 'Admin key revoke exists');
 
@@ -14,6 +15,10 @@ select ok(
 select ok(
   has_function_privilege('account_executor', 'private.account_principal(private.account_context)', 'execute'),
   'account executor can resolve Principal'
+);
+select ok(
+  has_function_privilege('account_executor', 'private.account_principal_presented(uuid, uuid, uuid, text, integer)', 'execute'),
+  'account executor can resolve Principal from a presented key'
 );
 select ok(
   has_function_privilege('admin_executor', 'private.admin_platform_update(private.admin_context, uuid, text, boolean)', 'execute'),

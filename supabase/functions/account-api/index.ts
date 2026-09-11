@@ -479,17 +479,45 @@ async function verifyPlatformKey(
   return { keyId, platformId, platformStatus };
 }
 
-async function principal(
+async function principalFromPresentedKey(
   transaction: Transaction,
-  key: KeyContext,
+  request: Request,
+  dependencies: AccountApiDependencies,
   session: SessionContext,
-): Promise<Row> {
-  const [row] = await transaction.unsafe<Row>(
-    'select * from private.account_principal(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
-    [session.userId, session.sessionId, key.platformId, key.keyId, requestId()],
-  );
-  if (!row) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
-  return row;
+): Promise<{ readonly key: KeyContext; readonly row: Row }> {
+  const parsed = parsePlatformKey(request.headers.get('x-platform-key'));
+  let row: Row | undefined;
+  for (const secret of platformHmacSecrets(dependencies)) {
+    const keyHmac = await hmacHex(
+      secret,
+      `${parsed.version}:platform-key:${parsed.keyId}:${parsed.presentedKey}`,
+    );
+    [row] = await transaction.unsafe<Row>(
+      'select * from private.account_principal_presented($1::uuid, $2::uuid, $3::uuid, $4::text, $5::integer)',
+      [
+        session.userId,
+        session.sessionId,
+        parsed.keyId,
+        keyHmac,
+        parsed.version,
+      ],
+    );
+    if (row) break;
+  }
+  if (!row) throw new ApiFault(401, 'PLATFORM_CREDENTIAL_INVALID');
+  const platformId = uuidValue(row.platform_id);
+  const keyId = uuidValue(row.key_id);
+  const platformStatus = stringValue(row.platform_status);
+  if (
+    !platformId ||
+    !keyId ||
+    (platformStatus !== 'active' && platformStatus !== 'disabled')
+  )
+    throw new ApiFault(401, 'PLATFORM_CREDENTIAL_INVALID');
+  return {
+    key: { keyId, platformId, platformStatus },
+    row,
+  };
 }
 
 function principalDto(row: Row, key: KeyContext, session: SessionContext) {
@@ -747,12 +775,12 @@ async function dispatchAccount(
   reauthSession?: SessionContext,
 ): Promise<DispatchResult> {
   const path = requestPath(request);
-  const key = await verifyPlatformKey(transaction, request, dependencies);
 
   if (
     (path === 'v1/plans' || path === 'v1/subscription/products') &&
     request.method === 'GET'
   ) {
+    const key = await verifyPlatformKey(transaction, request, dependencies);
     if (key.platformStatus !== 'active')
       throw new ApiFault(403, 'PLATFORM_DISABLED');
     if (path === 'v1/subscription/products') {
@@ -781,8 +809,12 @@ async function dispatchAccount(
     };
   }
 
-  if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+  if (!session) {
+    await verifyPlatformKey(transaction, request, dependencies);
+    throw new ApiFault(401, 'UNAUTHORIZED');
+  }
   if (path === 'v1/auth/recent-proof' && request.method === 'POST') {
+    const key = await verifyPlatformKey(transaction, request, dependencies);
     if (
       !reauthSession ||
       reauthSession.userId !== session.userId ||
@@ -801,7 +833,12 @@ async function dispatchAccount(
     return { status: 201, data: proof };
   }
 
-  const row = await principal(transaction, key, session);
+  const { key, row } = await principalFromPresentedKey(
+    transaction,
+    request,
+    dependencies,
+    session,
+  );
   if (path === 'v1/account/principal' && request.method === 'GET') {
     return { status: 200, data: principalDto(row, key, session) };
   }

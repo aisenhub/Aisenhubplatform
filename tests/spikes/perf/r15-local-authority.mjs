@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import postgres from 'postgres';
 
@@ -20,6 +20,9 @@ const durationSeconds = positiveInteger(
 const platformSecret =
   process.env.R15_PLATFORM_KEY_HMAC_SECRET ??
   'local-r15-authority-probe-platform-secret';
+const redemptionSecret =
+  process.env.R15_REDEMPTION_HMAC_SECRET ??
+  'local-r15-authority-probe-redemption-secret';
 
 function positiveInteger(value, fallback) {
   const parsed = Number.parseInt(value ?? '', 10);
@@ -61,6 +64,7 @@ const authUrl = status.API_URL;
 const anonKey = status.ANON_KEY;
 const databaseUrl = status.DB_URL;
 assert(authUrl && anonKey && databaseUrl, 'Local Supabase status is required');
+const apiPort = new URL(apiOrigin).port || '8000';
 
 const sql = postgres(databaseUrl, {
   max: 12,
@@ -77,6 +81,63 @@ const keyHmac = createHmac('sha256', platformSecret)
   .update(`1:platform-key:${keyId}:${presentedKey}`)
   .digest('hex');
 let userId;
+let managedApi;
+
+async function waitForManagedApi() {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (managedApi?.exitCode !== null)
+      throw new Error('managed Account API exited before becoming ready');
+    try {
+      await fetch(`${apiOrigin}/functions/v1/account-api/v1/plans`, {
+        signal: AbortSignal.timeout(2000),
+      });
+      return;
+    } catch {
+      await sleep(250);
+    }
+  }
+  throw new Error('managed Account API did not become ready');
+}
+
+async function startManagedApi() {
+  if (process.env.R15_START_API !== '1') return;
+  assert(status.SERVICE_ROLE_KEY, 'Local service role key is required');
+  managedApi = spawn(
+    process.env.R15_DENO_PATH ?? 'deno',
+    [
+      'run',
+      '--allow-env',
+      '--allow-net',
+      '--allow-read',
+      '--allow-import',
+      'supabase/functions/account-api/index.ts',
+    ],
+    {
+      cwd: repositoryRoot,
+      env: {
+        ...process.env,
+        SUPABASE_URL: authUrl,
+        SUPABASE_ANON_KEY: anonKey,
+        SUPABASE_PUBLISHABLE_KEY: anonKey,
+        SUPABASE_SECRET_KEY: status.SERVICE_ROLE_KEY,
+        ACCOUNT_API_DB_URL: databaseUrl,
+        PLATFORM_KEY_HMAC_SECRET: platformSecret,
+        REDEMPTION_HMAC_SECRET: redemptionSecret,
+        REDEMPTION_HMAC_KEY_VERSION: '1',
+        ACCOUNT_API_PORT: apiPort,
+      },
+      stdio: 'ignore',
+      windowsHide: true,
+    },
+  );
+  await waitForManagedApi();
+}
+
+async function stopManagedApi() {
+  if (!managedApi) return;
+  if (managedApi.exitCode === null) managedApi.kill();
+  managedApi = undefined;
+}
 
 async function cleanup() {
   if (userId) {
@@ -199,6 +260,7 @@ async function activate(accessToken) {
 }
 
 try {
+  await startManagedApi();
   await sql`grant account_executor to postgres`;
   await sql`
     insert into public.platforms (id, code, name, status, allow_activation)
@@ -294,5 +356,6 @@ try {
     'R15 local authorization pressure target failed',
   );
 } finally {
+  await stopManagedApi();
   await cleanup();
 }

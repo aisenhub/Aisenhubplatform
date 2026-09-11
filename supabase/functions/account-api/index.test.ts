@@ -24,7 +24,7 @@ function fakeJwt(
   return `${encode({ alg: 'none' })}.${encode({ sub: tokenUserId, session_id: tokenSessionId, aal })}.x`;
 }
 
-function fakeDatabase() {
+function fakeDatabase(onQuery?: (query: string) => void) {
   return {
     async begin<T>(
       callback: (transaction: {
@@ -42,6 +42,7 @@ function fakeDatabase() {
         async unsafe<R extends Record<string, unknown>>(
           query: string,
         ): Promise<R[]> {
+          onQuery?.(query);
           if (
             query.startsWith(
               'select * from private.platform_key_verify_presented',
@@ -84,6 +85,22 @@ function fakeDatabase() {
                 enabled: true,
                 purchasable: false,
                 reason: 'provider_mapping_unavailable',
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
+              'select * from private.account_principal_presented',
+            )
+          ) {
+            return [
+              {
+                key_id: keyId,
+                platform_id: platformId,
+                platform_status: 'active',
+                authorization: 'allowed',
+                account_status: 'active',
+                platform_account_id: userId,
               },
             ] as unknown as R[];
           }
@@ -647,9 +664,17 @@ Deno.test('Account API sends current and previous redemption HMAC candidates ato
                 platform_status: 'active',
               },
             ] as unknown as R[];
-          if (query.startsWith('select * from private.account_principal'))
+          if (
+            query.startsWith(
+              'select * from private.account_principal_presented',
+            ) ||
+            query.startsWith('select * from private.account_principal')
+          )
             return [
               {
+                key_id: keyId,
+                platform_id: platformId,
+                platform_status: 'active',
                 authorization: 'allowed',
                 account_status: 'active',
                 platform_account_id: userId,
@@ -782,6 +807,36 @@ Deno.test('Account API coalesces concurrent Auth verification for one token', as
     if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY');
     else Deno.env.set('SUPABASE_ANON_KEY', previousKey);
   }
+});
+
+Deno.test('Account API uses the presented-key Principal fast path', async () => {
+  const queries: string[] = [];
+  const response = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/account/principal', {
+      headers: {
+        Authorization: `Bearer ${fakeJwt()}`,
+        'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+      },
+    }),
+    {
+      database: fakeDatabase((query) => queries.push(query)),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(
+    queries.filter((query) =>
+      query.startsWith('select * from private.account_principal_presented'),
+    ).length,
+    1,
+  );
+  assertEquals(
+    queries.some((query) =>
+      query.startsWith('select * from private.account_principal('),
+    ),
+    false,
+  );
 });
 
 Deno.test('Account API issues a recent proof only after Auth verification and AAL2', async () => {
@@ -1415,9 +1470,20 @@ Deno.test('Account API streams an authorized file with download security headers
                 mime_type: 'text/plain',
               },
             ] as unknown as R[];
-          if (query.startsWith('select * from private.account_principal'))
+          if (
+            query.startsWith(
+              'select * from private.account_principal_presented',
+            ) ||
+            query.startsWith('select * from private.account_principal')
+          )
             return [
-              { authorization: 'allowed', platform_account_id: userId },
+              {
+                key_id: keyId,
+                platform_id: platformId,
+                platform_status: 'active',
+                authorization: 'allowed',
+                platform_account_id: userId,
+              },
             ] as unknown as R[];
           if (query.startsWith('select private.file_download_event')) {
             auditEvents += 1;
@@ -1533,9 +1599,17 @@ Deno.test('Account API maps replacement capacity failures to the stable contract
                 platform_status: 'active',
               },
             ] as unknown as R[];
-          if (query.startsWith('select * from private.account_principal'))
+          if (
+            query.startsWith(
+              'select * from private.account_principal_presented',
+            ) ||
+            query.startsWith('select * from private.account_principal')
+          )
             return [
               {
+                key_id: keyId,
+                platform_id: platformId,
+                platform_status: 'active',
                 authorization: 'allowed',
                 account_status: 'active',
                 platform_account_id: userId,
