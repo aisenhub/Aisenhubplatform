@@ -133,6 +133,13 @@
 - 验证命令：`pnpm test:sdk:m5-02` PASS（可复现 tarball、包边界、独立安装、Node/Edge 导入和浏览器导入拒绝）；`pnpm test:consumer:m5-05` PASS（独立安装、类型检查、生产构建、模板路由、local dual-origin platform E2E）；`pnpm test:e2e:t12-r2` PASS（Admin AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝、70 条路由×5 视口可访问性）；`pnpm test:e2e:t16-r2` PASS（独立上下文、平台 Key 隔离、订阅/兑换、文件、资料/偏好、CSRF/ETag、Admin MFA/暂停恢复、跨 Tab、敏感操作未知响应和 bundle 凭据）；`pnpm test:ops:m6-02-local` PASS（外部备份目标为 `NOT_RUN (X04 unavailable)`）；`pnpm --filter template-preview typecheck` PASS；Impeccable detector PASS（无告警）。Hosted 双平台结果为 `NOT_RUN (X05/hosted backend unavailable)`，不转换为本地 PASS。
 - 代码提交：`1edf844`（`fix(consumer): complete account and file integration`）、`fab5b3d`（`fix(sdk): make package archives reproducible`）、`0378d3f`（`test(admin): stabilize browser probe hydration`）与 `34f498c`（`test(admin): clean subscription fixtures`），均已 push 并核对远端 SHA；验证记录随独立文档提交同步。
 
+### Admin 交互语义修复/2026-09-12/当前 Agent
+
+- 实际变更文件：`apps/admin/app/layout.tsx` 及 8 个 Admin 页面/组件中的 Button-Link 组合。
+- 实现行为：所有以 `Link` 作为渲染目标的 `Button` 显式关闭原生 button 语义推断，保留链接的可访问性与键盘行为；根布局显式声明全局平滑滚动，消除 Next.js 路由过渡提示。
+- 验证命令：`pnpm test:e2e:t12-r2` PASS（Admin 登录、AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝、70 条路由×5 视口；测试用户/平台/配置清理为 0）；`pnpm exec oxfmt --check`（9 个变更文件）PASS；`pnpm --filter admin typecheck` PASS；`pnpm lint` PASS；`git diff --check` PASS；测试进程清理核对 PASS。
+- 代码提交：`7e318a3`（`fix(admin): preserve link button semantics`）已 push，并核对 `origin/codex/billing-architecture-review` 远端 SHA 为 `7e318a38c5f5dffcfbc302c05331218a92082c10`。
+
 ## 5. 要求覆盖与实际测试
 
 ### R01–R17 逐项证据映射
