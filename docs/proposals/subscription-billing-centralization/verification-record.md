@@ -148,9 +148,10 @@
 ### Local R15 授权压力探针/2026-09-12/当前 Agent
 
 - 实际变更文件：`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`tests/spikes/perf/r15-local-authority.mjs`、`package.json`、`docs/reference/configuration.md`。
-- 代码提交：`ba053a4`（`perf(account-api): coalesce auth verification work`；待本轮文档提交后一起 push）。
+- 代码提交：`ba053a4`（`perf(account-api): coalesce auth verification work`；已与本条验证记录一起 push）。
 - 实现行为：同一 access token 的并发 Auth 验证只共享进行中的请求，验证完成立即移除，不缓存验证结果；每个业务请求仍执行数据库 session、平台 Key 与权限检查。平台 HMAC CryptoKey 在进程内复用；数据库连接池上限新增受限配置 `ACCOUNT_API_DB_POOL_MAX`（4–64，默认 8），未改变默认值。
 - 验证结果：Account API Deno 测试 `26 passed`；并发 Auth 合并用例 PASS；10 req/s 短 smoke 为 20/20、错误率 0%、p95 225.82ms。默认连接池 8 下执行 100 req/s×60s 早停压力探针为 6000/6000、错误率 0%、实际 98.36 req/s、p95 884.08ms，未达到 p95≤500ms；连接池 32 对照为实际 85.32 req/s、p95 1455.32ms，同样未通过，未将其作为推荐配置。15 分钟完整窗口未伪造为通过。
+- 证据边界：上述压力数据覆盖同一变更集的并发 Auth 合并与连接池设置；随后补充的 HMAC CryptoKey 复用未单独重跑 100 req/s×60s，因此该 p95 作为保守容量基线，不宣称最终版本已通过该补充门槛。
 - 结论：功能授权链路 PASS；R15 性能目标当前 `NOT_PASS/待容量优化`，该结果不转换为 G-OPS 或生产通过。探针只操作 Local fixture，未修改 staging/生产。
 
 ## 5. 要求覆盖与实际测试
