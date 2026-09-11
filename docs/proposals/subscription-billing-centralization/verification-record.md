@@ -18,11 +18,11 @@
 |---|---|---|---|
 | BILL-01 | G-DEV 已完成 | Provider-neutral 合同、虚构适配器夹具、Node/Deno MD5/HMAC 向量已验证；G-PROVIDER 未运行 | `20a28ed` / `4abb87b`，已 push |
 | BILL-02 | 本地验收已交付 | 固定商品目录、期限语义、平台商品配置、切换 preflight、Account API/SDK/OpenAPI/Admin UI 已实现；Provider 映射未配置，真实购买关闭 | `503f14c` / `fdd106f`，已 push |
-| BILL-03 | 本地验收已交付 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入已实现；真实结算未运行 | `5dba4bd`，已 push |
+| BILL-03 | 本地验收已交付 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入和 correction replay forward-fix 已实现；真实结算未运行 | `5dba4bd` + `764f76c` + `a170d52`，已 push |
 | BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push |
 | BILL-05 | 本地验收已交付 | Provider-neutral 事实归一化、权威验证/结算、重复款/合同冲突、双进度游标、maintenance Provider I/O 边界已实现；真实 Provider 未运行 | `d587ca4`，已 push |
 | BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer Auth/BFF、账户/文件/订阅页面、近期认证和服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；本地双来源浏览器 E2E 已通过，Hosted/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1` + `d71a259` + `1edf844` + `fab5b3d`，均已 push 并核对远端 |
-| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级兼容 fixture、独立 stop switch 演练、Checkout fail-closed 及最终 forward-fix 回归已完成；真实生产等价升级数据、G-PROVIDER、G-OPS、生产观察未运行 | `b7ec484` + `7b46695` + `e7da954` + `14c9359` + `4d92db0`，均已 push；文档同步随本记录提交 |
+| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级兼容 fixture、独立 stop switch 演练、Checkout fail-closed 及最终 forward-fix 回归已完成；真实生产等价升级数据、G-PROVIDER、G-OPS、生产观察未运行 | `b7ec484` + `7b46695` + `e7da954` + `14c9359` + `4d92db0` + `764f76c`，均已 push；文档同步随本记录提交 |
 
 状态可用未开始/进行中/已阻塞/验证失败/验收通过待推送/已交付。已交付仅指该阶段明确范围，真实渠道和运维门槛另列；整体未满足不能Completed。
 
@@ -88,6 +88,7 @@
 - 实现行为：Admin correction 在持有平台/账户/订阅锁后先按 `platform_id + operation_id` 检查已提交结果，再检查原始事件序列；因此首次原子 revoke+grant 推进序列后，携带旧快照序列的重试仍返回 `replayed`。operation 对应账户/原 Grant 不一致时拒绝为 `idempotency_conflict`，不放宽替代链唯一性或共享权益写入口。
 - 验证命令：`pnpm exec supabase db reset --local --yes` PASS；Local M3 entitlement ledger 脚本 PASS（correction preview、atomic replacement、replay、stale precondition、single replacement、concurrent winner/loser）；`pnpm test:db` PASS（36 files/695 tests）；定向 `oxfmt --check` 与 `git diff --check` PASS。
 - 证据边界：以上为本地 Docker/Auth fixture 与 SQL 事务并发证据；真实退款/Provider、Hosted、生产调度、密钥轮换和删除竞态仍未验证，Proposal 仍不可标记 Completed。
+- 后续测试提交：`a170d52` 增加同一 correction `operation_id` 跨账户重放的 `idempotency_conflict` 负向回归，已 push 并核对远端。
 
 ### BILL-04/2026-09-11/当前 Agent
 
