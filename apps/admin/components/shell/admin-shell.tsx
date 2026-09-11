@@ -24,7 +24,7 @@ export function AdminShell({ children }: AdminShellProps) {
     <SidebarProvider
       defaultOpen
       data-test="admin-shell"
-      className="min-h-svh bg-muted/30"
+      className="admin-shell-root min-h-svh"
     >
       <AdminSidebar />
       <div className="admin-shell-inset">

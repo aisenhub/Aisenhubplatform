@@ -39,22 +39,20 @@ export function AdminTopbar() {
 
   return (
     <header
-      className="sticky top-0 z-20 flex min-h-14 items-center gap-3 border-b border-border/70 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6"
+      className="admin-topbar sticky top-0 z-20 flex items-center gap-3 border-b border-border/70 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6"
       data-test="admin-topbar"
     >
       <SidebarTrigger data-test="admin-sidebar-toggle" />
       <Separator orientation="vertical" className="hidden h-5 sm:block" />
-      <div className="hidden min-w-0 items-center gap-2 text-sm text-muted-foreground lg:flex">
+      <div className="admin-topbar-context hidden min-w-0 items-center gap-2 lg:flex">
         <span>Aisenhub</span>
         <span aria-hidden="true">/</span>
-        <span className="truncate font-medium text-foreground">
-          {pageLabel}
-        </span>
+        <strong className="truncate">{pageLabel}</strong>
       </div>
       <div className="ml-auto flex min-w-0 items-center gap-2">
         <div className="lg:hidden min-w-0 truncate">
           <span className="sr-only">当前页面：</span>
-          <span className="text-sm font-medium">{pageLabel}</span>
+          <span className="text-sm font-semibold">{pageLabel}</span>
         </div>
         <AdminCommandMenu compact />
         <Button

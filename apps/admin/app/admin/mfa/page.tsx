@@ -200,15 +200,22 @@ export default function AdminMfaPage() {
   }
 
   return (
-    <main className="shell" data-test="admin-mfa-page">
-      <h1>验证管理员身份</h1>
-      <p className="muted">
-        Admin 操作需要 AAL2；验证成功后，服务端向当前 session 绑定 5 分钟
-        proof，浏览器不会自行提交 proof。
-      </p>
+    <main className="admin-auth-layout" data-test="admin-mfa-page">
+      <div className="admin-auth-brand" aria-label="Aisenhub 管理工作台">
+        <span className="admin-auth-brand-mark">A</span>
+        <span>Aisenhub</span>
+        <span className="admin-auth-brand-note">管理工作台</span>
+      </div>
+      <div className="admin-auth-copy">
+        <h1>验证管理员身份</h1>
+        <p className="muted">
+          Admin 操作需要 AAL2；验证成功后，服务端向当前 session 绑定 5 分钟
+          proof，浏览器不会自行提交 proof。
+        </p>
+      </div>
 
       {!factors.length && !enrollment ? (
-        <section className="panel">
+        <section className="panel admin-auth-card">
           <h2>绑定认证器</h2>
           <p className="muted">
             使用 Google Authenticator、Microsoft Authenticator 或其他兼容 TOTP
@@ -226,7 +233,7 @@ export default function AdminMfaPage() {
       ) : null}
 
       {enrollment ? (
-        <section className="panel">
+        <section className="panel admin-auth-card">
           <h2>绑定 Aisenhub Admin 认证器</h2>
           <p className="muted">
             用认证器扫描二维码。无法扫码时，可复制下方密钥手动添加。
@@ -278,7 +285,10 @@ export default function AdminMfaPage() {
       ) : null}
 
       {factors.length ? (
-        <form className="panel stack-form" onSubmit={verifyExistingFactor}>
+        <form
+          className="panel stack-form admin-auth-card"
+          onSubmit={verifyExistingFactor}
+        >
           <label htmlFor="factor">认证器</label>
           <select
             id="factor"

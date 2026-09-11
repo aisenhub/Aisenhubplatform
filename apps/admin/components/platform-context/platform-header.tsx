@@ -22,12 +22,15 @@ export function PlatformHeader({ platform, actions }: PlatformHeaderProps) {
   const workspaceHref = `/admin/platforms/${encodeURIComponent(platform.platform_id)}`;
 
   return (
-    <section className="grid gap-5" data-test="platform-context-header">
+    <section
+      className="platform-context-header grid"
+      data-test="platform-context-header"
+    >
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 space-y-3">
           <nav
             aria-label="面包屑"
-            className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+            className="platform-breadcrumb flex flex-wrap items-center gap-2"
           >
             <Link className="hover:text-foreground" href="/admin">
               管理员
@@ -49,8 +52,8 @@ export function PlatformHeader({ platform, actions }: PlatformHeaderProps) {
               rawValue={platform.status}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-            <span className="font-mono text-foreground">{platform.code}</span>
+          <div className="platform-meta flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="font-mono">{platform.code}</span>
             <span aria-hidden="true">·</span>
             <span className="inline-flex min-w-0 items-center gap-2">
               <span className="shrink-0">平台 ID</span>

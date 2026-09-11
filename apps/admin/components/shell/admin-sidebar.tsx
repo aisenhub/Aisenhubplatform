@@ -24,21 +24,24 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar" data-test="admin-sidebar">
+    <Sidebar
+      collapsible="icon"
+      variant="sidebar"
+      className="admin-sidebar"
+      data-test="admin-sidebar"
+    >
       <SidebarHeader className="gap-3 border-b border-sidebar-border/70 p-4">
         <Link
           href="/admin"
           data-test="admin-brand"
-          className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          className="admin-sidebar-brand flex min-w-0 items-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-            A
-          </span>
+          <span className="admin-sidebar-brand-mark shrink-0">A</span>
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-sm font-semibold">
+            <span className="admin-sidebar-brand-name block truncate">
               Aisenhub
             </span>
-            <span className="block truncate text-xs text-sidebar-foreground/65">
+            <span className="admin-sidebar-brand-note block truncate">
               管理员控制台
             </span>
           </span>
@@ -85,10 +88,8 @@ export function AdminSidebar() {
 
       <SidebarSeparator />
       <SidebarFooter className="p-3">
-        <div className="rounded-md bg-sidebar-accent/60 px-3 py-2 text-xs text-sidebar-foreground/75 group-data-[collapsible=icon]:hidden">
-          <div className="font-medium text-sidebar-foreground">
-            安全边界已启用
-          </div>
+        <div className="admin-sidebar-footer-card rounded-xl px-3 py-2 text-xs group-data-[collapsible=icon]:hidden">
+          <div className="font-semibold">安全边界已启用</div>
           <div className="mt-1 leading-5">敏感操作仍需近期 MFA 验证。</div>
         </div>
       </SidebarFooter>

@@ -32,7 +32,7 @@ export function PlatformNavigation({ platformId }: PlatformNavigationProps) {
   return (
     <nav
       aria-label="平台工作区"
-      className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1"
+      className="platform-navigation -mx-1 flex gap-1 overflow-x-auto px-1"
       data-test="platform-navigation"
     >
       {items.map((item) => {

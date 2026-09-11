@@ -36,13 +36,20 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="shell" data-test="admin-login-page">
-      <h1>登录管理员控制台</h1>
-      <p className="muted">
-        登录会建立管理员会话；计划和兑换写操作仍需要 AAL2 与近期认证证明。
-      </p>
+    <main className="admin-auth-layout" data-test="admin-login-page">
+      <div className="admin-auth-brand" aria-label="Aisenhub 管理工作台">
+        <span className="admin-auth-brand-mark">A</span>
+        <span>Aisenhub</span>
+        <span className="admin-auth-brand-note">管理工作台</span>
+      </div>
+      <div className="admin-auth-copy">
+        <h1>登录管理员控制台</h1>
+        <p className="muted">
+          登录会建立管理员会话；计划和兑换写操作仍需要 AAL2 与近期认证证明。
+        </p>
+      </div>
       <form
-        className="panel stack-form"
+        className="panel stack-form admin-auth-card"
         onSubmit={submit}
         data-test="admin-login-form"
       >
