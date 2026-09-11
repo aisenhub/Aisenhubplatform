@@ -177,6 +177,7 @@
 - 实现行为：Account API 支持 HS256 可选 Secret 和 Supabase Auth ES256 JWKS 的本地签名校验；JWKS 公钥仅短期缓存，验证结果不缓存，每个业务请求仍进入 `account_principal_presented` 检查活动 session/revocation。JWKS 不可用时回退 Auth `/user`，不改变 fail-closed 语义。
 - 验证命令：Account API Deno 测试 `29 passed`；startup role + pool8、`100 req/s × 60s` 为 `6000/6000`、错误率 `0`、实际 `100.66 req/s`、p95 `289.87ms`、p99 `376.69ms`，R15 探针 `pass=true`；此前同口径优化路径复测为 p95 `379.65ms` 和 `301.85ms`，均通过门槛；定向 `oxfmt --check`、`pnpm lint`、`pnpm contracts:check`、`pnpm docs:check` 与 `git diff --check` PASS。
 - 对照与边界：此前同一 startup + pool8、远程 Auth 验证路径 p95 `619.00ms` 的失败结果保留；本次仅操作 Local fixture，未把本地性能结果外推为 Hosted/生产容量或 G-OPS 通过。
+- 代码提交：`4eebbbd`（`perf(account-api): verify access tokens locally`）已 push，并核对 `origin/codex/billing-architecture-review` 远端 SHA。
 
 ## 5. 要求覆盖与实际测试
 
