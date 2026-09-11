@@ -98,6 +98,31 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
+          if (
+            query.startsWith(
+              'select * from private.subscription_checkout_create',
+            ) ||
+            query.startsWith(
+              'select * from private.subscription_checkout_read',
+            )
+          ) {
+            return [
+              {
+                checkout_id: '00000000-0000-4000-8000-000000000011',
+                status: 'pending',
+                product_code: 'monthly',
+                price_amount: '19.90',
+                currency: 'CNY',
+                term_kind: 'finite',
+                duration_value: 1,
+                duration_unit: 'month',
+                expires_at: '2026-09-11T00:30:00.000Z',
+                provider_display_name: null,
+                paid_at: null,
+                granted_at: null,
+              },
+            ] as unknown as R[];
+          }
           if (query.startsWith('select * from private.admin_step_up_issue')) {
             return [
               {
@@ -392,6 +417,50 @@ Deno.test('Account API exposes products without a bearer session and preserves p
   assertEquals(payload.data[0].term.duration_value, 99);
   assertEquals(payload.data[0].purchasable, false);
   assertEquals(payload.data[0].reason, 'provider_mapping_unavailable');
+});
+
+Deno.test('Account API creates and reads a server-priced checkout snapshot', async () => {
+  const headers = {
+    Authorization: `Bearer ${fakeJwt()}`,
+    'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+  };
+  const created = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/subscription/checkout', {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'checkout-test-1',
+      },
+      body: JSON.stringify({ product_code: 'monthly' }),
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      checkoutSecret: 'checkout-test-secret',
+      checkoutKeyVersion: 1,
+      checkoutProviderAccountId: '00000000-0000-4000-8000-000000000401',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(created.status, 201);
+  const createdPayload = await created.json();
+  assertEquals(createdPayload.data.price, '19.90');
+  assertEquals(createdPayload.data.payment_url, null);
+
+  const read = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout/00000000-0000-4000-8000-000000000011',
+      { headers },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(read.status, 200);
+  assertEquals((await read.json()).data.product_code, 'monthly');
 });
 
 Deno.test('Account API accepts the Edge runtime function-name path prefix', async () => {

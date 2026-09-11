@@ -14,6 +14,7 @@ import type {
   ProfileDto,
   RecentAuthProofDto,
   SubscriptionProductDto,
+  SubscriptionCheckoutDto,
   ConfigFileDto,
   ConfigFileListDto,
   UploadIntentDto,
@@ -198,6 +199,15 @@ export interface AccountApiClient {
   ) => Promise<DeleteRequestDto>;
   readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
   readonly listSubscriptionProducts: () => Promise<readonly SubscriptionProductDto[]>;
+  readonly createSubscriptionCheckout: (
+    accessToken: string,
+    productCode: 'monthly' | 'yearly' | 'lifetime',
+    idempotencyKey: string,
+  ) => Promise<SubscriptionCheckoutDto>;
+  readonly getSubscriptionCheckout: (
+    accessToken: string,
+    checkoutId: string,
+  ) => Promise<SubscriptionCheckoutDto>;
   readonly getPrincipal: (accessToken: string) => Promise<AccountPrincipalDto>;
   readonly activate: (accessToken: string) => Promise<AccountPrincipalDto>;
   readonly getProfile: (accessToken: string) => Promise<ProfileDto>;
@@ -553,6 +563,20 @@ export function createAccountApiClient(input: {
       request<readonly SubscriptionProductDto[]>({
         method: 'GET',
         path: '/v1/subscription/products',
+      }),
+    createSubscriptionCheckout: (accessToken, productCode, idempotencyKey) =>
+      request<SubscriptionCheckoutDto>({
+        method: 'POST',
+        path: '/v1/subscription/checkout',
+        accessToken,
+        idempotencyKey,
+        body: { product_code: productCode },
+      }),
+    getSubscriptionCheckout: (accessToken, checkoutId) =>
+      request<SubscriptionCheckoutDto>({
+        method: 'GET',
+        path: `/v1/subscription/checkout/${encodeURIComponent(checkoutId)}`,
+        accessToken,
       }),
     getPrincipal: (accessToken) =>
       request<AccountPrincipalDto>({

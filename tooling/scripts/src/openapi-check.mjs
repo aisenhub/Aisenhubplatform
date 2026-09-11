@@ -98,9 +98,9 @@ checkReferences(admin.document, admin.document);
 
 const accountOps = checkOperations(account.document, 'account');
 const adminOps = checkOperations(admin.document, 'admin');
-if (accountOps.length !== 19)
+if (accountOps.length !== 21)
   fail(
-    `account contract must freeze 19 operations, found ${accountOps.length}`,
+    `account contract must freeze 21 operations, found ${accountOps.length}`,
   );
 if (adminOps.length < 25)
   fail(
@@ -120,6 +120,7 @@ for (const code of [
   'ENTITLEMENT_PERPETUAL',
   'PRECONDITION_REQUIRED',
   'STORAGE_UNAVAILABLE',
+  'CHECKOUT_UNAVAILABLE',
 ]) {
   if (!errorCodes.includes(code)) fail(`missing stable error code ${code}`);
 }

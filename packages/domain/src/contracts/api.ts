@@ -23,6 +23,7 @@ export type ApiErrorCode =
   | 'FILE_CONTENT_CONFLICT'
   | 'REPLACEMENT_CAPACITY_REQUIRED'
   | 'QUOTA_EXCEEDED'
+  | 'CHECKOUT_UNAVAILABLE'
   | 'RESOURCE_NOT_FOUND'
   | 'INVALID_CODE'
   | 'CODE_EXPIRED'
@@ -123,6 +124,33 @@ export interface SubscriptionConfigDto {
     | 'redeemable_old_plan_batch'
     | null;
   readonly preflight_blocking_count: number;
+}
+
+export type SubscriptionCheckoutStatus =
+  | 'pending'
+  | 'expired'
+  | 'paid'
+  | 'verified'
+  | 'granted'
+  | 'review_required'
+  | 'resolved';
+
+export interface SubscriptionCheckoutDto {
+  readonly checkout_id: string;
+  readonly status: SubscriptionCheckoutStatus;
+  readonly product_code: 'monthly' | 'yearly' | 'lifetime';
+  readonly price: string;
+  readonly currency: 'CNY';
+  readonly term: {
+    readonly kind: 'finite';
+    readonly duration_value: number;
+    readonly duration_unit: 'month' | 'year';
+  };
+  readonly expires_at: string;
+  readonly provider_display_name: string | null;
+  readonly payment_url: string | null;
+  readonly paid_at: string | null;
+  readonly granted_at: string | null;
 }
 
 export interface EntitlementDto {
@@ -238,6 +266,7 @@ export const API_ERROR_CODES: readonly ApiErrorCode[] = [
   'FILE_CONTENT_CONFLICT',
   'REPLACEMENT_CAPACITY_REQUIRED',
   'QUOTA_EXCEEDED',
+  'CHECKOUT_UNAVAILABLE',
   'RESOURCE_NOT_FOUND',
   'INVALID_CODE',
   'CODE_EXPIRED',

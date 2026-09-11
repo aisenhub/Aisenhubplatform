@@ -487,6 +487,78 @@ async function deletionJobAuth(
   });
 }
 
+async function billingJobClaim(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const limit = input.limit === undefined ? 20 : Number(input.limit);
+  if (
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > 100 ||
+    Object.keys(input).some((key) => key !== 'limit')
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id);
+  const jobs = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_processing_job_claim(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::integer)',
+      [...jobContext, limit],
+    ),
+  );
+  return response(200, { jobs, request_id: id });
+}
+
+async function billingJobFinish(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  const fence = Number(input.fence);
+  const state = typeof input.state === 'string' ? input.state : null;
+  const errorClass = input.error_class === undefined ? null : String(input.error_class);
+  const errorCodeValue = input.error_code === undefined ? null : String(input.error_code);
+  if (
+    !jobId ||
+    !Number.isSafeInteger(fence) ||
+    !state ||
+    !['retryable', 'completed', 'manual_review'].includes(state) ||
+    Object.keys(input).some(
+      (key) => !['job_id', 'fence', 'state', 'error_class', 'error_code'].includes(key),
+    )
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id, fence);
+  const [result] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_processing_job_finish(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
+      [
+        ...jobContext,
+        jobId,
+        fence,
+        state,
+        errorClass,
+        errorCodeValue,
+      ],
+    ),
+  );
+  return response(200, { result: result ?? null, request_id: id });
+}
+
 async function retentionRun(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -551,6 +623,10 @@ export async function handleMaintenanceRequest(
       return await deletionJobFiles(request, dependencies, id);
     if (path === '/maintenance/v1/deletion-jobs/auth')
       return await deletionJobAuth(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/jobs/claim')
+      return await billingJobClaim(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/jobs/finish')
+      return await billingJobFinish(request, dependencies, id);
     if (path === '/maintenance/v1/accounts/retention')
       return await retentionRun(request, dependencies, id);
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });

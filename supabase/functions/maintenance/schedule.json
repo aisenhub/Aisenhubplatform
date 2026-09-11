@@ -18,6 +18,12 @@
       "route": "/maintenance/v1/accounts/retention",
       "cadence": "daily",
       "body": {}
+    },
+    {
+      "id": "billing-processing",
+      "route": "/maintenance/v1/billing/jobs/claim",
+      "cadence": "every-minute",
+      "body": { "limit": 20 }
     }
   ]
 }

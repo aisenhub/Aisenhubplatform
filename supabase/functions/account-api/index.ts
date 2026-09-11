@@ -12,6 +12,8 @@ import {
   generateRedemptionCodes,
   normalizeRedemptionCode,
 } from '../../../packages/domain/src/redemption.ts';
+import type { SubscriptionCheckoutDto } from '../../../packages/domain/src/contracts/api.ts';
+import { deriveCheckoutToken } from '../_shared/billing.ts';
 
 type Row = Record<string, unknown>;
 
@@ -28,6 +30,9 @@ interface AccountApiDependencies {
   readonly database?: Database;
   readonly platformKeySecret?: string;
   readonly platformKeySecrets?: readonly string[];
+  readonly checkoutSecret?: string;
+  readonly checkoutKeyVersion?: number;
+  readonly checkoutProviderAccountId?: string;
   readonly redemptionSecret?: string;
   readonly redemptionKeyVersion?: number;
   readonly redemptionSecrets?: readonly {
@@ -316,12 +321,20 @@ function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(409, 'ACCOUNT_NOT_ACTIVATED');
   if (message.includes('activation_disabled'))
     return new ApiFault(409, 'ACTIVATION_DISABLED');
+  if (
+    message.includes('provider_mapping_unavailable') ||
+    message.includes('checkout_key_unavailable') ||
+    message.includes('paid_plan_not_configured')
+  )
+    return new ApiFault(503, 'CHECKOUT_UNAVAILABLE');
   if (message.includes('plan_conflict'))
     return new ApiFault(409, 'PLAN_CONFLICT');
   if (
     message.includes('subscription_plan_switch_blocked') ||
     message.includes('subscription_plan_in_use') ||
-    message.includes('plan_unavailable')
+    message.includes('plan_unavailable') ||
+    message.includes('product_unavailable') ||
+    message.includes('product_disabled')
   )
     return new ApiFault(409, 'PLAN_CONFLICT');
   if (message.includes('entitlement_perpetual'))
@@ -619,6 +632,26 @@ function subscriptionProductDto(row: Row): Record<string, unknown> {
   };
 }
 
+function subscriptionCheckoutDto(row: Row): SubscriptionCheckoutDto {
+  return {
+    checkout_id: uuidValue(row.checkout_id ?? row.id) ?? '',
+    status: (stringValue(row.status) ?? 'pending') as SubscriptionCheckoutDto['status'],
+    product_code: (stringValue(row.product_code) ?? 'monthly') as SubscriptionCheckoutDto['product_code'],
+    price: String(row.price_amount ?? '0.00'),
+    currency: 'CNY',
+    term: {
+      kind: 'finite',
+      duration_value: Number(row.duration_value ?? 0),
+      duration_unit: (stringValue(row.duration_unit) ?? 'month') as 'month' | 'year',
+    },
+    expires_at: isoDate(row.expires_at) ?? new Date(0).toISOString(),
+    provider_display_name: stringValue(row.provider_display_name),
+    payment_url: null,
+    paid_at: isoDate(row.paid_at),
+    granted_at: isoDate(row.granted_at),
+  };
+}
+
 async function body(request: Request): Promise<Record<string, unknown>> {
   const bytes = new TextEncoder().encode(await request.text());
   if (bytes.byteLength > 65536) throw new ApiFault(413, 'PAYLOAD_TOO_LARGE');
@@ -718,6 +751,59 @@ async function dispatchAccount(
   }
 
   const contextValues = accountContextValues(session, key);
+  if (path === 'v1/subscription/checkout' && request.method === 'POST') {
+    assertAllowed(row);
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (!idempotencyKey || idempotencyKey.length > 128)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const input = await body(request);
+    if (
+      Object.keys(input).some((field) => field !== 'product_code') ||
+      !['monthly', 'yearly', 'lifetime'].includes(stringValue(input.product_code) ?? '')
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const checkoutId = crypto.randomUUID();
+    let tokenKeyVersion: number | null = null;
+    let tokenDigest: Uint8Array | null = null;
+    if (
+      dependencies.checkoutSecret &&
+      dependencies.checkoutKeyVersion &&
+      dependencies.checkoutProviderAccountId
+    ) {
+      const token = await deriveCheckoutToken({
+        secret: dependencies.checkoutSecret,
+        keyVersion: dependencies.checkoutKeyVersion,
+        providerAccountId: dependencies.checkoutProviderAccountId,
+        checkoutId,
+      });
+      tokenKeyVersion = dependencies.checkoutKeyVersion;
+      tokenDigest = token.digest;
+    }
+    const [checkout] = await transaction.unsafe<Row>(
+      'select * from private.subscription_checkout_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::text, $9::smallint, $10::bytea)',
+      [
+        ...contextValues,
+        checkoutId,
+        input.product_code,
+        idempotencyKey,
+        tokenKeyVersion,
+        tokenDigest,
+      ],
+    );
+    if (!checkout) throw new ApiFault(503, 'CHECKOUT_UNAVAILABLE');
+    return { status: 201, data: subscriptionCheckoutDto(checkout) };
+  }
+  const checkoutMatch = /^v1\/subscription\/checkout\/([^/]+)$/u.exec(path);
+  if (checkoutMatch && request.method === 'GET') {
+    const checkoutId = uuidValue(checkoutMatch[1]);
+    if (!checkoutId) throw new ApiFault(400, 'INVALID_INPUT');
+    const [checkout] = await transaction.unsafe<Row>(
+      'select * from private.subscription_checkout_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+      [...contextValues, checkoutId],
+    );
+    if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: subscriptionCheckoutDto(checkout) };
+  }
   if (path === 'v1/config-files' && request.method === 'GET') {
     const cursorValue = new URL(request.url).searchParams.get('cursor');
     const cursor = cursorValue === null ? null : uuidValue(cursorValue);

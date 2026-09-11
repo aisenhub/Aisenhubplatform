@@ -48,6 +48,8 @@ export type {
   ProfileDto,
   RecentAuthProofDto,
   SubscriptionConfigDto,
+  SubscriptionCheckoutDto,
+  SubscriptionCheckoutStatus,
   SubscriptionProductDto,
   SubscriptionProductReason,
   UploadIntentDto,

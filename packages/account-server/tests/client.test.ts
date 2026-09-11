@@ -56,6 +56,61 @@ describe('account API server client', () => {
     ]);
   });
 
+  it('creates and reads subscription checkout through the authenticated server client', async () => {
+    const requests: Array<{ url: string; init: Record<string, unknown> }> = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      fetcher: async (url, init) => {
+        requests.push({ url, init: init as Record<string, unknown> });
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            data: {
+              checkout_id: '00000000-0000-4000-8000-000000000001',
+              status: 'pending',
+              product_code: 'yearly',
+              price: '199.00',
+              currency: 'CNY',
+              term: { kind: 'finite', duration_value: 1, duration_unit: 'year' },
+              expires_at: '2026-09-11T12:30:00.000Z',
+              provider_display_name: null,
+              payment_url: null,
+              paid_at: null,
+              granted_at: null,
+            },
+            request_id: 'checkout-1',
+          }),
+        };
+      },
+    });
+
+    await client.createSubscriptionCheckout(
+      'access-token',
+      'yearly',
+      'checkout-idem-1',
+    );
+    await client.getSubscriptionCheckout(
+      'access-token',
+      '00000000-0000-4000-8000-000000000001',
+    );
+    expect(requests[0]).toMatchObject({
+      url: 'https://account.example.invalid/v1/subscription/checkout',
+      init: {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer access-token',
+          'Idempotency-Key': 'checkout-idem-1',
+        },
+        body: JSON.stringify({ product_code: 'yearly' }),
+      },
+    });
+    expect(requests[1]?.url).toBe(
+      'https://account.example.invalid/v1/subscription/checkout/00000000-0000-4000-8000-000000000001',
+    );
+  });
+
   it('forwards the independently verified reauthentication token only as a header', async () => {
     const requests: Array<{
       url: string;

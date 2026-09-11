@@ -45,6 +45,51 @@
         }
       }
     },
+    "/v1/subscription/checkout": {
+      "post": {
+        "operationId": "createSubscriptionCheckout",
+        "tags": ["subscription"],
+        "description": "Creates or recovers a server-priced checkout intent. Checkout remains closed until a verified provider mapping is configured.",
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/SubscriptionCheckout" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/SubscriptionCheckout" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/v1/subscription/checkout/{checkout_id}": {
+      "get": {
+        "operationId": "getSubscriptionCheckout",
+        "tags": ["subscription"],
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          {
+            "name": "checkout_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/SubscriptionCheckout" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
     "/v1/account/principal": {
       "get": {
         "operationId": "getPrincipal",
@@ -470,6 +515,24 @@
           }
         }
       },
+      "SubscriptionCheckout": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["product_code"],
+              "properties": {
+                "product_code": {
+                  "type": "string",
+                  "enum": ["monthly", "yearly", "lifetime"]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      },
       "UploadIntent": {
         "required": true,
         "content": {
@@ -543,6 +606,7 @@
           "FILE_CONTENT_CONFLICT",
           "REPLACEMENT_CAPACITY_REQUIRED",
           "QUOTA_EXCEEDED",
+          "CHECKOUT_UNAVAILABLE",
           "RESOURCE_NOT_FOUND",
           "INVALID_CODE",
           "CODE_EXPIRED",
@@ -657,6 +721,57 @@
           },
           "request_id": { "type": "string", "format": "uuid" }
         }
+      },
+      "SubscriptionCheckout": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/SubscriptionCheckoutData" },
+          "request_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
+      },
+      "SubscriptionCheckoutData": {
+        "type": "object",
+        "required": [
+          "checkout_id",
+          "status",
+          "product_code",
+          "price",
+          "currency",
+          "term",
+          "expires_at",
+          "provider_display_name",
+          "payment_url",
+          "paid_at",
+          "granted_at"
+        ],
+        "properties": {
+          "checkout_id": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "expired", "paid", "verified", "granted", "review_required", "resolved"]
+          },
+          "product_code": { "type": "string", "enum": ["monthly", "yearly", "lifetime"] },
+          "price": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
+          "currency": { "type": "string", "const": "CNY" },
+          "term": {
+            "type": "object",
+            "required": ["kind", "duration_value", "duration_unit"],
+            "properties": {
+              "kind": { "type": "string", "const": "finite" },
+              "duration_value": { "type": "integer", "minimum": 1 },
+              "duration_unit": { "type": "string", "enum": ["month", "year"] }
+            },
+            "additionalProperties": false
+          },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "provider_display_name": { "type": ["string", "null"] },
+          "payment_url": { "type": ["string", "null"], "format": "uri" },
+          "paid_at": { "type": ["string", "null"], "format": "date-time" },
+          "granted_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "additionalProperties": false
       },
       "Principal": {
         "type": "object",
@@ -1014,6 +1129,18 @@
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Subscription" }
+          }
+        }
+      },
+      "SubscriptionCheckout": {
+        "description": "Checkout intent status and immutable price snapshot.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "X-Request-Id": { "$ref": "#/components/headers/RequestId" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/SubscriptionCheckout" }
           }
         }
       },
