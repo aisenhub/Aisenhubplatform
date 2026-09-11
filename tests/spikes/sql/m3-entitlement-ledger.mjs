@@ -327,6 +327,16 @@ try {
     (transaction) =>
       transaction`select * from private.admin_entitlement_command(${adminContext()}, ${platformId}, ${correctionRaceAccount.platform_account_id}, 'grant', ${crypto.randomUUID()}, ${paidPlanId}, 30, 'day', null, 'M3 correction race original')`,
   );
+  await expectSqlState(
+    () =>
+      asRole(
+        'admin_executor',
+        (transaction) =>
+          transaction`select * from private.admin_entitlement_correction_apply(${adminContext()}, ${platformId}, ${correctionRaceAccount.platform_account_id}, ${correctionOriginal.grant_id}, 1, ${otherPlanId}, 1, 'month', ${correctionOperationId}, 'M3 correction scope conflict')`,
+      ),
+    '23505',
+    'correction operation cannot replay across accounts',
+  );
   const correctionRaceResults = await Promise.all(
     [crypto.randomUUID(), crypto.randomUUID()].map((operationId) =>
       asRole(
@@ -756,6 +766,7 @@ try {
       correctionReplay: 'PASS',
       correctionPrecondition: 'PASS',
       correctionSingleReplacement: 'PASS',
+      correctionIdempotencyScope: 'PASS',
     }),
   );
 } finally {
