@@ -130,8 +130,13 @@
 
 - 实际变更文件：`apps/template-preview/app/api/v1/[...path]/route.ts`、`apps/template-preview/app/api/auth/reauth/*`、`apps/template-preview/app/account/page.tsx`、`apps/template-preview/app/files/page.tsx`、`apps/template-preview/app/subscription/page.tsx`、`apps/template-preview/components/consumer-auth-actions.tsx`、`apps/template-preview/components/consumer-shell.tsx`、`packages/account-auth-nextjs/src/browser.ts`、`apps/admin/next.config.mjs`、`tests/spikes/e2e/t16-r2-account.mjs`。
 - 实现行为：修复 catch-all BFF 的 `v1` 路径拼接；扩大严格 allowlist 覆盖账户资料/偏好、文件读写、敏感账户动作；账户页使用中央 API 的 ETag/CSRF/错误合同，近期认证使用独立 start/verify 路由和 HttpOnly proof cookie；文件页连接真实列表、上传、下载和删除；会话跨页刷新/退出/跨 tab 失效具有确定反馈；Admin 构建可正确解析浏览器会话导出。
-- 验证命令：`pnpm test:sdk:m5-02` PASS（可复现 tarball、包边界、独立安装、Node/Edge 导入和浏览器导入拒绝）；`pnpm test:consumer:m5-05` PASS（独立安装、类型检查、生产构建、模板路由、local dual-origin platform E2E）；`pnpm test:e2e:t12-r2` PASS（Admin AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝、70 条路由×5 视口可访问性）；`pnpm test:e2e:t16-r2` PASS（独立上下文、平台 Key 隔离、订阅/兑换、文件、资料/偏好、CSRF/ETag、Admin MFA/暂停恢复、跨 Tab、敏感操作未知响应和 bundle 凭据）；`pnpm test:ops:m6-02-local` PASS（外部备份目标为 `NOT_RUN (X04 unavailable)`）；`pnpm --filter template-preview typecheck` PASS；Impeccable detector PASS（无告警）。Hosted 双平台结果为 `NOT_RUN (X05/hosted backend unavailable)`，不转换为本地 PASS。
+- 验证命令：`pnpm test:sdk:m5-02` PASS（可复现 tarball、包边界、独立安装、Node/Edge 导入和浏览器导入拒绝）；`pnpm test:consumer:m5-05` PASS（独立安装、类型检查、生产构建、模板路由、local dual-origin platform E2E）；`pnpm test:e2e:t12-r2` PASS（Admin AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝、70 条路由×5 视口可访问性）；`pnpm test:e2e:t16-r2` PASS（独立上下文、平台 Key 隔离、订阅/兑换、文件、资料/偏好、CSRF/ETag、Admin MFA/暂停恢复、跨 Tab、敏感操作未知响应和 bundle 凭据）；`pnpm test:ops:m6-02-local` PASS（外部备份目标为 `NOT_RUN (X04 unavailable)`）；`pnpm --filter template-preview typecheck` PASS；Impeccable detector PASS（无告警）。Hosted 双平台结果为 `NOT_RUN`（staging 根站点可达，但当前无认证 fixture/runner），不转换为本地 PASS。
 - 代码提交：`1edf844`（`fix(consumer): complete account and file integration`）、`fab5b3d`（`fix(sdk): make package archives reproducible`）、`0378d3f`（`test(admin): stabilize browser probe hydration`）与 `34f498c`（`test(admin): clean subscription fixtures`），均已 push 并核对远端 SHA；验证记录随独立文档提交同步。
+
+### Staging 可达性复核/2026-09-12/当前 Agent
+
+- 只读探针结果：`STAGING_ACCOUNT_ORIGIN` 与 `STAGING_ADMIN_ORIGIN` 根站点均返回 HTTP 200；未携带认证或平台密钥访问受保护页面/Account API 时返回 HTTP 401/404。探针未输出或保存任何 URL 值、Token、Key，也未对 staging 数据执行写入。
+- 结论：staging 主机并非网络不可达，但当前工作区仍缺少可复用的认证 Hosted 双平台 fixture/runner，故 X05 仍为 `NOT_RUN`；该探针不能替代 Consumer 双平台、平台隔离、文件/订阅/账户/Admin 全链路验收。
 
 ### Admin 交互语义修复/2026-09-12/当前 Agent
 
@@ -146,7 +151,7 @@
 
 | 要求 | Local 证据 | 当前结论与剩余边界 |
 |---|---|---|
-| R01 中央自营/BFF 边界 | `tests/spikes/consumer/m5-05-install.mjs`、`tests/spikes/e2e/t16-r2-account.mjs` 的独立平台与 bundle 凭据扫描；Consumer BFF allowlist | Local PASS；Hosted 双平台仍 NOT_RUN |
+| R01 中央自营/BFF 边界 | `tests/spikes/consumer/m5-05-install.mjs`、`tests/spikes/e2e/t16-r2-account.mjs` 的独立平台与 bundle 凭据扫描；Consumer BFF allowlist | Local PASS；Hosted 双平台仍 NOT_RUN（staging 根站点可达但无认证 runner） |
 | R02 目录与 Free 单源 | `supabase/tests/bill_02_subscription_product_catalog.sql`、`bill_08_purchase_readiness.sql`、Account API 商品测试 | Local PASS；真实 Provider 映射未联调 |
 | R03 Provider 权威 | `supabase/tests/bill_05_provider_verification_settlement.sql`、`supabase/functions/_shared/afdian.test.ts`、crypto vectors | G-DEV/模拟 PASS；G-PROVIDER 真实签名、query-order、限流仍 NOT_RUN |
 | R04 调价与版本发布 | BILL-02 catalog/config、BILL-04 checkout snapshot、Account checkout API 测试 | Local PASS；真实渠道旧链接结算未验证 |
@@ -156,7 +161,7 @@
 | R08 优惠/数量/金额合同 | BILL-05 SQL、`packages/domain/tests/billing.test.ts`、Afdian normalizer tests | Local PASS；真实 discount/redeem/零元行为 NOT_RUN |
 | R09 99 年与通用修正 | BILL-03/BILL-05/BILL-06 SQL、Domain calendar/correction tests、T16 Admin flow | Local PASS；真实退款/撤销定位未验证 |
 | R10 旧码兼容 | `supabase/tests/bill_03_redemption_v2_lifecycle.sql`、`bill_07_upgrade_compatibility.sql`、Domain redemption tests | Local PASS；真实生产数据分布未验证 |
-| R11 SDK 状态与页面 | `tests/spikes/sdk/m5-02-packages.mjs`、`consumer/m5-05-install.mjs`、T16/T12 浏览器流程 | Local PASS；Hosted/生产页面观察未运行 |
+| R11 SDK 状态与页面 | `tests/spikes/sdk/m5-02-packages.mjs`、`consumer/m5-05-install.mjs`、T16/T12 浏览器流程 | Local PASS；Hosted/生产页面观察未运行（staging 根站点可达但无认证 runner） |
 | R12 Admin 结案边界 | BILL-06 SQL、`packages/account-server/tests/authorization.test.ts`、T12 MFA/AAL2 与 T16 Admin flow | Local PASS；真实运维责任/生产审计未验证 |
 | R13 双进度对账 | BILL-05 SQL、`maintenance/index.test.ts`、Admin operations UI | Local 模拟 PASS；Provider 分页/限流和生产告警仍 NOT_RUN |
 | R14 生命周期与删除 | BILL-03/BILL-04/BILL-07 SQL、M4 retention/delete tests、T16 close/delete flow | Local PASS；真实恢复点与生产保留观察未运行 |
