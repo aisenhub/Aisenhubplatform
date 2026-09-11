@@ -253,6 +253,7 @@ export function PlatformWorkspace({
         <Button
           variant="link"
           className="w-fit px-0"
+          nativeButton={false}
           render={<Link href="/admin/platforms" />}
         >
           返回平台目录

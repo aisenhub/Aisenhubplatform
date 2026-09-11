@@ -79,6 +79,7 @@ export function PlatformHeader({ platform, actions }: PlatformHeaderProps) {
               variant="link"
               size="sm"
               className="ml-1 px-0"
+              nativeButton={false}
               render={<Link href={`${workspaceHref}/settings`} />}
             >
               查看平台设置

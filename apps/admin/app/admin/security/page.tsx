@@ -194,6 +194,7 @@ export default function AdminSecurityPage() {
             variant="outline"
             size="sm"
             className="w-fit"
+            nativeButton={false}
             render={<Link href="/admin/mfa" />}
             data-test="security-manage-mfa"
           >

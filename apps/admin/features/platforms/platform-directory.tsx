@@ -608,6 +608,7 @@ function PlatformDirectoryContent() {
                       <Button
                         variant="outline"
                         size="sm"
+                        nativeButton={false}
                         render={<Link href={href} />}
                         data-test="platform-directory-open"
                       >

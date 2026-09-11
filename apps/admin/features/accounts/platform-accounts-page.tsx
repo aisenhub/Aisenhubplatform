@@ -518,6 +518,7 @@ export function PlatformAccountsPage() {
           inspectedAccount ? (
             <Button
               variant="outline"
+              nativeButton={false}
               render={
                 <Link
                   href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/subscriptions?account=${encodeURIComponent(inspectedAccount.platform_account_id)}`}

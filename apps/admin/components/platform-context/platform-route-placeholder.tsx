@@ -38,6 +38,7 @@ export function PlatformRoutePlaceholder({
           </EmptyHeader>
           <Button
             variant="outline"
+            nativeButton={false}
             render={<Link href={`/admin/platforms/${platformId}`} />}
           >
             返回平台概览

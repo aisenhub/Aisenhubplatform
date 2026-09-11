@@ -136,6 +136,7 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
             variant="link"
             size="sm"
             className="ml-1 px-0"
+            nativeButton={false}
             render={<Link href="/admin/mfa" />}
             data-test="recent-mfa-manage"
           >

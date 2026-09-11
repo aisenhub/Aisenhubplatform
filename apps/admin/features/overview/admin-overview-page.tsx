@@ -630,6 +630,7 @@ function QuickLink({ href, label }: { href: string; label: string }) {
     <Button
       variant="outline"
       size="sm"
+      nativeButton={false}
       render={<Link href={href} />}
       data-test={`overview-link-${label}`}
     >
