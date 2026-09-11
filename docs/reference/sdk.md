@@ -15,7 +15,7 @@
 
 ## 本地打包
 
-根目录执行 pnpm sdk:pack，调用[打包脚本](../../tooling/scripts/src/sdk-pack.mjs)编译上述四个包并生成 tarball。默认产物目录 artifacts/sdk，manifest.json 按本次产物写入版本、文件路径及 SHA-256。生成的 hash 只对应同目录的具体 tarball，不在文档固定旧构建校验和。
+根目录执行 pnpm sdk:pack，调用[打包脚本](../../tooling/scripts/src/sdk-pack.mjs)编译上述四个包并生成 tarball；脚本会对已解析的 package metadata 做稳定排序，保证同一源码的归档可复现。默认产物目录 artifacts/sdk，manifest.json 按本次产物写入版本、文件路径及 SHA-256。生成的 hash 只对应同目录的具体 tarball，不在文档固定旧构建校验和。
 
 M5_SDK_PACK_DESTINATION 可覆盖目标；打包会清空目标目录并重建各包 dist。包仍为 private，本地 tarball 不表示已发布到 npm。
 

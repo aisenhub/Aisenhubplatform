@@ -48,7 +48,7 @@ Registry只列真实路由，复制BFF/SDK/授权示例与必要配置；先核�
 
 测试无登录Pricing、激活/关闭/暂停、missing mapping、MFA/412、popup blocked、未知响应、人工状态、31位和历史码、支付后刷新；浏览器只读结果不直接授权。服务端测试允许/到期/暂停/中央超时，检查bundle无Key/SQL/token，API no-store。
 
-已运行 account-server typecheck/unit、Template/Admin typecheck/build、Template Auth 动态路由构建、Account API 定向测试、contracts/docs 检查；`pnpm test:registry:m5-04`、`pnpm test:consumer:m5-05` 和根目录 `pnpm test:e2e:t16-r2` 的本地链路通过，后者覆盖独立上下文、Consumer/Admin 浏览器流程和 bundle 凭据扫描。旧 `pnpm test:e2e:t12-r2` 探针仍受独立 session/login harness 影响，未计作 PASS。Hosted 后端、真实 Provider 和生产购买仍 NOT_RUN。
+已运行 account-server typecheck/unit、Template/Admin typecheck/build、Template Auth 动态路由构建、Account API 定向测试、contracts/docs 检查；`pnpm test:sdk:m5-02`、`pnpm test:registry:m5-04`、`pnpm test:consumer:m5-05` 和根目录 `pnpm test:e2e:t16-r2` 的本地链路通过，后者覆盖独立上下文、Consumer/Admin 浏览器流程和 bundle 凭据扫描。旧 `pnpm test:e2e:t12-r2` 探针仍受独立 session/login harness 影响，未计作 PASS。Hosted 后端、真实 Provider 和生产购买仍 NOT_RUN。
 
 
 ## 执行纪律与交付
