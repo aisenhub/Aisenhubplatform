@@ -142,7 +142,37 @@ function presentedSession(request: Request): {
   return { accessToken, session: sessionFromAccessToken(accessToken) };
 }
 
-async function verifyAccessTokenWithAuth(
+const accessTokenVerificationInFlight = new Map<
+  string,
+  Promise<string | null>
+>();
+const platformHmacKeyCache = new Map<string, Promise<CryptoKey>>();
+
+function platformHmacKey(secret: string): Promise<CryptoKey> {
+  const existing = platformHmacKeyCache.get(secret);
+  if (existing) return existing;
+
+  const key = crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  platformHmacKeyCache.set(secret, key);
+  while (platformHmacKeyCache.size > 2) {
+    const oldest = platformHmacKeyCache.keys().next().value;
+    if (oldest === undefined) break;
+    platformHmacKeyCache.delete(oldest);
+  }
+  void key.catch(() => {
+    if (platformHmacKeyCache.get(secret) === key)
+      platformHmacKeyCache.delete(secret);
+  });
+  return key;
+}
+
+async function verifyAccessTokenWithAuthRemote(
   accessToken: string,
 ): Promise<string | null> {
   const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
@@ -169,6 +199,22 @@ async function verifyAccessTokenWithAuth(
 
   const payload = objectValue(await response.json().catch(() => null));
   return uuidValue(objectValue(payload.user).id) ?? uuidValue(payload.id);
+}
+
+async function verifyAccessTokenWithAuth(
+  accessToken: string,
+): Promise<string | null> {
+  const existing = accessTokenVerificationInFlight.get(accessToken);
+  if (existing) return existing;
+
+  const verification = verifyAccessTokenWithAuthRemote(accessToken);
+  accessTokenVerificationInFlight.set(accessToken, verification);
+  try {
+    return await verification;
+  } finally {
+    if (accessTokenVerificationInFlight.get(accessToken) === verification)
+      accessTokenVerificationInFlight.delete(accessToken);
+  }
 }
 
 async function verifiedSessionFromRequest(
@@ -212,13 +258,7 @@ function parsePlatformKey(value: string | null): {
 }
 
 async function hmacHex(secret: string, value: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
+  const key = await platformHmacKey(secret);
   const signature = await crypto.subtle.sign(
     'HMAC',
     key,
@@ -371,6 +411,14 @@ function env(name: string): string {
   return value;
 }
 
+function databasePoolMax(): number {
+  const value = Number.parseInt(
+    Deno.env.get('ACCOUNT_API_DB_POOL_MAX') ?? '8',
+    10,
+  );
+  return Number.isSafeInteger(value) && value >= 4 && value <= 64 ? value : 8;
+}
+
 const databases = new Map<'account' | 'admin', Database>();
 const defaultUploadGate = new UploadGate();
 function database(executor: 'account' | 'admin'): Database {
@@ -385,7 +433,7 @@ function database(executor: 'account' | 'admin'): Database {
     Deno.env.get('SUPABASE_DB_URL');
   if (!url) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
   const connection = postgres(url, {
-    max: 8,
+    max: databasePoolMax(),
     prepare: false,
     connect_timeout: 5,
   }) as unknown as Database;

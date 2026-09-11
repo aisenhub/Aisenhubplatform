@@ -734,6 +734,56 @@ Deno.test('Account API rejects a parsed JWT whose Auth-verified subject differs'
   assertEquals((await response.json()).error.code, 'UNAUTHORIZED');
 });
 
+Deno.test('Account API coalesces concurrent Auth verification for one token', async () => {
+  const previousUrl = Deno.env.get('SUPABASE_URL');
+  const previousKey = Deno.env.get('SUPABASE_ANON_KEY');
+  const originalFetch = globalThis.fetch;
+  let authCalls = 0;
+  Deno.env.set('SUPABASE_URL', 'http://local');
+  Deno.env.set('SUPABASE_ANON_KEY', 'local-publishable-key');
+  globalThis.fetch = async (input, init) => {
+    if (String(input) === 'http://local/auth/v1/user') {
+      authCalls += 1;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return new Response(JSON.stringify({ user: { id: userId } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return originalFetch(input, init);
+  };
+  try {
+    const request = () =>
+      handleRequest(
+        new Request(
+          'http://local/functions/v1/account-api/v1/account/principal',
+          {
+            headers: {
+              Authorization: `Bearer ${fakeJwt()}`,
+              'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+            },
+          },
+        ),
+        {
+          database: fakeDatabase(),
+          platformKeySecret: 'm3-test-platform-secret',
+        },
+      );
+    const responses = await Promise.all([request(), request()]);
+    assertEquals(
+      responses.map((response) => response.status),
+      [200, 200],
+    );
+    assertEquals(authCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousUrl === undefined) Deno.env.delete('SUPABASE_URL');
+    else Deno.env.set('SUPABASE_URL', previousUrl);
+    if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY');
+    else Deno.env.set('SUPABASE_ANON_KEY', previousKey);
+  }
+});
+
 Deno.test('Account API issues a recent proof only after Auth verification and AAL2', async () => {
   const response = await handleRequest(
     new Request(

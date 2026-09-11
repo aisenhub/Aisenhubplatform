@@ -29,6 +29,7 @@
 | ACCOUNT_DB_URL | Account 独立数据库连接 |
 | ADMIN_DB_URL | Admin 独立数据库连接 |
 | ACCOUNT_API_DB_URL、SUPABASE_DB_URL | 独立连接缺失时依次回退 |
+| ACCOUNT_API_DB_POOL_MAX | Account API 数据库连接池上限，允许 4–64，默认 8；按实际数据库连接预算调整 |
 | PLATFORM_KEY_HMAC_SECRET | 当前平台 Key HMAC Secret |
 | PLATFORM_KEY_HMAC_SECRET_PREVIOUS | 可选上一平台 Secret |
 | REDEMPTION_HMAC_SECRET | 当前兑换 Secret |
