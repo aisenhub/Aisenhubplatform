@@ -1535,3 +1535,62 @@ h2 {
     transition-duration: 0.01ms !important;
   }
 }
+
+.consumer-auth-layout {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 2rem 1.25rem;
+  background:
+    radial-gradient(circle at 20% 10%, #e8f0e6 0, transparent 38%),
+    var(--background);
+}
+
+.consumer-auth-brand,
+.consumer-auth-copy,
+.consumer-auth-card {
+  width: min(100%, 28rem);
+}
+
+.consumer-auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 2rem;
+  font-size: 1.15rem;
+  font-weight: 750;
+}
+
+.consumer-auth-copy {
+  margin-bottom: 1rem;
+}
+
+.consumer-auth-copy h1 {
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+
+.consumer-auth-copy p {
+  margin-top: 0.8rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.consumer-auth-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1.35rem;
+}
+
+.consumer-auth-card input {
+  width: 100%;
+  min-height: 2.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.consumer-auth-card .consumer-button {
+  margin-top: 0.45rem;
+}

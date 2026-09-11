@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+import { ConsumerAuthActions } from './consumer-auth-actions';
+
 type IconName =
   | 'user'
   | 'file'
@@ -179,16 +181,10 @@ export function ConsumerShell({
         <div className="consumer-sidebar-user">
           <span className="consumer-avatar">林</span>
           <span className="consumer-sidebar-user-copy">
-            <strong>林默</strong>
+            <strong>Aisenhub 账户</strong>
             <small>个人账户</small>
           </span>
-          <button
-            type="button"
-            className="consumer-icon-button"
-            aria-label="更多账户选项"
-          >
-            <Icon name="more" size={18} />
-          </button>
+          <ConsumerAuthActions />
         </div>
       </aside>
 

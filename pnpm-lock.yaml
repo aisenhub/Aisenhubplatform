@@ -219,6 +219,9 @@ importers:
       '@kit/account-auth-nextjs':
         specifier: workspace:*
         version: link:../../packages/account-auth-nextjs
+      '@kit/account-server':
+        specifier: workspace:*
+        version: link:../../packages/account-server
       '@kit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
