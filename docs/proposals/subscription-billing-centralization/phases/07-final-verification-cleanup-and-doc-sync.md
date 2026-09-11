@@ -1,6 +1,6 @@
 # BILL-07 — 完整验收、迁移恢复与发布准备
 
-> 状态：本地最终检查已完成；G-DEV PASS，G-PROVIDER/G-OPS/生产 NOT_RUN。文档已同步当前实现事实，整体方案仍不能标记 Completed。
+> 状态：本地最终检查、升级兼容 fixture 与独立止损开关演练已完成；G-DEV PASS，真实调度/G-PROVIDER/G-OPS/生产 NOT_RUN。整体方案仍不能标记 Completed。
 
 ## 1. 目标与前置
 
@@ -18,7 +18,7 @@ schema采用expand/受控启用/forward-fix，明确旧API与新schema的兼容�
 
 固定谁调用maintenance新入口、调用认证/密钥管理、频率、并发上限、单次预算、退避和积压报警责任人；按BILL-05与Provider限流冻结实际数值。复用现有可用调度设施，不凭“有HTTP接口”宣称自动运行；缺少调度条件则记录阻塞。
 
-独立开关至少覆盖新Checkout签发、Webhook接收、自动结算、后台重试/发现。正常止损只关新购买，继续接收已付款并保存任务；若暂停结算，积压可见且可恢复。接收停用属于单独故障措施，不可随购买开关误关。
+独立开关至少覆盖新Checkout签发、Webhook接收、自动结算、后台重试/发现。当前代码以 `BILLING_CHECKOUT_ENABLED`、`BILLING_WEBHOOK_INGRESS_ENABLED`、`BILLING_AUTO_SETTLEMENT_ENABLED`、`BILLING_BACKGROUND_PROCESSING_ENABLED` 实现前四项的独立止损边界；正常止损只关新购买，继续接收已付款并保存任务；若暂停结算，积压可见且可恢复。接收停用属于单独故障措施，不可随购买开关误关。生产开关变更仍需真实运维授权和审计记录。
 
 本地演练调度停机→积压→重启、lease接管、Provider限流、密钥轮换/丢失、DB/代码恢复后的去重；恢复后重新对账重建状态，不重复发Grant。已打开外部链接不能假定已失效，迟到付款继续按snapshot验证/人工处理。
 
@@ -36,7 +36,7 @@ PII检查覆盖数据库、日志、错误、浏览器bundle和URL埋点；Webho
 
 ## 6. 命令与旧路径退出
 
-核对并运行 docs:check、contracts:check、typecheck、构建、领域单测、运行时和数据库检查；本次实际完成本地 reset、33 个 SQL 测试文件/648 条断言、Account API/maintenance/Afdian 定向测试、SDK/Admin/Template typecheck/build、合同与文档检查。format/lint 的全仓结果仍按实际输出区分；真实升级 fixture、Provider、运维调度和生产观察 NOT_RUN。`pnpm test:api` 等不存在命令不计通过。
+核对并运行 docs:check、contracts:check、typecheck、构建、领域单测、运行时和数据库检查；本次实际完成本地 reset、34 个 SQL 测试文件/678 条断言、Account API/maintenance/Webhook 定向测试、升级兼容 fixture、独立 stop switch 演练、SDK/Admin/Template typecheck/build、合同与文档检查。format/lint 的全仓结果仍按实际输出区分；真实生产等价升级数据、Provider、运维调度和生产观察 NOT_RUN。`pnpm test:api` 等不存在命令不计通过。
 
 使用rg核查旧16位默认、Free claim本期实现、旧Checkout状态、默认零元接受、单高水位、硬编码价格/URL、前端授权、重复期限算法、任意DML和日志PII；历史码兼容与第二期说明不是需要删除的旧功能。
 
