@@ -6,7 +6,7 @@
 
 - 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`, `1edf844`, `fab5b3d`。
 - 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`, `1edf844`, `fab5b3d`。
-- 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `fab5b3d` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Registry 对齐、商品就绪、维护清理、Consumer 集成和 SDK 可复现打包修复已形成独立提交，Consumer/SDK 提交待本轮 push 后核对远端。
+- 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / 代码 `fab5b3d`、验证记录基线 `266ff4e` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Registry 对齐、商品就绪、维护清理、Consumer 集成和 SDK 可复现打包修复均已形成独立提交并核对远端。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（59个文件，11个本轮变更源文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
 - 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07，并补齐本地验证发现的 Registry、商品就绪、幂等清理和 Consumer 集成 forward-fix；当前仅本地合同、数据库、API、SDK、Consumer/Admin 参考应用实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
@@ -21,7 +21,7 @@
 | BILL-03 | 本地验收已交付 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入已实现；真实结算未运行 | `5dba4bd`，已 push |
 | BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push |
 | BILL-05 | 本地验收已交付 | Provider-neutral 事实归一化、权威验证/结算、重复款/合同冲突、双进度游标、maintenance Provider I/O 边界已实现；真实 Provider 未运行 | `d587ca4`，已 push |
-| BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer Auth/BFF、账户/文件/订阅页面、近期认证和服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；本地双来源浏览器 E2E 已通过，Hosted/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1` + `d71a259` + `1edf844`，当前提交待 push 核对 |
+| BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer Auth/BFF、账户/文件/订阅页面、近期认证和服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；本地双来源浏览器 E2E 已通过，Hosted/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1` + `d71a259` + `1edf844` + `fab5b3d`，均已 push 并核对远端 |
 | BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级兼容 fixture、独立 stop switch 演练、Checkout fail-closed 及最终 forward-fix 回归已完成；真实生产等价升级数据、G-PROVIDER、G-OPS、生产观察未运行 | `b7ec484` + `7b46695` + `e7da954` + `14c9359` + `4d92db0`，均已 push；文档同步随本记录提交 |
 
 状态可用未开始/进行中/已阻塞/验证失败/验收通过待推送/已交付。已交付仅指该阶段明确范围，真实渠道和运维门槛另列；整体未满足不能Completed。
@@ -131,7 +131,7 @@
 - 实际变更文件：`apps/template-preview/app/api/v1/[...path]/route.ts`、`apps/template-preview/app/api/auth/reauth/*`、`apps/template-preview/app/account/page.tsx`、`apps/template-preview/app/files/page.tsx`、`apps/template-preview/app/subscription/page.tsx`、`apps/template-preview/components/consumer-auth-actions.tsx`、`apps/template-preview/components/consumer-shell.tsx`、`packages/account-auth-nextjs/src/browser.ts`、`apps/admin/next.config.mjs`、`tests/spikes/e2e/t16-r2-account.mjs`。
 - 实现行为：修复 catch-all BFF 的 `v1` 路径拼接；扩大严格 allowlist 覆盖账户资料/偏好、文件读写、敏感账户动作；账户页使用中央 API 的 ETag/CSRF/错误合同，近期认证使用独立 start/verify 路由和 HttpOnly proof cookie；文件页连接真实列表、上传、下载和删除；会话跨页刷新/退出/跨 tab 失效具有确定反馈；Admin 构建可正确解析浏览器会话导出。
 - 验证命令：`pnpm test:sdk:m5-02` PASS（可复现 tarball、包边界、独立安装、Node/Edge 导入和浏览器导入拒绝）；`pnpm test:consumer:m5-05` PASS（独立安装、类型检查、生产构建、模板路由、local dual-origin platform E2E）；`pnpm test:e2e:t16-r2` PASS（独立上下文、平台 Key 隔离、订阅/兑换、文件、资料/偏好、CSRF/ETag、Admin MFA/暂停恢复、跨 Tab、敏感操作未知响应和 bundle 凭据）；`pnpm test:ops:m6-02-local` PASS（外部备份目标为 `NOT_RUN (X04 unavailable)`）；`pnpm --filter template-preview typecheck` PASS；Impeccable detector PASS（无告警）。Hosted 双平台结果为 `NOT_RUN (X05/hosted backend unavailable)`，不转换为本地 PASS。
-- 代码提交：`1edf844`（`fix(consumer): complete account and file integration`），本地已提交，待 push 后核对远端 SHA。
+- 代码提交：`1edf844`（`fix(consumer): complete account and file integration`）与 `fab5b3d`（`fix(sdk): make package archives reproducible`），均已 push；随后验证记录提交 `266ff4e` 已核对远端 SHA。
 
 ## 5. 要求覆盖与实际测试
 
