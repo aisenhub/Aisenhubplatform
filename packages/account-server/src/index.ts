@@ -198,7 +198,9 @@ export interface AccountApiClient {
     recentAuthProofId: string,
   ) => Promise<DeleteRequestDto>;
   readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
-  readonly listSubscriptionProducts: () => Promise<readonly SubscriptionProductDto[]>;
+  readonly listSubscriptionProducts: () => Promise<
+    readonly SubscriptionProductDto[]
+  >;
   readonly createSubscriptionCheckout: (
     accessToken: string,
     productCode: 'monthly' | 'yearly' | 'lifetime',
@@ -351,10 +353,7 @@ export async function authorizeProtectedFeature(input: {
         requestId: null,
       };
     }
-    if (
-      input.feature &&
-      entitlement.features[input.feature] !== true
-    ) {
+    if (input.feature && entitlement.features[input.feature] !== true) {
       return { ok: false, code: 'ENTITLEMENT_REQUIRED', requestId: null };
     }
     return { ok: true, entitlement };

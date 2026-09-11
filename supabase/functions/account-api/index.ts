@@ -635,14 +635,18 @@ function subscriptionProductDto(row: Row): Record<string, unknown> {
 function subscriptionCheckoutDto(row: Row): SubscriptionCheckoutDto {
   return {
     checkout_id: uuidValue(row.checkout_id ?? row.id) ?? '',
-    status: (stringValue(row.status) ?? 'pending') as SubscriptionCheckoutDto['status'],
-    product_code: (stringValue(row.product_code) ?? 'monthly') as SubscriptionCheckoutDto['product_code'],
+    status: (stringValue(row.status) ??
+      'pending') as SubscriptionCheckoutDto['status'],
+    product_code: (stringValue(row.product_code) ??
+      'monthly') as SubscriptionCheckoutDto['product_code'],
     price: String(row.price_amount ?? '0.00'),
     currency: 'CNY',
     term: {
       kind: 'finite',
       duration_value: Number(row.duration_value ?? 0),
-      duration_unit: (stringValue(row.duration_unit) ?? 'month') as 'month' | 'year',
+      duration_unit: (stringValue(row.duration_unit) ?? 'month') as
+        | 'month'
+        | 'year',
     },
     expires_at: isoDate(row.expires_at) ?? new Date(0).toISOString(),
     provider_display_name: stringValue(row.provider_display_name),
@@ -759,7 +763,9 @@ async function dispatchAccount(
     const input = await body(request);
     if (
       Object.keys(input).some((field) => field !== 'product_code') ||
-      !['monthly', 'yearly', 'lifetime'].includes(stringValue(input.product_code) ?? '')
+      !['monthly', 'yearly', 'lifetime'].includes(
+        stringValue(input.product_code) ?? '',
+      )
     )
       throw new ApiFault(400, 'INVALID_INPUT');
     const checkoutId = crypto.randomUUID();
@@ -1213,9 +1219,10 @@ async function dispatchAdmin(
     return {
       status: 200,
       data: rows,
-      next_cursor: rows.length === boundedLimit(url.searchParams.get('limit'))
-        ? isoDate(rows.at(-1)?.created_at)
-        : null,
+      next_cursor:
+        rows.length === boundedLimit(url.searchParams.get('limit'))
+          ? isoDate(rows.at(-1)?.created_at)
+          : null,
     };
   }
   if (path === 'admin/api/v1/billing/metrics' && request.method === 'GET') {
@@ -1225,18 +1232,30 @@ async function dispatchAdmin(
     );
     return { status: 200, data: result ?? null };
   }
-  if (path === 'admin/api/v1/billing/provider-products' && request.method === 'GET') {
+  if (
+    path === 'admin/api/v1/billing/provider-products' &&
+    request.method === 'GET'
+  ) {
     const providerAccountId = url.searchParams.get('provider_account_id');
     if (providerAccountId !== null && !uuidValue(providerAccountId))
       throw new ApiFault(400, 'INVALID_INPUT');
     const rows = await transaction.unsafe<Row>(
       'select * from private.admin_billing_provider_product_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
-      [...context, providerAccountId === null ? null : uuidValue(providerAccountId)],
+      [
+        ...context,
+        providerAccountId === null ? null : uuidValue(providerAccountId),
+      ],
     );
     return { status: 200, data: rows };
   }
-  const billingOrderMatch = /^admin\/api\/v1\/billing\/orders\/([^/]+)$/u.exec(path);
-  if (billingOrderMatch && UUID.test(billingOrderMatch[1]!) && request.method === 'GET') {
+  const billingOrderMatch = /^admin\/api\/v1\/billing\/orders\/([^/]+)$/u.exec(
+    path,
+  );
+  if (
+    billingOrderMatch &&
+    UUID.test(billingOrderMatch[1]!) &&
+    request.method === 'GET'
+  ) {
     const [result] = await transaction.unsafe<Row>(
       'select * from private.admin_billing_order_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
       [...context, billingOrderMatch[1]],
@@ -1250,8 +1269,13 @@ async function dispatchAdmin(
         : undefined,
     };
   }
-  const billingRequeryMatch = /^admin\/api\/v1\/billing\/orders\/([^/]+)\/requery$/u.exec(path);
-  if (billingRequeryMatch && UUID.test(billingRequeryMatch[1]!) && request.method === 'POST') {
+  const billingRequeryMatch =
+    /^admin\/api\/v1\/billing\/orders\/([^/]+)\/requery$/u.exec(path);
+  if (
+    billingRequeryMatch &&
+    UUID.test(billingRequeryMatch[1]!) &&
+    request.method === 'POST'
+  ) {
     await adminStepUp(transaction, session, request);
     const input = await body(request);
     const operationId = uuidValue(input.operation_id);
@@ -1259,22 +1283,41 @@ async function dispatchAdmin(
     if (!operationId || !reason) throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
       'select * from private.admin_billing_order_requery(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::bigint, $7::text)',
-      [...context, billingRequeryMatch[1], operationId, expectedVersion(request), reason],
+      [
+        ...context,
+        billingRequeryMatch[1],
+        operationId,
+        expectedVersion(request),
+        reason,
+      ],
     );
     if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     return { status: 202, data: result };
   }
-  const billingResolveMatch = /^admin\/api\/v1\/billing\/orders\/([^/]+)\/resolve$/u.exec(path);
-  if (billingResolveMatch && UUID.test(billingResolveMatch[1]!) && request.method === 'POST') {
+  const billingResolveMatch =
+    /^admin\/api\/v1\/billing\/orders\/([^/]+)\/resolve$/u.exec(path);
+  if (
+    billingResolveMatch &&
+    UUID.test(billingResolveMatch[1]!) &&
+    request.method === 'POST'
+  ) {
     await adminStepUp(transaction, session, request);
     const input = await body(request);
     const operationId = uuidValue(input.operation_id);
     const decision = stringValue(input.decision);
     const reason = stringValue(input.reason);
-    if (!operationId || !decision || !reason) throw new ApiFault(400, 'INVALID_INPUT');
+    if (!operationId || !decision || !reason)
+      throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
       'select * from private.admin_billing_order_resolve(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::bigint, $7::text, $8::text)',
-      [...context, billingResolveMatch[1], operationId, expectedVersion(request), decision, reason],
+      [
+        ...context,
+        billingResolveMatch[1],
+        operationId,
+        expectedVersion(request),
+        decision,
+        reason,
+      ],
     );
     if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     return { status: 200, data: result };
@@ -1734,9 +1777,7 @@ async function dispatchAdmin(
       const input = await body(request);
       const inputPlatformId = uuidValue(input.platform_id);
       const planId = uuidValue(input.plan_id);
-      const productCode = stringValue(input.product_code)
-        ?.trim()
-        .toLowerCase();
+      const productCode = stringValue(input.product_code)?.trim().toLowerCase();
       const batchName = stringValue(input.name);
       const quantity = Number(input.quantity);
       const creationOperationId = uuidValue(input.creation_operation_id);

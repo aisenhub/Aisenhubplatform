@@ -666,7 +666,14 @@
         "required": false,
         "schema": {
           "type": "string",
-          "enum": ["pending", "retryable", "manual_review", "finalized", "granted", "rejected"]
+          "enum": [
+            "pending",
+            "retryable",
+            "manual_review",
+            "finalized",
+            "granted",
+            "rejected"
+          ]
         }
       },
       "BillingOrderId": {
@@ -888,13 +895,23 @@
           "paid_plan_id": { "type": ["string", "null"], "format": "uuid" },
           "paid_plan_code": { "type": ["string", "null"] },
           "paid_plan_name": { "type": ["string", "null"] },
-          "paid_plan_status": { "type": ["string", "null"], "enum": ["active", "archived", null] },
+          "paid_plan_status": {
+            "type": ["string", "null"],
+            "enum": ["active", "archived", null]
+          },
           "monthly_enabled": { "type": "boolean" },
           "yearly_enabled": { "type": "boolean" },
           "lifetime_enabled": { "type": "boolean" },
           "subscription_copy_override": { "type": ["string", "null"] },
           "row_version": { "type": "integer", "minimum": 1 },
-          "preflight_blocked_reason": { "type": ["string", "null"], "enum": ["active_or_future_grant", "redeemable_old_plan_batch", null] },
+          "preflight_blocked_reason": {
+            "type": ["string", "null"],
+            "enum": [
+              "active_or_future_grant",
+              "redeemable_old_plan_batch",
+              null
+            ]
+          },
           "preflight_blocking_count": { "type": "integer", "minimum": 0 }
         },
         "additionalProperties": false

@@ -311,6 +311,11 @@ as $$
 declare
   v_order public.billing_orders;
   v_settlement public.billing_settlements;
+  v_existing private.admin_idempotency%rowtype;
+  v_scope text;
+  v_hash bytea;
+  v_new boolean := false;
+  v_response jsonb;
 begin
   perform private.billing_admin_assert(p_ctx);
   if p_order_id is null or p_operation_id is null or p_expected_version is null
@@ -323,6 +328,39 @@ begin
   if v_order.admin_version <> p_expected_version then
     raise exception using errcode = '40001', message = 'precondition_failed';
   end if;
+  v_scope := 'platform:' || v_order.platform_id::text;
+  v_hash := extensions.digest(
+    convert_to(
+      p_order_id::text || ':' || p_decision || ':' || p_expected_version::text || ':' || p_reason,
+      'utf8'
+    ),
+    'sha256'
+  );
+  insert into private.admin_idempotency(
+    admin_user_id, platform_id, scope, operation, idempotency_key, request_hash
+  ) values (
+    (p_ctx).admin_user_id, v_order.platform_id, v_scope, 'billing_order_resolve',
+    p_operation_id::text, v_hash
+  ) on conflict (admin_user_id, scope, operation, idempotency_key)
+    do nothing returning true into v_new;
+  if not coalesce(v_new, false) then
+    select * into v_existing from private.admin_idempotency i
+    where i.admin_user_id = (p_ctx).admin_user_id and i.scope = v_scope
+      and i.operation = 'billing_order_resolve' and i.idempotency_key = p_operation_id::text
+    for update;
+    if v_existing.request_hash <> v_hash then
+      raise exception using errcode = '23505', message = 'idempotency_conflict';
+    end if;
+    if v_existing.state = 'completed' then
+      return query select
+        (v_existing.response_body->>'order_id')::uuid,
+        v_existing.response_body->>'resolution_status',
+        v_existing.response_body->>'settlement_state',
+        (v_existing.response_body->>'admin_version')::bigint;
+      return;
+    end if;
+    raise exception using errcode = 'P0001', message = 'operation_in_progress';
+  end if;
   select * into v_settlement from public.billing_settlements where billing_order_id = p_order_id for update;
   if not found then raise exception using errcode = 'P0001', message = 'settlement_required'; end if;
   update public.billing_settlements set state = 'finalized', decision_reason = p_reason
@@ -331,6 +369,20 @@ begin
     resolved_at = clock_timestamp(), resolution_reason = p_reason
   where id = p_order_id
   returning * into v_order;
+  update public.billing_processing_jobs
+  set state = 'completed', lease_owner = null, lease_until = null,
+    error_class = null, error_code = null
+  where billing_order_id = p_order_id and state = 'manual_review';
+  v_response := jsonb_build_object(
+    'order_id', v_order.id,
+    'resolution_status', v_order.resolution_status,
+    'settlement_state', 'finalized',
+    'admin_version', v_order.admin_version
+  );
+  update private.admin_idempotency i
+  set state = 'completed', response_status = 200, response_body = v_response
+  where i.admin_user_id = (p_ctx).admin_user_id and i.scope = v_scope
+    and i.operation = 'billing_order_resolve' and i.idempotency_key = p_operation_id::text;
   perform private.audit_append(p_operation_id, 'admin', (p_ctx).admin_user_id,
     v_order.platform_id, v_order.platform_account_id, 'billing.order.resolved',
     'billing_order', v_order.id, null, null,

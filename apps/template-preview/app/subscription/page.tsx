@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { ConsumerShell, Icon } from '../../components/consumer-shell';
@@ -49,10 +49,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const csrf =
     typeof document === 'undefined'
       ? null
-      : document.cookie
+      : (document.cookie
           .split('; ')
           .find((entry) => entry.startsWith('aisenhub-consumer-csrf='))
-          ?.slice('aisenhub-consumer-csrf='.length) ?? null;
+          ?.slice('aisenhub-consumer-csrf='.length) ?? null);
   const response = await fetch(`/api/${path}`, {
     ...init,
     cache: 'no-store',
@@ -84,7 +84,7 @@ export default function SubscriptionPage() {
     useState<RedemptionState>('idle');
   const [redemptionMessage, setRedemptionMessage] = useState('');
 
-  async function refreshSubscription() {
+  const refreshSubscription = useCallback(async () => {
     const entitlement = await api<Entitlement>('v1/subscription');
     const planCode = entitlement.plan?.code ?? 'free';
     setCurrentPlan(planCode);
@@ -95,7 +95,7 @@ export default function SubscriptionPage() {
           ? '账户已暂停，权益不再生效'
           : '当前使用免费版',
     );
-  }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,10 +140,11 @@ export default function SubscriptionPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshSubscription]);
 
+  const checkoutId = pendingPayment?.checkoutId;
   useEffect(() => {
-    if (!pendingPayment) return;
+    if (!checkoutId) return;
     let cancelled = false;
     let attempts = 0;
     async function poll() {
@@ -153,7 +154,7 @@ export default function SubscriptionPage() {
           status: string;
           paid_at: string | null;
           granted_at: string | null;
-        }>(`v1/subscription/checkout/${pendingPayment!.checkoutId}`);
+        }>(`v1/subscription/checkout/${checkoutId}`);
         if (cancelled) return;
         setPendingPayment((current) =>
           current ? { ...current, status: checkout.status } : current,
@@ -162,13 +163,17 @@ export default function SubscriptionPage() {
           setPaymentFeedback('支付已确认，权益已由服务端开通。');
           setPendingPayment(null);
           await refreshSubscription();
-        } else if (checkout.status === 'review_required' || checkout.status === 'resolved') {
+        } else if (
+          checkout.status === 'review_required' ||
+          checkout.status === 'resolved'
+        ) {
           setPaymentFeedback('订单需要人工处理，请保留订单号并稍后查看。');
         } else if (checkout.status === 'expired') {
           setPaymentFeedback('付款意图已过期，请重新创建订单。');
         }
       } catch {
-        if (!cancelled) setPaymentFeedback('暂时无法读取订单状态，请稍后重试。');
+        if (!cancelled)
+          setPaymentFeedback('暂时无法读取订单状态，请稍后重试。');
       }
       if (attempts >= 12) clearInterval(timer);
     }
@@ -178,7 +183,7 @@ export default function SubscriptionPage() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [pendingPayment?.checkoutId]);
+  }, [checkoutId, refreshSubscription]);
 
   async function choosePlan(name: string, code: string) {
     if (code === currentPlan || pendingPayment) return;

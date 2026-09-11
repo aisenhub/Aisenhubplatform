@@ -67,9 +67,7 @@ function fakeDatabase() {
             ] as unknown as R[];
           }
           if (
-            query.startsWith(
-              'select * from private.subscription_products_list',
-            )
+            query.startsWith('select * from private.subscription_products_list')
           ) {
             return [
               {
@@ -102,9 +100,7 @@ function fakeDatabase() {
             query.startsWith(
               'select * from private.subscription_checkout_create',
             ) ||
-            query.startsWith(
-              'select * from private.subscription_checkout_read',
-            )
+            query.startsWith('select * from private.subscription_checkout_read')
           ) {
             return [
               {
@@ -182,11 +178,41 @@ function fakeDatabase() {
             ] as unknown as R[];
           }
           if (query.startsWith('select * from private.admin_billing_metrics'))
-            return [{ pending_count: 0, retryable_count: 1, manual_review_count: 0, duplicate_payment_count: 0, oldest_pending_age_seconds: 0 }] as unknown as R[];
-          if (query.startsWith('select * from private.admin_billing_order_read'))
-            return [{ order_id: keyId, provider_order_no: 'provider-order-1', admin_version: 1, provider_facts: {}, open_job_count: 0 }] as unknown as R[];
-          if (query.startsWith('select * from private.admin_billing_order_requery'))
-            return [{ order_id: keyId, job_id: sessionId, state: 'pending', admin_version: 1, replayed: false }] as unknown as R[];
+            return [
+              {
+                pending_count: 0,
+                retryable_count: 1,
+                manual_review_count: 0,
+                duplicate_payment_count: 0,
+                oldest_pending_age_seconds: 0,
+              },
+            ] as unknown as R[];
+          if (
+            query.startsWith('select * from private.admin_billing_order_read')
+          )
+            return [
+              {
+                order_id: keyId,
+                provider_order_no: 'provider-order-1',
+                admin_version: 1,
+                provider_facts: {},
+                open_job_count: 0,
+              },
+            ] as unknown as R[];
+          if (
+            query.startsWith(
+              'select * from private.admin_billing_order_requery',
+            )
+          )
+            return [
+              {
+                order_id: keyId,
+                job_id: sessionId,
+                state: 'pending',
+                admin_version: 1,
+                replayed: false,
+              },
+            ] as unknown as R[];
           if (query.startsWith('select * from private.admin_audit_list')) {
             return [
               {
@@ -453,15 +479,18 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
     'X-Platform-Key': `phk_v1_${keyId}_fixture`,
   };
   const created = await handleRequest(
-    new Request('http://local/functions/v1/account-api/v1/subscription/checkout', {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': 'checkout-test-1',
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'checkout-test-1',
+        },
+        body: JSON.stringify({ product_code: 'monthly' }),
       },
-      body: JSON.stringify({ product_code: 'monthly' }),
-    }),
+    ),
     {
       database: fakeDatabase(),
       platformKeySecret: 'm3-test-platform-secret',
@@ -983,7 +1012,10 @@ Deno.test('Account API exposes central Billing order and requery wrappers', asyn
         'If-Match': 'W/"1"',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ operation_id: sessionId, reason: 'fixture requery' }),
+      body: JSON.stringify({
+        operation_id: sessionId,
+        reason: 'fixture requery',
+      }),
     }),
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
   );
@@ -996,7 +1028,9 @@ Deno.test('Account API exposes subscription config ETags and step-up mutation bo
     'http://local/functions/v1/account-api/admin/api/v1/platforms/' +
     `${platformId}/subscription-config`;
   const get = await handleRequest(
-    new Request(base, { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } }),
+    new Request(base, {
+      headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+    }),
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
   );
   assertEquals(get.status, 200);

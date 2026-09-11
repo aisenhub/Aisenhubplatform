@@ -24,7 +24,9 @@ function isAllowedPath(method: string, path: string): boolean {
       /^v1\/subscription\/checkout\/[^/]+$/u.test(path)
     );
   if (method === 'POST')
-    return path === 'v1/subscription/checkout' || path === 'v1/subscription/redeem';
+    return (
+      path === 'v1/subscription/checkout' || path === 'v1/subscription/redeem'
+    );
   return false;
 }
 
@@ -32,7 +34,8 @@ async function dispatch(request: NextRequest, context: RouteContext) {
   const baseUrl = process.env.ACCOUNT_API_URL?.replace(/\/$/u, '');
   const platformKey = process.env.ACCOUNT_PLATFORM_KEY;
   const origin = process.env.TEMPLATE_ORIGIN;
-  if (!baseUrl || !platformKey) return errorResponse(503, 'AUTHORIZATION_UNAVAILABLE');
+  if (!baseUrl || !platformKey)
+    return errorResponse(503, 'AUTHORIZATION_UNAVAILABLE');
 
   const { path } = await context.params;
   const pathValue = path.join('/');
@@ -85,7 +88,8 @@ async function dispatch(request: NextRequest, context: RouteContext) {
       status: upstream.status,
       headers: {
         'Cache-Control': 'no-store',
-        'Content-Type': upstream.headers.get('content-type') ?? 'application/json',
+        'Content-Type':
+          upstream.headers.get('content-type') ?? 'application/json',
         ...(upstream.headers.get('x-request-id')
           ? { 'X-Request-Id': upstream.headers.get('x-request-id') as string }
           : {}),

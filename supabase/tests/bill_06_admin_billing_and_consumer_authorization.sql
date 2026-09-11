@@ -22,7 +22,11 @@ select ok(not has_table_privilege('admin_executor', 'public.billing_processing_j
 select ok((select prosecdef from pg_proc where oid = 'private.admin_billing_order_requery(private.admin_context, uuid, uuid, bigint, text)'::regprocedure), 'requery is security definer');
 select ok((select prosecdef from pg_proc where oid = 'private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)'::regprocedure), 'resolve is security definer');
 select ok(pg_get_functiondef('private.admin_billing_order_requery(private.admin_context, uuid, uuid, bigint, text)'::regprocedure) like '%audit_append%', 'requery is audited');
-select ok(pg_get_functiondef('private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)'::regprocedure) like '%expected_version%', 'resolve checks optimistic version');
+select ok(
+  pg_get_functiondef('private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)'::regprocedure) like '%expected_version%'
+  and pg_get_functiondef('private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)'::regprocedure) like '%admin_idempotency%',
+  'resolve checks version and persists idempotent operation'
+);
 select ok(pg_get_functiondef('private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)'::regprocedure) like '%settlement_required%', 'resolve requires a settlement');
 select ok((select array_to_string(proconfig, ',') like 'search_path=pg_catalog%' from pg_proc where oid = 'private.admin_billing_order_list(private.admin_context, timestamp with time zone, integer, text)'::regprocedure), 'billing list pins search path');
 select ok((select relforcerowsecurity from pg_class where oid = 'public.billing_orders'::regclass), 'billing orders keep forced RLS');
