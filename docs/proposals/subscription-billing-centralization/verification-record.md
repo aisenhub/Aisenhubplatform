@@ -153,6 +153,7 @@
 - 本轮追加代码提交：`9f778bd`（`perf(account-api): support startup executor roles`；startup 角色模式仅作为显式 Local/运维调优项验证，默认保持事务角色模式）。
 - 实现行为：同一 access token 的并发 Auth 验证只共享进行中的请求，验证完成立即移除，不缓存验证结果；普通认证 Account API 路径通过 `private.account_principal_presented` 在一次数据库调用内完成呈现 Key、会话和平台账户授权，公开资源与近期认证证明仍保留原有 Key 验证边界。每个业务请求仍执行数据库 session、平台 Key 与权限检查。平台 HMAC CryptoKey 在进程内复用；数据库连接池上限新增受限配置 `ACCOUNT_API_DB_POOL_MAX`（4–64，默认 8），未改变默认值；`ACCOUNT_API_DB_ROLE_MODE=startup` 可让独立连接池在连接建立时固定 executor 角色，默认仍为 `transaction`，需单独确认连接用户允许 `SET ROLE`。压力探针支持 `R15_START_API=1` 自行启动并清理 Local Account API。
 - 验证结果：Account API Deno 测试 `27 passed`；完整 Local DB reset 后 `pnpm test:db` PASS（36 files/695 tests），含新增函数存在性、SECURITY DEFINER、search_path 和最小权限断言；10 req/s 短 smoke 为 20/20、错误率 0%、p95 225.82ms。当前单次授权路径、默认事务角色模式/连接池 8 下自包含执行 100 req/s×60s 为 6000/6000、错误率 0%、实际 97.61 req/s、p95 760.70ms；此前无单次路径的同窗口基线为 p95 820.58ms。启用 startup 角色模式、连接池 8 后同窗口为 6000/6000、错误率 0%、实际 100.03 req/s、p95 619.00ms、p99 785.61ms，仍未达到 p95≤500ms；15 分钟完整窗口未伪造为通过。
+- 负载对照：同一 startup + pool8 配置在 50 req/s×60s 为 3000/3000、错误率 0%、实际 50.16 req/s、p95 332.50ms、p99 425.62ms，满足该负载下的 p95≤500ms 门槛；这不能替代 100 req/s 目标，当前证据显示 Local 在两档负载之间发生延迟饱和。
 - 证据边界：startup 角色模式仅在 Local 经过验证，未改变默认配置；连接池 4 + startup 角色的 60 秒对照 p95 969.24ms，连接池 12 + startup 角色的对照 p95 1601.58ms、实际 77.03 req/s，连接池 32 的历史对照 p95 1455.32ms，均不作为推荐配置。当前 Local 最优测得组合为 startup + pool8；结果不转换为 G-OPS 或生产通过。
 - 结论：功能授权链路 PASS；R15 性能目标当前 `NOT_PASS/待容量优化`，该结果不转换为 G-OPS 或生产通过。探针只操作 Local fixture，未修改 staging/生产。
 
