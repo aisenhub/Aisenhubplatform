@@ -1,6 +1,6 @@
 # 统一订阅与中央支付总计划
 
-> 状态：In Progress。BILL-01～BILL-07 的本地实现/验证已完成，并通过最终本地 forward-fix 补齐了已验证 Provider 映射的商品可购买状态与普通幂等缓存清理；真实 Provider、G-OPS 与生产门槛仍未运行。
+> 状态：In Progress。BILL-01～BILL-07 的本地实现/验证已完成，并通过最终本地 forward-fix 补齐了已验证 Provider 映射的商品可购买状态、普通幂等缓存清理和 Consumer 账户/文件真实链路；真实 Provider、G-OPS、Hosted 后端与生产门槛仍未运行。
 
 目标依据：[最新架构](AisenFlow_Subscription_Billing_Architecture.md)；[设计差距](design.md)；[交接](agent-handoff.md)；[证据](verification-record.md)；[Afdian 调试参考](afdian-debug-reference.md)。
 
@@ -19,7 +19,7 @@
 | BILL-03 | Ledger/Redemption/生命周期合同 | BILL-02 | 本地已验收；真实结算未运行 |
 | BILL-04 | Checkout/Order/Inbox/持久任务 | BILL-03 的数据、锁和 correction 合同 | 本地已验收；Provider/权威结算未运行 |
 | BILL-05 | 权威验证/结算/双进度对账 | BILL-04；模拟可验收，渠道状态单列 | 本地已验收；G-PROVIDER 未运行 |
-| BILL-06 | Admin 结案/SDK/BFF/Consumer | BILL-05 DTO/命令冻结 | 本地已验收；真实 Consumer/生产未运行 |
+| BILL-06 | Admin 结案/SDK/BFF/Consumer | BILL-05 DTO/命令冻结 | 本地已验收；本地双来源 Consumer E2E 通过；Hosted/生产未运行 |
 | BILL-07 | 完整验收/迁移恢复/发布准备 | BILL-02～06；真实购买就绪还需 G-PROVIDER/G-OPS | 本地最终检查、升级兼容 fixture、独立止损开关演练及最终 forward-fix 回归已完成；真实调度/G-PROVIDER/G-OPS 未运行 |
 
 G-DEV 允许 Provider-neutral 和模拟器开发；G-PROVIDER 证明真实渠道合同，不能由固定向量或 fake Adapter 代替；G-OPS 证明调度、开关、权限、恢复等运行准备。三者独立记录。BILL-01 可达到开发准备完成但渠道验证仍 NOT_RUN，不能被简称为“全部验证通过”。

@@ -1,6 +1,6 @@
 # 统一订阅与中央支付 — Agent 实施计划
 
-> 状态：In Progress / BILL-01～BILL-07 的本地开发与回归门槛已完成；真实 Provider、G-OPS 与生产门槛仍未运行。
+> 状态：In Progress / BILL-01～BILL-07 的本地开发与回归门槛已完成，Consumer 本地双来源 E2E 已通过；真实 Provider、G-OPS、Hosted 后端与生产门槛仍未运行。
 
 唯一目标设计：[架构文档](AisenFlow_Subscription_Billing_Architecture.md)。本目录将设计转换为可派发任务，不保留旧架构副本或第二套冻结规则。当前代码事实仍以 architecture/reference 与实际源码为准。
 

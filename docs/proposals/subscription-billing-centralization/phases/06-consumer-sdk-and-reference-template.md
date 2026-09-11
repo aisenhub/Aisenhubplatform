@@ -1,6 +1,6 @@
 # BILL-06 — 中央 Admin、Consumer SDK/BFF 与服务端授权
 
-> 状态：本地 G-DEV 已验收；浏览器真实 Consumer 会话、Provider、生产 NOT_RUN。中央 Billing Admin、Consumer BFF、Consumer Auth 路由、Checkout/兑换页面和服务端授权示例已实现。
+> 状态：本地 G-DEV 已验收；本地双来源 Consumer 浏览器链路已通过，Provider、Hosted 后端和生产仍 NOT_RUN。中央 Billing Admin、Consumer BFF、Consumer Auth/近期认证路由、账户/文件/Checkout/兑换页面和服务端授权示例已实现。
 
 ## 1. 目标与依赖
 
@@ -24,7 +24,7 @@ Orders展示付款事实、归属、结算/修正链、暂时阻塞或人工原�
 
 保留flat methods，可添加subscription facade但不复制HTTP实现。支持products/current/create/get/redeem及稳定错误/request_id；POST仅同Idempotency-Key重试，确定性业务冲突不盲重试。`@kit/account-server` 增加 `authorizeProtectedFeature`，只以中央 entitlement 为权威，不在本地重算到期或信任浏览器字段。
 
-Browser→同源 Auth/BFF→Central API；BFF 只暴露订阅/Checkout/兑换白名单路径，Key 仅 server env，会话/Origin/CSRF/method 按现有认证合同。`/login` 与 `/api/auth/*` 使用 Consumer scoped cookies，服务端受保护示例在授权前读取中央 entitlement。Auth allowlist、callback、returnTo 与账户显式激活仍以现有应用配置为准；不声称跨域自动登录。
+Browser→同源 Auth/BFF→Central API；BFF 暴露公开 plans/products 及认证后的账户、资料、偏好、订阅、文件和敏感账户动作白名单路径，Key 仅 server env，会话/Origin/CSRF/method 按现有认证合同。近期认证通过同源 start/verify 路由和 HttpOnly proof cookie 完成。`/login` 与 `/api/auth/*` 使用 Consumer scoped cookies，服务端受保护示例在授权前读取中央 entitlement。Auth allowlist、callback、returnTo 与账户显式激活仍以现有应用配置为准；不声称跨域自动登录。
 
 ## 5. 用户页面
 
@@ -48,7 +48,7 @@ Registry只列真实路由，复制BFF/SDK/授权示例与必要配置；先核�
 
 测试无登录Pricing、激活/关闭/暂停、missing mapping、MFA/412、popup blocked、未知响应、人工状态、31位和历史码、支付后刷新；浏览器只读结果不直接授权。服务端测试允许/到期/暂停/中央超时，检查bundle无Key/SQL/token，API no-store。
 
-已运行 account-server typecheck/unit、Template/Admin typecheck/build、Template Auth 动态路由构建、Account API 定向测试、contracts/docs 检查；浏览器真实 Auth/Provider 会话、Registry 安装和生产购买仍 NOT_RUN。命令可参考现有test:sdk:m5-02、test:registry:m5-04、test:consumer:m5-05，但需在对应环境核实覆盖。
+已运行 account-server typecheck/unit、Template/Admin typecheck/build、Template Auth 动态路由构建、Account API 定向测试、contracts/docs 检查；`pnpm test:registry:m5-04` 与 `pnpm test:consumer:m5-05` 的本地链路通过，后者覆盖独立安装、类型检查、生产构建、模板路由和双来源平台 E2E。Hosted 后端、真实 Provider 和生产购买仍 NOT_RUN。
 
 
 ## 执行纪律与交付
