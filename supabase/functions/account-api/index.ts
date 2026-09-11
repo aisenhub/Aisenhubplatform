@@ -320,6 +320,12 @@ function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(409, 'ACTIVATION_DISABLED');
   if (message.includes('plan_conflict'))
     return new ApiFault(409, 'PLAN_CONFLICT');
+  if (
+    message.includes('subscription_plan_switch_blocked') ||
+    message.includes('subscription_plan_in_use') ||
+    message.includes('plan_unavailable')
+  )
+    return new ApiFault(409, 'PLAN_CONFLICT');
   if (message.includes('entitlement_perpetual'))
     return new ApiFault(409, 'ENTITLEMENT_PERPETUAL');
   if (message.includes('code_already_redeemed'))
@@ -592,6 +598,29 @@ function entitlementDto(row: Row) {
   };
 }
 
+function subscriptionProductDto(row: Row): Record<string, unknown> {
+  return {
+    code: stringValue(row.product_code) ?? 'free',
+    name: stringValue(row.product_name) ?? '',
+    description: stringValue(row.product_description),
+    price: String(row.price_amount ?? '0.00'),
+    currency: stringValue(row.currency) ?? 'CNY',
+    term: {
+      kind: stringValue(row.term_kind) ?? 'free',
+      duration_value:
+        row.duration_value === null || row.duration_value === undefined
+          ? null
+          : Number(row.duration_value),
+      duration_unit: stringValue(row.duration_unit),
+    },
+    price_version: Number(row.price_version ?? 1),
+    recommended: row.recommended === true,
+    enabled: row.enabled === true,
+    purchasable: row.purchasable === true,
+    reason: stringValue(row.reason) ?? 'provider_mapping_unavailable',
+  };
+}
+
 async function body(request: Request): Promise<Record<string, unknown>> {
   const bytes = new TextEncoder().encode(await request.text());
   if (bytes.byteLength > 65536) throw new ApiFault(413, 'PAYLOAD_TOO_LARGE');
@@ -633,9 +662,22 @@ async function dispatchAccount(
   const path = requestPath(request);
   const key = await verifyPlatformKey(transaction, request, dependencies);
 
-  if (path === 'v1/plans' && request.method === 'GET') {
+  if (
+    (path === 'v1/plans' || path === 'v1/subscription/products') &&
+    request.method === 'GET'
+  ) {
     if (key.platformStatus !== 'active')
       throw new ApiFault(403, 'PLATFORM_DISABLED');
+    if (path === 'v1/subscription/products') {
+      const rows = await transaction.unsafe<Row>(
+        'select * from private.subscription_products_list($1::uuid, $2::uuid)',
+        [key.platformId, key.keyId],
+      );
+      return {
+        status: 200,
+        data: rows.map(subscriptionProductDto),
+      };
+    }
     const rows = await transaction.unsafe<Row>(
       'select * from private.public_plans_list($1::uuid, $2::uuid)',
       [key.platformId, key.keyId],
@@ -1458,6 +1500,56 @@ async function dispatchAdmin(
     }
   }
 
+  const subscriptionConfigMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/subscription-config$/u.exec(path);
+  if (subscriptionConfigMatch && UUID.test(subscriptionConfigMatch[1]!)) {
+    const platformId = subscriptionConfigMatch[1]!;
+    if (request.method === 'GET') {
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_subscription_config_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return { status: 200, data: result, headers: withEtag(result) };
+    }
+    if (request.method === 'PATCH') {
+      await adminStepUp(transaction, session, request);
+      const input = await body(request);
+      const paidPlanId =
+        input.paid_plan_id === null ? null : uuidValue(input.paid_plan_id);
+      const copy =
+        input.subscription_copy_override === null
+          ? null
+          : stringValue(input.subscription_copy_override);
+      const reason = stringValue(input.reason);
+      if (
+        (input.paid_plan_id !== null && !paidPlanId) ||
+        typeof input.monthly_enabled !== 'boolean' ||
+        typeof input.yearly_enabled !== 'boolean' ||
+        typeof input.lifetime_enabled !== 'boolean' ||
+        (input.subscription_copy_override !== null && copy === null) ||
+        !reason
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_subscription_config_patch(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::bigint, $6::uuid, $7::boolean, $8::boolean, $9::boolean, $10::text, $11::text)',
+        [
+          ...context,
+          platformId,
+          expectedVersion(request),
+          paidPlanId,
+          input.monthly_enabled,
+          input.yearly_enabled,
+          input.lifetime_enabled,
+          copy,
+          reason,
+        ],
+      );
+      if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      return { status: 200, data: result, headers: withEtag(result) };
+    }
+  }
+
   const batchCollection = /^admin\/api\/v1\/redemption-batches$/u.test(path);
   if (batchCollection) {
     const platformId = uuidValue(url.searchParams.get('platform_id'));
@@ -2020,7 +2112,10 @@ export async function handleRequest(
     const path = requestPath(request);
     const session =
       path.startsWith('admin/') ||
-      !(path === 'v1/plans' && request.method === 'GET')
+      !(
+        (path === 'v1/plans' || path === 'v1/subscription/products') &&
+        request.method === 'GET'
+      )
         ? await verifiedSessionFromRequest(request, dependencies)
         : undefined;
     const reauthSession =

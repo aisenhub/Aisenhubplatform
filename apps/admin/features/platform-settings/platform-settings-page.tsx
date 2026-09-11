@@ -16,6 +16,7 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { adminAuthSession } from '../../app/_lib/auth-session';
+import { SubscriptionConfigPanel } from './subscription-config-panel';
 import {
   apiErrorDescription,
   resourcePath,
@@ -239,6 +240,11 @@ export function PlatformSettingsPage() {
           </Button>
         </section>
       </div>
+
+      <SubscriptionConfigPanel
+        platformId={platform.platform_id}
+        platformStatus={platform.status}
+      />
 
       {intent ? (
         <ConfirmActionDialog

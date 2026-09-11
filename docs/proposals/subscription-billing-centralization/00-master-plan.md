@@ -1,6 +1,6 @@
 # 统一订阅与中央支付总计划
 
-> 状态：In Progress。BILL-01 已完成本地 G-DEV 交付；后续功能阶段尚未开始。
+> 状态：In Progress。BILL-01 与 BILL-02 已完成本地实现/验证；真实 Provider 与后续支付阶段仍未完成。
 
 目标依据：[最新架构](AisenFlow_Subscription_Billing_Architecture.md)；[设计差距](design.md)；[交接](agent-handoff.md)；[证据](verification-record.md)；[Afdian 调试参考](afdian-debug-reference.md)。
 
@@ -15,7 +15,7 @@
 | 编号 | 内容 | 前置/门槛 | 状态 |
 |---|---|---|---|
 | BILL-01 | 协议与设计冻结 | 只读代码基线；产出 G-DEV 与独立 G-PROVIDER | G-DEV 已完成；G-PROVIDER 未运行 |
-| BILL-02 | Catalog/config/公共合同 | G-DEV；真实购买保持关闭 | 未开始 |
+| BILL-02 | Catalog/config/公共合同 | G-DEV；真实购买保持关闭 | 本地已验收；Provider 未运行 |
 | BILL-03 | Ledger/Redemption/生命周期合同 | BILL-02 | 未开始 |
 | BILL-04 | Checkout/Order/Inbox/持久任务 | BILL-03 的数据、锁和 correction 合同 | 未开始 |
 | BILL-05 | 权威验证/结算/双进度对账 | BILL-04；模拟可验收，渠道状态单列 | 未开始 |

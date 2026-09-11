@@ -13,6 +13,7 @@ import type {
   PreferencesDto,
   ProfileDto,
   RecentAuthProofDto,
+  SubscriptionProductDto,
   ConfigFileDto,
   ConfigFileListDto,
   UploadIntentDto,
@@ -196,6 +197,7 @@ export interface AccountApiClient {
     recentAuthProofId: string,
   ) => Promise<DeleteRequestDto>;
   readonly listPublicPlans: () => Promise<readonly PlanDto[]>;
+  readonly listSubscriptionProducts: () => Promise<readonly SubscriptionProductDto[]>;
   readonly getPrincipal: (accessToken: string) => Promise<AccountPrincipalDto>;
   readonly activate: (accessToken: string) => Promise<AccountPrincipalDto>;
   readonly getProfile: (accessToken: string) => Promise<ProfileDto>;
@@ -547,6 +549,11 @@ export function createAccountApiClient(input: {
       }),
     listPublicPlans: () =>
       request<readonly PlanDto[]>({ method: 'GET', path: '/v1/plans' }),
+    listSubscriptionProducts: () =>
+      request<readonly SubscriptionProductDto[]>({
+        method: 'GET',
+        path: '/v1/subscription/products',
+      }),
     getPrincipal: (accessToken) =>
       request<AccountPrincipalDto>({
         method: 'GET',

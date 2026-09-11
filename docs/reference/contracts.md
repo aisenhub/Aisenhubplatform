@@ -72,7 +72,7 @@ DomainResult<T>为成功data或确定性业务拒绝code/status，不把业务�
 
 Admin Grant必须有operation_id UUID和reason；兑换operation_id来自code.id；source+operation_id永久唯一。重放先重新鉴权。Profiles/Preferences增加row_version bigint（初始1、每次成功patch+1），ETag为服务端生成的不透明版本表示，客户端仅If-Match回传；updated_at仍用于展示。
 
-OpenAPI必须覆盖API专题当前全部18个Account方法/路径组合、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。新增经过验证的reauth路径后同步更新清单和数量，实际条目由API表抽取核对。尚未实现路由不应暴露成功假数据。
+OpenAPI必须覆盖API专题当前全部19个Account方法/路径组合、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。新增经过验证的reauth路径后同步更新清单和数量，实际条目由API表抽取核对。尚未实现路由不应暴露成功假数据。
 
 Admin路径固定为/admin/api/v1，具体动作：
 
@@ -88,7 +88,7 @@ Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文�
 
 ## 5. OpenAPI 与 DTO 合同
 
-Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含18个方法/路径组合；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计和删除任务资源。所有未实现的操作不得暴露成功假数据。
+Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含19个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计和删除任务资源。所有未实现的操作不得暴露成功假数据。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证必须使用服务端 session-bound proof；OpenAPI 的存在不代表路由、Provider 或真实会话生命周期已经完成。
 

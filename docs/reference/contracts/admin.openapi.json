@@ -257,6 +257,37 @@
         }
       }
     },
+    "/admin/api/v1/platforms/{platformId}/subscription-config": {
+      "get": {
+        "operationId": "adminGetSubscriptionConfig",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/SubscriptionConfig" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "operationId": "adminPatchSubscriptionConfig",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/IfMatch" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SubscriptionConfig" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" },
+          "428": { "$ref": "#/components/responses/PreconditionRequired" }
+        }
+      }
+    },
     "/admin/api/v1/redemption-batches": {
       "get": {
         "operationId": "adminListRedemptionBatches",
@@ -507,6 +538,12 @@
         "required": true,
         "schema": { "type": "string", "format": "uuid" }
       },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "pattern": "^(W/)?\\\"[0-9]+\\\"$" }
+      },
       "PlatformId": {
         "name": "platformId",
         "in": "path",
@@ -582,6 +619,18 @@
       }
     },
     "responses": {
+      "SubscriptionConfig": {
+        "description": "Platform subscription configuration with an optimistic-concurrency validator.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "ETag": { "$ref": "#/components/headers/ETag" }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/SubscriptionConfig" }
+          }
+        }
+      },
       "Object": {
         "description": "JSON response with data and request_id.",
         "headers": {
@@ -651,6 +700,22 @@
           }
         }
       },
+      "PreconditionFailed": {
+        "description": "The configuration changed after the client read it.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "PreconditionRequired": {
+        "description": "If-Match is required for this mutation.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
       "NotFound": {
         "description": "Resource not found.",
         "content": {
@@ -661,7 +726,8 @@
       }
     },
     "headers": {
-      "NoStore": { "schema": { "type": "string", "const": "no-store" } }
+      "NoStore": { "schema": { "type": "string", "const": "no-store" } },
+      "ETag": { "schema": { "type": "string", "minLength": 1 } }
     },
     "schemas": {
       "Envelope": {
@@ -698,6 +764,38 @@
           },
           "request_id": { "type": "string", "format": "uuid" }
         }
+      },
+      "SubscriptionConfig": {
+        "type": "object",
+        "required": [
+          "platform_id",
+          "paid_plan_id",
+          "paid_plan_code",
+          "paid_plan_name",
+          "paid_plan_status",
+          "monthly_enabled",
+          "yearly_enabled",
+          "lifetime_enabled",
+          "subscription_copy_override",
+          "row_version",
+          "preflight_blocked_reason",
+          "preflight_blocking_count"
+        ],
+        "properties": {
+          "platform_id": { "type": "string", "format": "uuid" },
+          "paid_plan_id": { "type": ["string", "null"], "format": "uuid" },
+          "paid_plan_code": { "type": ["string", "null"] },
+          "paid_plan_name": { "type": ["string", "null"] },
+          "paid_plan_status": { "type": ["string", "null"], "enum": ["active", "archived", null] },
+          "monthly_enabled": { "type": "boolean" },
+          "yearly_enabled": { "type": "boolean" },
+          "lifetime_enabled": { "type": "boolean" },
+          "subscription_copy_override": { "type": ["string", "null"] },
+          "row_version": { "type": "integer", "minimum": 1 },
+          "preflight_blocked_reason": { "type": ["string", "null"], "enum": ["active_or_future_grant", "redeemable_old_plan_batch", null] },
+          "preflight_blocking_count": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
       }
     }
   }

@@ -80,6 +80,51 @@ export interface PlanDto {
   readonly features: Readonly<Record<string, unknown>>;
 }
 
+export type SubscriptionProductReason =
+  | 'free_plan_source'
+  | 'free_plan_not_configured'
+  | 'paid_plan_not_configured'
+  | 'paid_plan_unavailable'
+  | 'product_disabled'
+  | 'provider_mapping_unavailable'
+  | 'platform_disabled';
+
+export interface SubscriptionProductDto {
+  readonly code: 'free' | 'monthly' | 'yearly' | 'lifetime';
+  readonly name: string;
+  readonly description: string | null;
+  readonly price: string;
+  readonly currency: 'CNY';
+  readonly term: {
+    readonly kind: 'free' | 'finite';
+    readonly duration_value: number | null;
+    readonly duration_unit: 'month' | 'year' | null;
+  };
+  readonly price_version: number;
+  readonly recommended: boolean;
+  readonly enabled: boolean;
+  readonly purchasable: boolean;
+  readonly reason: SubscriptionProductReason;
+}
+
+export interface SubscriptionConfigDto {
+  readonly platform_id: string;
+  readonly paid_plan_id: string | null;
+  readonly paid_plan_code: string | null;
+  readonly paid_plan_name: string | null;
+  readonly paid_plan_status: 'active' | 'archived' | null;
+  readonly monthly_enabled: boolean;
+  readonly yearly_enabled: boolean;
+  readonly lifetime_enabled: boolean;
+  readonly subscription_copy_override: string | null;
+  readonly row_version: number;
+  readonly preflight_blocked_reason:
+    | 'active_or_future_grant'
+    | 'redeemable_old_plan_batch'
+    | null;
+  readonly preflight_blocking_count: number;
+}
+
 export interface EntitlementDto {
   readonly effective_status: 'active' | 'none' | 'suspended';
   readonly entitlement_kind: 'free' | 'term' | 'perpetual' | 'none';

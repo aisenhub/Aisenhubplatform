@@ -1,23 +1,23 @@
 # 实施与验证记录
 
-> BILL-01 已记录本地 G-DEV 结果；真实 Provider、运维和生产证据仍保持独立状态。
+> BILL-01、BILL-02 已记录本地 G-DEV 结果；真实 Provider、运维和生产证据仍保持独立状态。
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；实施基线 HEAD：`2d058a4149017099b030d20d5382c0fa35d9fd80`。
-- 计划：[总计划](00-master-plan.md)；实施基线 HEAD：`2d058a4149017099b030d20d5382c0fa35d9fd80`。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本阶段实施基线 HEAD：`4abb87b`。
+- 计划：[总计划](00-master-plan.md)；本阶段实施基线 HEAD：`4abb87b`。
 - 工作目录/branch/HEAD/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `2d058a4` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；开始前工作区 clean。
-- Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB、Docker、可用调度未启动/未验证。
+- Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；`pnpm format:check` FAIL（既有54个文件）；`pnpm lint` FAIL（既有 `apps/template-preview/app/subscription/page.tsx:64` 未使用变量）；`pnpm test:api` 未运行且为占位入口。
-- 当前用户实际派发阶段与授权范围：BILL-01；仅本地合同/测试实现，不含真实付款、商品/价格、Webhook 配置、生产迁移或部署。
+- 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
 - 历史研究d3c25e9不是执行起点；本轮文档修订不作为任何功能验证。
 
 ## 2. 阶段状态
 
 | 阶段 | 状态 | 实现/剩余 | commit/push |
 |---|---|---|---|
-| BILL-01 | G-DEV 已完成 | Provider-neutral 合同、虚构适配器夹具、Node/Deno MD5/HMAC 向量已验证；G-PROVIDER 未运行 | 代码待提交；记录随本阶段提交 |
-| BILL-02 | 未开始 | 全部 | 未记录 |
+| BILL-01 | G-DEV 已完成 | Provider-neutral 合同、虚构适配器夹具、Node/Deno MD5/HMAC 向量已验证；G-PROVIDER 未运行 | `20a28ed` / `4abb87b`，已 push |
+| BILL-02 | 本地验收通过待提交 | 固定商品目录、期限语义、平台商品配置、切换 preflight、Account API/SDK/OpenAPI/Admin UI 已实现；Provider 映射未配置，真实购买关闭 | 当前工作区待提交；验证通过后记录 commit |
 | BILL-03 | 未开始 | 全部 | 未记录 |
 | BILL-04 | 未开始 | 全部 | 未记录 |
 | BILL-05 | 未开始 | 全部 | 未记录 |
@@ -30,7 +30,7 @@
 
 | 门槛 | 状态 | 证据/缺口 |
 |---|---|---|
-| G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作版本和结算状态；虚构 Provider adapter fixture；Node/Deno 固定向量均通过 |
+| G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作版本和结算状态；BILL-02 增加固定商品目录、平台配置、切换 preflight、OpenAPI/SDK/Admin UI；虚构 Provider adapter fixture；Node/Deno 固定向量均通过 |
 | G-PROVIDER | NOT_RUN | 真实渠道未验证 |
 | G-OPS | NOT_RUN | 调度/恢复/开关未验证 |
 
@@ -62,11 +62,22 @@
 
 实现时逐阶段追加，不覆盖失败历史；记录自身SHA可单独提交，不循环amend。
 
+### BILL-02/2026-09-11/当前 Agent
+
+- 实际变更文件：`supabase/migrations/20260911120819_bill_02_subscription_product_catalog.sql`、`supabase/tests/bill_02_subscription_product_catalog.sql`、`packages/domain/src/contracts/api.ts`、`packages/domain/src/contracts/index.ts`、`packages/account-server/src/index.ts`、`packages/account-server/tests/client.test.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`docs/reference/contracts/account.openapi.json`、`docs/reference/contracts/admin.openapi.json`、`tooling/scripts/src/openapi-check.mjs`、`apps/admin/features/platform-settings/subscription-config-panel.tsx` 及对应架构/合同/Proposal 文档。
+- 实现行为：固定 `free/monthly/yearly/lifetime` 四项目录；`lifetime` 是 finite/99/year；平台配置只允许同平台 active paid Plan，恰好一个 active paid Plan 时自动回填且不重映射已有配置；计划切换在 active/future grant 或旧计划可兑换批次存在时阻断；无 Provider product mapping 时 paid 商品明确 `purchasable=false/provider_mapping_unavailable`；管理写入使用 row version/If-Match、锁序与最近 MFA 边界。
+- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（29 files/473 tests）；`pnpm contracts:check` PASS（account=19/admin=38）；`pnpm docs:check` PASS（44 documents）；`pnpm exec deno test -A supabase/functions/account-api/index.test.ts` PASS（21 tests）；`pnpm --filter @kit/account-server test:unit` PASS（2 files/14 tests）；`pnpm sdk:pack` PASS；domain/account-server/admin typecheck PASS；`git diff --check` PASS。
+- Supabase lint：`pnpm exec supabase db lint --local --fail-on error` 未通过，但仅报告已有 `admin_account_*`、`admin_file_policy_update`、`admin_deletion_job_*` 等函数的既有 error，以及本阶段函数的未使用变量 warning；BILL-02 无新增 lint error。全量 lint/format 的既有失败继续保留，不改写为 PASS。
+- 覆盖范围：本地迁移 reset、pgTAP、API 单测、SDK 单测、类型、OpenAPI 和文档；未覆盖真实 Provider、真实付款、Webhook、调度、生产迁移与生产观察。
+- 代码commit：待当前阶段提交后补记；push 状态待核对。
+- 未完成/阻塞/下一满足依赖任务：BILL-02 不启用真实购买；下一项为 BILL-03，继续补齐兑换码模型版本快照、生命周期与校正链。
+
 ## 5. 要求覆盖与实际测试
 
 | 要求ID（总计划R01～R17） | 测试路径/用例 | 环境/被测commit | 命令/exit code | 结果/证据 |
 |---|---|---|---|---|
 | BILL-01 G-DEV | `packages/domain/tests/billing.test.ts`、`tests/spikes/billing/crypto-vectors.mjs` | 本地 Node/Deno；工作区当前改动 | `pnpm test:billing:crypto`; `pnpm test:billing:crypto:deno`; `pnpm --filter @kit/domain test:unit --run`; `pnpm --filter @kit/domain typecheck` | PASS；真实 Provider 仍 NOT_RUN |
+| BILL-02 catalog/config | `supabase/tests/bill_02_subscription_product_catalog.sql`、`supabase/functions/account-api/index.test.ts`、`packages/account-server/tests/client.test.ts` | 本地 Docker DB、Deno、Node；当前工作区 | `pnpm test:db`; `pnpm exec deno test -A supabase/functions/account-api/index.test.ts`; `pnpm --filter @kit/account-server test:unit` | PASS；Provider/生产仍 NOT_RUN |
 
 重点独立记录：Checkout长幂等/响应丢失、两笔真实款、finalized重放、ACK后崩溃、lease/fence、分页移动与处理重试、99年顺延/到期/跨世纪日期、Admin真永久兼容及通用替代链、删除/归档/批次并发、服务端故障授权。
 
@@ -89,6 +100,6 @@
 
 ## 8. 最终结论与交接
 
-实现覆盖：BILL-01 G-DEV 局部完成；文档/合同检查：`docs:check` 与 `contracts:check` PASS；真实渠道：NOT_RUN；生产观察：NOT_RUN且不在默认范围。Proposal Completed：否。
+实现覆盖：BILL-01、BILL-02 的本地 G-DEV 范围已完成；文档/合同检查：`docs:check` 与 `contracts:check` PASS；真实渠道：NOT_RUN；生产观察：NOT_RUN且不在默认范围。Proposal Completed：否，BILL-03～BILL-07 尚未完成。
 
 记录当时未提交修改归属、需用户决策事项、已解决与剩余失败；不得将本地模拟成功转换为真实支付可用。

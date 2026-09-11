@@ -47,6 +47,9 @@ export type {
   PreferencesDto,
   ProfileDto,
   RecentAuthProofDto,
+  SubscriptionConfigDto,
+  SubscriptionProductDto,
+  SubscriptionProductReason,
   UploadIntentDto,
 } from './api.ts';
 export { API_ERROR_CODES } from './api.ts';

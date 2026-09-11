@@ -9,6 +9,7 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 | 方法与路径 | 用户条件 | 平台凭据 | 说明 |
 |---|---|---|---|
 | GET /v1/plans | 不需要用户；不建立账户 | 必需、平台active | 仅公开active套餐字段 |
+| GET /v1/subscription/products | 不需要用户；不建立账户 | 必需、平台active | 固定四商品、平台启用状态和明确的purchasable reason；无Provider映射时不可购买 |
 | GET /v1/account/principal | 有效用户/会话 | 必需 | 可返回not_activated/suspended/closed/disabled状态供界面提示 |
 | POST /v1/account/activate | 有效用户、非Admin、非deleting | 必需、平台active | 仅首次需要allow_activation |
 | POST /v1/auth/recent-proof | 当前业务会话 + 独立 email `token_hash` 事件会话 | 不需要Platform Key | 服务端校验同user、事件session及5分钟窗口，仅签发绑定原业务session的proof |
@@ -29,7 +30,7 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 
 principal为状态诊断接口，返回disabled时不表示授权通过；其余普通接口拒绝disabled。失效/revoked Key始终401，即使仅查询principal。system_admin和全局deleting身份不能构造普通Principal。平台已disabled时的关闭/删除申请通过受控支持/Admin路径处理，不为此开放一般业务API。
 
-公开Pricing通过 Browser → BFF → GET /plans，不需要登录，也不暴露Platform Key。仅返回code/name/description/kind/features，不返回platform config、内部ID、兑换库存或Secret；Free/paid展示不意味着用户已获得权益。
+旧公开Pricing通过 Browser → BFF → GET /plans；商品目录通过服务端BFF调用 GET /v1/subscription/products，不需要用户Bearer，但Platform Key只允许留在服务端。商品接口返回固定商品的价格、期限、启用和购买就绪原因，不返回provider ID、platform config、兑换库存或Secret；Free/paid展示不意味着用户已获得权益。
 
 Admin独立 /admin/api/v1：platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、config-files、audit、deletion-jobs。所有入口强制Admin鉴权；Grant/revoke/pause/resume、批次交付及Key操作的高风险规则不可由前端参数关闭。Admin文件列表的可选 `platform_id` 在受控SQL边界内先于分页过滤；Admin不提供直接更新Projection或任意SQL入口。
 
@@ -106,6 +107,7 @@ await account.plans.list(); // 公开套餐，不传userToken
 const p = await account.principal.get(userToken);
 if (p.platformStatus !== 'active' || p.accountStatus !== 'active') deny();
 await account.activate(userToken);
+const products = await account.listSubscriptionProducts(); // server-only Platform Key boundary
 await account.subscription.redeem(userToken, { code, idempotencyKey });
 await account.configFiles.createUploadIntent(userToken, input, { idempotencyKey });
 // uploadContent只接受V1有界字节/可控流，不返回或传递Storage Secret

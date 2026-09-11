@@ -66,6 +66,29 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
+          if (
+            query.startsWith(
+              'select * from private.subscription_products_list',
+            )
+          ) {
+            return [
+              {
+                product_code: 'lifetime',
+                product_name: 'Lifetime',
+                product_description: '一次性购买，权益期限为 99 年',
+                price_amount: '999.00',
+                currency: 'CNY',
+                term_kind: 'finite',
+                duration_value: 99,
+                duration_unit: 'year',
+                price_version: 1,
+                recommended: false,
+                enabled: true,
+                purchasable: false,
+                reason: 'provider_mapping_unavailable',
+              },
+            ] as unknown as R[];
+          }
           if (query.startsWith('select * from private.account_principal')) {
             return [
               {
@@ -189,6 +212,31 @@ function fakeDatabase() {
                 platform_id: platformId,
                 status: 'disabled',
                 allow_activation: false,
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
+              'select * from private.admin_subscription_config_read',
+            ) ||
+            query.startsWith(
+              'select * from private.admin_subscription_config_patch',
+            )
+          ) {
+            return [
+              {
+                platform_id: platformId,
+                paid_plan_id: keyId,
+                paid_plan_code: 'pro',
+                paid_plan_name: 'Pro',
+                paid_plan_status: 'active',
+                monthly_enabled: true,
+                yearly_enabled: false,
+                lifetime_enabled: true,
+                subscription_copy_override: null,
+                row_version: 3,
+                preflight_blocked_reason: null,
+                preflight_blocking_count: 0,
               },
             ] as unknown as R[];
           }
@@ -326,6 +374,24 @@ Deno.test('Account API validates the Platform Key boundary before public plans',
   assertEquals(response.status, 200);
   assertEquals((await response.json()).data[0].code, 'free');
   assertEquals(response.headers.get('cache-control'), 'no-store');
+});
+
+Deno.test('Account API exposes products without a bearer session and preserves purchase readiness', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/products',
+      { headers: { 'X-Platform-Key': `phk_v1_${keyId}_fixture` } },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+    },
+  );
+  assertEquals(response.status, 200);
+  const payload = await response.json();
+  assertEquals(payload.data[0].term.duration_value, 99);
+  assertEquals(payload.data[0].purchasable, false);
+  assertEquals(payload.data[0].reason, 'provider_mapping_unavailable');
 });
 
 Deno.test('Account API accepts the Edge runtime function-name path prefix', async () => {
@@ -792,6 +858,41 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(deployment.status, 200);
   assertEquals((await deployment.json()).data.status, 'active');
+});
+
+Deno.test('Account API exposes subscription config ETags and step-up mutation boundary', async () => {
+  const base =
+    'http://local/functions/v1/account-api/admin/api/v1/platforms/' +
+    `${platformId}/subscription-config`;
+  const get = await handleRequest(
+    new Request(base, { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(get.status, 200);
+  assertEquals(get.headers.get('etag'), 'W/"3"');
+
+  const patch = await handleRequest(
+    new Request(base, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${fakeJwt('aal2')}`,
+        'X-Recent-Auth-Proof': keyId,
+        'If-Match': 'W/"3"',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        paid_plan_id: keyId,
+        monthly_enabled: true,
+        yearly_enabled: false,
+        lifetime_enabled: true,
+        subscription_copy_override: null,
+        reason: 'fixture update',
+      }),
+    }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(patch.status, 200);
+  assertEquals(patch.headers.get('etag'), 'W/"3"');
 });
 
 Deno.test('Account API exposes Global Delete job start and list wrappers', async () => {

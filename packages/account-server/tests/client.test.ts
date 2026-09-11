@@ -35,6 +35,27 @@ describe('account API server client', () => {
     });
   });
 
+  it('lists subscription products through the server-only Platform Key boundary', async () => {
+    const requests: string[] = [];
+    const client = createAccountApiClient({
+      baseUrl: 'https://account.example.invalid',
+      platformKey: 'phk_test_server_only',
+      fetcher: async (url) => {
+        requests.push(url);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: [], request_id: 'products-1' }),
+        };
+      },
+    });
+
+    await expect(client.listSubscriptionProducts()).resolves.toEqual([]);
+    expect(requests).toEqual([
+      'https://account.example.invalid/v1/subscription/products',
+    ]);
+  });
+
   it('forwards the independently verified reauthentication token only as a header', async () => {
     const requests: Array<{
       url: string;
