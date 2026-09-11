@@ -57,7 +57,7 @@
 - 验证命令：`pnpm test:billing:crypto` PASS；`pnpm test:billing:crypto:deno` PASS；`pnpm --filter @kit/domain test:unit --run` PASS（2 files/6 tests）；`pnpm --filter @kit/domain typecheck` PASS；串行 `pnpm typecheck` PASS（9/9）；串行 `pnpm build` PASS（admin/template-preview 成功，保留既有导出 warning）。
 - 全量 `pnpm test:unit` 未通过：已执行的 domain/ui/account-auth/account-server/account-auth-nextjs 测试通过，`template-preview` 因没有测试文件按 Vitest 返回失败；不将其记为 PASS。全量 `pnpm lint` 与 `pnpm format:check` 仍为基线失败，详见执行基线。
 - 覆盖范围：静态类型和本地单测/固定向量；未覆盖真实 Provider、Local DB、调度、生产观察。
-- 代码commit、push结果、远端SHA：待本阶段提交后更新。
+- 代码commit：`20a28ed`（`feat(billing): establish provider-neutral contract foundation`）；已 push 到 `origin/codex/billing-architecture-review`，远端 SHA 核对为 `20a28ed`。
 - 未完成/阻塞/下一满足依赖任务：真实 Provider 协议与最小联调缺失，保持 purchasable/真实购买关闭；下一满足依赖任务为 BILL-02，但仍需单独派发。
 
 实现时逐阶段追加，不覆盖失败历史；记录自身SHA可单独提交，不循环amend。
