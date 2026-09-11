@@ -1,6 +1,6 @@
 begin;
 
-select plan(65);
+select plan(66);
 
 select has_table('public', 'billing_provider_accounts', 'provider account table exists');
 select has_table('public', 'billing_provider_products', 'provider product mapping table exists');
@@ -93,6 +93,13 @@ select is(
     row('00000000-0000-4000-8000-000000000406', 'bill04-test-worker', 1, '00000000-0000-4000-8000-000000000407')::private.job_context,
     (select id from public.billing_processing_jobs), 1, 'completed', null, null
   )), 'completed', 'finish releases a completed job'
+);
+select throws_ok(
+  $$select * from private.billing_processing_job_finish(
+    row('00000000-0000-4000-8000-000000000406', 'bill04-test-worker', 2, '00000000-0000-4000-8000-000000000407')::private.job_context,
+    (select id from public.billing_processing_jobs), 1, 'completed', null, null
+  )$$,
+  '22023', 'invalid_input', 'finish requires context fence to match submitted fence'
 );
 select throws_ok(
   $$select * from private.billing_processing_job_finish(

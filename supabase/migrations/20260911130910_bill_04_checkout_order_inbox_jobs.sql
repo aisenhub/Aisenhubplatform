@@ -548,7 +548,10 @@ security definer
 set search_path = pg_catalog, private, public
 as $$
 begin
-  if (p_ctx).lease_owner is null or length((p_ctx).lease_owner) not between 1 and 128
+  if (p_ctx).job_id is null or (p_ctx).lease_owner is null
+     or length((p_ctx).lease_owner) not between 1 and 128
+     or (p_ctx).fencing_token is null or (p_ctx).fencing_token < 1
+     or (p_ctx).request_id is null
      or p_limit is null or p_limit not between 1 and 100 then
     raise exception using errcode = '22023', message = 'invalid_input';
   end if;
@@ -591,7 +594,10 @@ security definer
 set search_path = pg_catalog, private, public
 as $$
 begin
-  if p_job_id is null or p_fence is null or p_state not in ('retryable', 'completed', 'manual_review') then
+  if (p_ctx).job_id is null or (p_ctx).lease_owner is null
+     or (p_ctx).fencing_token is null or (p_ctx).request_id is null
+     or p_job_id is null or p_fence is null or p_fence <> (p_ctx).fencing_token
+     or p_state not in ('retryable', 'completed', 'manual_review') then
     raise exception using errcode = '22023', message = 'invalid_input';
   end if;
   return query
