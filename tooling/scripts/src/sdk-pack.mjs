@@ -45,6 +45,14 @@ function run(command, args, cwd) {
   });
 }
 
+function runDirect(command, args, cwd) {
+  execFileSync(command, args, {
+    cwd,
+    env: { ...process.env, COREPACK_ENABLE_DOWNLOAD_PROMPT: '0' },
+    stdio: 'inherit',
+  });
+}
+
 function sourceFiles(directory) {
   const result = [];
   const visit = (current) => {
@@ -66,8 +74,21 @@ function sha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
+function stableJson(value) {
+  if (Array.isArray(value)) return value.map(stableJson);
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, stableJson(entry)]),
+  );
+}
+
 rmSync(destination, { recursive: true, force: true });
 mkdirSync(destination, { recursive: true });
+const rawDestination = join(destination, '.raw');
+const stagingRoot = join(destination, '.pack-staging');
 
 const artifacts = [];
 for (const packageName of packageNames) {
@@ -109,10 +130,45 @@ for (const packageName of packageNames) {
     packageDirectory,
   );
 
+  const packageSlug = packageName.replaceAll('/', '-');
+  const rawPackageDestination = join(rawDestination, packageSlug);
+  const stagingDirectory = join(stagingRoot, packageSlug);
+  const stagingPackageDirectory = join(stagingDirectory, 'package');
+  mkdirSync(rawPackageDestination, { recursive: true });
+  mkdirSync(stagingDirectory, { recursive: true });
+
+  run(
+    packageManager(),
+    ['pack', '--pack-destination', rawPackageDestination],
+    packageDirectory,
+  );
+
+  const rawTarball = join(
+    rawPackageDestination,
+    `${packageJson.name.replace(/^@/u, '').replaceAll('/', '-')}-${packageJson.version}.tgz`,
+  );
+  if (!existsSync(rawTarball))
+    throw new Error(`SDK raw tarball was not created: ${rawTarball}`);
+
+  runDirect(process.platform === 'win32' ? 'tar.exe' : 'tar', [
+    '-xf',
+    rawTarball,
+    '-C',
+    stagingDirectory,
+  ]);
+  const stagedPackageJsonPath = join(stagingPackageDirectory, 'package.json');
+  const stagedPackageJson = JSON.parse(
+    readFileSync(stagedPackageJsonPath, 'utf8'),
+  );
+  writeFileSync(
+    stagedPackageJsonPath,
+    `${JSON.stringify(stableJson(stagedPackageJson), null, 2)}\n`,
+  );
+
   run(
     packageManager(),
     ['pack', '--pack-destination', destination],
-    packageDirectory,
+    stagingPackageDirectory,
   );
 
   const tarball = join(
@@ -128,6 +184,9 @@ for (const packageName of packageNames) {
     sha256: sha256(tarball),
   });
 }
+
+rmSync(rawDestination, { recursive: true, force: true });
+rmSync(stagingRoot, { recursive: true, force: true });
 
 writeFileSync(
   join(destination, 'manifest.json'),
