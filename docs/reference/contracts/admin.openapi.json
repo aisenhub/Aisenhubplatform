@@ -466,6 +466,87 @@
         }
       }
     },
+    "/admin/api/v1/billing/orders": {
+      "get": {
+        "operationId": "adminListBillingOrders",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/BillingCursor" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/BillingStatus" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/api/v1/billing/orders/{orderId}": {
+      "get": {
+        "operationId": "adminGetBillingOrder",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/BillingOrderId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/billing/orders/{orderId}/requery": {
+      "post": {
+        "operationId": "adminRequeryBillingOrder",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/BillingOrderId" },
+          { "$ref": "#/components/parameters/IfMatch" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "202": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" }
+        }
+      }
+    },
+    "/admin/api/v1/billing/orders/{orderId}/resolve": {
+      "post": {
+        "operationId": "adminResolveBillingOrder",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/BillingOrderId" },
+          { "$ref": "#/components/parameters/IfMatch" }
+        ],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" }
+        }
+      }
+    },
+    "/admin/api/v1/billing/metrics": {
+      "get": {
+        "operationId": "adminGetBillingMetrics",
+        "security": [{ "adminBearer": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/api/v1/billing/provider-products": {
+      "get": {
+        "operationId": "adminListBillingProviderProducts",
+        "security": [{ "adminBearer": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
     "/admin/api/v1/deletion-jobs": {
       "get": {
         "operationId": "adminListDeletionJobs",
@@ -571,6 +652,27 @@
         "name": "cursor",
         "in": "query",
         "required": false,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "BillingCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "format": "date-time" }
+      },
+      "BillingStatus": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["pending", "retryable", "manual_review", "finalized", "granted", "rejected"]
+        }
+      },
+      "BillingOrderId": {
+        "name": "orderId",
+        "in": "path",
+        "required": true,
         "schema": { "type": "string", "format": "uuid" }
       },
       "AccountId": {

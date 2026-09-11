@@ -318,6 +318,58 @@ export class AccountApiError extends Error {
   }
 }
 
+export type ProtectedFeatureAuthorization =
+  | { readonly ok: true; readonly entitlement: EntitlementDto }
+  | {
+      readonly ok: false;
+      readonly code:
+        | 'ACCOUNT_SUSPENDED'
+        | 'ENTITLEMENT_REQUIRED'
+        | 'AUTHORIZATION_UNAVAILABLE';
+      readonly requestId: string | null;
+    };
+
+/**
+ * Server-only authorization boundary for Consumer features. The central API
+ * remains authoritative for status and expiry; this helper never evaluates a
+ * local timestamp or trusts a browser-provided plan flag.
+ */
+export async function authorizeProtectedFeature(input: {
+  readonly client: Pick<AccountApiClient, 'getSubscription'>;
+  readonly accessToken: string;
+  readonly feature?: string;
+}): Promise<ProtectedFeatureAuthorization> {
+  try {
+    const entitlement = await input.client.getSubscription(input.accessToken);
+    if (entitlement.effective_status !== 'active') {
+      return {
+        ok: false,
+        code:
+          entitlement.effective_status === 'suspended'
+            ? 'ACCOUNT_SUSPENDED'
+            : 'ENTITLEMENT_REQUIRED',
+        requestId: null,
+      };
+    }
+    if (
+      input.feature &&
+      entitlement.features[input.feature] !== true
+    ) {
+      return { ok: false, code: 'ENTITLEMENT_REQUIRED', requestId: null };
+    }
+    return { ok: true, entitlement };
+  } catch (error) {
+    if (error instanceof AccountApiError) {
+      return {
+        ok: false,
+        code: 'AUTHORIZATION_UNAVAILABLE',
+        requestId: error.requestId,
+      };
+    }
+    return { ok: false, code: 'AUTHORIZATION_UNAVAILABLE', requestId: null };
+  }
+}
+
 export function createAccountApiClient(input: {
   readonly baseUrl: string;
   readonly platformKey: string;

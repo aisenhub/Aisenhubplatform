@@ -159,6 +159,34 @@ function fakeDatabase() {
               },
             ] as unknown as R[];
           }
+          if (
+            query.startsWith('select * from private.admin_billing_order_list')
+          ) {
+            return [
+              {
+                order_id: keyId,
+                provider: 'afdian',
+                provider_order_no: 'provider-order-1',
+                provider_status: 'paid',
+                verification_status: 'verified',
+                entitlement_status: 'granted',
+                linkage_status: 'linked',
+                resolution_status: 'open',
+                settlement_state: 'finalized',
+                settlement_kind: 'automatic',
+                decision_code: 'granted',
+                admin_version: 1,
+                created_at: '2026-09-11T00:00:00.000Z',
+                updated_at: '2026-09-11T00:00:00.000Z',
+              },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.admin_billing_metrics'))
+            return [{ pending_count: 0, retryable_count: 1, manual_review_count: 0, duplicate_payment_count: 0, oldest_pending_age_seconds: 0 }] as unknown as R[];
+          if (query.startsWith('select * from private.admin_billing_order_read'))
+            return [{ order_id: keyId, provider_order_no: 'provider-order-1', admin_version: 1, provider_facts: {}, open_job_count: 0 }] as unknown as R[];
+          if (query.startsWith('select * from private.admin_billing_order_requery'))
+            return [{ order_id: keyId, job_id: sessionId, state: 'pending', admin_version: 1, replayed: false }] as unknown as R[];
           if (query.startsWith('select * from private.admin_audit_list')) {
             return [
               {
@@ -927,6 +955,40 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(deployment.status, 200);
   assertEquals((await deployment.json()).data.status, 'active');
+});
+
+Deno.test('Account API exposes central Billing order and requery wrappers', async () => {
+  const base = 'http://local/functions/v1/account-api/admin/api/v1/billing';
+  const auth = { Authorization: `Bearer ${fakeJwt('aal2')}` };
+  const list = await handleRequest(
+    new Request(`${base}/orders?limit=20`, { headers: auth }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(list.status, 200);
+  assertEquals((await list.json()).data[0].decision_code, 'granted');
+
+  const metrics = await handleRequest(
+    new Request(`${base}/metrics`, { headers: auth }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(metrics.status, 200);
+  assertEquals((await metrics.json()).data.retryable_count, 1);
+
+  const requery = await handleRequest(
+    new Request(`${base}/orders/${keyId}/requery`, {
+      method: 'POST',
+      headers: {
+        ...auth,
+        'X-Recent-Auth-Proof': keyId,
+        'If-Match': 'W/"1"',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ operation_id: sessionId, reason: 'fixture requery' }),
+    }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(requery.status, 202);
+  assertEquals((await requery.json()).data.state, 'pending');
 });
 
 Deno.test('Account API exposes subscription config ETags and step-up mutation boundary', async () => {

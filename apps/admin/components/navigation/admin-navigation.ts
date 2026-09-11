@@ -1,6 +1,7 @@
 import {
   Activity,
   Boxes,
+  CreditCard,
   LayoutDashboard,
   LockKeyhole,
   ScrollText,
@@ -33,6 +34,12 @@ export const adminNavigationGroups: Array<{
         href: '/admin/platforms',
         description: '管理平台、账户和平台密钥',
         icon: Boxes,
+      },
+      {
+        label: '中央 Billing',
+        href: '/admin/billing',
+        description: '订单、结算、Provider mapping 与人工处理',
+        icon: CreditCard,
       },
     ],
   },

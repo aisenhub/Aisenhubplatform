@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   authorizeAccountRequest,
   authorizeAdminRequest,
+  authorizeProtectedFeature,
   generatePlatformKeyMaterial,
   generateRedemptionCodes,
   normalizeOrigin,
@@ -65,6 +66,39 @@ describe('server authorization guards', () => {
       expectedUserId: 'admin-1',
     });
     expect(denied.ok ? undefined : denied.code).toBe('UNAUTHORIZED');
+  });
+
+  it('uses the central entitlement result for server-side feature authorization', async () => {
+    const entitlement = {
+      effective_status: 'active' as const,
+      entitlement_kind: 'term' as const,
+      plan: null,
+      features: { advanced_config: true },
+      started_at: '2026-09-11T00:00:00Z',
+      current_period_end: '2026-10-11T00:00:00Z',
+      evaluated_at: '2026-09-11T12:00:00Z',
+      next_transition_at: '2026-10-11T00:00:00Z',
+    };
+    const client = { getSubscription: async () => entitlement };
+    await expect(
+      authorizeProtectedFeature({
+        client,
+        accessToken: 'server-token',
+        feature: 'advanced_config',
+      }),
+    ).resolves.toEqual({ ok: true, entitlement });
+    await expect(
+      authorizeProtectedFeature({
+        client: {
+          getSubscription: async () => ({
+            ...entitlement,
+            effective_status: 'none' as const,
+          }),
+        },
+        accessToken: 'server-token',
+        feature: 'advanced_config',
+      }),
+    ).resolves.toMatchObject({ ok: false, code: 'ENTITLEMENT_REQUIRED' });
   });
 
   it('generates non-repeatable HMAC-backed key material and validates origins', () => {

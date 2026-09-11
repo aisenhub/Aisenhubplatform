@@ -5,132 +5,235 @@ import type { FormEvent } from 'react';
 
 import { ConsumerShell, Icon } from '../../components/consumer-shell';
 
-const plans = [
-  {
-    code: 'free',
-    name: '免费版',
-    price: '¥0',
-    unit: '/ 永久',
-    description: '适合个人体验，满足基础配置管理需求。',
-    features: ['基础功能使用', '有限的配置空间', '个人使用'],
-    accent: 'sage',
-    recommended: false,
-  },
-  {
-    code: 'monthly',
-    name: '月订阅',
-    price: '¥9.9',
-    unit: '/ 月',
-    description: '灵活订阅，适合短期项目和阶段性使用。',
-    features: ['解锁更多高级功能', '更大的配置空间', '优先技术支持'],
-    accent: 'green',
-    recommended: false,
-  },
-  {
-    code: 'yearly',
-    name: '年订阅',
-    price: '¥19.9',
-    unit: '/ 年',
-    description: '适合长期使用，享受更完整的功能体验。',
-    features: ['包含全部高级功能', '更大的配置空间', '优先技术支持'],
-    accent: 'green',
-    recommended: true,
-  },
-  {
-    code: 'lifetime',
-    name: '永久订阅',
-    price: '¥29.9',
-    unit: '/ 永久',
-    description: '一次开通，长期使用，适合深度用户。',
-    features: ['包含全部高级功能', '永久的配置空间', '长期技术支持'],
-    accent: 'clay',
-    recommended: false,
-  },
-] as const;
-
-const activationCodePattern = /^[A-Z0-9]{4}(?:-[A-Z0-9]{4}){3}$/;
-type RedemptionState = 'idle' | 'invalid' | 'checking' | 'error';
-
-const afdianPaymentUrl =
-  'https://www.afdian.com/order/create?product_type=1&plan_id=f1ca79cc99bb11f1a5055254001e7c00&sku=%5B%7B%22sku_id%22%3A%22f1d2427e99bb11f19e8f5254001e7c00%22%2C%22count%22%3A1%7D%5D&custom_order_id=O20260911868A24F263F7';
-
-type PendingPayment = {
-  code: string;
+type Product = {
+  code: 'free' | 'monthly' | 'yearly' | 'lifetime';
   name: string;
-  url: string;
+  description: string | null;
+  price: string;
+  term: { duration_value: number | null; duration_unit: string | null };
+  recommended: boolean;
+  purchasable: boolean;
+  enabled: boolean;
+  accent: 'sage' | 'green' | 'clay';
+  features: string[];
 };
 
+type Entitlement = {
+  effective_status: 'active' | 'none' | 'suspended';
+  plan: { code: string; name: string } | null;
+};
+
+const activationCodePattern = /^[A-Z0-9-]{16,159}$/u;
+type RedemptionState = 'idle' | 'invalid' | 'checking' | 'error';
+
+type PendingPayment = {
+  checkoutId: string;
+  code: string;
+  name: string;
+  status: string;
+  url: string | null;
+};
+
+function accentFor(code: string): Product['accent'] {
+  if (code === 'free') return 'sage';
+  if (code === 'lifetime') return 'clay';
+  return 'green';
+}
+
+function featureCopy(code: string): string[] {
+  if (code === 'free') return ['基础功能使用', '有限的配置空间', '个人使用'];
+  return ['解锁更多高级功能', '更大的配置空间', '服务端权威权益'];
+}
+
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const csrf =
+    typeof document === 'undefined'
+      ? null
+      : document.cookie
+          .split('; ')
+          .find((entry) => entry.startsWith('aisenhub-consumer-csrf='))
+          ?.slice('aisenhub-consumer-csrf='.length) ?? null;
+  const response = await fetch(`/api/${path}`, {
+    ...init,
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      ...(csrf ? { 'x-csrf-token': decodeURIComponent(csrf) } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    data?: T;
+    error?: { code?: string };
+  } | null;
+  if (!response.ok || !payload?.data)
+    throw new Error(payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE');
+  return payload.data;
+}
+
 export default function SubscriptionPage() {
+  const [plans, setPlans] = useState<Product[]>([]);
   const [currentPlan, setCurrentPlan] = useState('free');
   const [feedback, setFeedback] = useState('当前使用免费版');
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(
     null,
   );
-  const [lifetimeNoticeOpen, setLifetimeNoticeOpen] = useState(false);
   const [paymentFeedback, setPaymentFeedback] = useState('');
   const [activationCode, setActivationCode] = useState('');
   const [redemptionState, setRedemptionState] =
     useState<RedemptionState>('idle');
   const [redemptionMessage, setRedemptionMessage] = useState('');
 
-  useEffect(() => {
-    if (!lifetimeNoticeOpen) return;
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setLifetimeNoticeOpen(false);
-    }
-
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [lifetimeNoticeOpen]);
-
-  function choosePlan(name: string, code: string) {
-    if (code === currentPlan || pendingPayment) return;
-
-    if (code === 'lifetime') {
-      setLifetimeNoticeOpen(true);
-      return;
-    }
-
-    setPendingPayment({ code, name, url: afdianPaymentUrl });
-    setPaymentFeedback('');
-    setFeedback(`等待支付 · ${name}`);
-
-    const paymentWindow = window.open(
-      afdianPaymentUrl,
-      '_blank',
-      'noopener,noreferrer',
+  async function refreshSubscription() {
+    const entitlement = await api<Entitlement>('v1/subscription');
+    const planCode = entitlement.plan?.code ?? 'free';
+    setCurrentPlan(planCode);
+    setFeedback(
+      entitlement.effective_status === 'active'
+        ? `服务端已确认 · ${entitlement.plan?.name ?? '当前方案'}`
+        : entitlement.effective_status === 'suspended'
+          ? '账户已暂停，权益不再生效'
+          : '当前使用免费版',
     );
+  }
 
-    if (!paymentWindow) {
-      setPaymentFeedback('浏览器拦截了新窗口，请点击下方“点此打开”。');
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [products] = await Promise.all([
+          api<Array<Record<string, unknown>>>('v1/subscription/products'),
+          refreshSubscription(),
+        ]);
+        if (cancelled) return;
+        setPlans(
+          products.map((product) => {
+            const code = String(product.code) as Product['code'];
+            const term = (product.term ?? {}) as Product['term'];
+            return {
+              code,
+              name: String(product.name ?? code),
+              description:
+                typeof product.description === 'string'
+                  ? product.description
+                  : null,
+              price: `¥${String(product.price ?? '0.00')}`,
+              term,
+              recommended: product.recommended === true,
+              purchasable: product.purchasable === true,
+              enabled: product.enabled !== false,
+              accent: accentFor(code),
+              features: featureCopy(code),
+            };
+          }),
+        );
+      } catch (error) {
+        if (!cancelled)
+          setFeedback(
+            error instanceof Error && error.message === 'UNAUTHORIZED'
+              ? '请先登录后查看订阅状态'
+              : '订阅服务暂时不可用，请稍后刷新',
+          );
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingPayment) return;
+    let cancelled = false;
+    let attempts = 0;
+    async function poll() {
+      attempts += 1;
+      try {
+        const checkout = await api<{
+          status: string;
+          paid_at: string | null;
+          granted_at: string | null;
+        }>(`v1/subscription/checkout/${pendingPayment!.checkoutId}`);
+        if (cancelled) return;
+        setPendingPayment((current) =>
+          current ? { ...current, status: checkout.status } : current,
+        );
+        if (checkout.status === 'granted') {
+          setPaymentFeedback('支付已确认，权益已由服务端开通。');
+          setPendingPayment(null);
+          await refreshSubscription();
+        } else if (checkout.status === 'review_required' || checkout.status === 'resolved') {
+          setPaymentFeedback('订单需要人工处理，请保留订单号并稍后查看。');
+        } else if (checkout.status === 'expired') {
+          setPaymentFeedback('付款意图已过期，请重新创建订单。');
+        }
+      } catch {
+        if (!cancelled) setPaymentFeedback('暂时无法读取订单状态，请稍后重试。');
+      }
+      if (attempts >= 12) clearInterval(timer);
+    }
+    const timer = window.setInterval(() => void poll(), 4000);
+    void poll();
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [pendingPayment?.checkoutId]);
+
+  async function choosePlan(name: string, code: string) {
+    if (code === currentPlan || pendingPayment) return;
+    const idempotencyKey = crypto.randomUUID();
+    setPaymentFeedback('正在创建服务端定价订单…');
+    try {
+      const checkout = await api<{
+        checkout_id: string;
+        status: string;
+        product_code: string;
+        payment_url: string | null;
+      }>('v1/subscription/checkout', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ product_code: code }),
+      });
+      setPendingPayment({
+        checkoutId: checkout.checkout_id,
+        code,
+        name,
+        status: checkout.status,
+        url: checkout.payment_url,
+      });
+      setFeedback(`等待支付 · ${name}`);
+      setPaymentFeedback(
+        checkout.payment_url
+          ? '订单已创建，付款完成后页面会自动刷新状态。'
+          : '订单已创建，当前 Provider 付款入口尚未配置。',
+      );
+      if (checkout.payment_url) {
+        const paymentWindow = window.open(
+          checkout.payment_url,
+          '_blank',
+          'noopener,noreferrer',
+        );
+        if (!paymentWindow)
+          setPaymentFeedback('浏览器拦截了新窗口，请点击下方“点此打开”。');
+      }
+    } catch (error) {
+      setPaymentFeedback(
+        error instanceof Error && error.message === 'CHECKOUT_UNAVAILABLE'
+          ? '当前套餐暂未开放付款，请稍后再试。'
+          : '订单创建失败，请稍后重试。',
+      );
     }
   }
 
   function confirmPayment() {
     if (!pendingPayment) return;
-
-    setPaymentFeedback(
-      `已提交“${pendingPayment.name}”支付确认，等待后台回调到账。`,
-    );
-    setFeedback(`支付确认已提交，等待${pendingPayment.name}权益到账`);
-    setPendingPayment(null);
+    setPaymentFeedback('正在刷新服务端订单状态…');
   }
 
   function cancelPayment() {
-    setPaymentFeedback('已取消本次支付，套餐选择已恢复。');
-    setFeedback('当前使用免费版');
+    setPaymentFeedback('已关闭本地订单面板；服务端订单不会被伪造取消。');
     setPendingPayment(null);
-  }
-
-  function goToActivationCode() {
-    setLifetimeNoticeOpen(false);
-    window.setTimeout(() => {
-      document
-        .getElementById('redemption-title')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      document.getElementById('activation-code')?.focus();
-    }, 0);
   }
 
   function redeemActivationCode(event: FormEvent<HTMLFormElement>) {
@@ -139,18 +242,31 @@ export default function SubscriptionPage() {
 
     if (!activationCodePattern.test(normalizedCode)) {
       setRedemptionState('invalid');
-      setRedemptionMessage('格式不正确，请输入 XXXX-XXXX-XXXX-XXXX');
+      setRedemptionMessage('格式不正确，请输入16至128位激活码（可带短横线）。');
       return;
     }
 
     setActivationCode(normalizedCode);
     setRedemptionState('checking');
     setRedemptionMessage('格式正确，正在向后台验证激活码…');
-
-    window.setTimeout(() => {
-      setRedemptionState('error');
-      setRedemptionMessage('当前为参考模式，后台兑换接口尚未连接。');
-    }, 650);
+    void api<Entitlement>('v1/subscription/redeem', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+      body: JSON.stringify({ code: normalizedCode }),
+    })
+      .then(async () => {
+        setRedemptionState('idle');
+        setRedemptionMessage('兑换成功，权益状态已由服务端更新。');
+        await refreshSubscription();
+      })
+      .catch((error: unknown) => {
+        setRedemptionState('error');
+        setRedemptionMessage(
+          error instanceof Error && error.message === 'CODE_EXPIRED'
+            ? '激活码已过期，请联系管理员。'
+            : '兑换失败，请检查激活码状态后重试。',
+        );
+      });
   }
 
   return (
@@ -199,7 +315,11 @@ export default function SubscriptionPage() {
                     <h2>{plan.name}</h2>
                     <div className="consumer-subscription-price">
                       <strong>{plan.price}</strong>
-                      <span>{plan.unit}</span>
+                      <span>
+                        {plan.term.duration_value
+                          ? `/ ${plan.term.duration_value} ${plan.term.duration_unit === 'year' ? '年' : '月'}`
+                          : '/ 当前'}
+                      </span>
                     </div>
                   </div>
                   {isCurrent ? (
@@ -222,10 +342,19 @@ export default function SubscriptionPage() {
                 <button
                   className={`consumer-plan-button${isCurrent ? ' is-current' : ''}`}
                   type="button"
-                  disabled={isCurrent || Boolean(pendingPayment)}
+                  disabled={
+                    isCurrent ||
+                    Boolean(pendingPayment) ||
+                    !plan.enabled ||
+                    !plan.purchasable
+                  }
                   onClick={() => choosePlan(plan.name, plan.code)}
                 >
-                  {isCurrent ? '当前使用中' : '选择方案'}
+                  {isCurrent
+                    ? '当前使用中'
+                    : !plan.enabled || !plan.purchasable
+                      ? '暂未开放'
+                      : '选择方案'}
                 </button>
               </article>
             );
@@ -253,8 +382,9 @@ export default function SubscriptionPage() {
             </div>
           </div>
           <p className="consumer-payment-description">
-            已在浏览器打开爱发电付款页（支持微信 /
-            支付宝）。支付完成后积分自动到账，无需停留在本页面。
+            {pendingPayment.url
+              ? '已在浏览器打开 Provider 付款页。支付完成后权益状态会由服务端自动确认。'
+              : '订单已保存，但 Provider 付款入口尚未配置；请稍后刷新订单状态。'}
           </p>
           {paymentFeedback ? (
             <p className="consumer-payment-feedback" role="status">
@@ -263,10 +393,14 @@ export default function SubscriptionPage() {
           ) : null}
           <div className="consumer-payment-actions">
             <span className="consumer-payment-fallback">
-              没看到付款页？
-              <a href={pendingPayment.url} target="_blank" rel="noreferrer">
-                点此打开
-              </a>
+              {pendingPayment.url ? (
+                <>
+                  没看到付款页？
+                  <a href={pendingPayment.url} target="_blank" rel="noreferrer">
+                    点此打开
+                  </a>
+                </>
+              ) : null}
             </span>
             <div className="consumer-payment-buttons">
               <button
@@ -274,7 +408,7 @@ export default function SubscriptionPage() {
                 type="button"
                 onClick={confirmPayment}
               >
-                我已完成支付
+                刷新订单状态
               </button>
               <button
                 className="consumer-button consumer-button-secondary"
@@ -292,58 +426,6 @@ export default function SubscriptionPage() {
         <p className="consumer-payment-feedback is-after" role="status">
           {paymentFeedback}
         </p>
-      ) : null}
-
-      {lifetimeNoticeOpen ? (
-        <div
-          className="consumer-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) {
-              setLifetimeNoticeOpen(false);
-            }
-          }}
-        >
-          <section
-            className="consumer-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="lifetime-notice-title"
-          >
-            <button
-              className="consumer-modal-close"
-              type="button"
-              aria-label="关闭提示"
-              onClick={() => setLifetimeNoticeOpen(false)}
-            >
-              ×
-            </button>
-            <span className="consumer-modal-icon">
-              <Icon name="infinity" size={22} />
-            </span>
-            <p className="consumer-overline">永久订阅</p>
-            <h2 id="lifetime-notice-title">请联系管理员开通</h2>
-            <p className="consumer-modal-description">
-              永久订阅暂不支持爱发电自动付款，请联系管理员获取对应的永久订阅激活码。
-            </p>
-            <div className="consumer-modal-actions">
-              <button
-                className="consumer-button consumer-button-primary"
-                type="button"
-                onClick={goToActivationCode}
-              >
-                去兑换激活码
-              </button>
-              <button
-                className="consumer-button consumer-button-secondary"
-                type="button"
-                onClick={() => setLifetimeNoticeOpen(false)}
-              >
-                我知道了
-              </button>
-            </div>
-          </section>
-        </div>
       ) : null}
 
       <section

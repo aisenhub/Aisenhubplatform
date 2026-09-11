@@ -1196,6 +1196,89 @@ async function dispatchAdmin(
           : null,
     };
   }
+  if (path === 'admin/api/v1/billing/orders' && request.method === 'GET') {
+    const cursorValue = url.searchParams.get('cursor');
+    const cursor = cursorValue === null ? null : new Date(cursorValue);
+    if (cursor !== null && Number.isNaN(cursor.getTime()))
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_billing_order_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::integer, $6::text)',
+      [
+        ...context,
+        cursor === null ? null : cursor.toISOString(),
+        boundedLimit(url.searchParams.get('limit')),
+        url.searchParams.get('status'),
+      ],
+    );
+    return {
+      status: 200,
+      data: rows,
+      next_cursor: rows.length === boundedLimit(url.searchParams.get('limit'))
+        ? isoDate(rows.at(-1)?.created_at)
+        : null,
+    };
+  }
+  if (path === 'admin/api/v1/billing/metrics' && request.method === 'GET') {
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_billing_metrics(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context)',
+      context,
+    );
+    return { status: 200, data: result ?? null };
+  }
+  if (path === 'admin/api/v1/billing/provider-products' && request.method === 'GET') {
+    const providerAccountId = url.searchParams.get('provider_account_id');
+    if (providerAccountId !== null && !uuidValue(providerAccountId))
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_billing_provider_product_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+      [...context, providerAccountId === null ? null : uuidValue(providerAccountId)],
+    );
+    return { status: 200, data: rows };
+  }
+  const billingOrderMatch = /^admin\/api\/v1\/billing\/orders\/([^/]+)$/u.exec(path);
+  if (billingOrderMatch && UUID.test(billingOrderMatch[1]!) && request.method === 'GET') {
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_billing_order_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+      [...context, billingOrderMatch[1]],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return {
+      status: 200,
+      data: result,
+      headers: Number.isSafeInteger(Number(result.admin_version))
+        ? { ETag: `W/"${Number(result.admin_version)}"` }
+        : undefined,
+    };
+  }
+  const billingRequeryMatch = /^admin\/api\/v1\/billing\/orders\/([^/]+)\/requery$/u.exec(path);
+  if (billingRequeryMatch && UUID.test(billingRequeryMatch[1]!) && request.method === 'POST') {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const operationId = uuidValue(input.operation_id);
+    const reason = stringValue(input.reason);
+    if (!operationId || !reason) throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_billing_order_requery(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::bigint, $7::text)',
+      [...context, billingRequeryMatch[1], operationId, expectedVersion(request), reason],
+    );
+    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 202, data: result };
+  }
+  const billingResolveMatch = /^admin\/api\/v1\/billing\/orders\/([^/]+)\/resolve$/u.exec(path);
+  if (billingResolveMatch && UUID.test(billingResolveMatch[1]!) && request.method === 'POST') {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const operationId = uuidValue(input.operation_id);
+    const decision = stringValue(input.decision);
+    const reason = stringValue(input.reason);
+    if (!operationId || !decision || !reason) throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_billing_order_resolve(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::bigint, $7::text, $8::text)',
+      [...context, billingResolveMatch[1], operationId, expectedVersion(request), decision, reason],
+    );
+    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 200, data: result };
+  }
   if (path === 'admin/api/v1/deletion-jobs' && request.method === 'POST') {
     await adminStepUp(transaction, session, request);
     const requestId = uuidValue((await body(request)).request_id);
