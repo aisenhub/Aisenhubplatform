@@ -574,6 +574,9 @@ try {
     await sql`delete from public.redemption_code_batches where platform_id = ${platformId}`.catch(
       () => undefined,
     );
+    await sql`delete from public.platform_subscription_config where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
     await sql`update public.platforms set default_plan_id = null where id = ${platformId}`.catch(
       () => undefined,
     );
