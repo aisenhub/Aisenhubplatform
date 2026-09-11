@@ -25,6 +25,8 @@
 - API 使用 Developer `user_id`、API Token、请求参数 JSON、秒级 `ts` 和 `sign`；Token 只参与签名，不应作为请求字段或日志内容发送。
 - 本记录没有保存 Webhook URL，因为用户尚未提供项目的实际接收地址；也没有执行“保存”或“发送测试”。
 
+用户后来提供的实际 Checkout URL 参数、标准收款页面判断及 `custom_order_id` 回程验证边界，见 [Afdian Checkout 链接分析参考](afdian-checkout-link-analysis.md)。
+
 ## 3. 用户提供的 Webhook 调试样例（仅作字段 fixture）
 
 以下值按用户消息中的公开调试样例记录为**合成测试数据**，不能当作真实生产订单：
