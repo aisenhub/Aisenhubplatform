@@ -2,21 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
 import type { ReactNode } from 'react';
-
-import { Button } from '@kit/ui/button';
-
-import {
-  consumerAuthSession,
-  sessionErrorMessage,
-} from '../app/_lib/auth-session';
 
 const navigation = [
   { href: '/', label: '总览' },
-  { href: '/account', label: '账户' },
-  { href: '/subscription', label: '订阅' },
-  { href: '/files', label: '文件' },
+  { href: '/account', label: '设置页' },
+  { href: '/subscription', label: '套餐页' },
+  { href: '/files', label: '资源页' },
   { href: '/pricing', label: '套餐' },
 ] as const;
 
@@ -94,46 +86,8 @@ export function ConsumerShell({
 export function ConsumerFooter() {
   return (
     <footer className="consumer-footer">
-      <span>同源 BFF · 服务端权限</span>
-      <Link href="/login">登录</Link>
+      <span>参考模板 · 无登录 · 无真实用户数据</span>
+      <Link href="/pricing">查看套餐页</Link>
     </footer>
-  );
-}
-
-export function ConsumerLogoutButton() {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-
-  async function logout() {
-    setPending(true);
-    setError('');
-    try {
-      await consumerAuthSession.logout();
-      window.location.assign('/login');
-    } catch (caught) {
-      setError(sessionErrorMessage(caught));
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <div className="consumer-header-actions-group">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => void logout()}
-        disabled={pending}
-        data-test="consumer-logout"
-      >
-        {pending ? '退出中…' : '退出登录'}
-      </Button>
-      {error ? (
-        <span className="consumer-header-error" role="status">
-          {error}
-        </span>
-      ) : null}
-    </div>
   );
 }

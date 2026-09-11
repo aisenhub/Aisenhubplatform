@@ -14,11 +14,11 @@ MakerKit 仅作为工程结构、组件组织和实现边界的参考，不作�
 
 | 资源 | 领域入口 | HTTP/OpenAPI | SDK | 当前UI/消费者 | 缺口承接 |
 |---|---|---|---|---|---|
-| 平台/Origin/Key/账户 | M2 SQL与Account/Admin受控入口 | 18 Account、36 Admin已冻结；部分操作仍contract-only | `account-server`已有principal/activate/profile/preferences/subscription/redeem子集 | Admin已覆盖列表/筛选/轮换/状态页面；Consumer仍为登录、Pricing、Subscription | M5-03 Local页面与资源搜索已交付，Hosted联合验收留M5-05 |
-| Plan/订阅/批次/Code | M3 Local SQL、Account API、Admin计划/批次/订阅路由 | Admin路径已有Local-only实现，Plan/批次/订阅页面已接入 | `account-server`仅订阅读取/兑换方法 | Consumer Subscription与Redeem已有基础页；Admin覆盖Plan/批次/订阅管理 | M5-05补全新Consumer联合验收 |
-| 文件/策略/删除任务 | M4-01合同与M4-02～09 Local领域入口 | Account六个文件操作及Admin file/deletion-jobs已接入，部分托管能力仍待验证 | 尚无文件方法 | Admin文件/删除任务页面与Consumer文件页面已接入；unknown、deleting、blocked/retry原因可见 | M5-03补服务端资源搜索与细粒度原因展示；M5-05补Hosted联合验收 |
+| 平台/Origin/Key/账户 | M2 SQL与Account/Admin受控入口 | 18 Account、36 Admin已冻结；部分操作仍contract-only | `account-server`已有principal/activate/profile/preferences/subscription/redeem子集 | Admin已覆盖列表/筛选/轮换/状态页面；`template-preview`只保留公开页面和API示例，不读取账户 | M5-03 Local页面与资源搜索已交付；账户能力由具体平台按需接入 |
+| Plan/订阅/批次/Code | M3 Local SQL、Account API、Admin计划/批次/订阅路由 | Admin路径已有Local-only实现，Plan/批次/订阅页面已接入 | `account-server`仅订阅读取/兑换方法 | `template-preview`仅展示静态套餐与动作页面结构；Admin覆盖Plan/批次/订阅管理 | 真实Consumer接入不属于参考模板默认范围 |
+| 文件/策略/删除任务 | M4-01合同与M4-02～09 Local领域入口 | Account六个文件操作及Admin file/deletion-jobs已接入，部分托管能力仍待验证 | 尚无文件方法 | Admin文件/删除任务页面保留真实管理能力；`template-preview`只展示静态资源列表和API示例 | 具体平台按需接入Storage和权限 |
 | 审计 | M1事务 append 基础 | Admin audit资源已冻结并接入受控只读查询 | 尚无Admin审计SDK | Admin audit页提供服务端分页、q筛选和脱敏投影 | M5-05补全新Consumer联合验收 |
-| 用户Auth模板 | M2 Auth adapter；T12-R1已交付请求级SDK/refresh/PKCE callback | 登录/退出、signup/reset/link路径已形成Local模板 | `account-auth`/`account-auth-nextjs`职责边界已存在 | template-preview覆盖Signup/Forgot/Reset/OAuth/MFA、Pricing、Profile、Subscription、Files和UserMenu | M5-05补全新Consumer联合验收 |
+| 用户Auth能力 | M2 Auth adapter；T12-R1已交付请求级SDK/refresh/PKCE callback | Auth SDK职责边界已形成 | `account-auth`/`account-auth-nextjs`职责边界已存在 | SDK可供具体平台按需接入；`template-preview`明确不包含登录、会话或用户状态 | 具体平台自行决定是否接入Auth |
 
 ## 2. 包与构建兼容
 
@@ -33,11 +33,11 @@ MakerKit 仅作为工程结构、组件组织和实现边界的参考，不作�
 
 ## 3. 模板和安装覆盖
 
-目标Registry条目按API专题固定为：`auth-login`、`auth-signup`、`auth-forgot-password`、`auth-reset-password`、OAuth callback、`pricing-page`、`profile-settings`、`preferences-settings`、`subscription-status`、`subscription-redeem`、`config-files-manager`、`user-menu`。
+当前参考模板条目按页面专题固定为：`public-shell`、`pricing-page`、`settings-page`、`subscription-page`、`resource-list-page`、`api-adapter-example`。Auth、账户状态、订阅权益和文件Storage属于可选平台能力，不再作为`template-preview`默认页面的一部分。
 
-当前 `apps/template-preview` 已覆盖 Registry 清单中的Local页面与同源BFF路由；`apps/admin`已覆盖M5-03 Local Admin资源页面。`registry/`仅为Local metadata，不能把preview或Local metadata当正式Registry或生产部署物。模板必须只复制页面、路由和SDK胶水，不复制授权、Ledger、日期、配额、Storage或删除算法。
+当前 `apps/template-preview` 已覆盖参考模板清单中的Local公开页面与API接入示例；`apps/admin`已覆盖M5-03 Local Admin资源页面。`registry/`仅为Local metadata，不能把preview或Local metadata当正式Registry或生产部署物。模板必须只复制页面和API适配示例，不复制授权、Ledger、日期、配额、Storage或删除算法。
 
-独立Consumer的最低安装验收由M5-05承接：空Next项目从本次真实tarball和固定Registry安装，不使用workspace链接；两个不同Origin/Platform完成Auth/刷新/激活/Profile/兑换/文件/停用链路；执行typecheck/build/E2E和browser bundle Secret扫描。
+独立参考模板的最低安装验收由M5-05重新基线：空Next项目从本次真实tarball和固定Registry安装，不使用workspace链接；公开页面在无登录、无Cookie、无真实Account API的条件下完成render、typecheck/build和API示例扫描；执行browser bundle Secret扫描。
 
 ## 4. 兼容性风险与冻结点
 

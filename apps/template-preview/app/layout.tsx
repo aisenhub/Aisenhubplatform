@@ -5,7 +5,7 @@ import { ConsumerFooter } from '../components/consumer-shell';
 
 export const metadata: Metadata = {
   title: 'Aisenhub Template Preview',
-  description: 'Minimal consumer integration shell',
+  description: '公开的跨平台页面参考模板与 API 接入示例',
 };
 
 export default function RootLayout({

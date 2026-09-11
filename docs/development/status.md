@@ -6,6 +6,8 @@
 
 2026-09-10 FE-R1/DP2 本地核对：当前产品实现基线为 `c9c19f4`，最新 FE-V Local 浏览器回归测试提交同为 `c9c19f4`；FE-D02 批次边界的产品基线仍为 `54ff79727dd0b7ea734822d23db2c9b58d6fe4ea`。Frontend Phase 01–08 代码、FE-D02 Local 修复与验证已完成，本轮补齐资源 loader generation/epoch 防护、目录 400/403/404/409/412/428/429/500/503 文案矩阵、Plans/Accounts/Operations/Subscriptions 的 412/429/503/202、Files/Policy/Settings 的 412/503/202、Origins 迟到响应竞态，以及 Admin MFA 二维码 Next Image 优化，均已推送。不能再按空 main/尚未合并判断。DP2 原规划时实现基线 `31b5142421847c26e61fe733b0df67f2fecd115a`、ASU-R1 旧 main `0d42b4cd44a2c17777c33f616bd393c22ee78f16` 与更早 main `f981ca533db67e543bbe3f6d88c337b78c0199d4` 仅保留为历史快照。下方原任务 PASS 仍只代表各自报告范围；本次前端审查的剩余项见 [FE-R1 verification record](../plans/aisenhub-frontend-experience-state-upgrade-plan/frontend-experience-state-upgrade/verification-record.md)。
 
+2026-09-11 产品范围修正：按用户决定，`apps/template-preview` 已从“完整 Consumer 登录/用户状态集成模板”改为“公开页面参考模板与 API 接入示例”。旧M5-04/M5-05中关于Auth、刷新、Profile、兑换、文件和停用的验证仍是历史证据，不代表当前preview行为；新的参考模板范围需要重新执行对应Local安装验收。
+
 ## FE-R1 前端当前审查（2026-09-10）
 
 | 范围 | 当前状态 | 尚未关闭的任务/门槛 |
@@ -42,7 +44,7 @@ T12-R1已在`task/T12-R1-auth-ssr`完成代码实现并推送（`aa5089d`），�
 
 T17-R1本轮已完成可独立的网关合同配置与 Account/Admin 独立数据库 URL 选择；根据当前 Supabase 官方连接、SSL 与 Edge Functions 指南补充了 hosted 配置及验收矩阵。实际独立 executor、TLS、CA、pooler 和重新部署请求矩阵因受控 Staging 输入未提供而保持 BLOCKED/NOT_RUN，详见`evidence/T17-R1.md`；不改变远端部署，不把历史默认 `SUPABASE_DB_URL` 证据升级为通过。
 
-M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；M5-02已完成四个本地tarball的可重复构建、边界扫描、独立消费者类型检查及Node/Edge导入回归（见 `evidence/M5-02.md`）。这些产物尚未发布到npm/Registry；M5-03 Local Admin页面、受控资源搜索、审计查询、状态动作和失败原因展示已完成（见 `evidence/M5-03.md`）；M5-04 Local Registry manifest与完整Auth/用户模板已完成（见 `evidence/M5-04.md`）；M5-05已完成Local G5-L：独立Consumer从tarball安装、typecheck/build，并通过双Origin/Platform Auth/刷新/激活/Profile/兑换/文件/停用浏览器链路；Hosted双Origin/Platform E2E仍未运行（见 `evidence/M5-05.md`）。
+M5-01已完成当前资源、包exports、OpenAPI/UI事实与承接矩阵盘点（见 `m5-compatibility-matrix.md`）；M5-02已完成四个本地tarball的可重复构建、边界扫描、独立消费者类型检查及Node/Edge导入回归（见 `evidence/M5-02.md`）。这些产物尚未发布到npm/Registry；M5-03 Local Admin页面、受控资源搜索、审计查询、状态动作和失败原因展示已完成（见 `evidence/M5-03.md`）；M5-04/M5-05的旧Auth Consumer验证已完成历史范围，但不再代表当前`template-preview`；公开参考模板改造已完成代码，新的独立安装与页面回归尚未单独记为PASS。Hosted双Origin/Platform E2E仍未运行（见 `evidence/M5-05.md`）。
 
 M6-01已完成环境、Secret、联合备份屏障、manifest、墓碑和告警运维协议设计（见 `m6-operations-protocol.md`）；M6-02已补齐Local job lease/fence屏障收口、对象manifest/hash和隔离墓碑模拟（见 `evidence/M6-02.md`），但X04独立备份目标未确认，真实外部备份仍未验收；M6-03～04的真实恢复/轮换/容量告警验证仍未开始。X02/X05/X06也未确认。
 
