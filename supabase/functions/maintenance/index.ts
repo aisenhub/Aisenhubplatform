@@ -268,6 +268,31 @@ async function runCleanup(
   return response(failed ? 503 : 200, { processed: results.length, results });
 }
 
+async function cleanupIdempotency(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  if (Object.keys(input).length !== 0)
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id);
+  const [result] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.idempotency_cleanup(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, null::timestamptz, 100)',
+      [...jobContext],
+    ),
+  );
+  return response(200, {
+    deleted: result ?? { user_deleted: 0, admin_deleted: 0 },
+  });
+}
+
 async function reconcile(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -716,6 +741,8 @@ export async function handleMaintenanceRequest(
       return await runCleanup(request, dependencies, id);
     if (path === '/maintenance/v1/files/reconcile')
       return await reconcile(request, dependencies, id);
+    if (path === '/maintenance/v1/idempotency/cleanup')
+      return await cleanupIdempotency(request, dependencies, id);
     if (path === '/maintenance/v1/deletion-jobs/claim')
       return await deletionJobClaim(request, dependencies, id);
     if (path === '/maintenance/v1/deletion-jobs/step')

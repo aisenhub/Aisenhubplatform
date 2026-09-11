@@ -67,7 +67,7 @@ Auth完全不可用时不绕过认证开放Admin网页；通过基础设施运�
 
 ## 5. Durable任务与容量
 
-清理/删除重试每分钟运行，对象对账每小时分批运行，联合备份每天运行。Billing processing 使用独立的 job lease/fencing：`/maintenance/v1/billing/jobs/claim` 领取批次，`/maintenance/v1/billing/jobs/process` 在事务外调用 Provider adapter 后进入 `billing_order_query_target`/`billing_order_verify_and_settle`，`/maintenance/v1/billing/jobs/finish` 以 lease 结算成功/失败；Provider 网络等待不持有数据库事务。任务用数据库job lease、fencing_token、retry_count和next_attempt_at，禁止将Edge响应后的未跟踪Promise作为可靠任务。
+清理/删除重试每分钟运行，对象对账每小时分批运行，普通过期幂等缓存每天通过 `/maintenance/v1/idempotency/cleanup` 分批清理，联合备份每天运行。幂等清理只删除 `private.idempotency_keys` 与 `private.admin_idempotency` 的过期缓存，不删除 `billing_checkout_intents` 或 `billing_orders` 等长期交易绑定。Billing processing 使用独立的 job lease/fencing：`/maintenance/v1/billing/jobs/claim` 领取批次，`/maintenance/v1/billing/jobs/process` 在事务外调用 Provider adapter 后进入 `billing_order_query_target`/`billing_order_verify_and_settle`，`/maintenance/v1/billing/jobs/finish` 以 lease 结算成功/失败；Provider 网络等待不持有数据库事务。任务用数据库job lease、fencing_token、retry_count和next_attempt_at，禁止将Edge响应后的未跟踪Promise作为可靠任务。
 
 当前仓库调度清单只声明每分钟领取最多20个 Billing job；process/finish 由同一受控 worker 在领取后完成，不能仅凭存在HTTP入口宣称已自动调度。发现游标和处理游标独立记录，Admin metrics 同时展示两者的最后成功时间、pending/retryable/manual_review 和 oldest pending。Checkout、Webhook、后台领取和自动结算分别由 `BILLING_CHECKOUT_ENABLED`、`BILLING_WEBHOOK_INGRESS_ENABLED`、`BILLING_BACKGROUND_PROCESSING_ENABLED`、`BILLING_AUTO_SETTLEMENT_ENABLED` 控制；关闭 Checkout 不会误关已付款入站，关闭结算不会删除积压任务。真实调度密钥、Provider 限流预算、告警接收人和停机恢复演练属于 G-OPS，当前 NOT_RUN。
 

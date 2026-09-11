@@ -50,23 +50,27 @@ function database(): TestDatabase {
                             ? 'retention-candidates'
                             : query.includes('account_retention_cleanup')
                               ? 'retention-cleanup'
-                              : query.includes('billing_processing_job_claim')
-                                ? 'billing-claim'
-                                : query.includes(
-                                      'billing_processing_job_finish',
-                                    )
-                                  ? 'billing-finish'
-                                  : query.includes('billing_order_query_target')
-                                    ? 'billing-target'
+                              : query.includes('idempotency_cleanup')
+                                ? 'idempotency-cleanup'
+                                : query.includes('billing_processing_job_claim')
+                                  ? 'billing-claim'
+                                  : query.includes(
+                                        'billing_processing_job_finish',
+                                      )
+                                    ? 'billing-finish'
                                     : query.includes(
-                                          'billing_order_verify_and_settle',
+                                          'billing_order_query_target',
                                         )
-                                      ? 'billing-verify'
+                                      ? 'billing-target'
                                       : query.includes(
-                                            'deletion_job_backup_barrier_guard',
+                                            'billing_order_verify_and_settle',
                                           )
-                                        ? 'barrier-guard'
-                                        : 'finish',
+                                        ? 'billing-verify'
+                                        : query.includes(
+                                              'deletion_job_backup_barrier_guard',
+                                            )
+                                          ? 'barrier-guard'
+                                          : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -101,6 +105,8 @@ function database(): TestDatabase {
             return [
               { platform_account_id: accountId, action: 'cleaned' },
             ] as unknown as T[];
+          if (query.includes('idempotency_cleanup'))
+            return [{ user_deleted: 1, admin_deleted: 1 }] as unknown as T[];
           if (query.includes('billing_processing_job_claim'))
             return [
               {
@@ -347,6 +353,27 @@ Deno.test('maintenance claims and finishes billing jobs with a worker lease', as
     'role',
     'billing-finish',
   ]);
+});
+
+Deno.test('maintenance cleans only expired seven-day idempotency caches', async () => {
+  events.length = 0;
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/idempotency/cleanup', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    }),
+    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data.deleted, {
+    user_deleted: 1,
+    admin_deleted: 1,
+  });
+  assertEquals(events, ['begin', 'role', 'idempotency-cleanup']);
 });
 
 Deno.test('maintenance stop switches leave leases and provider state untouched', async () => {

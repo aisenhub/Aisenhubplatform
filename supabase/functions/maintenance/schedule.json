@@ -24,6 +24,12 @@
       "route": "/maintenance/v1/billing/jobs/claim",
       "cadence": "every-minute",
       "body": { "limit": 20 }
+    },
+    {
+      "id": "idempotency-cleanup",
+      "route": "/maintenance/v1/idempotency/cleanup",
+      "cadence": "daily",
+      "body": {}
     }
   ]
 }

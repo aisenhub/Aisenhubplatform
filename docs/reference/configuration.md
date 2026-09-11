@@ -54,6 +54,8 @@
 | BILLING_BACKGROUND_PROCESSING_ENABLED | `false` 时停止领取新的 Billing job，既有 lease 等待超时后可恢复，默认开启 |
 | BILLING_AUTO_SETTLEMENT_ENABLED | `false` 时停止 Provider 查询与自动结算，已入队任务保留并可恢复，默认开启 |
 
+调度清单每天调用 `/maintenance/v1/idempotency/cleanup`，通过 `job_executor` 受限 wrapper 批量删除已过期的普通用户/Admin 幂等缓存。该任务不删除 `billing_checkout_intents` 或 `billing_orders` 等长期交易绑定；无需新增环境变量。
+
 数据库回退是代码行为，不保证连接凭据权限最小化。各服务仍在事务内切换 executor 角色。
 
 ## 开发与共享设施
