@@ -122,7 +122,7 @@ Account handler不依赖Consumer浏览器正确判断，服务端再次鉴权。
 
 统一安装三个包 account-auth、account-auth-nextjs、account-server。正式包命名空间与Registry域名在发布前固定到项目拥有的地址，文档中的包名是职责名，不伪造当前已发布npm包。
 
-Registry含auth-login/auth-signup/auth-forgot-password/auth-reset-password、OAuth callback、pricing-page、profile-settings、preferences-settings、subscription-status、subscription-redeem、config-files-manager、user-menu。模板复制UI、路由配置和BFF调用胶水；授权/金额/日期/配额算法不复制。
+Registry含auth-login、OAuth callback、pricing-page、profile-settings、preferences-settings、subscription-status、subscription-redeem、config-files-manager、user-menu。Signup、Forgot Password和Reset Password在当前参考模板未提供，不登记为可安装路由。模板复制UI、路由配置和BFF调用胶水；授权/金额/日期/配额算法不复制。
 
 模板的工程与组件组织可以参考 MakerKit，但不要求复刻 MakerKit 的视觉模板。产品 UI 以操作顺畅、信息清楚、状态反馈及时和页面有质感为验收标准，品牌、布局和视觉语言可独立定制。
 

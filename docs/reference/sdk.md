@@ -21,7 +21,7 @@ M5_SDK_PACK_DESTINATION 可覆盖目标；打包会清空目标目录并重建�
 
 ## Registry
 
-[manifest.json](../../registry/manifest.json)记录本地元数据及兼容范围；[templates.json](../../registry/templates.json)是安装器读取的模板清单。当前清单包含参考应用不存在的登录路由，不应据此生成当前路由导航或宣称全新安装已验证。
+[manifest.json](../../registry/manifest.json)记录本地元数据及兼容范围；[templates.json](../../registry/templates.json)是安装器读取的模板清单。当前清单只包含参考应用真实存在的页面和 Auth callback，不应据此生成未提供的 Signup、Forgot Password 或 Reset Password 路由。
 
 实际页面与适配边界见[前端模块](../architecture/modules/frontends.md)。安装脚本位于 tests/spikes/registry 和 tests/spikes/consumer；执行前应核对其路由假设。
 

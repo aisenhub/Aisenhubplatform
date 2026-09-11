@@ -1,19 +1,8 @@
 [
   { "id": "auth-login", "route": "/login", "auth": "public" },
-  { "id": "auth-signup", "route": "/signup", "auth": "public" },
-  {
-    "id": "auth-forgot-password",
-    "route": "/forgot-password",
-    "auth": "public"
-  },
-  {
-    "id": "auth-reset-password",
-    "route": "/update-password",
-    "auth": "recovery-session"
-  },
   {
     "id": "oauth-callback",
-    "route": "/auth/callback",
+    "route": "/api/auth/callback",
     "auth": "provider-callback"
   },
   { "id": "pricing-page", "route": "/pricing", "auth": "public" },

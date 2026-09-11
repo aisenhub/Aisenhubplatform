@@ -25,4 +25,4 @@ ReferenceApiCard 展示接口调用示例，不执行示例代码。账户页可
 
 packages/ui 提供 shadcn、Makerkit 和业务展示组件；Admin 与参考页面分别维护样式和页面结构。
 
-registry/templates.json 仍含 /login、/signup 等当前参考应用不存在的路由项。它是本地安装元数据，不能作为当前页面路由清单；安装校验脚本可能因此与参考应用不匹配。相关源码与使用限制见[SDK 与 Registry](../../reference/sdk.md)。
+registry/templates.json 只登记当前参考应用真实存在的页面和同源 Auth callback；注册表不虚构 Signup、Forgot Password 等尚未提供的页面。安装校验脚本会对这些路径和 Secret 边界做一致性检查。相关源码与使用限制见[SDK 与 Registry](../../reference/sdk.md)。

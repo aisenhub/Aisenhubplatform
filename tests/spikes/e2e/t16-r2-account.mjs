@@ -265,8 +265,8 @@ async function startLocalServices() {
     {
       ...appEnv,
       PORT: '3110',
-      PLATFORM_KEY: presentedKeyA,
-      CONSUMER_ORIGIN: consumerAUrl,
+      ACCOUNT_PLATFORM_KEY: presentedKeyA,
+      TEMPLATE_ORIGIN: consumerAUrl,
     },
     'Consumer A',
   );
@@ -276,8 +276,8 @@ async function startLocalServices() {
     {
       ...appEnv,
       PORT: '3111',
-      PLATFORM_KEY: presentedKeyB,
-      CONSUMER_ORIGIN: consumerBUrl,
+      ACCOUNT_PLATFORM_KEY: presentedKeyB,
+      TEMPLATE_ORIGIN: consumerBUrl,
     },
     'Consumer B',
   );
@@ -512,12 +512,9 @@ async function loginConsumer(page, baseUrl, platformId) {
 
 async function exercisePublicTemplateRoutes(page, baseUrl) {
   const routes = [
-    ['/', '把账户任务做得清楚、可恢复'],
-    ['/pricing', '选择适合你的工作区'],
-    ['/login', '登录你的账户'],
-    ['/signup', '创建账户'],
-    ['/forgot-password', '找回密码'],
-    ['/update-password', '设置新密码'],
+    ['/', '配置文件'],
+    ['/pricing', '订阅方案'],
+    ['/login', '登录个人工作区'],
   ];
   for (const [path, heading] of routes) {
     const response = await page.goto(`${baseUrl}${path}`, {
@@ -2730,11 +2727,7 @@ try {
     page.setDefaultTimeout(15_000);
 
   await exercisePublicTemplateRoutes(pageA, consumerAUrl);
-  await exerciseAuthResponsive(pageA, consumerAUrl, [
-    '/login',
-    '/signup',
-    '/forgot-password',
-  ]);
+  await exerciseAuthResponsive(pageA, consumerAUrl, ['/login']);
   await loginConsumer(pageA, consumerAUrl, platformAId);
   await loginConsumer(pageB, consumerBUrl, platformBId);
   await exerciseAuthenticatedTemplateRoutes(pageA, consumerAUrl);

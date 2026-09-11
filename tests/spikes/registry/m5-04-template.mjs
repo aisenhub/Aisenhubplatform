@@ -22,15 +22,12 @@ assert(
   'SDK range drifted',
 );
 assert(
-  Array.isArray(templates) && templates.length === 12,
+  Array.isArray(templates) && templates.length === 9,
   'template coverage is incomplete',
 );
 
 const routePaths = new Set([
   'app/login/page.tsx',
-  'app/signup/page.tsx',
-  'app/forgot-password/page.tsx',
-  'app/update-password/page.tsx',
   'app/pricing/page.tsx',
   'app/account/page.tsx',
   'app/subscription/page.tsx',
