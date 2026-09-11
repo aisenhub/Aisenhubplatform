@@ -82,6 +82,7 @@ export interface PlanDto {
 }
 
 export type SubscriptionProductReason =
+  | 'ready'
   | 'free_plan_source'
   | 'free_plan_not_configured'
   | 'paid_plan_not_configured'
