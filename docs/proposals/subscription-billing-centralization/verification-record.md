@@ -4,9 +4,9 @@
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`, `1edf844`, `fab5b3d`。
-- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`, `1edf844`, `fab5b3d`。
-- 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / 代码 `fab5b3d`、验证记录基线 `266ff4e` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Registry 对齐、商品就绪、维护清理、Consumer 集成和 SDK 可复现打包修复均已形成独立提交并核对远端。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`, `1edf844`, `fab5b3d`, `0378d3f`。
+- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`, `1edf844`, `fab5b3d`, `0378d3f`。
+- 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / 代码 `fab5b3d`、T12 探针修复 `0378d3f` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Registry 对齐、商品就绪、维护清理、Consumer 集成、SDK 可复现打包和 Admin 浏览器探针稳定性修复均已形成独立提交并核对远端。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（59个文件，11个本轮变更源文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
 - 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07，并补齐本地验证发现的 Registry、商品就绪、幂等清理和 Consumer 集成 forward-fix；当前仅本地合同、数据库、API、SDK、Consumer/Admin 参考应用实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
@@ -131,7 +131,7 @@
 - 实际变更文件：`apps/template-preview/app/api/v1/[...path]/route.ts`、`apps/template-preview/app/api/auth/reauth/*`、`apps/template-preview/app/account/page.tsx`、`apps/template-preview/app/files/page.tsx`、`apps/template-preview/app/subscription/page.tsx`、`apps/template-preview/components/consumer-auth-actions.tsx`、`apps/template-preview/components/consumer-shell.tsx`、`packages/account-auth-nextjs/src/browser.ts`、`apps/admin/next.config.mjs`、`tests/spikes/e2e/t16-r2-account.mjs`。
 - 实现行为：修复 catch-all BFF 的 `v1` 路径拼接；扩大严格 allowlist 覆盖账户资料/偏好、文件读写、敏感账户动作；账户页使用中央 API 的 ETag/CSRF/错误合同，近期认证使用独立 start/verify 路由和 HttpOnly proof cookie；文件页连接真实列表、上传、下载和删除；会话跨页刷新/退出/跨 tab 失效具有确定反馈；Admin 构建可正确解析浏览器会话导出。
 - 验证命令：`pnpm test:sdk:m5-02` PASS（可复现 tarball、包边界、独立安装、Node/Edge 导入和浏览器导入拒绝）；`pnpm test:consumer:m5-05` PASS（独立安装、类型检查、生产构建、模板路由、local dual-origin platform E2E）；`pnpm test:e2e:t12-r2` PASS（Admin AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝、70 条路由×5 视口可访问性）；`pnpm test:e2e:t16-r2` PASS（独立上下文、平台 Key 隔离、订阅/兑换、文件、资料/偏好、CSRF/ETag、Admin MFA/暂停恢复、跨 Tab、敏感操作未知响应和 bundle 凭据）；`pnpm test:ops:m6-02-local` PASS（外部备份目标为 `NOT_RUN (X04 unavailable)`）；`pnpm --filter template-preview typecheck` PASS；Impeccable detector PASS（无告警）。Hosted 双平台结果为 `NOT_RUN (X05/hosted backend unavailable)`，不转换为本地 PASS。
-- 代码提交：`1edf844`（`fix(consumer): complete account and file integration`）与 `fab5b3d`（`fix(sdk): make package archives reproducible`），均已 push；随后验证记录提交 `266ff4e` 已核对远端 SHA。
+- 代码提交：`1edf844`（`fix(consumer): complete account and file integration`）、`fab5b3d`（`fix(sdk): make package archives reproducible`）与 `0378d3f`（`test(admin): stabilize browser probe hydration`），均已 push 并核对远端 SHA；验证记录随独立文档提交同步。
 
 ## 5. 要求覆盖与实际测试
 
