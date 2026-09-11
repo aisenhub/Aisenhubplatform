@@ -136,7 +136,7 @@
 ### Staging 可达性复核/2026-09-12/当前 Agent
 
 - 只读探针结果：`STAGING_ACCOUNT_ORIGIN` 与 `STAGING_ADMIN_ORIGIN` 根站点均返回 HTTP 200；未携带认证或平台密钥访问受保护页面/Account API 时返回 HTTP 401/404。探针未输出或保存任何 URL 值、Token、Key，也未对 staging 数据执行写入。
-- 结论：staging 主机并非网络不可达，但当前工作区仍缺少可复用的认证 Hosted 双平台 fixture/runner，故 X05 仍为 `NOT_RUN`；该探针不能替代 Consumer 双平台、平台隔离、文件/订阅/账户/Admin 全链路验收。
+- 结论：staging 主机并非网络不可达，但只读 REST schema 虽包含当前公开 Billing 表，计数为 1 个平台、0 个 Plan、0 个账户/订阅/兑换码/文件，且平台 API key 不在公开 schema；当前工作区仍缺少可复用的认证 Hosted 双平台 fixture/runner，故 X05 仍为 `NOT_RUN`。该探针不能替代 Consumer 双平台、平台隔离、文件/订阅/账户/Admin 全链路验收；未获得明确 staging fixture 授权前不创建或修改外部数据。
 
 ### Admin 交互语义修复/2026-09-12/当前 Agent
 
