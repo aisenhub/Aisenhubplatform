@@ -4,8 +4,8 @@
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`。
-- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`。
+- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`。
 - 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `d71a259` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Consumer 功能提交 `d71a259`、公共文档同步提交 `e78c5e9` 均已 push。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（72个文件，10个本轮变更文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
@@ -22,7 +22,7 @@
 | BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push |
 | BILL-05 | 本地验收已交付 | Provider-neutral 事实归一化、权威验证/结算、重复款/合同冲突、双进度游标、maintenance Provider I/O 边界已实现；真实 Provider 未运行 | `d587ca4`，已 push |
 | BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer Auth/BFF、动态订阅 Checkout/兑换页面、服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；浏览器真实 Consumer/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1` + `d71a259`，已 push |
-| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级兼容 fixture、独立 stop switch 演练已完成；真实生产等价升级数据、G-PROVIDER、G-OPS、生产观察未运行 | `b7ec484`，已 push；文档同步随本记录提交 |
+| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级兼容 fixture、独立 stop switch 演练和 Checkout fail-closed 验证已完成；真实生产等价升级数据、G-PROVIDER、G-OPS、生产观察未运行 | `b7ec484` + `7b46695`，已 push；文档同步随本记录提交 |
 
 状态可用未开始/进行中/已阻塞/验证失败/验收通过待推送/已交付。已交付仅指该阶段明确范围，真实渠道和运维门槛另列；整体未满足不能Completed。
 
@@ -115,9 +115,9 @@
 ### BILL-07/2026-09-11/当前 Agent
 
 - 实际变更文件：`supabase/tests/bill_07_upgrade_compatibility.sql`、`supabase/functions/_shared/billing.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/maintenance/index.ts` 及定向测试、`packages/domain/tests/billing.test.ts`、运行配置/Proposal 文档。
-- 本地最终验证：`pnpm test:db` PASS（34 files/678 tests）；Account API PASS（24 tests）；Webhook PASS（4 tests）；maintenance PASS（9 tests）；Domain PASS（8 tests）；独立 stop switch 验证了 Checkout、Webhook ingress、后台领取和自动结算的停机边界；`pnpm contracts:check`、`pnpm docs:check`、定向格式与 lint PASS。`pnpm exec supabase db lint --local --fail-on error` 仍因既有非 Billing 函数错误返回非零。
+- 本地最终验证：`pnpm test:db` PASS（34 files/678 tests）；Account API PASS（25 tests）；Webhook PASS（4 tests）；maintenance PASS（9 tests）；Domain PASS（8 tests）；独立 stop switch 验证了 Checkout（含缺省关闭）、Webhook ingress、后台领取和自动结算的停机边界；`pnpm contracts:check`、`pnpm docs:check`、定向格式与 lint PASS。`pnpm exec supabase db lint --local --fail-on error` 仍因既有非 Billing 函数错误返回非零。
 - 状态边界：G-DEV PASS；本地 G-OPS 证据 PARTIAL_LOCAL；真实生产等价数据、G-PROVIDER、真实调度/告警/密钥轮换、浏览器真实会话、真实付款、生产迁移/观察仍 NOT_RUN。整体 Proposal 仍为 In Progress，不能标记 Completed。
-- 代码提交：`b7ec484`（`feat(billing): add upgrade fixture and stop controls`），已 push；文档同步随本记录提交。
+- 代码提交：`b7ec484`（`feat(billing): add upgrade fixture and stop controls`）与 `7b46695`（`fix(billing): fail closed for checkout issuance`），均已 push；文档同步随本记录提交。
 
 ## 5. 要求覆盖与实际测试
 
