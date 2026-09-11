@@ -74,6 +74,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export default function SubscriptionPage() {
   const [plans, setPlans] = useState<Product[]>([]);
   const [currentPlan, setCurrentPlan] = useState('free');
+  const [currentPlanName, setCurrentPlanName] = useState('Free');
   const [feedback, setFeedback] = useState('当前使用免费版');
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(
     null,
@@ -88,6 +89,7 @@ export default function SubscriptionPage() {
     const entitlement = await api<Entitlement>('v1/subscription');
     const planCode = entitlement.plan?.code ?? 'free';
     setCurrentPlan(planCode);
+    setCurrentPlanName(entitlement.plan?.name ?? 'Free');
     setFeedback(
       entitlement.effective_status === 'active'
         ? `服务端已确认 · ${entitlement.plan?.name ?? '当前方案'}`
@@ -284,9 +286,7 @@ export default function SubscriptionPage() {
           <Icon name="user" size={20} />
         </span>
         <span>
-          <strong>
-            当前方案：{plans.find((plan) => plan.code === currentPlan)?.name}
-          </strong>
+          <strong>当前方案：{currentPlanName}</strong>
           <small>{feedback}</small>
         </span>
       </section>

@@ -14,8 +14,23 @@ export function ConsumerAuthActions() {
     consumerAuthSession.getSessionState(),
   );
   const [error, setError] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => consumerAuthSession.subscribe(setSnapshot), []);
+  useEffect(() => {
+    let cancelled = false;
+    const unsubscribe = consumerAuthSession.subscribe(setSnapshot);
+    void consumerAuthSession
+      .refresh()
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   if (snapshot.state !== 'authenticated') {
     return (
@@ -26,16 +41,21 @@ export function ConsumerAuthActions() {
   }
 
   async function logout() {
+    if (isLoggingOut) return;
+
     setError('正在退出…');
+    setIsLoggingOut(true);
     try {
       const response = await consumerAuthSession.logout();
       if (!response.ok) {
         setError('退出失败，请稍后重试。');
         return;
       }
-      setError('已退出');
+      window.location.assign('/login');
     } catch (caught) {
       setError(sessionErrorMessage(caught));
+    } finally {
+      setIsLoggingOut(false);
     }
   }
 
@@ -43,10 +63,13 @@ export function ConsumerAuthActions() {
     <div className="consumer-auth-actions">
       <button
         className="consumer-small-button"
+        data-hydrated={hydrated ? 'true' : 'false'}
+        data-test="consumer-logout"
+        disabled={isLoggingOut}
         onClick={() => void logout()}
         type="button"
       >
-        退出登录
+        {isLoggingOut ? '退出中…' : '退出登录'}
       </button>
       {error ? <small role="status">{error}</small> : null}
     </div>

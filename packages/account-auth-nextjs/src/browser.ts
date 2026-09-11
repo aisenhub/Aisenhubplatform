@@ -21,5 +21,12 @@ export function createBrowserSupabaseClient(
   });
 }
 
-export * from './browser-session.ts';
+export {
+  AuthSessionManager,
+  AuthorizationUnavailableError,
+  SessionExpiredError,
+  SessionReplayPolicyError,
+  SessionRetryRequiredError,
+  createAuthSessionManager,
+} from './browser-session.ts';
 export { authCookieNames } from './cookie-policy.ts';

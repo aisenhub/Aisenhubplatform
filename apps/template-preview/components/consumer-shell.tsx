@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
+import { consumerAuthSession } from '../app/_lib/auth-session';
 import { ConsumerAuthActions } from './consumer-auth-actions';
 
 type IconName =
@@ -134,6 +135,18 @@ export function ConsumerShell({
   narrow?: boolean;
 }) {
   const pathname = usePathname();
+
+  useEffect(() => {
+    let hadAuthenticatedSession = false;
+    return consumerAuthSession.subscribe((snapshot) => {
+      if (snapshot.state === 'authenticated') {
+        hadAuthenticatedSession = true;
+        return;
+      }
+      if (hadAuthenticatedSession && snapshot.resolved)
+        window.location.assign('/login');
+    });
+  }, []);
 
   return (
     <div className="consumer-app">

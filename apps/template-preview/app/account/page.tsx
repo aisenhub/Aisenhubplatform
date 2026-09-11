@@ -9,6 +9,24 @@ import { ConsumerShell } from '../../components/consumer-shell';
 
 type VerificationTarget = 'email' | 'phone';
 
+type Profile = {
+  display_name: string | null;
+  bio: string | null;
+  row_version: number;
+};
+
+type Preferences = {
+  preferences: Record<string, unknown>;
+  row_version: number;
+};
+
+type SensitiveAction = {
+  label: string;
+  path: '/api/v1/account/close' | '/api/v1/identity/delete-request';
+};
+
+type ApiErrorPayload = { error?: { code?: string } };
+
 const OTP_COUNTDOWN_SECONDS = 60;
 
 function createSupabaseClient() {
@@ -68,8 +86,69 @@ function authErrorMessage(error: { message?: string } | null) {
   return 'Supabase 验证失败，请检查账户配置后重试。';
 }
 
+function csrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const value = document.cookie
+    .split('; ')
+    .find((entry) => entry.startsWith('aisenhub-consumer-csrf='))
+    ?.slice('aisenhub-consumer-csrf='.length);
+  return value ? decodeURIComponent(value) : null;
+}
+
+async function accountApi<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  const csrf = csrfToken();
+  if (csrf) headers.set('x-csrf-token', csrf);
+  if (init.body && !headers.has('content-type'))
+    headers.set('content-type', 'application/json');
+
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers,
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
+  } catch {
+    throw new Error('AUTHORIZATION_UNAVAILABLE');
+  }
+  const payload = (await response.json().catch(() => null)) as
+    | { data?: T }
+    | ApiErrorPayload
+    | null;
+  if (!response.ok) {
+    throw new Error(
+      (payload && 'error' in payload ? payload.error?.code : undefined) ??
+        'AUTHORIZATION_UNAVAILABLE',
+    );
+  }
+  if (!payload || !('data' in payload) || payload.data === undefined)
+    throw new Error('AUTHORIZATION_UNAVAILABLE');
+  return payload.data;
+}
+
+function accountErrorMessage(error: unknown): string {
+  const code = error instanceof Error ? error.message : '';
+  if (code === 'UNAUTHORIZED' || code === 'ACCOUNT_NOT_ACTIVATED')
+    return '请先登录并激活工作区后再管理账户资料。';
+  if (code === 'PRECONDITION_FAILED')
+    return '资料版本已变化，请刷新后再保存，避免覆盖其他设备的修改。';
+  if (code === 'RECENT_MFA_REQUIRED')
+    return '这项操作需要近期认证，请先完成邮件验证。';
+  return '账户服务暂时不可用，请稍后重试。';
+}
+
 export default function AccountPage() {
   const [name, setName] = useState('林默');
+  const [bio, setBio] = useState('');
+  const [profileVersion, setProfileVersion] = useState<number | null>(null);
+  const [preferences, setPreferences] = useState<Preferences | null>(null);
+  const [preferenceText, setPreferenceText] = useState('{}');
+  const [isLoadingAccountData, setIsLoadingAccountData] = useState(true);
+  const [accountDataError, setAccountDataError] = useState('');
+  const [preferencesMessage, setPreferencesMessage] = useState('');
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [currentEmail, setCurrentEmail] = useState('');
@@ -93,6 +172,50 @@ export default function AccountPage() {
   const [passwordMessage, setPasswordMessage] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [tokenHash, setTokenHash] = useState('');
+  const [reauthMessage, setReauthMessage] = useState('');
+  const [isSendingReauth, setIsSendingReauth] = useState(false);
+  const [isVerifyingReauth, setIsVerifyingReauth] = useState(false);
+  const [pendingSensitiveAction, setPendingSensitiveAction] =
+    useState<SensitiveAction | null>(null);
+  const [sensitiveActionState, setSensitiveActionState] = useState<
+    'idle' | 'submitting' | 'accepted' | 'unknown_outcome'
+  >('idle');
+  const [sensitiveActionMessage, setSensitiveActionMessage] = useState('');
+  const [sensitiveNeedsReauth, setSensitiveNeedsReauth] = useState(false);
+  const [unknownOutcomeChecked, setUnknownOutcomeChecked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccountData() {
+      setIsLoadingAccountData(true);
+      setAccountDataError('');
+      try {
+        const [profileData, preferencesData] = await Promise.all([
+          accountApi<Profile>('/api/v1/profile'),
+          accountApi<Preferences>('/api/v1/preferences'),
+        ]);
+        if (cancelled) return;
+        setName(profileData.display_name ?? '');
+        setBio(profileData.bio ?? '');
+        setProfileVersion(profileData.row_version);
+        setPreferences(preferencesData);
+        setPreferenceText(
+          JSON.stringify(preferencesData.preferences ?? {}, null, 2),
+        );
+      } catch (error) {
+        if (!cancelled) setAccountDataError(accountErrorMessage(error));
+      } finally {
+        if (!cancelled) setIsLoadingAccountData(false);
+      }
+    }
+
+    void loadAccountData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const client = supabase;
@@ -166,28 +289,172 @@ export default function AccountPage() {
     event.preventDefault();
     setMessage('');
 
-    if (!supabase) {
-      setMessage('请先配置 Supabase 公共环境变量。');
+    if (profileVersion === null) {
+      setMessage(accountDataError || '账户资料尚未加载完成，请稍后重试。');
       return;
     }
 
     setIsSavingProfile(true);
-    const { data, error } = await supabase.auth.getUser();
+    try {
+      const profile = await accountApi<Profile>('/api/v1/profile', {
+        method: 'PATCH',
+        headers: { 'If-Match': `W/"${profileVersion}"` },
+        body: JSON.stringify({ display_name: name.trim(), bio }),
+      });
+      setProfileVersion(profile.row_version);
+      setName(profile.display_name ?? '');
+      setBio(profile.bio ?? '');
 
-    if (error || !data.user) {
-      setMessage('当前没有检测到 Supabase 登录会话，请先登录。');
-      setIsSavingProfile(false);
+      if (supabase) {
+        const { error } = await supabase.auth.updateUser({
+          data: { display_name: profile.display_name ?? '' },
+        });
+        if (error) {
+          setMessage(
+            `资料已保存，但登录资料同步失败：${authErrorMessage(error)}`,
+          );
+          return;
+        }
+      }
+      setMessage('资料已保存，服务端版本已更新。');
+    } catch (error) {
+      setMessage(accountErrorMessage(error));
+    }
+    setIsSavingProfile(false);
+  }
+
+  async function savePreferences(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!preferences) {
+      setPreferencesMessage(
+        accountDataError || '偏好尚未加载完成，请稍后重试。',
+      );
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: { display_name: name.trim() },
-    });
+    let patch: unknown;
+    try {
+      patch = JSON.parse(preferenceText);
+    } catch {
+      setPreferencesMessage('偏好必须是有效的 JSON 对象。');
+      return;
+    }
+    if (!patch || Array.isArray(patch) || typeof patch !== 'object') {
+      setPreferencesMessage('偏好必须是 JSON 对象。');
+      return;
+    }
 
-    setMessage(
-      updateError ? authErrorMessage(updateError) : '账户信息已保存到 Supabase',
-    );
-    setIsSavingProfile(false);
+    setIsSavingPreferences(true);
+    setPreferencesMessage('正在保存偏好…');
+    try {
+      const nextPreferences = await accountApi<Preferences>(
+        '/api/v1/preferences',
+        {
+          method: 'PATCH',
+          headers: {
+            'content-type': 'application/merge-patch+json',
+            'If-Match': `W/"${preferences.row_version}"`,
+          },
+          body: JSON.stringify(patch),
+        },
+      );
+      setPreferences(nextPreferences);
+      setPreferenceText(
+        JSON.stringify(nextPreferences.preferences ?? {}, null, 2),
+      );
+      setPreferencesMessage('偏好已保存，服务端版本已更新。');
+    } catch (error) {
+      setPreferencesMessage(accountErrorMessage(error));
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  }
+
+  async function requestReauth() {
+    setIsSendingReauth(true);
+    setReauthMessage('正在发送验证邮件…');
+    try {
+      await accountApi<{ requested: true }>('/api/auth/reauth/start', {
+        method: 'POST',
+      });
+      setReauthMessage('验证邮件已发送，请粘贴邮件链接中的 token_hash。');
+    } catch (error) {
+      setReauthMessage(accountErrorMessage(error));
+    } finally {
+      setIsSendingReauth(false);
+    }
+  }
+
+  async function verifyReauth() {
+    const value = tokenHash.trim();
+    if (!value) {
+      setReauthMessage('请先粘贴邮件链接中的 token_hash。');
+      return;
+    }
+
+    setIsVerifyingReauth(true);
+    setReauthMessage('正在验证近期认证…');
+    try {
+      await accountApi<{ verified: true }>('/api/auth/reauth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ token_hash: value }),
+      });
+      setTokenHash('');
+      setReauthMessage('近期认证已完成，可执行敏感账户操作。');
+      setSensitiveNeedsReauth(false);
+    } catch (error) {
+      setReauthMessage(accountErrorMessage(error));
+    } finally {
+      setIsVerifyingReauth(false);
+    }
+  }
+
+  async function submitSensitiveAction() {
+    if (!pendingSensitiveAction || sensitiveActionState === 'submitting')
+      return;
+
+    setSensitiveActionState('submitting');
+    setSensitiveActionMessage('正在提交，请勿重复点击。');
+    setSensitiveNeedsReauth(false);
+    try {
+      await accountApi(pendingSensitiveAction.path, { method: 'POST' });
+      setSensitiveActionState('accepted');
+      setSensitiveActionMessage(
+        pendingSensitiveAction.path.endsWith('delete-request')
+          ? '全局删除请求已受理，后续由后台流程处理。'
+          : '当前平台账户已关闭。',
+      );
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      if (code === 'RECENT_MFA_REQUIRED') {
+        setSensitiveActionState('idle');
+        setSensitiveNeedsReauth(true);
+        setSensitiveActionMessage('请先完成近期认证，再提交这项敏感操作。');
+      } else if (code === 'AUTHORIZATION_UNAVAILABLE') {
+        setSensitiveActionState('unknown_outcome');
+        setUnknownOutcomeChecked(false);
+        setSensitiveActionMessage('结果待确认：网络在服务端响应前中断。');
+      } else {
+        setSensitiveActionState('idle');
+        setSensitiveActionMessage(accountErrorMessage(error));
+      }
+    }
+  }
+
+  function openSensitiveAction(action: SensitiveAction) {
+    setPendingSensitiveAction(action);
+    setSensitiveActionState('idle');
+    setSensitiveActionMessage('');
+    setSensitiveNeedsReauth(false);
+    setUnknownOutcomeChecked(false);
+  }
+
+  function closeSensitiveAction() {
+    setPendingSensitiveAction(null);
+    setSensitiveActionState('idle');
+    setSensitiveActionMessage('');
+    setSensitiveNeedsReauth(false);
+    setUnknownOutcomeChecked(false);
   }
 
   async function sendVerificationCode(target: VerificationTarget) {
@@ -390,7 +657,7 @@ export default function AccountPage() {
   return (
     <ConsumerShell
       title="账户设置"
-      description="账户资料和绑定验证由 Supabase Auth 处理。"
+      description="账户资料、偏好与安全动作通过同源边界交给中央账户服务处理。"
     >
       <div className="consumer-settings-layout">
         <aside className="consumer-settings-nav" aria-label="账户设置导航">
@@ -417,13 +684,29 @@ export default function AccountPage() {
             </div>
             <form className="consumer-form-grid" onSubmit={saveProfile}>
               <label className="consumer-field consumer-field-full">
-                <span>用户名</span>
+                <span>显示名称</span>
                 <input
+                  aria-label="显示名称"
+                  disabled={isLoadingAccountData || isSavingProfile}
+                  maxLength={120}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="输入用户名"
                 />
                 <small>这个名称会显示在工作区和配置操作记录中。</small>
+              </label>
+              <label className="consumer-field consumer-field-full">
+                <span>简介</span>
+                <textarea
+                  aria-label="简介"
+                  disabled={isLoadingAccountData || isSavingProfile}
+                  maxLength={500}
+                  rows={3}
+                  value={bio}
+                  onChange={(event) => setBio(event.target.value)}
+                  placeholder="简单介绍一下自己"
+                />
+                <small>资料由 Account API 保存，版本冲突时不会静默覆盖。</small>
               </label>
               {currentEmail ? (
                 <div className="consumer-field">
@@ -569,16 +852,16 @@ export default function AccountPage() {
               ) : null}
               <div className="consumer-form-footer consumer-field-full">
                 <span className="consumer-form-message" role="status">
-                  {!verificationTarget && verificationMessage
-                    ? verificationMessage
-                    : message}
+                  {accountDataError ||
+                    (!verificationTarget && verificationMessage) ||
+                    message}
                 </span>
                 <button
                   className="consumer-button consumer-button-primary"
                   type="submit"
-                  disabled={isSavingProfile}
+                  disabled={isSavingProfile || isLoadingAccountData}
                 >
-                  {isSavingProfile ? '保存中…' : '保存信息'}
+                  {isSavingProfile ? '保存中…' : '保存资料'}
                 </button>
               </div>
             </form>
@@ -643,19 +926,214 @@ export default function AccountPage() {
             </form>
           </section>
 
-          <section className="consumer-note-panel" id="preferences">
+          <section
+            className="consumer-panel"
+            id="preferences"
+            aria-labelledby="preferences-title"
+          >
+            <div className="consumer-panel-heading">
+              <div>
+                <p className="consumer-overline">工作区偏好</p>
+                <h2 id="preferences-title">偏好设置</h2>
+              </div>
+              <span className="consumer-status">Account API</span>
+            </div>
+            <form className="consumer-form-grid" onSubmit={savePreferences}>
+              <label className="consumer-field consumer-field-full">
+                <span>JSON Merge Patch</span>
+                <textarea
+                  aria-label="JSON Merge Patch"
+                  disabled={isLoadingAccountData || isSavingPreferences}
+                  value={preferenceText}
+                  onChange={(event) => setPreferenceText(event.target.value)}
+                  rows={7}
+                  spellCheck={false}
+                />
+                <small>
+                  偏好只影响工作区体验，不参与订阅或授权判断；null
+                  会删除对应键。
+                </small>
+              </label>
+              <div className="consumer-form-footer consumer-field-full">
+                <span className="consumer-form-message" role="status">
+                  {preferencesMessage}
+                </span>
+                <button
+                  className="consumer-button consumer-button-primary"
+                  type="submit"
+                  disabled={isLoadingAccountData || isSavingPreferences}
+                >
+                  {isSavingPreferences ? '保存中…' : '保存偏好'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section
+            className="consumer-note-panel"
+            aria-labelledby="reauth-title"
+          >
             <div>
-              <strong>账户验证状态</strong>
+              <strong id="reauth-title">近期认证与账户动作</strong>
               <p>
                 {supabase
-                  ? '当前页面已接入 Supabase Auth。邮箱和手机号验证码由 Supabase 发送并校验。'
-                  : '当前页面尚未读取到 Supabase 公共环境变量，请配置 NEXT_PUBLIC_SUPABASE_URL 和公共密钥后启用验证。'}
+                  ? '敏感操作需要通过 Supabase Auth 邮件完成近期认证；临时会话不会返回浏览器。'
+                  : '当前尚未配置 Supabase Auth，近期认证暂不可用。'}
               </p>
+              <div className="consumer-field-inline">
+                <button
+                  className="consumer-button consumer-button-secondary consumer-button-compact"
+                  type="button"
+                  disabled={isSendingReauth}
+                  onClick={() => void requestReauth()}
+                >
+                  {isSendingReauth ? '发送中…' : '发送验证邮件'}
+                </button>
+                <input
+                  aria-label="近期认证 token_hash"
+                  placeholder="粘贴 token_hash"
+                  value={tokenHash}
+                  onChange={(event) => setTokenHash(event.target.value)}
+                  autoComplete="off"
+                />
+                <button
+                  className="consumer-button consumer-button-primary consumer-button-compact"
+                  type="button"
+                  disabled={isVerifyingReauth || !tokenHash.trim()}
+                  onClick={() => void verifyReauth()}
+                >
+                  {isVerifyingReauth ? '验证中…' : '验证并回到确认'}
+                </button>
+              </div>
+              <small role="status">{reauthMessage}</small>
             </div>
-            <span className="consumer-status">
-              {supabase ? 'Supabase Auth' : '待配置'}
-            </span>
+            <div className="consumer-form-footer">
+              <button
+                className="consumer-button consumer-button-secondary consumer-button-compact"
+                type="button"
+                onClick={() =>
+                  openSensitiveAction({
+                    label: '全局删除请求',
+                    path: '/api/v1/identity/delete-request',
+                  })
+                }
+              >
+                提交全局删除请求
+              </button>
+              <button
+                className="consumer-button consumer-button-secondary consumer-button-compact"
+                type="button"
+                onClick={() =>
+                  openSensitiveAction({
+                    label: '关闭当前账户',
+                    path: '/api/v1/account/close',
+                  })
+                }
+              >
+                关闭当前账户
+              </button>
+            </div>
           </section>
+
+          {pendingSensitiveAction ? (
+            <div
+              className="consumer-modal-backdrop"
+              data-test="confirm-action-dialog"
+            >
+              <div className="consumer-modal" role="dialog" aria-modal="true">
+                <p className="consumer-overline">确认账户动作</p>
+                <h2>确认{pendingSensitiveAction.label}？</h2>
+                <p>
+                  这项操作会由中央账户服务记录并执行，请确认目标和当前会话。
+                </p>
+                {sensitiveNeedsReauth ? (
+                  <div role="alert">
+                    <p>请先完成近期认证，再重新提交。</p>
+                    <button
+                      className="consumer-button consumer-button-secondary consumer-button-compact"
+                      type="button"
+                      disabled={isSendingReauth}
+                      onClick={() => void requestReauth()}
+                    >
+                      {isSendingReauth ? '发送中…' : '发送验证邮件'}
+                    </button>
+                    <label className="consumer-field">
+                      <span>邮件 token_hash</span>
+                      <input
+                        aria-label="近期认证 token_hash"
+                        placeholder="粘贴 token_hash"
+                        value={tokenHash}
+                        onChange={(event) => setTokenHash(event.target.value)}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <button
+                      className="consumer-button consumer-button-primary consumer-button-compact"
+                      type="button"
+                      disabled={isVerifyingReauth || !tokenHash.trim()}
+                      onClick={() => void verifyReauth()}
+                    >
+                      {isVerifyingReauth ? '验证中…' : '验证并回到确认'}
+                    </button>
+                    {reauthMessage ? <small>{reauthMessage}</small> : null}
+                  </div>
+                ) : null}
+                {sensitiveActionState === 'unknown_outcome' ? (
+                  <div role="status">
+                    <strong>
+                      {unknownOutcomeChecked ? '结果仍待确认' : '结果待确认'}
+                    </strong>
+                    <p>{sensitiveActionMessage}</p>
+                    {!unknownOutcomeChecked ? (
+                      <button
+                        className="consumer-button consumer-button-secondary consumer-button-compact"
+                        type="button"
+                        data-test="confirm-action-check-unknown"
+                        onClick={() => {
+                          setUnknownOutcomeChecked(true);
+                          setSensitiveActionMessage(
+                            '请刷新账户状态或联系支持确认服务端最终结果。',
+                          );
+                        }}
+                      >
+                        我已检查权威状态
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {sensitiveActionState === 'accepted' ? (
+                  <p role="status">已受理</p>
+                ) : null}
+                <div className="consumer-form-footer">
+                  <button
+                    className="consumer-button consumer-button-secondary"
+                    type="button"
+                    data-test="confirm-action-cancel"
+                    onClick={closeSensitiveAction}
+                  >
+                    取消
+                  </button>
+                  <button
+                    className="consumer-button consumer-button-primary"
+                    type="button"
+                    data-test="confirm-action-submit"
+                    disabled={
+                      sensitiveActionState === 'submitting' ||
+                      sensitiveActionState === 'accepted' ||
+                      sensitiveActionState === 'unknown_outcome'
+                    }
+                    onClick={() => void submitSensitiveAction()}
+                  >
+                    {sensitiveActionState === 'accepted'
+                      ? '已受理'
+                      : sensitiveActionState === 'submitting'
+                        ? '提交中…'
+                        : '确认提交'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </ConsumerShell>

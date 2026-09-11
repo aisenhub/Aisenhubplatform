@@ -90,8 +90,8 @@ const platformACode = `t16-r2-a-${platformAId.slice(0, 8)}`;
 const platformBCode = `t16-r2-b-${platformBId.slice(0, 8)}`;
 const presentedKeyA = `phk_v1_${keyAId}_t16-r2-a`;
 const presentedKeyB = `phk_v1_${keyBId}_t16-r2-b`;
-const redemptionCodeA = 'T6R2A23456789';
-const redemptionCodeB = 'T6R2B23456789';
+const redemptionCodeA = 'TGR2A23456789034';
+const redemptionCodeB = 'TGR2B23456789034';
 const keyHmac = (keyId, presentedKey) =>
   createHmac('sha256', platformSecret)
     .update(`1:platform-key:${keyId}:${presentedKey}`)
@@ -558,7 +558,7 @@ async function exerciseAuthResponsive(page, baseUrl, routes) {
 
 async function exerciseAuthenticatedTemplateRoutes(page, baseUrl) {
   const routes = [
-    ['/subscription', '订阅与兑换'],
+    ['/subscription', '订阅方案'],
     ['/account', '账户设置'],
     ['/files', '配置文件'],
   ];
@@ -767,12 +767,14 @@ async function exerciseAccount(page, baseUrl) {
   ]);
   assertStatus(reauthRequested.status(), 200, 'consumer email reauth request');
   const tokenHash = await readMailpitToken(userEmail);
-  await page.getByPlaceholder('粘贴 token_hash').fill(tokenHash);
+  await sensitiveDialog.getByPlaceholder('粘贴 token_hash').fill(tokenHash);
   const [verifiedResponse] = await Promise.all([
     page.waitForResponse((item) =>
-      item.url().endsWith('/api/auth/reauth/verify'),
+      item.url().includes('/api/auth/reauth/verify'),
     ),
-    page.getByRole('button', { name: '验证并回到确认', exact: true }).click(),
+    sensitiveDialog
+      .getByRole('button', { name: '验证并回到确认', exact: true })
+      .click(),
   ]);
   assertStatus(verifiedResponse.status(), 200, 'consumer email reauth verify');
   const cookies = await page.context().cookies();
@@ -912,9 +914,9 @@ async function exerciseAdmin(page, adminTotp) {
     },
   );
   await page.getByRole('heading', { name: '兑换批次' }).waitFor();
-  await page.locator('#batch-plan').waitFor();
+  await page.locator('#batch-product').waitFor();
   await exerciseBatchReplayUi(page);
-  await page.locator('#batch-plan').selectOption(paidPlanAId);
+  await page.locator('#batch-product').selectOption('monthly');
   await page.locator('#batch-name').fill('T16 R2 UI batch');
   await page.locator('#batch-quantity').fill('1');
   const [createBatchResponse] = await Promise.all([
@@ -979,7 +981,7 @@ async function exerciseBatchReplayUi(page) {
   });
 
   try {
-    await page.locator('#batch-plan').selectOption(paidPlanAId);
+    await page.locator('#batch-product').selectOption('monthly');
     await page.locator('#batch-name').fill('T16 R2 replay UI');
     await page.locator('#batch-quantity').fill('1');
     await page.getByRole('button', { name: '复核并创建' }).click();
@@ -2737,20 +2739,23 @@ try {
   await pageC.goto(`${consumerAUrl}/subscription`, {
     waitUntil: 'domcontentloaded',
   });
-  await pageC.getByRole('heading', { name: '订阅与兑换' }).waitFor();
-  await pageC.getByRole('heading', { name: 'Pro', exact: true }).waitFor();
+  await pageC.getByRole('heading', { name: '订阅方案' }).waitFor();
+  await pageC.getByText('当前方案：Pro', { exact: true }).waitFor();
   await pageA.goto(`${consumerAUrl}/subscription`, {
     waitUntil: 'domcontentloaded',
   });
-  await pageA.getByRole('heading', { name: '订阅与兑换' }).waitFor();
-  await Promise.all([
-    pageA.waitForURL(/\/login$/u, { waitUntil: 'domcontentloaded' }),
-    pageA.getByRole('button', { name: '退出登录', exact: true }).click(),
-  ]);
-  await pageC
-    .getByText(/请登录后继续|登录已失效/u)
-    .first()
+  await pageA.getByRole('heading', { name: '订阅方案' }).waitFor();
+  await pageA
+    .locator('[data-test="consumer-logout"][data-hydrated="true"]')
     .waitFor();
+  const logoutResponsePromise = pageA.waitForResponse((item) =>
+    item.url().includes('/api/auth/logout'),
+  );
+  await pageA.getByRole('button', { name: '退出登录', exact: true }).click();
+  const logoutResponse = await logoutResponsePromise;
+  assertStatus(logoutResponse.status(), 200, 'consumer logout');
+  await pageA.waitForURL(/\/login$/u, { waitUntil: 'domcontentloaded' });
+  await pageC.waitForURL(/\/login$/u, { waitUntil: 'domcontentloaded' });
   await loginConsumer(pageA, consumerAUrl, platformAId);
   const userCookiesA = await contextA.cookies();
   const userCookiesB = await contextB.cookies();
