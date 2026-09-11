@@ -30,6 +30,7 @@
 | ADMIN_DB_URL | Admin 独立数据库连接 |
 | ACCOUNT_API_DB_URL、SUPABASE_DB_URL | 独立连接缺失时依次回退 |
 | ACCOUNT_API_DB_POOL_MAX | Account API 数据库连接池上限，允许 4–64，默认 8；按实际数据库连接预算调整 |
+| ACCOUNT_API_DB_ROLE_MODE | 默认 `transaction`，每个事务设置 executor 角色；设为 `startup` 时在 Account/Admin 独立连接池建立时固定对应 executor 角色，需确认连接用户允许 `SET ROLE` |
 | PLATFORM_KEY_HMAC_SECRET | 当前平台 Key HMAC Secret |
 | PLATFORM_KEY_HMAC_SECRET_PREVIOUS | 可选上一平台 Secret |
 | REDEMPTION_HMAC_SECRET | 当前兑换 Secret |

@@ -334,6 +334,10 @@ try {
   const p95 = percentile(latencies, 0.95);
   const result = {
     endpoint: 'account/principal',
+    configuration: {
+      db_pool_max: process.env.ACCOUNT_API_DB_POOL_MAX ?? '8',
+      db_role_mode: process.env.ACCOUNT_API_DB_ROLE_MODE ?? 'transaction',
+    },
     target_requests_per_second: requestsPerSecond,
     observed_requests_per_second: Number(observedRate.toFixed(2)),
     duration_seconds: Number(elapsedSeconds.toFixed(2)),

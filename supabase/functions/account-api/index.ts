@@ -419,6 +419,10 @@ function databasePoolMax(): number {
   return Number.isSafeInteger(value) && value >= 4 && value <= 64 ? value : 8;
 }
 
+function databaseRoleAtConnection(): boolean {
+  return Deno.env.get('ACCOUNT_API_DB_ROLE_MODE') === 'startup';
+}
+
 const databases = new Map<'account' | 'admin', Database>();
 const defaultUploadGate = new UploadGate();
 function database(executor: 'account' | 'admin'): Database {
@@ -436,6 +440,9 @@ function database(executor: 'account' | 'admin'): Database {
     max: databasePoolMax(),
     prepare: false,
     connect_timeout: 5,
+    ...(databaseRoleAtConnection()
+      ? { connection: { options: `-c role=${executor}_executor` } }
+      : {}),
   }) as unknown as Database;
   databases.set(executor, connection);
   return connection;
@@ -445,6 +452,7 @@ async function setRole(
   transaction: Transaction,
   role: 'account_executor' | 'admin_executor',
 ) {
+  if (databaseRoleAtConnection()) return;
   await transaction.unsafe(`set local role ${role}`);
 }
 
