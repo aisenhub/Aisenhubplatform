@@ -4,7 +4,7 @@
 
 状态：未开始
 
-关联：[总计划](../plan.md) · [优化设计](../design.md)
+关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
 ## 阶段目标
 
