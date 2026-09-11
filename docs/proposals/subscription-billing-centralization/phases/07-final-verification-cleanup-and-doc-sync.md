@@ -36,7 +36,7 @@ PII检查覆盖数据库、日志、错误、浏览器bundle和URL埋点；Webho
 
 ## 6. 命令与旧路径退出
 
-核对并运行 docs:check、contracts:check、typecheck、构建、领域单测、运行时和数据库检查；本次实际完成本地 reset、36 个 SQL 测试文件/693 条断言、Account API/maintenance/Webhook 定向测试、升级兼容 fixture、独立 stop switch 演练、已验证 Provider 映射可购买性回归、普通幂等缓存清理回归、SDK/Admin/Template typecheck/build、合同与文档检查。format/lint 的全仓结果仍按实际输出区分；真实生产等价升级数据、Provider、运维调度和生产观察 NOT_RUN。`pnpm test:api` 等不存在命令不计通过。
+核对并运行 docs:check、contracts:check、typecheck、构建、领域单测、运行时和数据库检查；本次实际完成本地 reset、36 个 SQL 测试文件/693 条断言、Account API/maintenance/Webhook 定向测试、升级兼容 fixture、独立 stop switch 演练、已验证 Provider 映射可购买性回归、普通幂等缓存清理回归、SDK/Admin/Template typecheck/build、Consumer M5 安装与根目录 T16 R2 浏览器链路、本地备份 barrier 演练、合同与文档检查。format/lint 的全仓结果仍按实际输出区分；真实生产等价升级数据、Provider、外部备份目标、运维调度和生产观察 NOT_RUN。`pnpm test:api` 等不存在命令不计通过。
 
 使用rg核查旧16位默认、Free claim本期实现、旧Checkout状态、默认零元接受、单高水位、硬编码价格/URL、前端授权、重复期限算法、任意DML和日志PII；历史码兼容与第二期说明不是需要删除的旧功能。
 
