@@ -171,6 +171,13 @@
 - 验证结果：新增用例覆盖后台处理开关关闭时不领取积压任务、积压保持可见、开关恢复后重新领取并按 fence 完成；Webhook/maintenance 定向测试 `15 passed`，定向 `oxfmt --check` 与 `git diff --check` PASS。
 - 证据边界：这是本地 handler/数据库边界模拟，不代表真实 scheduler、Provider 限流、密钥托管/轮换、告警或生产恢复已经通过；这些仍保持 G-OPS/生产 NOT_RUN。
 
+### Local BILL-05 结算并发回归/2026-09-12/当前 Agent
+
+- 实际变更文件：`tests/spikes/sql/bill-05-settlement-concurrency.mjs`、`package.json`。
+- 验证命令：`pnpm run test:sql:bill-05-concurrency` 在 Local Auth/Kong 恢复后连续运行 2 次均 PASS；两个不同 Provider 订单并发竞争同一 Checkout，结果恰为 `granted` + `duplicate_payment`，settlement 为 automatic 1 + manual 1，Grant 为 1，job 为 completed 1 + manual_review 1。
+- 清理验证：探针逐项清理 Provider、订单、任务、Grant/Event、订阅和平台夹具；复测后残留计数为 `platforms=0, jobs=0, providers=0`。完整 `pnpm test:db` 随后 PASS（36 files/695 tests）。
+- 证据边界：这是本地事务锁、自动结算唯一槽位和人工复核边界的并发证据；Provider 真实签名/query-order、真实付款/退款、外部调度和生产观察仍保持 G-PROVIDER/G-OPS/生产 NOT_RUN。
+
 ### Local R15 JWT 验证优化/2026-09-12/当前 Agent
 
 - 实际变更文件：`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`tests/spikes/perf/r15-local-authority.mjs`、`docs/reference/configuration.md`。
@@ -209,7 +216,7 @@
 | BILL-02 catalog/config | `supabase/tests/bill_02_subscription_product_catalog.sql`、`supabase/functions/account-api/index.test.ts`、`packages/account-server/tests/client.test.ts` | 本地 Docker DB、Deno、Node；当前工作区 | `pnpm test:db`; `pnpm exec deno test -A supabase/functions/account-api/index.test.ts`; `pnpm --filter @kit/account-server test:unit` | PASS；Provider/生产仍 NOT_RUN |
 | BILL-03 redemption/correction | `supabase/tests/bill_03_redemption_v2_lifecycle.sql`、`packages/domain/tests/billing.test.ts`、`supabase/functions/account-api/index.test.ts` | 本地 Docker DB、Deno、Node；当前工作区 | `pnpm test:db`; `pnpm --filter @kit/domain test:unit --run`; `pnpm exec deno test -A supabase/functions/account-api/index.test.ts` | PASS；真实结算/生产仍 NOT_RUN |
 | BILL-04 checkout/inbox/job | `supabase/tests/bill_04_checkout_order_inbox_jobs.sql`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.test.ts`、Account API/SDK tests | 本地 Docker DB、Deno、Node；代码 commits `7169183` + `c3b99b3` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted Deno/SDK/domain/admin tests; `pnpm contracts:check`; `pnpm docs:check` | PASS（579 SQL assertions、22 Account、3 webhook、7 maintenance）；真实 Provider/结算/生产 NOT_RUN |
-| BILL-05 verification/settlement | `supabase/tests/bill_05_provider_verification_settlement.sql`、Afdian normalizer、maintenance worker tests | 本地 Docker DB、Deno；代码 commit `d587ca4` | `pnpm test:db`; targeted Afdian/maintenance Deno tests; local Supabase lint | PASS（618 SQL assertions、2 Afdian、8 maintenance）；真实 Provider/生产 NOT_RUN |
+| BILL-05 verification/settlement | `supabase/tests/bill_05_provider_verification_settlement.sql`、`tests/spikes/sql/bill-05-settlement-concurrency.mjs`、Afdian normalizer、maintenance worker tests | 本地 Docker DB、Deno、Node；本轮工作区 | `pnpm test:db`; `pnpm run test:sql:bill-05-concurrency`; targeted Afdian/maintenance Deno tests; local Supabase lint | Local PASS（完整 36 files/695 tests；并发结算 2 次连续 PASS，automatic/manual=1/1，Grant=1）；真实 Provider/生产 NOT_RUN |
 | BILL-06 Admin/Consumer boundary | `supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql`、Account API/SDK tests、Template/Admin build、`tests/spikes/e2e/t16-r2-account.mjs` | 本地 Docker DB、Deno、Node、Next build；代码 commits `b91800f` + `fa3083e` + `1edf844` + `fab5b3d` | `pnpm test:db`; Account API/Afdian/maintenance; account-server unit/typecheck; Template/Admin typecheck/build; `pnpm test:sdk:m5-02`; `pnpm test:consumer:m5-05`; `pnpm contracts:check`; `pnpm docs:check` | PASS（648 SQL assertions、23 Account、2 Afdian、8 maintenance、SDK 可复现归档/独立安装、Consumer 独立安装/类型/构建/模板路由/local dual-origin E2E）；Hosted/Provider/生产 NOT_RUN |
 | BILL-07 final/local docs | 本记录、架构/合同/运维文档 | 本地工作区；代码 `b7ec484` 及后续 forward-fix、Consumer 集成 `1edf844` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted regression; `pnpm test:consumer:m5-05`; `pnpm test:e2e:t16-r2`; `pnpm test:ops:m6-02-local`; `pnpm contracts:check`; `pnpm docs:check` | Local G-DEV PASS；升级兼容 fixture/stop switch/商品就绪/幂等清理/Consumer 本地双来源 E2E/完整 T16 R2/本地备份 barrier 演练 PASS；Hosted 后端、外部备份目标、真实生产升级、G-PROVIDER/G-OPS/生产 NOT_RUN |
 
