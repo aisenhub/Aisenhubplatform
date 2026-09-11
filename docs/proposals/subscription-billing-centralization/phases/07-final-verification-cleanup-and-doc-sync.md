@@ -1,6 +1,6 @@
 # BILL-07 — 完整验收、迁移恢复与发布准备
 
-> 状态：本地最终检查、升级兼容 fixture 与独立止损开关演练已完成；G-DEV PASS，真实调度/G-PROVIDER/G-OPS/生产 NOT_RUN。整体方案仍不能标记 Completed。
+> 状态：本地最终检查、升级兼容 fixture、独立止损开关演练及最终 forward-fix 回归已完成；G-DEV PASS，真实调度/G-PROVIDER/G-OPS/生产 NOT_RUN。整体方案仍不能标记 Completed。
 
 ## 1. 目标与前置
 
@@ -10,7 +10,7 @@
 
 从真实等价pre-upgrade fixture升级，不只空库reset。核对旧用户/平台/Plan/Grant/Event/Batch/码的计数与关联；旧合法16–128码、新31默认、历史HMAC、旧/v1/plans及新批次单写。
 
-检查Billing FK/匿名保留、账号关闭/删除/retention任务和恢复步骤。测试清理普通7天幂等响应后Checkout长期绑定仍有效、旧订单去重不消失、删除后通知不复活身份。
+检查Billing FK/匿名保留、账号关闭/删除/retention任务和恢复步骤。已用普通7天幂等缓存清理 wrapper 验证过期响应缓存可删除、Checkout长期绑定仍保留；旧订单去重、删除后通知不复活身份及生产恢复仍需独立演练。
 
 schema采用expand/受控启用/forward-fix，明确旧API与新schema的兼容窗口。关闭新购买是首要止损，不能为了回滚删Order/Ledger；说明哪些迁移不可安全down。
 
@@ -36,7 +36,7 @@ PII检查覆盖数据库、日志、错误、浏览器bundle和URL埋点；Webho
 
 ## 6. 命令与旧路径退出
 
-核对并运行 docs:check、contracts:check、typecheck、构建、领域单测、运行时和数据库检查；本次实际完成本地 reset、34 个 SQL 测试文件/678 条断言、Account API/maintenance/Webhook 定向测试、升级兼容 fixture、独立 stop switch 演练、SDK/Admin/Template typecheck/build、合同与文档检查。format/lint 的全仓结果仍按实际输出区分；真实生产等价升级数据、Provider、运维调度和生产观察 NOT_RUN。`pnpm test:api` 等不存在命令不计通过。
+核对并运行 docs:check、contracts:check、typecheck、构建、领域单测、运行时和数据库检查；本次实际完成本地 reset、36 个 SQL 测试文件/693 条断言、Account API/maintenance/Webhook 定向测试、升级兼容 fixture、独立 stop switch 演练、已验证 Provider 映射可购买性回归、普通幂等缓存清理回归、SDK/Admin/Template typecheck/build、合同与文档检查。format/lint 的全仓结果仍按实际输出区分；真实生产等价升级数据、Provider、运维调度和生产观察 NOT_RUN。`pnpm test:api` 等不存在命令不计通过。
 
 使用rg核查旧16位默认、Free claim本期实现、旧Checkout状态、默认零元接受、单高水位、硬编码价格/URL、前端授权、重复期限算法、任意DML和日志PII；历史码兼容与第二期说明不是需要删除的旧功能。
 

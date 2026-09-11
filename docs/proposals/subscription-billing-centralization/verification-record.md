@@ -1,15 +1,15 @@
 # 实施与验证记录
 
-> BILL-01～BILL-06 已记录本地 G-DEV 结果，BILL-07 已完成本地最终检查；真实 Provider、运维和生产证据仍保持独立状态。
+> BILL-01～BILL-07 已记录本地 G-DEV 结果；最终本地 forward-fix 已补齐商品映射就绪状态与普通幂等缓存清理，真实 Provider、运维和生产证据仍保持独立状态。
 
 ## 1. 执行基线
 
-- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`。
-- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`。
-- 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `d71a259` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Consumer 功能提交 `d71a259`、公共文档同步提交 `e78c5e9` 均已 push。
+- 架构：[唯一设计](AisenFlow_Subscription_Billing_Architecture.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`。
+- 计划：[总计划](00-master-plan.md)；本轮实现代码 commits：`d587ca4`, `b91800f`, `fa3083e`, `f1bfba1`, `d71a259`, `b7ec484`, `7b46695`, `e7da954`, `14c9359`, `4d92db0`。
+- 工作目录/branch/功能实现基线/remote：`E:\Projects\Aisenhubplatform` / `codex/billing-architecture-review` / `4d92db0` / `origin=https://github.com/aisenhub/Aisenhubplatform.git`；Registry 对齐、商品就绪与维护清理三个 forward-fix 提交均已 push。
 - Node `v24.19.0`、pnpm `11.18.0`、Supabase CLI `2.111.0`、Deno `2.9.6`；Local DB reset、Docker 数据库和迁移测试已验证；调度与生产观察未验证。
 - 基线：`pnpm docs:check` PASS；`pnpm contracts:check` PASS；`pnpm runtime:probe` PASS；`pnpm typecheck` PASS；全仓 `pnpm format:check` FAIL（72个文件，10个本轮变更文件已定向 oxfmt PASS）；`pnpm lint` PASS；`pnpm test:api` 未运行且为占位入口。
-- 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
+- 当前用户实际派发阶段与授权范围：按 proposal 完成 BILL-01～BILL-07，并补齐本地验证发现的 Registry、商品就绪和幂等清理 forward-fix；当前仅本地合同、数据库、API、SDK 与管理界面实现，不含真实付款、Provider/Webhook 配置、生产迁移或部署。
 - 历史研究d3c25e9不是执行起点；本轮文档修订不作为任何功能验证。
 
 ## 2. 阶段状态
@@ -22,7 +22,7 @@
 | BILL-04 | 本地验收已交付 | 服务端定价Checkout snapshot、Order/Settlement关系、hash-only Webhook Inbox、持久 processing job、lease/fence、Account API/SDK/OpenAPI 和 maintenance 入口已实现；真实 Provider/权威结算未运行 | `7169183` + `c3b99b3`，已 push |
 | BILL-05 | 本地验收已交付 | Provider-neutral 事实归一化、权威验证/结算、重复款/合同冲突、双进度游标、maintenance Provider I/O 边界已实现；真实 Provider 未运行 | `d587ca4`，已 push |
 | BILL-06 | 本地验收已交付 | 中央 Billing Admin wrapper/UI、operation_id/If-Match/MFA 结案边界、Consumer Auth/BFF、动态订阅 Checkout/兑换页面、服务端权益授权已实现；结案 operation 使用已有 admin_idempotency 结果存储；Admin UI 已暴露重查和三种受控结案动作；浏览器真实 Consumer/生产未运行 | `b91800f` + `fa3083e` + `f1bfba1` + `d71a259`，已 push |
-| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级兼容 fixture、独立 stop switch 演练和 Checkout fail-closed 验证已完成；真实生产等价升级数据、G-PROVIDER、G-OPS、生产观察未运行 | `b7ec484` + `7b46695`，已 push；文档同步随本记录提交 |
+| BILL-07 | 本地最终检查已完成 | Local reset、全量 SQL/API/SDK/前端/合同/文档回归完成；升级兼容 fixture、独立 stop switch 演练、Checkout fail-closed 及最终 forward-fix 回归已完成；真实生产等价升级数据、G-PROVIDER、G-OPS、生产观察未运行 | `b7ec484` + `7b46695` + `e7da954` + `14c9359` + `4d92db0`，均已 push；文档同步随本记录提交 |
 
 状态可用未开始/进行中/已阻塞/验证失败/验收通过待推送/已交付。已交付仅指该阶段明确范围，真实渠道和运维门槛另列；整体未满足不能Completed。
 
@@ -115,9 +115,16 @@
 ### BILL-07/2026-09-11/当前 Agent
 
 - 实际变更文件：`supabase/tests/bill_07_upgrade_compatibility.sql`、`supabase/functions/_shared/billing.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/maintenance/index.ts` 及定向测试、`packages/domain/tests/billing.test.ts`、运行配置/Proposal 文档。
-- 本地最终验证：`pnpm test:db` PASS（34 files/678 tests）；Account API PASS（25 tests）；Webhook PASS（4 tests）；maintenance PASS（9 tests）；Domain PASS（8 tests）；独立 stop switch 验证了 Checkout（含缺省关闭）、Webhook ingress、后台领取和自动结算的停机边界；`pnpm contracts:check`、`pnpm docs:check`、定向格式与 lint PASS。`pnpm exec supabase db lint --local --fail-on error` 仍因既有非 Billing 函数错误返回非零。
-- 状态边界：G-DEV PASS；本地 G-OPS 证据 PARTIAL_LOCAL；真实生产等价数据、G-PROVIDER、真实调度/告警/密钥轮换、浏览器真实会话、真实付款、生产迁移/观察仍 NOT_RUN。`pnpm test:e2e:t16-r2` 已尝试但因现有参考模板与旧 E2E 路由/文案不一致，在首页标题断言处 FAIL，不计作浏览器会话 PASS；整体 Proposal 仍为 In Progress，不能标记 Completed。
-- 代码提交：`b7ec484`（`feat(billing): add upgrade fixture and stop controls`）与 `7b46695`（`fix(billing): fail closed for checkout issuance`），均已 push；文档同步随本记录提交。
+- 本地最终验证基线：`pnpm test:db` PASS（34 files/678 tests）；Account API PASS（25 tests）；Webhook PASS（4 tests）；maintenance PASS（9 tests）；Domain PASS（8 tests）；独立 stop switch 验证了 Checkout（含缺省关闭）、Webhook ingress、后台领取和自动结算的停机边界；`pnpm contracts:check`、`pnpm docs:check`、定向格式与 lint PASS。`pnpm exec supabase db lint --local --fail-on error` 仍因既有非 Billing 函数错误返回非零。
+- 状态边界：G-DEV PASS；本地 G-OPS 证据 PARTIAL_LOCAL；真实生产等价数据、G-PROVIDER、真实调度/告警/密钥轮换、浏览器真实会话、真实付款、生产迁移/观察仍 NOT_RUN。最终 forward-fix 后重新对齐了 Registry、公开页面和 Auth origin 配置，但 `pnpm test:e2e:t16-r2` 仍在当前模板 BFF 未开放的 `activate` 路径处收到 503；该旧宽链路不计作浏览器会话 PASS。整体 Proposal 仍为 In Progress，不能标记 Completed。
+- 代码提交：`b7ec484`（`feat(billing): add upgrade fixture and stop controls`）与 `7b46695`（`fix(billing): fail closed for checkout issuance`），均已 push；Registry/商品/维护 forward-fix 分别为 `e7da954`、`14c9359`、`4d92db0`，均已 push。
+
+### 最终本地 forward-fix/2026-09-12/当前 Agent
+
+- 实际变更文件：`supabase/migrations/20260911161052_bill_08_purchase_readiness.sql`、`supabase/tests/bill_08_purchase_readiness.sql`、`supabase/migrations/20260911161726_bill_09_idempotency_cleanup.sql`、`supabase/tests/bill_09_idempotency_cleanup.sql`、`packages/domain/src/contracts/api.ts`、`docs/reference/contracts/account.openapi.json`、`supabase/functions/maintenance/index.ts`、`supabase/functions/maintenance/index.test.ts`、`supabase/functions/maintenance/schedule.json`、Registry/E2E 对齐文件及相关参考文档。
+- 实现行为：公开商品目录的 `purchasable` 仅在平台/Plan/产品开关和当前 Provider mapping 同时满足时为 true，并以 `ready` 明确就绪原因；新增受 `job_executor` 保护的有界 `private.idempotency_cleanup`，每日入口只清理过期普通幂等缓存，不删除 Checkout/Order 长期绑定；Registry 只登记当前真实存在的页面与 `/api/auth/callback`，本地 E2E 启动变量与当前模板 `TEMPLATE_ORIGIN` 对齐。
+- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（36 files/693 tests）；Account API PASS（25 tests）；maintenance PASS（10 tests）；`pnpm contracts:check` PASS；`pnpm docs:check` PASS；Registry M5-04 PASS；`pnpm lint` PASS；针对变更文件的 `oxfmt --check` 与 `git diff --check` PASS；完整 `pnpm typecheck` PASS。`pnpm exec supabase db lint --local --fail-on error` 仍只报告仓库既有非 Billing 函数错误/警告；全仓 format 基线仍有既有失败。
+- 覆盖范围：Local 空库迁移、pgTAP、Account/maintenance 单测、公共合同、Registry 静态一致性和文档；未覆盖真实 Provider、真实支付、生产调度/告警、生产迁移、真实浏览器会话与生产观察。
 
 ## 5. 要求覆盖与实际测试
 
@@ -129,7 +136,7 @@
 | BILL-04 checkout/inbox/job | `supabase/tests/bill_04_checkout_order_inbox_jobs.sql`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.test.ts`、Account API/SDK tests | 本地 Docker DB、Deno、Node；代码 commits `7169183` + `c3b99b3` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted Deno/SDK/domain/admin tests; `pnpm contracts:check`; `pnpm docs:check` | PASS（579 SQL assertions、22 Account、3 webhook、7 maintenance）；真实 Provider/结算/生产 NOT_RUN |
 | BILL-05 verification/settlement | `supabase/tests/bill_05_provider_verification_settlement.sql`、Afdian normalizer、maintenance worker tests | 本地 Docker DB、Deno；代码 commit `d587ca4` | `pnpm test:db`; targeted Afdian/maintenance Deno tests; local Supabase lint | PASS（618 SQL assertions、2 Afdian、8 maintenance）；真实 Provider/生产 NOT_RUN |
 | BILL-06 Admin/Consumer boundary | `supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql`、Account API/SDK tests、Template/Admin build | 本地 Docker DB、Deno、Node、Next build；代码 commits `b91800f` + `fa3083e` | `pnpm test:db`; Account API/Afdian/maintenance; account-server unit/typecheck; Template/Admin typecheck/build; `pnpm contracts:check`; `pnpm docs:check` | PASS（648 SQL assertions、23 Account、2 Afdian、8 maintenance、16 SDK）；真实 Consumer/Provider/生产 NOT_RUN |
-| BILL-07 final/local docs | 本记录、架构/合同/运维文档 | 本地工作区；代码 `b7ec484` | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted regression; `pnpm contracts:check`; `pnpm docs:check` | Local G-DEV PASS；升级兼容 fixture/stop switch PASS；`pnpm test:e2e:t16-r2` 在现有参考模板与旧 E2E 路由/文案不一致处 FAIL；真实生产升级、G-PROVIDER/G-OPS/生产 NOT_RUN |
+| BILL-07 final/local docs | 本记录、架构/合同/运维文档 | 本地工作区；代码 `b7ec484` 及后续 forward-fix | `pnpm exec supabase db reset --local --yes`; `pnpm test:db`; targeted regression; `pnpm contracts:check`; `pnpm docs:check` | Local G-DEV PASS；升级兼容 fixture/stop switch/商品就绪/幂等清理 PASS；`pnpm test:e2e:t16-r2` 在当前模板 BFF 未开放的 `activate` 路径处 FAIL；真实生产升级、G-PROVIDER/G-OPS/生产 NOT_RUN |
 
 重点独立记录：Checkout长幂等/响应丢失、两笔真实款、finalized重放、ACK后崩溃、lease/fence、分页移动与处理重试、99年顺延/到期/跨世纪日期、Admin真永久兼容及通用替代链、删除/归档/批次并发、服务端故障授权。
 
@@ -137,8 +144,8 @@
 
 - 旧Plan/Grant/Event/Batch/Code 的等价迁移 fixture、V1/V2 批次共存、旧HMAC及16–128长度边界：本地已由 `supabase/tests/bill_07_upgrade_compatibility.sql` 与 Domain 测试验证；真实数据分布仍未验证。
 - FK/锁顺序/匿名保留/保留期/责任人/清理checkpoint决策：未冻结。
-- CLI `supabase migration new` 命令、升级fixture与空库 reset 已在本地执行；本轮没有需要保留的 schema migration 文件，生产等价升级迁移/恢复仍未执行。
-- 普通7天幂等清理与长期绑定、删除后迟到通知：未验证。
+- CLI `supabase migration new` 命令、升级fixture与空库 reset 已在本地执行；BILL-08/BILL-09 迁移已保留，生产等价升级迁移/恢复仍未执行。
+- 普通7天幂等清理与长期绑定：Local 已通过 BILL-09 wrapper/入口 fixture 验证；删除后迟到通知、生产清理调度与告警仍未验证。
 - correction链及退款目标、任务/结算/删除竞态：未验证。
 - schema兼容窗口、forward-fix/恢复演练：未验证。
 
@@ -146,12 +153,12 @@
 
 - 调用方/认证/频率/批量/超时/限流预算：未确定。
 - 报警阈值/接收责任人/oldest_pending目标：未确定。
-- 新购买/入站/结算/后台领取独立开关：本地已验证；生产配置变更、调度责任人、限流预算和告警仍未验证。
+- 新购买/入站/结算/后台领取独立开关：本地已验证；幂等缓存清理每日调度入口已加入并通过 maintenance fixture；生产配置变更、调度责任人、限流预算和告警仍未验证。
 - 调度停机恢复/密钥轮换/积压与重复结算演练：未验证。
 - G-PROVIDER/G-OPS通过和真实购买启用授权：未记录。
 
 ## 8. 最终结论与交接
 
-实现覆盖：BILL-01～BILL-07 的本地 G-DEV 范围已完成；`docs:check` 与 `contracts:check` 均已 PASS；真实渠道、G-OPS 与生产观察：NOT_RUN。Proposal Completed：否，必须取得独立 G-PROVIDER/G-OPS 证据并获部署授权后才能继续发布门槛。
+实现覆盖：BILL-01～BILL-07 的本地 G-DEV 范围及最终商品/幂等 forward-fix 已完成；`docs:check` 与 `contracts:check` 均已 PASS；真实渠道、G-OPS 与生产观察：NOT_RUN。Proposal Completed：否，必须取得独立 G-PROVIDER/G-OPS 证据并获部署授权后才能继续发布门槛。
 
 记录当时未提交修改归属、需用户决策事项、已解决与剩余失败；不得将本地模拟成功转换为真实支付可用。
