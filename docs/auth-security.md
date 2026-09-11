@@ -2,7 +2,7 @@
 
 本文件从属于 [架构基线](architecture.md)。身份是全局共享的，业务状态是平台本地的，两者不能互相替代。
 
-**ASU-R1 实现登记（2026-09-09）：** [Auth 优化计划 §2.10](plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/00-master-plan.md) 已落实 scoped CSRF/proof、CSRF 刷新窗口、local revoke 结果分类、退出 fence/ack、迟到响应隔离、显式刷新所有权与 MFA 部分成功协议。实现代码与阶段验证记录见 [verification-record.md](plans/aisenhub-auth-session-upgrade-plan-complete/auth-session-upgrade/verification-record.md)；真实 Supabase/Auth、浏览器双 Tab、响应式回归和生产观察仍需在对应环境执行。现有中央 JWT/session/AAL2/proof 和领域授权要求不变。
+**ASU-R1 实现登记（2026-09-09）：** 历史 Auth 优化计划已落实 scoped CSRF/proof、CSRF 刷新窗口、local revoke 结果分类、退出 fence/ack、迟到响应隔离、显式刷新所有权与 MFA 部分成功协议。对应计划包和阶段验证记录已从当前仓库清理；真实 Supabase/Auth、浏览器双 Tab、响应式回归和生产观察仍需在对应环境执行。现有中央 JWT/session/AAL2/proof 和领域授权要求不变。
 
 ## 1. 平台信任边界
 
