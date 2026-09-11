@@ -400,7 +400,7 @@ export function PlatformOriginsPage() {
               id="origin-environment"
               label="environment"
               value={draft.environment}
-              placeholder="local / staging / production"
+              placeholder="local / preview / production"
               onChange={(value) => setDraft({ ...draft, environment: value })}
             />
             <OriginField

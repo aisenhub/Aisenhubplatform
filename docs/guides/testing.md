@@ -2,6 +2,10 @@
 
 命令以[根 package.json](../../package.json)为准；下表说明入口做什么，不记录历史运行结果。
 
+## 环境约定
+
+本项目不设置 Staging 环境。开发、联调和数据库验证统一使用本地 Supabase；本地验证通过并取得上线授权后，才迁移和部署到 Production。Production 只做发布后的 smoke check、日志和指标观察，不把生产数据复制回 Local。
+
 | 命令 | 范围与条件 |
 | --- | --- |
 | pnpm docs:check | 文档必需入口、相对链接与导航可达性 |
@@ -27,6 +31,6 @@
 
 ## 结果解释
 
-CI 运行格式、lint、typecheck、build、单元测试、运行时导入和文档合同检查，不运行整个 SQL/API/浏览器/生产验证矩阵。
+CI 运行格式、lint、typecheck、build、单元测试、运行时导入和文档合同检查，不运行整个 SQL/API/浏览器/Production 验证矩阵；需要 Supabase 的验证在 Local 执行，Production 只在获得上线授权后做发布观察。
 
 测试结果在任务回复或测试平台报告中说明执行环境、命令、成功／失败／未运行及限制。隔离 mock 测试不代表真实 Auth、Storage 或生产恢复成功。

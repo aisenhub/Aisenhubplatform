@@ -4,13 +4,15 @@
 
 ## 1. 环境和发布
 
-Local、Staging、Production使用独立Supabase项目/实例，不共享Auth用户、数据库、对象、Secret、Platform Key、HMAC、兑换码或数据库凭据。Preview只接Local/Staging，禁止连接生产。生产数据不作为Staging seed。
+Local 和 Production 使用独立 Supabase 项目/实例，不共享 Auth 用户、数据库、对象、Secret、Platform Key、HMAC、兑换码或数据库凭据。本项目不设置 Staging 环境；Preview 仅作为 Local 的开发预览，只接 Local，禁止连接 Production。生产数据不作为 Local fixture。
 
 迁移由Supabase CLI生成时间戳文件，版本固定后先读CLI help。Auth/Storage/Origin/调度配置纳入受控配置与漂移检查，不能依赖开发者手工Dashboard操作。Secrets只存各环境Secret Manager，仓库保存变量名与配置模板。
 
 CI 负责执行仓库中已配置的格式、lint、typecheck、构建、领域单测、运行时和文档检查；空库 reset、升级、角色权限、攻击、并发、故障注入、真实消费项目 E2E 等检查只有在对应脚本存在并实际运行时才能计入结果。测试期间仅使用虚构数据。
 
 安全、审计、并发和恢复测试在对应功能开发时建立；发布前执行统一回归。生产迁移是独立release gate，不随普通merge执行。数据库变更采用expand→兼容部署→验证→contract；已产生业务数据后优先forward-fix，不通过删除Ledger来“回滚”。
+
+发布路径固定为 Local → Production。Local 验证通过并取得上线授权后，才执行生产迁移和部署；不创建、不维护、也不把 Staging 验证作为发布条件。高风险数据库、Auth、Storage、权限或并发变更仍须在 Local 完成定向验证，并准备生产迁移的回退/前向修复方案。
 
 发布证据包含依赖锁、上游commit/license、迁移结果、测试报告、备份manifest、恢复演练、Key轮换、配置漂移检查和实际Edge/BFF限制报告。缺证据标为未验收，不用勾选符号假装已完成。
 
@@ -71,7 +73,7 @@ Auth完全不可用时不绕过认证开放Admin网页；通过基础设施运�
 
 重试指数退避1分钟起、上限1小时，最多10次后转人工队列并持续告警；任务本身幂等。deleting超过15分钟、unknown写入超过5分钟、备份失败/超时、配额漂移立即告警。
 
-V1授权API目标p95<=500ms，按预期平台数及至少100次/秒聚合授权查询进行Staging压测，连续15分钟错误率<1%；达不到则降低已承诺容量或优化连接/查询后重测，不能靠缓存授权隐藏一致性问题。
+V1授权API目标p95<=500ms，上线前在 Local 按预期平台数及至少100次/秒聚合授权查询进行有界压力探针，连续15分钟错误率<1%；达不到则降低已承诺容量或优化连接/查询后重测，不能靠缓存授权隐藏一致性问题。Production 上线后继续记录真实延迟、连接/锁等待和错误率，发现偏差时按生产观察结果修复。
 
 记录每平台授权延迟、DB连接/锁等待、兑换冲突、限流次数、上传内存/并发、未结算对象、主存储及备份占用。BFF与Edge的实际内存/请求/CPU限制必须验证，单文件1MiB不是无限并发的许可。[Edge限制](https://supabase.com/docs/guides/functions/limits)
 
@@ -88,4 +90,4 @@ V1授权API目标p95<=500ms，按预期平台数及至少100次/秒聚合授权�
 | 集成 | 全新消费项目SDK/Registry安装、公开Pricing、Auth/SSR、业务授权、账户/兑换/文件全链路、Secret bundle扫描 |
 | 运维 | 空库与升级、联合恢复、hash核对、删除墓碑、Code/Key恢复禁用、全部轮换、任务重复/超时与告警 |
 
-验证记录必须分清“文档静态检查”“自动化测试”“Staging演练”“生产观察”。没有实际运行的检查只能标为未验证。
+验证记录必须分清“文档静态检查”“自动化测试”“Local 演练”“生产观察”。没有实际运行的检查只能标为未验证。

@@ -54,7 +54,7 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | 主题 | 当前可依据的来源 | 仍需在对应环境核对的内容 |
 | --- | --- | --- |
 | 依赖和工具 | 根目录 `package.json`、workspace、lockfile 和实际脚本 | CI 与部署环境的 Node/pnpm/Supabase CLI 版本一致性 |
-| 数据库和权限 | `supabase/migrations`、`supabase/tests`、受控 SQL wrapper | Staging/Production 的 executor、TLS、pooler 和真实凭据配置 |
+| 数据库和权限 | `supabase/migrations`、`supabase/tests`、受控 SQL wrapper | Production 的 executor、TLS、pooler 和真实凭据配置 |
 | 身份和回调 | Auth adapter、Account API、认证相关迁移与单元测试 | Supabase Auth、OAuth provider、邮件和浏览器多会话行为 |
 | 文件和恢复 | 文件迁移、受控 Storage adapter、maintenance 任务和恢复屏障测试 | 对象备份送达、恢复演练、告警和真实 Storage 取消语义 |
 | API 合同 | OpenAPI JSON、domain DTO、Account/Admin 路由和 `pnpm contracts:check` | 每个部署环境的网关、域名、缓存和真实端到端流量 |
@@ -67,12 +67,12 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 
 | 信息 | 影响 | 缺少时可继续的工作 |
 | --- | --- | --- |
-| 独立 Staging Supabase 项目、区域和最小凭据 | 托管数据库、Auth、权限和 API 验证 | Local 迁移、类型、fixture 和单元测试 |
+| Production Supabase 项目、区域和最小凭据 | 生产数据库、Auth、权限和 API 发布观察 | Local 迁移、类型、fixture、单元测试和发布前压力探针 |
 | Account/Admin/BFF 的真实部署 host 和可信代理链 | SSR、上传、Origin 和缓存验证 | 本地 HTTP、CSRF、Storage adapter 测试 |
 | OAuth 测试客户端、回调地址和 SMTP 测试配置 | Provider、邮箱和浏览器 E2E | 密码流程、callback 负向测试和会话单测 |
 | 独立备份目标、加密凭据和告警渠道 | 联合备份、墓碑恢复和 RPO/RTO 演练 | manifest、屏障和隔离恢复模拟 |
 | 正式 npm scope、Registry 地址和发布权限 | SDK/Registry 发布验证 | 本地 tarball、manifest 和消费项目构建 |
-| 生产区域、预算、平台数量和负载 | 容量、性能和运营阈值 | 默认负载下的本地及 Staging 压测 |
+| 生产区域、预算、平台数量和负载 | 容量、性能和运营阈值 | 默认负载下的 Local 压力探针 |
 
 ## 决策更新记录模板
 
@@ -88,6 +88,15 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 - 验证命令及结果：
 - 未解决的风险或外部输入：
 ```
+
+### 2026-09-11：取消 Staging 环境
+
+- 变更原因：项目开发流程统一采用本地 Supabase 验证，发布时直接迁移到 Production，不再维护独立 Staging 环境。
+- 代码/迁移证据：本次只同步运维、测试、架构、Agent 规则和 Admin Origins 提示；已有迁移中的 `staging` 值未改动，避免未经数据盘点的数据库契约变更。
+- 新旧行为：旧流程包含 Local、Staging、Production；新流程为 Local → Production。Preview 仅作为 Local 的开发预览，不作为独立 Supabase 环境。
+- 受影响文档、接口和消费者：`docs/guides/operations.md`、`docs/guides/testing.md`、文件任务架构说明、项目 Agent 规则和 Admin Origins 页面提示。
+- 验证命令及结果：`pnpm docs:check` 通过；`pnpm --filter admin typecheck` 通过。
+- 未解决的风险或外部输入：数据库仍接受历史 `staging` origin。若要从数据库层禁止该值，需要另行盘点数据并提交向前迁移，不能通过本次文档同步直接移除。
 
 ## Rejected alternatives
 

@@ -10,7 +10,7 @@ platform_file_policies 为 typed 表，platform_id PK/FK、enabled、max_file_by
 
 上传意图声明 size 只用于预约上限；Content-Length、MIME 和文件名都不可信。BFF 与 Account API 分别以有界读取器计数，最多读取 min(requested_size_bytes,max_file_bytes)+1 字节，超出立即终止，不调用 Storage。禁止在检查前使用无限制 arrayBuffer/formData 或把浏览器输入直接流式转发给 Storage。禁止 Content-Encoding 压缩体，避免解压字节边界歧义。
 
-Account API得到完整有界字节后校验实际大小>0、<=声明、<=当前策略，计算SHA-256，然后重新事务校验Principal、配额及上传租约，最后才上传该不可变缓冲区。BFF与Account API分别限制每实例最多16个并发接收、每账户最多2个接收，在读body前取得接收名额；超过返回429。实际内存仍须在Staging压测，不能仅以文件大小推算总实例内存。中央层独立校验，避免BFF配置错误成为绕过入口。
+Account API得到完整有界字节后校验实际大小>0、<=声明、<=当前策略，计算SHA-256，然后重新事务校验Principal、配额及上传租约，最后才上传该不可变缓冲区。BFF与Account API分别限制每实例最多16个并发接收、每账户最多2个接收，在读body前取得接收名额；超过返回429。实际内存须在 Local 以目标并发模型做压力探针，Production 上线后再核对真实限制，不能仅以文件大小推算总实例内存。中央层独立校验，避免BFF配置错误成为绕过入口。
 
 ## 2. 数据与配额
 
@@ -84,7 +84,7 @@ create unique index one_live_replacement_per_file
 4. Storage成功后查询对象大小并校验，账户锁下storing→active，记Audit。若用户在storing后被Suspend，允许已经授权的存储操作结算并保留占用，但后续访问拒绝；若处于Close/Global Delete则转deleting补偿，不重新开放账户。返回文件信息；完成为后端内部步骤，**没有浏览器可调用的 /complete API**。
 5. active 的重复 PUT 验证实际字节/hash 与已提交内容一致时返回既有结果；不同内容返回 FILE_CONTENT_CONFLICT；不覆盖对象。请求中断后 GET 文件状态恢复进度，不能盲目生成另一个对象。
 
-接收超时15秒，单次存储调用预算30秒；host 最大请求时限须留出清理和返回余量并在 Staging 验证。上传 worker 不能依赖未持久化的 fire-and-forget。
+接收超时15秒，单次存储调用预算30秒；host 最大请求时限须留出清理和返回余量，先在 Local 验证，Production 上线后通过观察确认。上传 worker 不能依赖未持久化的 fire-and-forget。
 
 状态转换：
 
