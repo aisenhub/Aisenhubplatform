@@ -1,60 +1,156 @@
-# 数据模型
+# 核心数据模型
 
-数据库定义以 [supabase/migrations](../../supabase/migrations) 按文件名顺序执行后的结果为准。后续 ALTER 和 CREATE OR REPLACE 同样构成当前定义；不要只读取首次建表迁移。
+本文件描述当前数据库模型的详细基线。字段、约束、RLS、权限、触发器、索引和函数的最终事实以 `supabase/migrations/` 合并执行结果为准；本文用于解释关系、所有权和不变量，不替代迁移。
 
-## 领域表
+## 1. 平台、身份和账户
 
-| 表 | 职责与关系 |
-| --- | --- |
-| public.platforms | 平台、启用状态、激活开关与默认 Plan |
-| public.platform_accounts | 平台内账户，唯一 platform_id/user_id；删除匿名化时可脱离 Auth 用户 |
-| public.platform_profiles | 账户资料与 row_version |
-| public.platform_preferences | 账户偏好 JSON 与 row_version |
-| public.platform_auth_origins | 平台 Origin 和回调配置 |
-| public.plans | 平台内套餐、features 与状态 |
-| public.subscriptions | 当前付费权益与暂停投影 |
-| public.subscription_grants | 授权区间、来源及 operation_id |
-| public.subscription_events | 授予、撤销、暂停与恢复事件及 sequence |
-| public.redemption_code_batches | 批次、交付和创建幂等信息 |
-| public.redemption_codes | 兑换码 HMAC、状态与批次关系 |
-| public.redemption_events | 兑换结果及关联授权 |
-| public.platform_file_policies | 平台文件上限和开关 |
-| public.platform_config_files | 文件 metadata、状态、占用预算、租约及写入结果 |
-| public.audit_logs | 请求、操作主体与脱敏事件 |
+~~~sql
+create schema if not exists private;
 
-## 私有设施
+create table public.platforms (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  status text not null default 'active'
+    check (status in ('active', 'disabled')),
+  allow_activation boolean not null default true,
+  default_locale text,
+  default_plan_id uuid,
+  default_plan_kind text not null default 'free' check (default_plan_kind = 'free'),
+  config jsonb not null default '{}'::jsonb check (jsonb_typeof(config) = 'object'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-| 表 | 用途 |
-| --- | --- |
-| system_admin、identity_lifecycle | 单管理员与身份删除门闩 |
-| platform_api_keys | 平台 Key HMAC、版本和部署确认 |
-| idempotency_keys、admin_idempotency | 作用域内请求幂等 |
-| admin_step_up、user_recent_auth_proofs | 绑定会话的近期认证证明 |
-| deletion_requests、deletion_jobs | 删除请求、状态与 checkpoint |
-| job_leases、rate_limit_windows | 租约/fencing token 与限流计数 |
-| file_write_attempts | 存储写入尝试与未知结果 |
-| file_backup_barriers、file_deletion_tombstones | 备份删除屏障与删除摘要 |
+create table public.platform_accounts (
+  id uuid primary key default gen_random_uuid(),
+  platform_id uuid not null references public.platforms(id) on delete restrict,
+  user_id uuid references auth.users(id) on delete restrict,
+  status text not null default 'active'
+    check (status in ('active', 'suspended', 'closed')),
+  activated_at timestamptz not null default now(),
+  suspended_at timestamptz,
+  closed_at timestamptz,
+  anonymized_at timestamptz,
+  last_login_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (platform_id, user_id),
+  unique (platform_id, id),
+  check (
+    (user_id is not null and anonymized_at is null)
+    or (user_id is null and status = 'closed' and anonymized_at is not null)
+  )
+);
 
-以上设施位于 private schema；public 表的位置不代表允许匿名访问。
+create table public.platform_profiles (
+  platform_account_id uuid primary key
+    references public.platform_accounts(id) on delete cascade,
+  display_name text,
+  avatar_url text,
+  bio text,
+  locale text,
+  timezone text,
+  metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata) = 'object'),
+  row_version bigint not null default 1 check (row_version > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-## 可信上下文
+create table public.platform_preferences (
+  platform_account_id uuid primary key
+    references public.platform_accounts(id) on delete cascade,
+  preferences jsonb not null default '{}'::jsonb check (jsonb_typeof(preferences) = 'object'),
+  row_version bigint not null default 1 check (row_version > 0),
+  updated_at timestamptz not null default now()
+);
 
-最初定义见[核心迁移](../../supabase/migrations/20260907100355_core_platform_accounts.sql)：
+create table public.platform_auth_origins (
+  id uuid primary key default gen_random_uuid(),
+  platform_id uuid not null references public.platforms(id) on delete restrict,
+  environment text not null
+    check (environment in ('local', 'preview', 'staging', 'production')),
+  origin text not null,
+  oauth_callback_url text not null,
+  password_reset_url text not null,
+  email_confirmation_url text not null,
+  status text not null default 'active' check (status in ('active', 'disabled')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (environment, origin),
+  unique (platform_id, id)
+);
 
-- account_context：user_id、session_id、platform_id、platform_key_id、request_id。
-- admin_context：admin_user_id、session_id、request_id。
-- job_context：job_id、lease_owner、fencing_token、request_id。
+create table private.system_admin (
+  singleton_id smallint primary key default 1 check (singleton_id = 1),
+  user_id uuid not null unique references auth.users(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-上下文由受控服务构造，函数仍检查持久状态与资源归属。复合外键约束平台、账户与资源一致性；不能代替读取权限检查。
+create table private.identity_lifecycle (
+  user_id uuid primary key references auth.users(id) on delete restrict,
+  state text not null default 'active' check (state in ('active', 'deleting')),
+  updated_at timestamptz not null default now()
+);
+~~~
 
-## 文件状态
+user_id 可空仅为受控 Global Purge 保留无身份墓碑账户。普通 Close 不清空 user_id；业务运行角色不能修改归属。平台资料只引用唯一账户根，不需要重复 platform_id。
 
-status：pending、receiving、storing、active、deleting、deleted、failed、expired。
+identity_lifecycle 首次受控访问时 insert-on-conflict 建立。普通写入锁定并检查该身份门闩；Global Delete 设置 deleting 后，激活/兑换/上传/下载和 BFF 授权均拒绝。Auth 中用户缺失时不能重建门闩。
 
-write_outcome：not_started、in_flight、confirmed、unknown、settled_absent。
+Origin 规范化后存储，不含路径；生产只允许 HTTPS，callback 必须与同一行 origin 同源且路径精确匹配。一个环境内同一 origin 只属于一个平台。该表不是 Supabase allowlist 的替代，部署控制器负责同步和漂移检测。
 
-文件可处于待清理状态而写入结果仍为 unknown；状态与预算释放不能简单等同。详见[文件与任务](../architecture/modules/files-jobs.md)。
+## 2. Plan 和默认 Free
 
-## 数据契约
+~~~sql
+create table public.plans (
+  id uuid primary key default gen_random_uuid(),
+  platform_id uuid not null references public.platforms(id) on delete restrict,
+  code text not null,
+  name text not null,
+  description text,
+  kind text not null check (kind in ('free', 'paid')),
+  features jsonb not null default '{}'::jsonb check (jsonb_typeof(features) = 'object'),
+  status text not null default 'active' check (status in ('active', 'archived')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (platform_id, code),
+  unique (platform_id, id),
+  unique (platform_id, id, kind)
+);
 
-Profile/Preferences 通过 row_version 实现条件更新。Grant/Event 的业务效果通过追加事件改变；文件外部操作使用独立短事务和租约结算。字段类型、约束、索引、授权和函数签名只在迁移中维护，HTTP 序列化见 [API](api.md)。
+alter table public.platforms add constraint platform_default_free_plan_fk
+  foreign key (id, default_plan_id, default_plan_kind)
+  references public.plans(platform_id, id, kind) on delete restrict;
+~~~
+
+默认 Plan 可为 NULL，表示无默认权益；非空必须引用同平台 Free Plan，数据库直接保证。归档默认 Free 前，必须同事务清空或更换默认 Plan；归档套餐停止新 Grant，不撤销已有有效 Grant。kind、platform_id 在 Plan 被引用后不可改变。
+
+features 是当前实时配置；更新立即影响后续权益读取，不承诺 grandfathering。只验证 JSON 对象、大小和字段基础类型，不提前构建通用 feature engine；业务平台自行理解业务键，统一后端不执行配置中的代码。
+
+## 3. 辅助表合同
+
+以下字段表是迁移的强制输入，实际类型及非空约束必须按所述语义落实。
+
+| 表 | 必备字段及约束 |
+|---|---|
+| private.platform_api_keys | id PK、platform_id FK、name、key_hmac（64字符小写hex）、hmac_key_version、prefix/suffix、status(active/revoked)、expires_at、revoked_at、created_by/ revoked_by nullable Auth FK SET NULL、creation_operation_id UUID、created_at；unique(version,hmac)、unique(platform_id,creation_operation_id) |
+| private.idempotency_keys | platform_id、platform_account_id、operation、actor_scope、idempotency_key、request_hash、state(pending/completed)、response_status/body、created_at、expires_at；上述 scope+key 唯一；复合账户 FK |
+| public.audit_logs | id PK、request_id、actor_type、actor_user_id nullable Auth FK SET NULL、platform_id nullable、platform_account_id nullable、event_type、target_type/id、ip、user_agent、metadata、created_at |
+| private.deletion_jobs | id PK、user_id nullable Auth FK SET NULL、scope、state、checkpoint、retry_count、next_attempt_at、last_error_code、created_at、completed_at；用户活跃删除任务唯一 |
+| private.job_leases | job_kind、resource_id、lease_owner、lease_until、fencing_token、retry_count、next_attempt_at、last_error_code；unique(job_kind,resource_id) |
+
+Audit的平台账户引用使用(platform_id,platform_account_id) → platform_accounts(platform_id,id)，并CHECK(platform_account_id IS NULL OR platform_id IS NOT NULL)。全局事件可没有平台；不能用伪平台占位。metadata不含Token、兑换码、签名、文件内容或直接身份资料。
+
+actor_scope 对用户操作固定 user:账户ID，对 Admin 操作固定 admin:管理员ID；不能由客户端自行提供。目标账户仍在幂等 scope 中，避免管理员对两个账户使用相同 key 时冲突。没有目标账户的批次/密钥操作使用独立 private.admin_idempotency，unique(admin_user_id,platform_id,operation,key)，避免 NULL 破坏唯一性；全局 Admin 操作使用固定 scope 字符串而不是 nullable platform 唯一键。
+
+## 4. 通用约束与维护
+
+- 所有跨租户敏感关系使用复合 FK；同账户关系进一步包含 platform_account_id。事件中的非空 code/subscription/grant 引用必须能由数据库验证。
+- Platform、Plan、Account、Code 不物理删除；Global Purge 留墓碑账户并脱离身份，文件内容按保留策略实际清除。
+- 所有 updated_at 由统一 trigger 更新，业务方不能覆盖 created_at。原始事件排序不依赖客户端时钟。
+- Profile/Preferences的row_version用于ETag/If-Match原子条件更新；成功PATCH递增，失败不变。updated_at不替代并发版本。迁移、API 和 SDK 必须共同遵守这一并发版本模型。
+- 业务 Ledger 的 effect 字段 append-only；管理员原因不得携带个人信息。受控清除可匿名化 actor/metadata，不得改变 Plan、时间、sequence 或 reversal 目标。
+- 高风险审计同业务事务写入，审计写入失败则业务回滚。拒绝事件与基础设施失败的记录见订阅与兑换文档。
+- 迁移中显式建立 RLS、REVOKE、最小权限 policy 和必要索引；public 表的位置不代表可公开读取。
