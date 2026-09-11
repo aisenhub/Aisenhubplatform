@@ -18,7 +18,7 @@
 |---|---|---|---|
 | BILL-01 | G-DEV 已完成 | Provider-neutral 合同、虚构适配器夹具、Node/Deno MD5/HMAC 向量已验证；G-PROVIDER 未运行 | `20a28ed` / `4abb87b`，已 push |
 | BILL-02 | 本地验收已交付 | 固定商品目录、期限语义、平台商品配置、切换 preflight、Account API/SDK/OpenAPI/Admin UI 已实现；Provider 映射未配置，真实购买关闭 | `503f14c` / `fdd106f`，已 push |
-| BILL-03 | 本地验收通过待提交 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入已实现；真实结算未运行 | 当前工作区待提交；验证通过后记录 commit |
+| BILL-03 | 本地验收已交付 | Redemption V2 快照、历史兼容、统一码规范化、Admin correction 预览/原子替代链、Admin/API 接入已实现；真实结算未运行 | `5dba4bd`，已 push |
 | BILL-04 | 未开始 | 全部 | 未记录 |
 | BILL-05 | 未开始 | 全部 | 未记录 |
 | BILL-06 | 未开始 | 全部 | 未记录 |
@@ -79,7 +79,7 @@
 - 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（30 files/513 tests）；`pnpm --filter @kit/domain test:unit --run` PASS（2 files/7 tests）；`pnpm --filter @kit/domain typecheck` PASS；`pnpm exec deno test -A supabase/functions/account-api/index.test.ts` PASS（21 tests）；`pnpm --filter admin typecheck` PASS；`git diff --check` 待提交前复核。
 - Supabase lint：`pnpm exec supabase db lint --local --fail-on error` 未通过，但只剩仓库既有 `admin_account_*`、`admin_file_policy_update`、`admin_deletion_job_*` 等 error；BILL-03 未新增 error，新增函数没有 lint error。全量 lint/format 的既有失败继续保留，不改写为 PASS。
 - 覆盖范围：本地迁移 reset、pgTAP、Domain/API/Admin 定向测试与类型；未覆盖真实 Provider、真实结算、Webhook、调度和生产观察。
-- 代码commit：待当前阶段提交后补记；push 状态待核对。
+- 代码commit：`5dba4bd`（`feat(billing): add redemption v2 lifecycle and corrections`）；已 push 到 `origin/codex/billing-architecture-review`，远端 SHA 核对为 `5dba4bd33fc4786debbce4ff525001b1ae7ef226`。
 - 未完成/阻塞/下一满足依赖任务：BILL-03 不提供商业永久/Free claim；下一项为 BILL-04，建立可恢复 Checkout、Order、Inbox 与持久任务。
 
 ## 5. 要求覆盖与实际测试
