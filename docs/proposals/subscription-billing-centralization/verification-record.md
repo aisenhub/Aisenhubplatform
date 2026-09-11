@@ -177,6 +177,7 @@
 - 验证命令：`pnpm run test:sql:bill-05-concurrency` 在 Local Auth/Kong 恢复后连续运行 2 次均 PASS；两个不同 Provider 订单并发竞争同一 Checkout，结果恰为 `granted` + `duplicate_payment`，settlement 为 automatic 1 + manual 1，Grant 为 1，job 为 completed 1 + manual_review 1。
 - 清理验证：探针逐项清理 Provider、订单、任务、Grant/Event、订阅和平台夹具；复测后残留计数为 `platforms=0, jobs=0, providers=0`。完整 `pnpm test:db` 随后 PASS（36 files/695 tests）。
 - 证据边界：这是本地事务锁、自动结算唯一槽位和人工复核边界的并发证据；Provider 真实签名/query-order、真实付款/退款、外部调度和生产观察仍保持 G-PROVIDER/G-OPS/生产 NOT_RUN。
+- 代码与验证提交：`9e066b0`（`test(billing): cover concurrent settlement slot`）已 push，并核对 `origin/codex/billing-architecture-review` 远端 SHA。
 
 ### Local R15 JWT 验证优化/2026-09-12/当前 Agent
 
