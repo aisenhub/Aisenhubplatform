@@ -34,7 +34,11 @@ export async function deriveCheckoutToken(input: {
   readonly providerAccountId: string;
   readonly checkoutId: string;
 }): Promise<{ readonly token: string; readonly digest: Uint8Array }> {
-  if (!input.secret || !Number.isInteger(input.keyVersion) || input.keyVersion < 1)
+  if (
+    !input.secret ||
+    !Number.isInteger(input.keyVersion) ||
+    input.keyVersion < 1
+  )
     throw new Error('CHECKOUT_KEY_UNAVAILABLE');
   const canonical = [
     'aisen-checkout-v1',
@@ -60,4 +64,20 @@ export function constantTimeEqual(left: string, right: string): boolean {
   for (let index = 0; index < left.length; index += 1)
     result |= left.charCodeAt(index) ^ right.charCodeAt(index);
   return result === 0;
+}
+
+/**
+ * Reads an independently deployable billing stop switch. The default keeps
+ * the current local behavior; production can stop one flow without disabling
+ * the others. Only explicit false-like values disable a switch.
+ */
+export function billingSwitchEnabled(
+  name: string,
+  defaultValue = true,
+): boolean {
+  const value = Deno.env.get(name);
+  if (value === undefined) return defaultValue;
+  return !['0', 'false', 'off', 'disabled', 'no'].includes(
+    value.trim().toLowerCase(),
+  );
 }

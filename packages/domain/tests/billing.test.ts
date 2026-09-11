@@ -14,6 +14,7 @@ import {
 } from './fixtures/fictional-provider.ts';
 import {
   formatRedemptionCode,
+  generateRedemptionCodes,
   normalizeRedemptionCode,
   validateRedemptionCode,
 } from '../src/redemption.ts';
@@ -104,5 +105,33 @@ describe('billing contract foundation', () => {
     expect(() => normalizeRedemptionCode('ABCD/EFGH/JKMP/QRST')).toThrow(
       'INVALID_REDEMPTION_CODE',
     );
+  });
+
+  it('uses the 31-character default while retaining legacy length bounds', async () => {
+    const [current] = await generateRedemptionCodes({
+      platformId: '00000000-0000-4000-8000-000000000701',
+      hmacSecret: 'a-local-test-secret-with-16-chars',
+      hmacKeyVersion: 1,
+      quantity: 1,
+    });
+    const [legacyShort] = await generateRedemptionCodes({
+      platformId: '00000000-0000-4000-8000-000000000701',
+      hmacSecret: 'a-local-test-secret-with-16-chars',
+      hmacKeyVersion: 1,
+      quantity: 1,
+      length: 16,
+    });
+    const [legacyLong] = await generateRedemptionCodes({
+      platformId: '00000000-0000-4000-8000-000000000701',
+      hmacSecret: 'a-local-test-secret-with-16-chars',
+      hmacKeyVersion: 1,
+      quantity: 1,
+      length: 128,
+    });
+    expect(current?.code).toHaveLength(31);
+    expect(legacyShort?.code).toHaveLength(16);
+    expect(legacyLong?.code).toHaveLength(128);
+    expect(validateRedemptionCode(legacyShort?.code)).toBe(true);
+    expect(validateRedemptionCode(legacyLong?.code)).toBe(true);
   });
 });

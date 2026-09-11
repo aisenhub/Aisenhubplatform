@@ -13,7 +13,10 @@ import {
   normalizeRedemptionCode,
 } from '../../../packages/domain/src/redemption.ts';
 import type { SubscriptionCheckoutDto } from '../../../packages/domain/src/contracts/api.ts';
-import { deriveCheckoutToken } from '../_shared/billing.ts';
+import {
+  billingSwitchEnabled,
+  deriveCheckoutToken,
+} from '../_shared/billing.ts';
 
 type Row = Record<string, unknown>;
 
@@ -33,6 +36,7 @@ interface AccountApiDependencies {
   readonly checkoutSecret?: string;
   readonly checkoutKeyVersion?: number;
   readonly checkoutProviderAccountId?: string;
+  readonly checkoutEnabled?: boolean;
   readonly redemptionSecret?: string;
   readonly redemptionKeyVersion?: number;
   readonly redemptionSecrets?: readonly {
@@ -757,6 +761,13 @@ async function dispatchAccount(
   const contextValues = accountContextValues(session, key);
   if (path === 'v1/subscription/checkout' && request.method === 'POST') {
     assertAllowed(row);
+    if (
+      !(
+        dependencies.checkoutEnabled ??
+        billingSwitchEnabled('BILLING_CHECKOUT_ENABLED')
+      )
+    )
+      throw new ApiFault(503, 'CHECKOUT_UNAVAILABLE');
     const idempotencyKey = request.headers.get('idempotency-key');
     if (!idempotencyKey || idempotencyKey.length > 128)
       throw new ApiFault(400, 'INVALID_INPUT');

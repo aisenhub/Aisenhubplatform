@@ -520,6 +520,32 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
   assertEquals((await read.json()).data.product_code, 'monthly');
 });
 
+Deno.test('Account API can stop new checkout issuance independently', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'checkout-disabled-1',
+        },
+        body: JSON.stringify({ product_code: 'monthly' }),
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      checkoutEnabled: false,
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 503);
+  assertEquals((await response.json()).error.code, 'CHECKOUT_UNAVAILABLE');
+});
+
 Deno.test('Account API accepts the Edge runtime function-name path prefix', async () => {
   const response = await handleRequest(
     new Request(`http://edge/account-api/v1/plans`, {

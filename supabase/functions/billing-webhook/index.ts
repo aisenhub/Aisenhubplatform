@@ -1,6 +1,10 @@
 /// <reference lib="deno.ns" />
 
-import { sha256Bytes, constantTimeEqual } from '../_shared/billing.ts';
+import {
+  billingSwitchEnabled,
+  sha256Bytes,
+  constantTimeEqual,
+} from '../_shared/billing.ts';
 import { readBoundedBody, UploadFault } from '../_shared/upload.ts';
 
 type Row = Record<string, unknown>;
@@ -16,6 +20,7 @@ interface Database {
 interface BillingWebhookDependencies {
   readonly database?: Database;
   readonly providerAccountId?: string;
+  readonly webhookIngressEnabled?: boolean;
   readonly verifySignature?: (
     body: Uint8Array,
     request: Request,
@@ -68,7 +73,9 @@ async function defaultVerifySignature(
   const copy = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(copy).set(bytes);
   const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, copy));
-  const expected = [...mac].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  const expected = [...mac]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
   return constantTimeEqual(expected, presented.trim().toLowerCase());
 }
 
@@ -76,7 +83,10 @@ async function parseBody(request: Request): Promise<{
   readonly bytes: Uint8Array;
   readonly payload: Record<string, unknown>;
 }> {
-  const contentType = request.headers.get('content-type')?.split(';')[0]?.trim();
+  const contentType = request.headers
+    .get('content-type')
+    ?.split(';')[0]
+    ?.trim();
   if (contentType !== 'application/json') throw new Error('INVALID_INPUT');
   const { bytes } = await readBoundedBody(request, 65536);
   let parsed: unknown;
@@ -96,26 +106,39 @@ export async function handleBillingWebhookRequest(
 ): Promise<Response> {
   const id = requestId();
   if (request.method !== 'POST')
-    return response(405, { error: { code: 'METHOD_NOT_ALLOWED' }, request_id: id }, id);
+    return response(
+      405,
+      { error: { code: 'METHOD_NOT_ALLOWED' }, request_id: id },
+      id,
+    );
   const path = new URL(request.url).pathname;
   if (!path.endsWith('/webhooks/afdian'))
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id }, id);
   try {
+    if (
+      !(
+        dependencies.webhookIngressEnabled ??
+        billingSwitchEnabled('BILLING_WEBHOOK_INGRESS_ENABLED')
+      )
+    )
+      throw new Error('WEBHOOK_INGRESS_DISABLED');
     const providerAccountId =
-      dependencies.providerAccountId ?? Deno.env.get('BILLING_PROVIDER_ACCOUNT_ID');
+      dependencies.providerAccountId ??
+      Deno.env.get('BILLING_PROVIDER_ACCOUNT_ID');
     if (!providerAccountId || !UUID.test(providerAccountId))
       throw new Error('WEBHOOK_NOT_CONFIGURED');
     const eventKey = value(request.headers.get('x-provider-event-id'));
     if (!eventKey || eventKey.length > 255) throw new Error('INVALID_INPUT');
     const { bytes, payload } = await parseBody(request);
-    const orderNo = value(request.headers.get('x-provider-order-no')) ??
-      value(payload.provider_order_no) ?? value(payload.order_no);
+    const orderNo =
+      value(request.headers.get('x-provider-order-no')) ??
+      value(payload.provider_order_no) ??
+      value(payload.order_no);
     const signature = request.headers.get('x-provider-signature');
     if (!signature) throw new Error('SIGNATURE_REQUIRED');
-    const verified = await (dependencies.verifySignature ?? defaultVerifySignature)(
-      bytes,
-      request,
-    );
+    const verified = await (
+      dependencies.verifySignature ?? defaultVerifySignature
+    )(bytes, request);
     if (!verified) throw new Error('SIGNATURE_INVALID');
     const payloadHash = await sha256Bytes(bytes);
     const db = dependencies.database;

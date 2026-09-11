@@ -7,7 +7,11 @@ import {
   type StorageAdapter,
 } from '../_shared/storage.ts';
 import { readBoundedBody, UploadFault } from '../_shared/upload.ts';
-import { normalizeAfdianOrder, toBillingOrderFacts } from '../_shared/afdian.ts';
+import {
+  normalizeAfdianOrder,
+  toBillingOrderFacts,
+} from '../_shared/afdian.ts';
+import { billingSwitchEnabled } from '../_shared/billing.ts';
 
 type Row = Record<string, unknown>;
 
@@ -26,6 +30,8 @@ interface MaintenanceDependencies {
   readonly jobToken?: string;
   readonly workerId?: string;
   readonly billingProviderAdapter?: BillingProviderAdapter;
+  readonly backgroundProcessingEnabled?: boolean;
+  readonly automaticSettlementEnabled?: boolean;
 }
 
 interface AuthAdminAdapter {
@@ -502,6 +508,16 @@ async function billingJobClaim(
   dependencies: MaintenanceDependencies,
   id: string,
 ): Promise<Response> {
+  if (
+    !(
+      dependencies.backgroundProcessingEnabled ??
+      billingSwitchEnabled('BILLING_BACKGROUND_PROCESSING_ENABLED')
+    )
+  )
+    return response(503, {
+      error: { code: 'BILLING_PROCESSING_DISABLED' },
+      request_id: id,
+    });
   const input = await jsonBody(request);
   const limit = input.limit === undefined ? 20 : Number(input.limit);
   if (
@@ -535,15 +551,20 @@ async function billingJobFinish(
   const jobId = uuid(input.job_id);
   const fence = Number(input.fence);
   const state = typeof input.state === 'string' ? input.state : null;
-  const errorClass = input.error_class === undefined ? null : String(input.error_class);
-  const errorCodeValue = input.error_code === undefined ? null : String(input.error_code);
+  const errorClass =
+    input.error_class === undefined ? null : String(input.error_class);
+  const errorCodeValue =
+    input.error_code === undefined ? null : String(input.error_code);
   if (
     !jobId ||
     !Number.isSafeInteger(fence) ||
     !state ||
     !['retryable', 'completed', 'manual_review'].includes(state) ||
     Object.keys(input).some(
-      (key) => !['job_id', 'fence', 'state', 'error_class', 'error_code'].includes(key),
+      (key) =>
+        !['job_id', 'fence', 'state', 'error_class', 'error_code'].includes(
+          key,
+        ),
     )
   )
     return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
@@ -556,14 +577,7 @@ async function billingJobFinish(
   const [result] = await withJobRole(db, (transaction) =>
     transaction.unsafe<Row>(
       'select * from private.billing_processing_job_finish(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
-      [
-        ...jobContext,
-        jobId,
-        fence,
-        state,
-        errorClass,
-        errorCodeValue,
-      ],
+      [...jobContext, jobId, fence, state, errorClass, errorCodeValue],
     ),
   );
   return response(200, { result: result ?? null, request_id: id });
@@ -582,12 +596,27 @@ async function billingJobProcess(
     !jobId ||
     !orderId ||
     !Number.isSafeInteger(fence) ||
-    Object.keys(input).some((key) => !['job_id', 'order_id', 'fence'].includes(key))
+    Object.keys(input).some(
+      (key) => !['job_id', 'order_id', 'fence'].includes(key),
+    )
   )
     return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  if (
+    !(
+      dependencies.automaticSettlementEnabled ??
+      billingSwitchEnabled('BILLING_AUTO_SETTLEMENT_ENABLED')
+    )
+  )
+    return response(503, {
+      error: { code: 'BILLING_SETTLEMENT_DISABLED' },
+      request_id: id,
+    });
   const adapter = dependencies.billingProviderAdapter;
   if (!adapter)
-    return response(503, { error: { code: 'PROVIDER_NOT_CONFIGURED' }, request_id: id });
+    return response(503, {
+      error: { code: 'PROVIDER_NOT_CONFIGURED' },
+      request_id: id,
+    });
   const workerId =
     dependencies.workerId ??
     Deno.env.get('MAINTENANCE_WORKER_ID') ??
@@ -601,7 +630,10 @@ async function billingJobProcess(
     ),
   );
   if (!target)
-    return response(503, { error: { code: 'JOB_UNAVAILABLE' }, request_id: id });
+    return response(503, {
+      error: { code: 'JOB_UNAVAILABLE' },
+      request_id: id,
+    });
 
   // Provider network I/O is deliberately outside the database transaction.
   const observed = await adapter.queryOrder(String(target.provider_order_no));
@@ -613,7 +645,10 @@ async function billingJobProcess(
   } else {
     const normalized = normalizeAfdianOrder(observed.order);
     if (!normalized)
-      return response(503, { error: { code: 'PROVIDER_RESPONSE_INVALID' }, request_id: id });
+      return response(503, {
+        error: { code: 'PROVIDER_RESPONSE_INVALID' },
+        request_id: id,
+      });
     facts = toBillingOrderFacts(normalized);
   }
   const [result] = await withJobRole(db, (transaction) =>

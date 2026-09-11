@@ -52,15 +52,19 @@ function database(): TestDatabase {
                               ? 'retention-cleanup'
                               : query.includes('billing_processing_job_claim')
                                 ? 'billing-claim'
-                                : query.includes('billing_processing_job_finish')
+                                : query.includes(
+                                      'billing_processing_job_finish',
+                                    )
                                   ? 'billing-finish'
                                   : query.includes('billing_order_query_target')
                                     ? 'billing-target'
-                                    : query.includes('billing_order_verify_and_settle')
+                                    : query.includes(
+                                          'billing_order_verify_and_settle',
+                                        )
                                       ? 'billing-verify'
                                       : query.includes(
-                                          'deletion_job_backup_barrier_guard',
-                                        )
+                                            'deletion_job_backup_barrier_guard',
+                                          )
                                         ? 'barrier-guard'
                                         : 'finish',
           );
@@ -107,7 +111,9 @@ function database(): TestDatabase {
               },
             ] as unknown as T[];
           if (query.includes('billing_processing_job_finish'))
-            return [{ job_id: jobId, state: 'completed', fence: 3 }] as unknown as T[];
+            return [
+              { job_id: jobId, state: 'completed', fence: 3 },
+            ] as unknown as T[];
           if (query.includes('billing_order_query_target'))
             return [
               {
@@ -341,6 +347,62 @@ Deno.test('maintenance claims and finishes billing jobs with a worker lease', as
     'role',
     'billing-finish',
   ]);
+});
+
+Deno.test('maintenance stop switches leave leases and provider state untouched', async () => {
+  events.length = 0;
+  const claim = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/claim', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ limit: 10 }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: database(),
+      backgroundProcessingEnabled: false,
+    },
+  );
+  assertEquals(claim.status, 503);
+  assertEquals(
+    (await claim.json()).data.error.code,
+    'BILLING_PROCESSING_DISABLED',
+  );
+  assertEquals(events, []);
+
+  let providerQueries = 0;
+  const process = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/process', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ job_id: jobId, order_id: jobId, fence: 3 }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: database(),
+      automaticSettlementEnabled: false,
+      billingProviderAdapter: {
+        async queryOrder() {
+          providerQueries += 1;
+          return { status: 'temporarily_unavailable' };
+        },
+      },
+    },
+  );
+  assertEquals(process.status, 503);
+  assertEquals(
+    (await process.json()).data.error.code,
+    'BILLING_SETTLEMENT_DISABLED',
+  );
+  assertEquals(providerQueries, 0);
 });
 
 Deno.test('maintenance performs provider I/O outside the settlement transaction', async () => {
