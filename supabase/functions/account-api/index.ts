@@ -764,7 +764,7 @@ async function dispatchAccount(
     if (
       !(
         dependencies.checkoutEnabled ??
-        billingSwitchEnabled('BILLING_CHECKOUT_ENABLED')
+        billingSwitchEnabled('BILLING_CHECKOUT_ENABLED', false)
       )
     )
       throw new ApiFault(503, 'CHECKOUT_UNAVAILABLE');

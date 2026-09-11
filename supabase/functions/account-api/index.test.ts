@@ -497,6 +497,7 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
       checkoutSecret: 'checkout-test-secret',
       checkoutKeyVersion: 1,
       checkoutProviderAccountId: '00000000-0000-4000-8000-000000000401',
+      checkoutEnabled: true,
       verifyAccessToken: async () => userId,
     },
   );
@@ -539,6 +540,31 @@ Deno.test('Account API can stop new checkout issuance independently', async () =
       database: fakeDatabase(),
       platformKeySecret: 'm3-test-platform-secret',
       checkoutEnabled: false,
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 503);
+  assertEquals((await response.json()).error.code, 'CHECKOUT_UNAVAILABLE');
+});
+
+Deno.test('Account API keeps checkout closed by default', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'checkout-default-closed-1',
+        },
+        body: JSON.stringify({ product_code: 'monthly' }),
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
       verifyAccessToken: async () => userId,
     },
   );
