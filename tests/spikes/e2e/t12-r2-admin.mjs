@@ -237,6 +237,8 @@ async function runBrowserFlow(secret) {
   page = await context.newPage();
   page.setDefaultTimeout(10_000);
   await page.goto(`${appUrl}/admin/login`, { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(250);
   await page.getByLabel('管理员邮箱').fill(email);
   await page.getByLabel('密码').fill(password);
   const [loginResponse] = await Promise.all([

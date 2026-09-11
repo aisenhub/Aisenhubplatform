@@ -116,7 +116,7 @@
 
 - 实际变更文件：`supabase/tests/bill_07_upgrade_compatibility.sql`、`supabase/functions/_shared/billing.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/maintenance/index.ts` 及定向测试、`packages/domain/tests/billing.test.ts`、运行配置/Proposal 文档。
 - 本地最终验证基线：`pnpm test:db` PASS（34 files/678 tests）；Account API PASS（25 tests）；Webhook PASS（4 tests）；maintenance PASS（9 tests）；Domain PASS（8 tests）；独立 stop switch 验证了 Checkout（含缺省关闭）、Webhook ingress、后台领取和自动结算的停机边界；`pnpm contracts:check`、`pnpm docs:check`、定向格式与 lint PASS。`pnpm exec supabase db lint --local --fail-on error` 仍因既有非 Billing 函数错误返回非零。
-- 状态边界：G-DEV PASS；本地 G-OPS 证据 PARTIAL_LOCAL；真实生产等价数据、G-PROVIDER、真实调度/告警/密钥轮换、真实付款、生产迁移/观察仍 NOT_RUN。最终 Consumer 集成修复后，`pnpm test:e2e:t16-r2` 已通过独立上下文、平台隔离、订阅/文件、账户、Admin、跨 Tab、未知响应和 bundle 凭据扫描；旧 `pnpm test:e2e:t12-r2` 探针在显式 Local 环境下仍受 session/login harness 影响返回 401，不计作 PASS，也不覆盖 T16 证据。整体 Proposal 仍为 In Progress，不能标记 Completed。
+- 状态边界：G-DEV PASS；本地 G-OPS 证据 PARTIAL_LOCAL；真实生产等价数据、G-PROVIDER、真实调度/告警/密钥轮换、真实付款、生产迁移/观察仍 NOT_RUN。`pnpm test:e2e:t12-r2` 已通过 Admin AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝及 70 条路由×5 视口可访问性矩阵；`pnpm test:e2e:t16-r2` 继续通过独立上下文、平台隔离、订阅/文件、账户、Admin、跨 Tab、未知响应和 bundle 凭据扫描。整体 Proposal 仍为 In Progress，不能标记 Completed。
 - 代码提交：`b7ec484`（`feat(billing): add upgrade fixture and stop controls`）与 `7b46695`（`fix(billing): fail closed for checkout issuance`），均已 push；Registry/商品/维护 forward-fix 分别为 `e7da954`、`14c9359`、`4d92db0`，均已 push。
 
 ### 最终本地 forward-fix/2026-09-12/当前 Agent
@@ -130,7 +130,7 @@
 
 - 实际变更文件：`apps/template-preview/app/api/v1/[...path]/route.ts`、`apps/template-preview/app/api/auth/reauth/*`、`apps/template-preview/app/account/page.tsx`、`apps/template-preview/app/files/page.tsx`、`apps/template-preview/app/subscription/page.tsx`、`apps/template-preview/components/consumer-auth-actions.tsx`、`apps/template-preview/components/consumer-shell.tsx`、`packages/account-auth-nextjs/src/browser.ts`、`apps/admin/next.config.mjs`、`tests/spikes/e2e/t16-r2-account.mjs`。
 - 实现行为：修复 catch-all BFF 的 `v1` 路径拼接；扩大严格 allowlist 覆盖账户资料/偏好、文件读写、敏感账户动作；账户页使用中央 API 的 ETag/CSRF/错误合同，近期认证使用独立 start/verify 路由和 HttpOnly proof cookie；文件页连接真实列表、上传、下载和删除；会话跨页刷新/退出/跨 tab 失效具有确定反馈；Admin 构建可正确解析浏览器会话导出。
-- 验证命令：`pnpm test:sdk:m5-02` PASS（可复现 tarball、包边界、独立安装、Node/Edge 导入和浏览器导入拒绝）；`pnpm test:consumer:m5-05` PASS（独立安装、类型检查、生产构建、模板路由、local dual-origin platform E2E）；`pnpm test:e2e:t16-r2` PASS（独立上下文、平台 Key 隔离、订阅/兑换、文件、资料/偏好、CSRF/ETag、Admin MFA/暂停恢复、跨 Tab、敏感操作未知响应和 bundle 凭据）；`pnpm test:ops:m6-02-local` PASS（外部备份目标为 `NOT_RUN (X04 unavailable)`）；`pnpm --filter template-preview typecheck` PASS；Impeccable detector PASS（无告警）。Hosted 双平台结果为 `NOT_RUN (X05/hosted backend unavailable)`，不转换为本地 PASS。
+- 验证命令：`pnpm test:sdk:m5-02` PASS（可复现 tarball、包边界、独立安装、Node/Edge 导入和浏览器导入拒绝）；`pnpm test:consumer:m5-05` PASS（独立安装、类型检查、生产构建、模板路由、local dual-origin platform E2E）；`pnpm test:e2e:t12-r2` PASS（Admin AAL1/AAL2、近期认证 proof、敏感写入、退出后旧 JWT 拒绝、70 条路由×5 视口可访问性）；`pnpm test:e2e:t16-r2` PASS（独立上下文、平台 Key 隔离、订阅/兑换、文件、资料/偏好、CSRF/ETag、Admin MFA/暂停恢复、跨 Tab、敏感操作未知响应和 bundle 凭据）；`pnpm test:ops:m6-02-local` PASS（外部备份目标为 `NOT_RUN (X04 unavailable)`）；`pnpm --filter template-preview typecheck` PASS；Impeccable detector PASS（无告警）。Hosted 双平台结果为 `NOT_RUN (X05/hosted backend unavailable)`，不转换为本地 PASS。
 - 代码提交：`1edf844`（`fix(consumer): complete account and file integration`）与 `fab5b3d`（`fix(sdk): make package archives reproducible`），均已 push；随后验证记录提交 `266ff4e` 已核对远端 SHA。
 
 ## 5. 要求覆盖与实际测试
