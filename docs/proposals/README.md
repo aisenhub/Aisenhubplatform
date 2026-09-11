@@ -32,7 +32,7 @@ proposals/
 
 ## 优化索引
 
-- [统一订阅与中央支付架构](AisenFlow_Subscription_Billing_Architecture.md)：Proposed；已完成设计审查修订，Provider 联调与功能实施尚未完成。配套旧阶段计划须先按该设计同步后才能执行。
+- [统一订阅与中央支付架构](AisenFlow_Subscription_Billing_Architecture.md)：Proposed；已完成设计审查修订，Provider 联调与功能实施尚未完成。[配套BILL实施计划](subscription-billing-centralization/README.md)已同步设计；全部功能阶段未开始，按实际派发与依赖门槛执行。
 
 ## 给计划 Agent 的执行要求
 

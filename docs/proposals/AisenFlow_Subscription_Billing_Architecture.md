@@ -46,7 +46,7 @@ Aisenhubplatform 当前已经具备中央共享身份、平台账户、权益和
 
 本文件是本轮订阅与中央支付优化的唯一目标设计来源；当前实现仍以源码、迁移和 [现行架构](../architecture/overview.md)、[跨模块合同](../reference/contracts.md) 为准。本文不是实施完成证明，也不自动授权开发、生产部署、真实付款或费用变更。
 
-仓库已有 subscription-billing-centralization 配套计划，其中 design.md 复制的旧正文及“执行冻结项”尚未随本轮同步，不能覆盖本文件。实施前必须将该目录的设计改为引用本文，并逐项同步阶段计划、验收与证据；同步前不得按旧冻结项执行，尤其是随机 Token 恢复、16位兑换码与对账高水位规则。本轮只修订本文件，不把配套计划标为已更新。
+[配套实施计划](subscription-billing-centralization/00-master-plan.md)已按本文同步；design.md仅引用本文件，不复制旧冻结项。计划采用BILL编号，历史文件名仅为稳定导航。后续目标决策先修本文，再同步阶段与验收，计划修订不代表功能已实现。
 
 任务标识采用 BILL-ARCH-REVIEW；未来阶段使用 BILL-01 等独立编号，避免与已有文件/任务模块 M4 编号混淆。
 
@@ -558,7 +558,7 @@ POST 必须带 Idempotency-Key；服务端以 platform/account/operation 组成 
 
 短事务校验 session/platform/account active、未暂停、商品和映射可售、无冲突及未拥有未撤销同 Plan 永久 Grant，再写入不可变 snapshot、Token 派生版本、幂等结果和审计。Free 不创建 Checkout。
 
-事务提交后构造 payment_url；幂等缓存只存 Checkout ID 与非敏感结果，不存包含 Token 的完整 URL。响应丢失时按第11节重建同一有效链接。已过付款窗口的重放返回同一 Checkout 的 expired 状态而不再发起付款；新的购买操作须新键。
+事务提交后构造 payment_url；幂等缓存只存 Checkout ID 与非敏感结果，不存包含 Token 的完整 URL。响应丢失时按第11节重建同一有效链接。重放始终返回当前权威状态：仅未确认付款且窗口已结束时显示 expired；paid/verified/granted 等状态不因时间到期回退。已确认付款、已结算或不允许付款时不再返回 payment_url；新的购买操作须新键。
 
 ---
 
@@ -2023,8 +2023,8 @@ Domain 的“规则集中”仅指 DTO、输入校验与序列化；生产期限
 
 | 阶段 | 范围 | 依赖与验收门槛 |
 |---|---|---|
-| BILL-01 | 同步唯一设计、Provider 合同与决策 | 第8.2节证据；真实联调须另有授权；配套旧计划完成同步 |
-| BILL-02 | Catalog、平台映射、公共合同 | 固定商品/期限、默认 Free 单一来源、旧 Plan 映射策略、调价门槛 |
+| BILL-01 | 同步唯一设计、Provider 合同与决策 | 先交付G-DEV；第8.2节真实证据作为G-PROVIDER独立跟踪，联调须实际授权 |
+| BILL-02 | Catalog、平台映射、公共合同 | G-DEV通过；固定商品/期限、Free单源、旧Plan映射策略；真实购买未就绪保持关闭 |
 | BILL-03 | Ledger 扩展与 Redemption V2 | 历史批次/码兼容、永久排期和撤销、source FK、生命周期与权限矩阵 |
 | BILL-04 | Checkout、Token 恢复、订单、Inbox 和任务 | 幂等重放能恢复 URL；持久接收与最小权限；重复付款结算约束 |
 | BILL-05 | Provider 接入、统一订单处理、对账 | 权威验证、优惠策略、并发/崩溃恢复、双进度对账和人工结案闭环 |
@@ -2244,3 +2244,39 @@ AisenCode
 本次优化将在现有共享后台基础上补齐商业化闭环，形成：
 
 > **Aisen 全产品体系的统一 Identity、Entitlement、Subscription 与 Billing Control Plane。**
+
+---
+
+## 58. 实施合同补充：恢复、修正与运行门槛
+
+### 58.1 长期Checkout操作绑定
+
+现有普通幂等响应最多保留7天，不能承担长期交易身份。Checkout另保留scope/key（或不可逆摘要）、request_hash、checkout_id绑定，至少随Checkout及明确交易去重周期保留；普通缓存清理后同键仍定位原Checkout，异参数仍冲突。清理/身份删除使用经评审的匿名保留，不让旧身份重新获得访问权。
+
+### 58.2 处理结果分类
+
+暂时故障/可恢复暂停属于retryable/blocked，可以恢复后受控重试；重复付款、合同冲突、关闭删除属于review_required；已授权或经受控结案属于finalized。无Grant不等于永久终态。finalized不得被后台重试复活，必要修正须新的审计补偿操作。
+
+### 58.3 原结算与替代授权
+
+同订单最多一次原始结算和原始billing Grant。correction使用独立operation_id，记录原始结算、被替代Grant和替代Grant；保证同一授权链仅一个当前有效替代，撤销/新增/审计原子完成。不能把新UUID当重复原结算绕过唯一性。退款或后续撤销沿链定位当前有效替代，不永远只操作已撤销原Grant。
+
+重复款转有效续购必须是显式人工结算，保留原重复付款问题与处理决定，不占第二个自动结算槽位，不修改原归属/snapshot。
+
+### 58.4 Plan切换与外链边界
+
+仍可兑换旧Plan批次阻止标准paid_plan切换；须过期或经授权禁用未使用批次，已用权益不追回，不重映射旧码。与未结订单、旧Checkout和未结束Grant一起在共同锁下预检。
+
+本地不再签发URL不等于已打开的渠道链接失效。只有Provider已验证支持撤销时才可声明外链失效；否则迟到付款按旧snapshot记录/验证或人工处理。切换策略不得凭本地expires_at宣称旧付款风险已排空。
+
+### 58.5 开发、渠道与运维门槛
+
+G-DEV冻结本地合同、模拟器与独立实现前提；允许Catalog/Ledger等本地工作。G-PROVIDER证明§8.2真实渠道合同，不能被crypto固定向量或fake替代。G-OPS证明调度、认证、预算、报警、开关和恢复准备。三者独立记录，缺少真实凭据不阻塞所有独立开发，但真实购买启用必须后两者通过并获实际部署授权。
+
+BILL-01可先交付开发准备，Provider核验继续单列；方案未达到全部门槛时最多报告本地实现验收，不能标整体Completed或真实支付已可用。
+
+### 58.6 调度与应急控制
+
+明确maintenance支付任务调用方、认证、频率、并发/单次预算、退避和积压报警责任人，实际值经Provider限流和本地容量验证后冻结。HTTP入口存在不代表自动执行。复用现有设施，不强制新增调度产品。
+
+新Checkout签发、入站接收、自动结算、发现/重试须独立控制。常规故障先停新购买，继续持久接收已付款；暂停结算时积压必须可见且可恢复。上线前演练调度停机接管、密钥轮换/丢失、代码/schema兼容与forward-fix；恢复后重新对账不重复授权。生产执行仍需实际授权。
