@@ -10,7 +10,7 @@ import {
 
 import {
   generateRedemptionCodes,
-  REDEMPTION_CODE_ALPHABET,
+  normalizeRedemptionCode,
 } from '../../../packages/domain/src/redemption.ts';
 
 type Row = Record<string, unknown>;
@@ -75,8 +75,6 @@ class ApiFault extends Error {
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const CODE = new RegExp(`^[${REDEMPTION_CODE_ALPHABET}]+$`, 'u');
-
 const stringValue = (value: unknown): string | null =>
   typeof value === 'string' ? value : null;
 
@@ -926,12 +924,12 @@ async function dispatchAccount(
     if (!idempotencyKey || idempotencyKey.length > 128)
       throw new ApiFault(400, 'INVALID_INPUT');
     const input = await body(request);
-    const code = stringValue(input.code)
-      ?.replaceAll('-', '')
-      .trim()
-      .toUpperCase();
-    if (!code || code.length > 128 || !CODE.test(code))
+    let code: string;
+    try {
+      code = normalizeRedemptionCode(stringValue(input.code) ?? '');
+    } catch {
       throw new ApiFault(400, 'INVALID_INPUT');
+    }
     const candidates = redemptionHmacSecrets(dependencies);
     const codeHmacs = await Promise.all(
       candidates.map(({ secret, version }) =>
@@ -1567,19 +1565,34 @@ async function dispatchAdmin(
       const input = await body(request);
       const inputPlatformId = uuidValue(input.platform_id);
       const planId = uuidValue(input.plan_id);
+      const productCode = stringValue(input.product_code)
+        ?.trim()
+        .toLowerCase();
+      const batchName = stringValue(input.name);
       const quantity = Number(input.quantity);
       const creationOperationId = uuidValue(input.creation_operation_id);
       const expiresAt = stringValue(input.expires_at);
       const deliveryDeadline = stringValue(input.delivery_deadline);
       if (
         !inputPlatformId ||
-        !planId ||
+        (!planId && !productCode) ||
+        (productCode !== undefined &&
+          !['monthly', 'yearly', 'lifetime'].includes(productCode)) ||
+        (productCode === undefined && !planId) ||
+        !batchName ||
         !creationOperationId ||
         !expiresAt ||
         !deliveryDeadline ||
         !Number.isInteger(quantity) ||
         quantity < 1 ||
         quantity > 1000
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      if (
+        !productCode &&
+        (!Number.isInteger(Number(input.duration_value)) ||
+          Number(input.duration_value) <= 0 ||
+          !['day', 'month', 'year'].includes(String(input.duration_unit)))
       )
         throw new ApiFault(400, 'INVALID_INPUT');
       const currentRedemptionSecret = redemptionHmacSecrets(dependencies)[0];
@@ -1597,30 +1610,47 @@ async function dispatchAdmin(
         secret,
         `delivery:v1:platform:${inputPlatformId}:receipt:${receipt}`,
       );
-      const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_batch_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::integer, $8::integer, $9::text, $10::timestamptz, $11::timestamptz, $12::uuid, $13::text, $14::jsonb)',
-        [
-          ...context,
-          inputPlatformId,
-          planId,
-          input.name,
-          quantity,
-          Number(input.duration_value),
-          input.duration_unit,
-          expiresAt,
-          deliveryDeadline,
-          creationOperationId,
-          receiptHmac,
-          transaction.json(
-            codes.map((code) => ({
-              code_hmac: code.codeHmac,
-              hmac_key_version: code.hmacKeyVersion,
-              code_prefix: code.codePrefix,
-              code_suffix: code.codeSuffix,
-            })),
-          ),
-        ],
+      const codePayload = transaction.json(
+        codes.map((code) => ({
+          code_hmac: code.codeHmac,
+          hmac_key_version: code.hmacKeyVersion,
+          code_prefix: code.codePrefix,
+          code_suffix: code.codeSuffix,
+        })),
       );
+      const [result] = productCode
+        ? await transaction.unsafe<Row>(
+            'select * from private.admin_batch_create_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::text, $7::integer, $8::timestamptz, $9::timestamptz, $10::uuid, $11::text, $12::jsonb)',
+            [
+              ...context,
+              inputPlatformId,
+              productCode,
+              batchName,
+              quantity,
+              expiresAt,
+              deliveryDeadline,
+              creationOperationId,
+              receiptHmac,
+              codePayload,
+            ],
+          )
+        : await transaction.unsafe<Row>(
+            'select * from private.admin_batch_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::integer, $8::integer, $9::text, $10::timestamptz, $11::timestamptz, $12::uuid, $13::text, $14::jsonb)',
+            [
+              ...context,
+              inputPlatformId,
+              planId,
+              batchName,
+              quantity,
+              Number(input.duration_value),
+              input.duration_unit,
+              expiresAt,
+              deliveryDeadline,
+              creationOperationId,
+              receiptHmac,
+              codePayload,
+            ],
+          );
       if (result?.creation_state === 'replayed_existing') {
         return {
           status: 200,

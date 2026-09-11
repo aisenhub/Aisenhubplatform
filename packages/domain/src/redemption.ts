@@ -1,5 +1,43 @@
 export const REDEMPTION_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ023456789';
 
+const REDEMPTION_CODE_PATTERN = new RegExp(
+  `^[${REDEMPTION_CODE_ALPHABET}]+$`,
+  'u',
+);
+
+/**
+ * Converts user-entered redemption text to the canonical HMAC input. Only
+ * explicit display separators are removed; the alphabet itself remains
+ * ambiguity-resistant and case-insensitive for pasted codes.
+ */
+export function normalizeRedemptionCode(value: string): string {
+  if (typeof value !== 'string') throw new Error('INVALID_REDEMPTION_CODE');
+  const normalized = value.trim().toUpperCase().replaceAll(/[\s-]/gu, '');
+  if (
+    normalized.length < 16 ||
+    normalized.length > 128 ||
+    !REDEMPTION_CODE_PATTERN.test(normalized)
+  ) {
+    throw new Error('INVALID_REDEMPTION_CODE');
+  }
+  return normalized;
+}
+
+export function validateRedemptionCode(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    normalizeRedemptionCode(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function formatRedemptionCode(value: string): string {
+  const normalized = normalizeRedemptionCode(value);
+  return normalized.match(/.{1,4}/gu)?.join('-') ?? normalized;
+}
+
 export interface RedemptionCodeMaterial {
   readonly code: string;
   readonly codeHmac: string;

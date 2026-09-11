@@ -22,6 +22,8 @@ V1 不做自动升级/降级。Admin 如需换 Plan，先撤销阻塞的未结�
 
 商业商品目录由 `public.subscription_products` 固定为 Free、Monthly、Yearly、Lifetime；Lifetime 是 `finite/99/year`，不是永久权益。平台只通过 `platform_subscription_config` 选择同平台的 active paid Plan 并控制付费商品开关，Free 仍唯一来自 `platforms.default_plan_id`。Products API 在没有可验证 Provider 映射时返回 `purchasable=false`，不把商品展示误报为可付款；切换标准 paid Plan 前，SQL 共享 preflight 会检查当前/未来 Grant 与仍可兑换旧批次。
 
+BILL-03 起新兑换批次使用 `model_version=2`，保存不可变的 `product_code`、`term_kind`、duration 与 Plan snapshot；只允许 Monthly、Yearly、Lifetime（Lifetime 固定 99 年），Free 不建立 claim 批次。旧批次保持 `model_version=1` 的原 Plan/duration/HMAC 解释，读取和兑换不反推新商品。通用 Admin correction 通过独立 `operation_id`、原 Grant/替代 Grant 强 FK、预览事件版本和同事务 revoke+grant 形成单一有效替代链，失败整体回滚。
+
 时间统一 UTC，由数据库生成一次 operation_now。区间为 [starts_at,ends_at)，end=now 已过期。day=24小时；month/year 使用 UTC 日历加法，月末夹到目标月最后一天，2月29日加一年为次年2月28日。每个 Grant 独立计算，不做隐式月底锚定或补偿。
 
 ## 2. 可重放 Ledger

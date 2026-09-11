@@ -34,25 +34,21 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
-  resourcePath,
   statusLabel,
   statusTone,
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
 
-type Plan = {
-  plan_id: string;
-  code: string;
-  name: string;
-  kind: 'free' | 'paid';
-  status: 'active' | 'archived';
-};
-
 type Batch = {
   batch_id: string;
   plan_id: string;
   plan_code: string;
+  product_code: 'monthly' | 'yearly' | 'lifetime' | null;
+  model_version: number;
+  term_kind: 'finite' | 'perpetual';
+  duration_value: number | null;
+  duration_unit: 'day' | 'month' | 'year' | null;
   name: string;
   quantity: number;
   status: string;
@@ -64,11 +60,9 @@ type Batch = {
 
 type CreateBatchPayload = {
   platform_id: string;
-  plan_id: string;
+  product_code: 'monthly' | 'yearly' | 'lifetime';
   name: string;
   quantity: number;
-  duration_value: number;
-  duration_unit: 'day' | 'month' | 'year';
   expires_at: string;
   delivery_deadline: string;
   creation_operation_id: string;
@@ -111,20 +105,17 @@ function localDateTime(daysFromNow: number): string {
 
 export function PlatformRedemptionBatchesPage() {
   const { platform } = usePlatformContext();
-  const [plans, setPlans] = useState<Plan[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [state, setState] = useState<ResourceLoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<ResourceError | null>(null);
   const [refreshError, setRefreshError] = useState<ResourceError | null>(null);
   const [filter, setFilter] = useState('');
-  const [planId, setPlanId] = useState('');
+  const [productCode, setProductCode] = useState<
+    'monthly' | 'yearly' | 'lifetime'
+  >('monthly');
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
-  const [durationValue, setDurationValue] = useState('30');
-  const [durationUnit, setDurationUnit] = useState<'day' | 'month' | 'year'>(
-    'day',
-  );
   const [expiresAt, setExpiresAt] = useState(() => localDateTime(30));
   const [deliveryDeadline, setDeliveryDeadline] = useState(() =>
     localDateTime(1 / 24),
@@ -151,36 +142,16 @@ export function PlatformRedemptionBatchesPage() {
         setError(null);
       }
       try {
-        const [plansResponse, batchesResponse] = await Promise.all([
-          adminAuthSession.request(
-            resourcePath(platform.platform_id, '/plans'),
-            { cache: 'no-store' },
-          ),
-          adminAuthSession.request(
-            `/api/v1/admin/api/v1/redemption-batches?platform_id=${encodeURIComponent(platform.platform_id)}&limit=100`,
-            { cache: 'no-store' },
-          ),
-        ]);
-        const plansPayload = await readApiPayload<Plan[]>(plansResponse);
+        const batchesResponse = await adminAuthSession.request(
+          `/api/v1/admin/api/v1/redemption-batches?platform_id=${encodeURIComponent(platform.platform_id)}&limit=100`,
+          { cache: 'no-store' },
+        );
         const batchesPayload = await readApiPayload<Batch[]>(batchesResponse);
         if (
           generation !== loadGeneration.current ||
           !adminAuthSession.isCurrentEpoch(epoch)
         )
           return;
-        if (!plansResponse.ok || !Array.isArray(plansPayload?.data)) {
-          const nextError = resourceError(
-            plansResponse,
-            plansPayload,
-            'Plan 列表',
-          );
-          if (background) setRefreshError(nextError);
-          else {
-            setError(nextError);
-            setState('error');
-          }
-          return;
-        }
         if (!batchesResponse.ok || !Array.isArray(batchesPayload?.data)) {
           const nextError = resourceError(
             batchesResponse,
@@ -194,16 +165,7 @@ export function PlatformRedemptionBatchesPage() {
           }
           return;
         }
-        setPlans(plansPayload.data);
         setBatches(batchesPayload.data);
-        setPlanId(
-          (current) =>
-            current ||
-            plansPayload.data?.find(
-              (plan) => plan.kind === 'paid' && plan.status === 'active',
-            )?.plan_id ||
-            '',
-        );
         setState('success');
       } catch (caught) {
         if (
@@ -234,7 +196,7 @@ export function PlatformRedemptionBatchesPage() {
   }, [load]);
 
   const visibleBatches = batches.filter((batch) =>
-    `${batch.name} ${batch.plan_code} ${batch.status}`
+    `${batch.name} ${batch.plan_code} ${batch.product_code ?? ''} ${batch.status}`
       .toLowerCase()
       .includes(filter.trim().toLowerCase()),
   );
@@ -243,31 +205,13 @@ export function PlatformRedemptionBatchesPage() {
     event.preventDefault();
     const normalizedName = name.trim();
     const quantityValue = Number(quantity);
-    const duration = Number(durationValue);
-    const activePlan = plans.find(
-      (plan) =>
-        plan.plan_id === planId &&
-        plan.status === 'active' &&
-        plan.kind === 'paid',
-    );
     const expires = new Date(expiresAt);
     const deadline = new Date(deliveryDeadline);
-    if (!activePlan) {
-      setNotice({
-        title: '请选择 active paid Plan',
-        description: '兑换码批次不能绑定 Free 或已归档 Plan。',
-        requestId: null,
-        technicalDetail: 'INVALID_INPUT',
-      });
-      return;
-    }
     if (
       !normalizedName ||
       !Number.isInteger(quantityValue) ||
       quantityValue < 1 ||
       quantityValue > 1000 ||
-      !Number.isInteger(duration) ||
-      duration < 1 ||
       Number.isNaN(expires.getTime()) ||
       Number.isNaN(deadline.getTime()) ||
       expires <= new Date() ||
@@ -276,7 +220,7 @@ export function PlatformRedemptionBatchesPage() {
       setNotice({
         title: '批次字段需要修正',
         description:
-          '名称、数量、时长和未来的交付/到期时间均为必填；数量范围为 1–1000。',
+          '商品、名称、数量和未来的交付/到期时间均为必填；数量范围为 1–1000。',
         requestId: null,
         technicalDetail: 'INVALID_INPUT',
       });
@@ -284,11 +228,9 @@ export function PlatformRedemptionBatchesPage() {
     }
     const payload: CreateBatchPayload = {
       platform_id: platform.platform_id,
-      plan_id: planId,
+      product_code: productCode,
       name: normalizedName,
       quantity: quantityValue,
-      duration_value: duration,
-      duration_unit: durationUnit,
       expires_at: expires.toISOString(),
       delivery_deadline: deadline.toISOString(),
       creation_operation_id: crypto.randomUUID(),
@@ -301,7 +243,7 @@ export function PlatformRedemptionBatchesPage() {
       payload,
       targetId: payload.creation_operation_id,
       title: '创建兑换码批次',
-      impact: `将为 ${activePlan.code} 生成 ${payload.quantity} 个一次性兑换码；批次先进入待交付，明文只在成功响应和当前内存面板显示一次。`,
+      impact: `将按 ${payload.product_code} 生成 ${payload.quantity} 个一次性兑换码；批次先进入待交付，明文只在成功响应和当前内存面板显示一次。`,
     });
   }
 
@@ -600,25 +542,21 @@ export function PlatformRedemptionBatchesPage() {
               className="grid gap-3 md:grid-cols-2"
               onSubmit={openCreateReview}
             >
-              <label className="grid gap-2" htmlFor="batch-plan">
-                <span className="text-sm font-medium">active paid Plan</span>
+              <label className="grid gap-2" htmlFor="batch-product">
+                <span className="text-sm font-medium">兑换商品</span>
                 <select
-                  id="batch-plan"
-                  value={planId}
-                  onChange={(event) => setPlanId(event.target.value)}
-                  data-test="batch-plan"
-                >
-                  <option value="">选择 Plan</option>
-                  {plans
-                    .filter(
-                      (plan) =>
-                        plan.kind === 'paid' && plan.status === 'active',
+                  id="batch-product"
+                  value={productCode}
+                  onChange={(event) =>
+                    setProductCode(
+                      event.target.value as typeof productCode,
                     )
-                    .map((plan) => (
-                      <option key={plan.plan_id} value={plan.plan_id}>
-                        {plan.code} · {plan.name}
-                      </option>
-                    ))}
+                  }
+                  data-test="batch-product"
+                >
+                  <option value="monthly">Monthly · 1 month</option>
+                  <option value="yearly">Yearly · 1 year</option>
+                  <option value="lifetime">Lifetime · 99 years</option>
                 </select>
               </label>
               <label className="grid gap-2" htmlFor="batch-name">
@@ -642,32 +580,6 @@ export function PlatformRedemptionBatchesPage() {
                   onChange={(event) => setQuantity(event.target.value)}
                   data-test="batch-quantity"
                 />
-              </label>
-              <label className="grid gap-2" htmlFor="batch-duration">
-                <span className="text-sm font-medium">每码有效时长</span>
-                <Input
-                  id="batch-duration"
-                  type="number"
-                  min={1}
-                  value={durationValue}
-                  onChange={(event) => setDurationValue(event.target.value)}
-                  data-test="batch-duration"
-                />
-              </label>
-              <label className="grid gap-2" htmlFor="batch-duration-unit">
-                <span className="text-sm font-medium">时长单位</span>
-                <select
-                  id="batch-duration-unit"
-                  value={durationUnit}
-                  onChange={(event) =>
-                    setDurationUnit(event.target.value as typeof durationUnit)
-                  }
-                  data-test="batch-duration-unit"
-                >
-                  <option value="day">day</option>
-                  <option value="month">month</option>
-                  <option value="year">year</option>
-                </select>
               </label>
               <label className="grid gap-2" htmlFor="batch-expires">
                 <span className="text-sm font-medium">

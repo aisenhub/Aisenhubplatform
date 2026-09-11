@@ -515,7 +515,7 @@ Deno.test('Account API sends current and previous redemption HMAC candidates ato
           'Idempotency-Key': 'rotation-test-1',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code: 'ABCD2345' }),
+        body: JSON.stringify({ code: 'ABCD2345EFGHJKMP' }),
       },
     ),
     {

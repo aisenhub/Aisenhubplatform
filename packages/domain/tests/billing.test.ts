@@ -12,6 +12,11 @@ import {
   FICTIONAL_PROVIDER_ADAPTER,
   FICTIONAL_PROVIDER_ORDER,
 } from './fixtures/fictional-provider.ts';
+import {
+  formatRedemptionCode,
+  normalizeRedemptionCode,
+  validateRedemptionCode,
+} from '../src/redemption.ts';
 
 describe('billing contract foundation', () => {
   it('freezes the four product terms without embedding prices', () => {
@@ -87,5 +92,17 @@ describe('billing contract foundation', () => {
         external_order_id: 'fictional-order-0001',
       }),
     ).resolves.toEqual({ status: 'found', order: FICTIONAL_PROVIDER_ORDER });
+  });
+
+  it('normalizes and formats V2 codes without changing their HMAC material', () => {
+    const code = 'ABCD-EFGH-JKMP-QRST';
+    expect(normalizeRedemptionCode(code)).toBe('ABCDEFGHJKMPQRST');
+    expect(formatRedemptionCode('abcdefghjkmpqrst')).toBe(code);
+    expect(validateRedemptionCode('ABCD EFGH JKMP QRST')).toBe(true);
+    expect(validateRedemptionCode('ABCD-I0GH-JKMP-QRST')).toBe(false);
+    expect(validateRedemptionCode('ABCD-EFGH')).toBe(false);
+    expect(() => normalizeRedemptionCode('ABCD/EFGH/JKMP/QRST')).toThrow(
+      'INVALID_REDEMPTION_CODE',
+    );
   });
 });
