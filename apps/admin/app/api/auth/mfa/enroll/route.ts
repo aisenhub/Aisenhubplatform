@@ -64,6 +64,22 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
     if (sessionResult.error) return result({ code: 'UNAUTHORIZED' }, 401);
 
+    // A failed client render can leave an unverified factor behind. Remove
+    // only those incomplete enrollments before starting a fresh one; verified
+    // factors must never be touched by this recovery path.
+    const factorsResult = await client.auth.mfa.listFactors();
+    if (factorsResult.error) {
+      return result({ code: 'MFA_ENROLLMENT_FAILED' }, 400);
+    }
+    for (const factor of factorsResult.data.totp ?? []) {
+      if ((factor.status as string) !== 'unverified') continue;
+      const cleanupResult = await client.auth.mfa.unenroll({
+        factorId: factor.id,
+      });
+      if (cleanupResult.error)
+        return result({ code: 'MFA_ENROLLMENT_FAILED' }, 400);
+    }
+
     const { data, error } = await client.auth.mfa.enroll({
       factorType: 'totp',
       friendlyName: 'Aisenhub Admin',

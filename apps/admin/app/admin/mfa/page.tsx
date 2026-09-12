@@ -240,7 +240,7 @@ export default function AdminMfaPage() {
           </p>
           <div className="totp-qr">
             <Image
-              src={enrollment.qr_code}
+              src={enrollment.qr_code.trimEnd()}
               alt="TOTP 认证器绑定二维码"
               width={256}
               height={256}
