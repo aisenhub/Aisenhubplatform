@@ -268,3 +268,9 @@
 - 实现变更：`billing-webhook` 现在对标准 Afdian `data.type=order` envelope 校验 `data.sign`；签名字符串按 `out_trade_no + user_id + plan_id + total_amount` 拼接，使用 RSA PKCS#1 v1.5/SHA-256 验证。`AFDIAN_WEBHOOK_PATH_SECRET` 仍作为额外路径防护，API Token 仅由 maintenance 服务端读取。
 - 验证：Afdian/作业 Webhook 定向测试 14/14 PASS，包含运行时生成 RSA fixture、签名篡改拒绝、回调 ACK 和路径密钥场景；真实 Afdian 签名/回调仍需 Provider staging 联调。
 - 安全处理：`docs/aifadian/data.md` 中的 API Token 已脱敏；旧 Token 不得继续使用，需在爱发电后台重新生成并通过 Supabase staging Secret 注入。
+
+### Hosted staging Afdian Provider 绑定/2026-09-12/当前 Agent
+
+- 原因复现：配置 Provider account 前，Webhook 地址的 GET 探测返回 405；POST 请求返回 503 `WEBHOOK_NOT_CONFIGURED`。`AFDIAN_USER_ID` 与 `AFDIAN_API_TOKEN` 本身不能替代本系统内部的 Provider account 绑定。
+- 已处理：在 staging 创建 active Afdian Provider account，绑定当前 Afdian creator `user_id`，并设置 `BILLING_PROVIDER_ACCOUNT_ID` Secret；未操作生产。
+- 待验证：用户需在爱发电后台重新保存同一个 Webhook URL，确认 Provider 的测试订单回调能收到 `{"ec":200,"em":"ok"}`；随后再配置真实 plan/SKU mapping 并执行 API/回调 round-trip。
