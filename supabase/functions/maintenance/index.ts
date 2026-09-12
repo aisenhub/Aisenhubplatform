@@ -650,41 +650,62 @@ async function billingJobProcess(
     `maintenance-${crypto.randomUUID()}`;
   const db = dependencies.database ?? database();
   const jobContext = context(workerId, id, fence);
-  const [target] = await withJobRole(db, (transaction) =>
-    transaction.unsafe<Row>(
-      'select * from private.billing_order_query_target(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint)',
-      [...jobContext, jobId, orderId, fence],
-    ),
-  );
-  if (!target)
-    return response(503, {
-      error: { code: 'JOB_UNAVAILABLE' },
-      request_id: id,
-    });
-
-  // Provider network I/O is deliberately outside the database transaction.
-  const observed = await adapter.queryOrder(String(target.provider_order_no));
-  let facts: Record<string, unknown>;
-  if (observed.status !== 'found') {
-    facts = { status: 'pending' };
-  } else if (observed.facts) {
-    facts = observed.facts;
-  } else {
-    const normalized = normalizeAfdianOrder(observed.order);
-    if (!normalized)
+  try {
+    const [target] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.billing_order_query_target(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint)',
+        [...jobContext, jobId, orderId, fence],
+      ),
+    );
+    if (!target)
       return response(503, {
-        error: { code: 'PROVIDER_RESPONSE_INVALID' },
+        error: { code: 'JOB_UNAVAILABLE' },
         request_id: id,
       });
-    facts = toBillingOrderFacts(normalized);
+
+    // Provider network I/O is deliberately outside the database transaction.
+    const observed = await adapter.queryOrder(String(target.provider_order_no));
+    let facts: Record<string, unknown>;
+    if (observed.status !== 'found') {
+      facts = { status: 'pending' };
+    } else if (observed.facts) {
+      facts = observed.facts;
+    } else {
+      const normalized = normalizeAfdianOrder(observed.order);
+      if (!normalized)
+        return response(503, {
+          error: { code: 'PROVIDER_RESPONSE_INVALID' },
+          request_id: id,
+        });
+      facts = toBillingOrderFacts(normalized);
+    }
+    const [result] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.billing_order_verify_and_settle(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::jsonb)',
+        [...jobContext, jobId, orderId, fence, JSON.stringify(facts)],
+      ),
+    );
+    return response(200, { result: result ?? null, request_id: id });
+  } catch (error) {
+    const failureCode = errorCode(error);
+    try {
+      const result = await finishBillingJob(
+        db,
+        jobContext,
+        jobId,
+        fence,
+        'retryable',
+        'worker',
+        failureCode,
+      );
+      return response(200, { result, request_id: id });
+    } catch {
+      return response(503, {
+        error: { code: 'JOB_PROCESSING_FAILED' },
+        request_id: id,
+      });
+    }
   }
-  const [result] = await withJobRole(db, (transaction) =>
-    transaction.unsafe<Row>(
-      'select * from private.billing_order_verify_and_settle(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::jsonb)',
-      [...jobContext, jobId, orderId, fence, JSON.stringify(facts)],
-    ),
-  );
-  return response(200, { result: result ?? null, request_id: id });
 }
 
 async function finishBillingJob(
