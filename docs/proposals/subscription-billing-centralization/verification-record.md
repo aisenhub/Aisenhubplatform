@@ -274,3 +274,9 @@
 - 原因复现：配置 Provider account 前，Webhook 地址的 GET 探测返回 405；POST 请求返回 503 `WEBHOOK_NOT_CONFIGURED`。`AFDIAN_USER_ID` 与 `AFDIAN_API_TOKEN` 本身不能替代本系统内部的 Provider account 绑定。
 - 已处理：在 staging 创建 active Afdian Provider account，绑定当前 Afdian creator `user_id`，并设置 `BILLING_PROVIDER_ACCOUNT_ID` Secret；未操作生产。
 - 待验证：用户需在爱发电后台重新保存同一个 Webhook URL，确认 Provider 的测试订单回调能收到 `{"ec":200,"em":"ok"}`；随后再配置真实 plan/SKU mapping 并执行 API/回调 round-trip。
+
+### Hosted staging Afdian 测试回调/2026-09-12/当前 Agent
+
+- 用户点击爱发电后台“发送测试”后，staging 数据库在 `2026-09-12 10:13:34 UTC` 收到 1 条 Afdian Webhook Inbox 事件，并创建 1 个 `webhook_order_discovery` 处理任务。
+- 事件状态为 `queued`，处理任务状态为 `pending`；这证明请求已通过标准 envelope 解析、RSA 签名校验、Provider 绑定校验并持久化。Afdian ACK 在持久化成功后返回 `200 {"ec":200,"em":"ok"}`；爱发电后台不显示可见反馈不等于回调失败。
+- 当前未宣称真实订单已核验或结算：该测试事件尚未完成后台 job processing，且真实 plan/SKU mapping、真实付款和 API `query-order` round-trip 仍待 G-PROVIDER/G-OPS 验证。
