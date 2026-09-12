@@ -31,3 +31,6 @@ playwright-report/
 __pycache__/
 .DS_Store
 Thumbs.db
+
+# Local provider reference captures; may contain account-specific material
+docs/aifadian/

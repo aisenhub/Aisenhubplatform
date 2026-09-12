@@ -58,6 +58,7 @@
 | BILLING_WEBHOOK_INGRESS_ENABLED | `false` 时拒绝新的 Provider webhook 且不写入 Inbox；独立于 Checkout，默认开启 |
 | BILLING_PROVIDER_ACCOUNT_ID | Webhook 使用的 `billing_provider_accounts.id`；必须与 active Afdian provider account 一致，禁止写入前端 |
 | AFDIAN_WEBHOOK_PATH_SECRET | 可选；为爱发电回调 URL 增加不可猜路径段。配置后 URL 必须使用 `/webhooks/afdian/<secret>` |
+| AFDIAN_WEBHOOK_PUBLIC_KEY | 可选；爱发电 Webhook RSA/SHA-256 签名校验使用的 PEM 公钥。默认内置教程公布的公钥，爱发电轮换公钥时通过 Secret/环境变量覆盖 |
 | BILLING_BACKGROUND_PROCESSING_ENABLED | `false` 时停止领取新的 Billing job，既有 lease 等待超时后可恢复，默认开启 |
 | BILLING_AUTO_SETTLEMENT_ENABLED | `false` 时停止 Provider 查询与自动结算，已入队任务保留并可恢复，默认开启 |
 | AFDIAN_USER_ID | 爱发电开发者账号 `user_id`；仅供 maintenance 服务端 API 调用，禁止进入浏览器 |

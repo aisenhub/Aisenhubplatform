@@ -34,6 +34,9 @@ export interface AfdianWebhookObservation {
 const DEFAULT_API_BASE_URL = 'https://afdian.com/api/open';
 const DEFAULT_CHECKOUT_BASE_URL = 'https://afdian.com/order/create';
 const DEFAULT_TIMEOUT_MS = 5000;
+const DEFAULT_WEBHOOK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwwdaCg1Bt+UKZKs0R54ylYnuANma49IpgoOwNmk3a0rhg/PQuhUJ0EOZSowIC44l0K3+fqGns3Ygi4AfmEfS4EKbdk1ahSxu7Zkp2rHMt+R9GarQFQkwSS/5x1dYiHNVMiR8oIXDgjmvxuNes2Cr8fw9dEF0xNBKdkKgG2qAawcN1nZrdyaKWtPVT9m2Hl0ddOO9thZmVLFOb9NVzgYfjEgI+KWX6aY19Ka/ghv/L4t1IXmz9pctablN5S0CRWpJW3Cn0k6zSXgjVdKm4uN7jRlgSRaf/Ind46vMCm3N2sgwxu/g3bnooW+db0iLo13zzuvyn727Q3UDQ0MmZcEWMQIDAQAB
+-----END PUBLIC KEY-----`;
 
 export function buildAfdianCheckoutUrl(input: {
   readonly baseUrl?: string;
@@ -144,6 +147,79 @@ export function afdianCanonicalSign(input: {
 }): string {
   const canonical = `${input.token}params${input.params}ts${input.timestamp}user_id${input.userId}`;
   return md5Hex(canonical);
+}
+
+function decodeBase64(value: string): Uint8Array | null {
+  try {
+    const binary = atob(value.replace(/\s/gu, ''));
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  } catch {
+    return null;
+  }
+}
+
+function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const owned = new Uint8Array(bytes.byteLength);
+  owned.set(bytes);
+  return owned.buffer;
+}
+
+function pemToDer(value: string): ArrayBuffer | null {
+  const base64 = value
+    .replace(/-----BEGIN PUBLIC KEY-----/gu, '')
+    .replace(/-----END PUBLIC KEY-----/gu, '')
+    .replace(/\\n/gu, '\n')
+    .replace(/\s/gu, '');
+  const bytes = decodeBase64(base64);
+  if (!bytes) return null;
+  return ownedArrayBuffer(bytes);
+}
+
+/**
+ * Verifies the standard Afdian order envelope signature.
+ *
+ * Afdian signs the concatenation of order.out_trade_no, order.user_id,
+ * order.plan_id, and order.total_amount with RSA-SHA256. The public key is
+ * public provider configuration and can be overridden for provider rotation.
+ */
+export async function verifyAfdianWebhookSignature(
+  value: unknown,
+  publicKeyPem = Deno.env.get('AFDIAN_WEBHOOK_PUBLIC_KEY') ??
+    DEFAULT_WEBHOOK_PUBLIC_KEY,
+): Promise<boolean> {
+  const root = objectValue(value);
+  const data = objectValue(root?.data);
+  const order = objectValue(data?.order);
+  const signature = text(data?.sign);
+  if (data?.type !== 'order' || !order || !signature) return false;
+  const signedValues = [
+    order.out_trade_no,
+    order.user_id,
+    order.plan_id,
+    order.total_amount,
+  ];
+  if (signedValues.some((item) => item === null || item === undefined))
+    return false;
+  const publicKey = pemToDer(publicKeyPem);
+  const signatureBytes = decodeBase64(signature);
+  if (!publicKey || !signatureBytes) return false;
+  try {
+    const key = await crypto.subtle.importKey(
+      'spki',
+      publicKey,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+    return await crypto.subtle.verify(
+      { name: 'RSASSA-PKCS1-v1_5' },
+      key,
+      ownedArrayBuffer(signatureBytes),
+      new TextEncoder().encode(signedValues.map(String).join('')),
+    );
+  } catch {
+    return false;
+  }
 }
 
 function apiResponseOrders(value: unknown): readonly ObjectValue[] | null {

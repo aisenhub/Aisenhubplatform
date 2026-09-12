@@ -8,7 +8,18 @@ import {
   createAfdianProviderAdapter,
   normalizeAfdianOrder,
   toBillingOrderFacts,
+  verifyAfdianWebhookSignature,
 } from './afdian.ts';
+
+function base64(bytes: ArrayBuffer): string {
+  let binary = '';
+  for (const byte of new Uint8Array(bytes)) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function pemPublicKey(bytes: ArrayBuffer): string {
+  return `-----BEGIN PUBLIC KEY-----\n${base64(bytes)}\n-----END PUBLIC KEY-----`;
+}
 
 Deno.test('Afdian checkout URLs keep the server checkout binding intact', () => {
   const checkoutUrl = buildAfdianCheckoutUrl({
@@ -38,6 +49,52 @@ Deno.test('Afdian API signing follows the documented canonical vector', () => {
       userId: 'abc',
     }),
     'a4acc28b81598b7e5d84ebdc3e91710c',
+  );
+});
+
+Deno.test('Afdian webhook signatures verify the documented order fields', async () => {
+  const keyPair = await crypto.subtle.generateKey(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256',
+    },
+    true,
+    ['sign', 'verify'],
+  );
+  const order = {
+    out_trade_no: 'order-1',
+    user_id: 'afdian-user-1',
+    plan_id: 'plan-monthly',
+    total_amount: '9.90',
+  };
+  const signature = await crypto.subtle.sign(
+    { name: 'RSASSA-PKCS1-v1_5' },
+    keyPair.privateKey,
+    new TextEncoder().encode(
+      `${order.out_trade_no}${order.user_id}${order.plan_id}${order.total_amount}`,
+    ),
+  );
+  const payload = {
+    ec: 200,
+    data: { type: 'order', order, sign: base64(signature) },
+  };
+  const publicKey = pemPublicKey(
+    await crypto.subtle.exportKey('spki', keyPair.publicKey),
+  );
+  assert(await verifyAfdianWebhookSignature(payload, publicKey));
+  assert(
+    !(await verifyAfdianWebhookSignature(
+      {
+        ...payload,
+        data: {
+          ...payload.data,
+          order: { ...order, total_amount: '19.90' },
+        },
+      },
+      publicKey,
+    )),
   );
 });
 

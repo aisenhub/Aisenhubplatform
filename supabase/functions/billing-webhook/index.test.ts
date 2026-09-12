@@ -173,6 +173,7 @@ Deno.test('billing webhook accepts the documented Afdian order envelope and retu
     {
       providerAccountId,
       database: database(valuesSeen),
+      verifyAfdianSignature: async () => true,
     },
   );
   assertEquals(response.status, 200);
@@ -180,6 +181,27 @@ Deno.test('billing webhook accepts the documented Afdian order envelope and retu
   assertEquals(valuesSeen.length, 1);
   assertEquals(valuesSeen[0]![1], 'afdian:afdian-order-1:2');
   assertEquals(valuesSeen[0]![4], 'afdian-order-1');
+});
+
+Deno.test('billing webhook rejects an Afdian envelope with an invalid signature', async () => {
+  const valuesSeen: unknown[][] = [];
+  const response = await handleBillingWebhookRequest(
+    afdianRequest(
+      JSON.stringify({
+        data: {
+          type: 'order',
+          order: { out_trade_no: 'afdian-order-invalid', status: 2 },
+        },
+      }),
+    ),
+    {
+      providerAccountId,
+      database: database(valuesSeen),
+      verifyAfdianSignature: async () => false,
+    },
+  );
+  assertEquals(response.status, 401);
+  assertEquals(valuesSeen, []);
 });
 
 Deno.test('billing webhook can require a secret Afdian callback path', async () => {
@@ -197,6 +219,7 @@ Deno.test('billing webhook can require a secret Afdian callback path', async () 
       providerAccountId,
       afdianWebhookPathSecret: 'staging-secret',
       database: database(valuesSeen),
+      verifyAfdianSignature: async () => true,
     },
   );
   assertEquals(rejected.status, 401);
@@ -216,6 +239,7 @@ Deno.test('billing webhook can require a secret Afdian callback path', async () 
       providerAccountId,
       afdianWebhookPathSecret: 'staging-secret',
       database: database([]),
+      verifyAfdianSignature: async () => true,
     },
   );
   assertEquals(accepted.status, 200);

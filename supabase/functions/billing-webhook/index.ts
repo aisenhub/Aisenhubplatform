@@ -7,7 +7,10 @@ import {
   sha256Bytes,
   constantTimeEqual,
 } from '../_shared/billing.ts';
-import { parseAfdianWebhook } from '../_shared/afdian.ts';
+import {
+  parseAfdianWebhook,
+  verifyAfdianWebhookSignature,
+} from '../_shared/afdian.ts';
 import { readBoundedBody, UploadFault } from '../_shared/upload.ts';
 
 type Row = Record<string, unknown>;
@@ -25,6 +28,7 @@ interface BillingWebhookDependencies {
   readonly providerAccountId?: string;
   readonly webhookIngressEnabled?: boolean;
   readonly afdianWebhookPathSecret?: string;
+  readonly verifyAfdianSignature?: (payload: unknown) => Promise<boolean>;
   readonly verifySignature?: (
     body: Uint8Array,
     request: Request,
@@ -168,6 +172,10 @@ export async function handleBillingWebhookRequest(
     let eventKey: string | null = null;
     let orderNo: string | null = null;
     if (afdian) {
+      const verified = await (
+        dependencies.verifyAfdianSignature ?? verifyAfdianWebhookSignature
+      )(payload);
+      if (!verified) throw new Error('SIGNATURE_INVALID');
       eventKey = afdian.eventKey;
       orderNo = afdian.orderNo;
     } else {

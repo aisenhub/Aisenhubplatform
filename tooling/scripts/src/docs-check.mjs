@@ -32,7 +32,10 @@ function markdownFiles(directory) {
     return entry.isFile() && entry.name.endsWith('.md') ? [absolute] : [];
   });
 }
-const documents = markdownFiles(docsRoot);
+const localReferenceRoots = [path.join(docsRoot, 'aifadian') + path.sep];
+const documents = markdownFiles(docsRoot).filter(
+  (file) => !localReferenceRoots.some((rootPath) => file.startsWith(rootPath)),
+);
 const files = [
   ...documents,
   ...['README.md', 'AGENTS.md', 'registry/README.md'].map((name) =>

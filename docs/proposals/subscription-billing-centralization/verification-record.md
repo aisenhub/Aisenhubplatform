@@ -260,3 +260,11 @@
 - Hosted 修复：发现远端 `postgres` 不能进入 `billing_ingress` 等 executor role，新增 `20260912143000_hosted_runtime_role_membership.sql`；staging 已先行执行同等授权，迁移随后固化。该差异此前只会在 hosted Edge Function 中暴露，本地超级用户测试无法发现。
 - Hosted 真实 HTTP 烟测：使用明确标记的 staging fixture provider account 和 fixture order，Afdian 官方 envelope POST 到 `/functions/v1/billing-webhook/webhooks/afdian` 返回 `200 {"ec":200,"em":"ok"}`；同一字节 payload 重放再次返回 200，数据库仅保留一个事件和一个处理 job。fixture 已清理，`BILLING_PROVIDER_ACCOUNT_ID` 测试 Secret 已移除。
 - 当前未完成：没有真实 Afdian `user_id`、API Token、三个 plan/SKU 映射或真实 checkout 链接，因此没有启用真实 Provider mapping、Checkout 或 `AFDIAN_USER_ID/AFDIAN_API_TOKEN`；真实 `query-order`、真实付款、真实回调和 Hosted maintenance 仍为 G-PROVIDER/G-OPS NOT_RUN。已暴露的旧 Token 仍不得使用，必须在 Afdian 重新生成后通过 Secret 注入。
+
+### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
+
+- 选型结论：采用 `Webhook + API`。Webhook 用于实时接收入站订单事件，API `query-order` 用于服务端权威核验、重试和补偿；两者共同完成 Provider round-trip。OAuth2.0 暂不接入，因为它需要向爱发电申请 `client_id/client_secret`，解决的是爱发电用户授权登录/身份绑定，不是收款回调或订单核验。
+- 依据资料：`docs/aifadian/教程.html`、`docs/aifadian/教程2.html` 和 `docs/aifadian/data.md`。教程说明 Webhook 可能重复投递、API 使用 `user_id + token` 的 MD5 签名，且 2025-07 起 Webhook envelope 使用订单字段的 RSA/SHA-256 签名。
+- 实现变更：`billing-webhook` 现在对标准 Afdian `data.type=order` envelope 校验 `data.sign`；签名字符串按 `out_trade_no + user_id + plan_id + total_amount` 拼接，使用 RSA PKCS#1 v1.5/SHA-256 验证。`AFDIAN_WEBHOOK_PATH_SECRET` 仍作为额外路径防护，API Token 仅由 maintenance 服务端读取。
+- 验证：Afdian/作业 Webhook 定向测试 14/14 PASS，包含运行时生成 RSA fixture、签名篡改拒绝、回调 ACK 和路径密钥场景；真实 Afdian 签名/回调仍需 Provider staging 联调。
+- 安全处理：`docs/aifadian/data.md` 中的 API Token 已脱敏；旧 Token 不得继续使用，需在爱发电后台重新生成并通过 Supabase staging Secret 注入。
