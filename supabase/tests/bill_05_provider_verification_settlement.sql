@@ -1,6 +1,6 @@
 begin;
 
-select plan(39);
+select plan(44);
 
 select has_column('public', 'billing_checkout_intents', 'custom_order_id', 'checkout has custom order binding');
 select has_column('public', 'billing_orders', 'custom_order_id', 'order stores custom order observation');
@@ -140,6 +140,57 @@ select is(
   )), 'contract_conflict', 'a mapped amount mismatch is manual');
 select is((select settlement_kind from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000518'), 'manual', 'contract mismatch uses manual settlement');
 select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000519'), 'manual_review', 'contract mismatch stops in manual review');
+
+insert into public.billing_provider_products (
+  id, provider_account_id, subscription_product_id, external_plan_id, product_type,
+  external_sku_ids, sku_count, purchase_months, expected_show_amount, expected_total_amount,
+  price_version, mapping_version, validation_status, published, enabled
+) values (
+  '00000000-0000-4000-8000-000000000522', '00000000-0000-4000-8000-000000000505',
+  (select id from public.subscription_products where code = 'lifetime'), 'sale-plan-lifetime',
+  '1', array['sale-sku-lifetime']::text[], 1, null, 49.90, 49.90, 2, 1, 'verified', true, true
+);
+insert into public.billing_checkout_intents (
+  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, product_code, term_kind_snapshot,
+  duration_value_snapshot, duration_unit_snapshot, price_amount, price_version,
+  mapping_version, custom_order_id, token_key_version, token_digest,
+  idempotency_key_hash, request_hash, expires_at
+) values (
+  '00000000-0000-4000-8000-000000000523', '00000000-0000-4000-8000-000000000502',
+  '00000000-0000-4000-8000-000000000504',
+  (select id from public.subscription_products where code = 'lifetime'),
+  '00000000-0000-4000-8000-000000000503', '00000000-0000-4000-8000-000000000505',
+  '00000000-0000-4000-8000-000000000522', 'lifetime', 'finite', 99, 'year', 49.90,
+  2, 1, 'bill05-sale-custom-order', 1, decode(repeat('12', 32), 'hex'),
+  decode(repeat('34', 32), 'hex'), decode(repeat('56', 32), 'hex'), now() + interval '30 minutes'
+);
+insert into public.billing_orders (
+  id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
+  platform_account_id, subscription_product_id, linkage_status
+) values (
+  '00000000-0000-4000-8000-000000000524', '00000000-0000-4000-8000-000000000505',
+  'provider-sale-order', '00000000-0000-4000-8000-000000000523',
+  '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
+  (select id from public.subscription_products where code = 'lifetime'), 'linked'
+);
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000525', 'order_verification',
+  '00000000-0000-4000-8000-000000000524', 'processing', 1, 'bill05-worker', now() + interval '1 minute', 1
+);
+select is(
+  (select entitlement_status from private.billing_order_verify_and_settle(
+    row('00000000-0000-4000-8000-000000000526', 'bill05-worker', 1, '00000000-0000-4000-8000-000000000527')::private.job_context,
+    '00000000-0000-4000-8000-000000000525', '00000000-0000-4000-8000-000000000524', 1,
+    '{"status":"paid","provider_user_id":"provider-user-1","external_plan_id":"sale-plan-lifetime","product_type":"1","sku_ids":["sale-sku-lifetime"],"purchase_months":12,"total_amount":"49.90","show_amount":"49.90","currency":"CNY","custom_order_id":"bill05-sale-custom-order"}'::jsonb
+  )), 'granted', 'sale product does not treat provider month as the local entitlement term'
+);
+select is((select verification_status from public.billing_orders where id = '00000000-0000-4000-8000-000000000524'), 'verified', 'sale product order is verified');
+select is((select settlement_kind from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000524'), 'automatic', 'sale product uses automatic settlement');
+select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000525'), 'completed', 'sale product job completes after settlement');
+select is((select count(*)::integer from public.subscription_grants where billing_order_id = '00000000-0000-4000-8000-000000000524'), 1, 'sale product creates one grant');
 
 select is(
   (select version from private.billing_reconciliation_cursor_update(

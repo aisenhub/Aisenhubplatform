@@ -248,10 +248,10 @@
 
 ### Afdian transport 与价格发布/2026-09-12/当前 Agent
 
-- 实际变更文件：`supabase/functions/_shared/afdian.ts`、`supabase/functions/_shared/afdian.test.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.ts`、`supabase/migrations/20260912060342_bill_10_afdian_price_release.sql`、`supabase/migrations/20260912143000_hosted_runtime_role_membership.sql`、`supabase/migrations/20260912150000_afdian_checkout_payment_link.sql`、对应 SQL tests、`docs/reference/configuration.md`。
+- 实际变更文件：`supabase/functions/_shared/afdian.ts`、`supabase/functions/_shared/afdian.test.ts`、`supabase/functions/account-api/index.ts`、`supabase/functions/account-api/index.test.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.ts`、`supabase/migrations/20260912060342_bill_10_afdian_price_release.sql`、`supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql`、`supabase/migrations/20260912143000_hosted_runtime_role_membership.sql`、`supabase/migrations/20260912150000_afdian_checkout_payment_link.sql`、对应 SQL tests、`docs/reference/configuration.md`。
 - 实现行为：加入 Afdian 官方 API MD5 canonical signing、`query-order` 适配、超时/失败分类、服务端环境变量装配；Webhook 支持官方 `data.type=order` envelope、稳定订单状态事件键、可选不可猜路径段和 `ec=200` ACK；不保存原始 webhook body，只写 hash 和 Inbox/Job 结果。新增价格 forward migration，将 monthly/yearly/lifetime 调整为 9.90/39.90/49.90 CNY 并将 price_version 提升至 2，保留 lifetime=99 years；已验证 mapping 时，Account API 服务端生成包含 plan/SKU/custom_order_id 的 Afdian URL，没有 mapping 时继续关闭购买。
-- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（39 files/712 tests）；Account API/Afdian Deno 定向测试 PASS（36 tests）；Webhook/Maintenance 定向测试此前 PASS（22 tests）；`pnpm lint` PASS；`pnpm exec oxfmt --check ...` PASS；`pnpm run docs:check` PASS（44 documents）；`pnpm run contracts:check` PASS；`git diff --check` PASS。BILL-12 迁移已 push 到 staging，Account API 新版本已部署。
-- 证据边界：当前为 Local G-DEV/fixture PASS；未使用真实 Token，未访问 Hosted staging、真实 `query-order`、真实 Afdian Webhook、真实付款、Provider 限流、告警和生产 Secret。Afdian `user_id`、真实 plan/SKU mapping、checkout 链接和 `custom_order_id` round-trip 仍为 G-PROVIDER 待验证项。
+- 验证命令：`pnpm test:db` PASS（39 files/717 tests）；Afdian Deno 定向测试 PASS（8 tests）；Account API/Webhook/Maintenance 定向测试此前 PASS；`pnpm lint` PASS；目标文件 `oxfmt --check` PASS；`pnpm run docs:check` PASS（44 documents）；`pnpm run contracts:check` PASS；`git diff --check` PASS。BILL-13 迁移已应用到 staging。
+- 证据边界：staging 已写入用户提供的三个公开 Checkout 链接对应的商品映射；两档普通订阅为 `product_type=0` 且无 SKU，99 年商品为 `product_type=1` 且带一个 SKU。真实付款、Webhook 与 `query-order` 的订单字段回环、权益结算、Provider 限流、告警和生产 Secret 仍为 G-PROVIDER/G-OPS 待验证项。
 
 ### Hosted staging 数据库与 Webhook 边界/2026-09-12/当前 Agent
 
@@ -259,7 +259,14 @@
 - 已部署函数：`account-api`、`billing-webhook`、`maintenance`，三者均使用当前工作区代码；数据库迁移已覆盖 BILL-01～BILL-10。远端商品结果为 Free、Monthly `9.90 CNY`、Yearly `39.90 CNY`、Lifetime `49.90 CNY`，付费价格版本为 2，Lifetime 仍为有限 99 年。
 - Hosted 修复：发现远端 `postgres` 不能进入 `billing_ingress` 等 executor role，新增 `20260912143000_hosted_runtime_role_membership.sql`；staging 已先行执行同等授权，迁移随后固化。该差异此前只会在 hosted Edge Function 中暴露，本地超级用户测试无法发现。
 - Hosted 真实 HTTP 烟测：使用明确标记的 staging fixture provider account 和 fixture order，Afdian 官方 envelope POST 到 `/functions/v1/billing-webhook/webhooks/afdian` 返回 `200 {"ec":200,"em":"ok"}`；同一字节 payload 重放再次返回 200，数据库仅保留一个事件和一个处理 job。fixture 已清理，`BILLING_PROVIDER_ACCOUNT_ID` 测试 Secret 已移除。
-- 当前未完成：staging 已注入新的 Afdian `user_id` 与 API Token，并已完成真实 API 请求路径的失败恢复烟测；三个 plan/SKU 映射、真实 checkout 链接、真实付款、成功订单 `query-order`、权益结算、外部调度器和生产观察仍未完成。已暴露的旧 Token 仍不得使用，必须继续通过 Secret 注入并按需轮换。
+- 当前未完成：staging 已注入新的 Afdian `user_id` 与 API Token，三个商品映射和服务端 Checkout 参数已配置，并已完成真实 API 请求路径的失败恢复烟测；真实付款、成功订单 `query-order`、Webhook 与 API 字段一致性、权益结算、外部调度器和生产观察仍未完成。已暴露的旧 Token 仍不得使用，必须继续通过 Secret 注入并按需轮换。
+
+### Hosted staging Afdian 商品映射/2026-09-12/当前 Agent
+
+- Monthly `9.90 CNY`：普通订阅，`product_type=0`，`purchase_months=1`，当前 mapping version 2；旧售卖商品映射已停用。
+- Yearly `39.90 CNY`：普通订阅，`product_type=0`，`purchase_months=12`，当前 mapping version 2；旧售卖商品映射已停用。
+- Lifetime `49.90 CNY`：售卖商品，`product_type=1`，SKU 集合为一个 SKU，期限由本地合同固定为有限 99 年，当前 mapping version 1。
+- 所有当前映射均为 CNY、无优惠、已发布并启用；映射值来自用户提供的公开付款链接。它们仍需一笔真实 staging 付款来完成 Provider round-trip 验收。
 
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
 
@@ -273,7 +280,7 @@
 
 - 原因复现：配置 Provider account 前，Webhook 地址的 GET 探测返回 405；POST 请求返回 503 `WEBHOOK_NOT_CONFIGURED`。`AFDIAN_USER_ID` 与 `AFDIAN_API_TOKEN` 本身不能替代本系统内部的 Provider account 绑定。
 - 已处理：在 staging 创建 active Afdian Provider account，绑定当前 Afdian creator `user_id`，并设置 `BILLING_PROVIDER_ACCOUNT_ID` Secret；未操作生产。
-- 已验证：用户在爱发电后台发送测试后，Provider 回调已到达 staging，并由入口返回 `{"ec":200,"em":"ok"}`；随后已完成 Worker/API 查询失败恢复路径验证。待继续：配置真实 plan/SKU mapping 并执行 API/回调 round-trip。
+- 已验证：用户在爱发电后台发送测试后，Provider 回调已到达 staging，并由入口返回 `{"ec":200,"em":"ok"}`；随后已完成 Worker/API 查询失败恢复路径验证。当前商品映射已配置，待继续：真实付款与 API/回调 round-trip。
 
 ### Hosted staging Afdian 测试回调/2026-09-12/当前 Agent
 

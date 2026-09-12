@@ -40,6 +40,20 @@ Deno.test('Afdian checkout URLs keep the server checkout binding intact', () => 
   );
 });
 
+Deno.test('Afdian regular plan URLs omit sale-product SKU parameters', () => {
+  const checkoutUrl = buildAfdianCheckoutUrl({
+    baseUrl: 'https://afdian.test/order/create',
+    productType: '0',
+    externalPlanId: 'plan-yearly',
+    customOrderId: 'checkout-002',
+  });
+  const url = new URL(checkoutUrl);
+  assertEquals(url.searchParams.get('product_type'), '0');
+  assertEquals(url.searchParams.get('plan_id'), 'plan-yearly');
+  assertEquals(url.searchParams.get('custom_order_id'), 'checkout-002');
+  assertEquals(url.searchParams.get('sku'), null);
+});
+
 Deno.test('Afdian API signing follows the documented canonical vector', () => {
   assertEquals(
     afdianCanonicalSign({
