@@ -912,6 +912,41 @@ h2 {
   color: #6f8c73;
   font-size: 0.68rem;
 }
+.consumer-checkout-rules {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+  gap: 1.25rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid #d4e3d0;
+  border-radius: 1rem;
+  background: #f6faf4;
+}
+.consumer-checkout-rules h2 {
+  margin-top: 0.2rem;
+  font-size: 1rem;
+}
+.consumer-checkout-rules > div > p:last-child {
+  max-width: 44rem;
+  margin-top: 0.45rem;
+  color: #6f7e72;
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+.consumer-checkout-rule-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0 0 0 1.25rem;
+  color: #536b58;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+.consumer-checkout-rule-list li::marker {
+  color: var(--primary);
+  font-weight: 800;
+}
 .consumer-plan-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1411,6 +1446,10 @@ h2 {
   .consumer-quick-strip a {
     border-top: 1px solid var(--border);
     border-left: 0;
+  }
+  .consumer-checkout-rules {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
   }
   .consumer-settings-layout {
     grid-template-columns: 1fr;

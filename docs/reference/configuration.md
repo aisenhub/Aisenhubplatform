@@ -66,6 +66,18 @@
 | AFDIAN_API_BASE_URL | 可选；默认 `https://afdian.com/api/open`，staging 可指向测试代理 |
 | AFDIAN_API_TIMEOUT_MS | 可选；Provider API 超时毫秒数，默认 5000 |
 
+## Consumer 模板
+
+`apps/template-preview` 是 `model.aisenhub` 的 Consumer BFF 模板。模板服务端需要配置：
+
+| 变量 | 行为 |
+| --- | --- |
+| `ACCOUNT_API_URL` | 中央 Account API 地址；staging 使用 Supabase Edge Function 的 `/functions/v1/account-api` 地址 |
+| `ACCOUNT_PLATFORM_KEY` | `model.aisenhub` 对应的服务端 Platform Key；只读服务端环境变量，不能使用 `NEXT_PUBLIC_` 前缀、不能进入浏览器、日志或 Git |
+| `TEMPLATE_ORIGIN` | 模板页面的精确 origin，用于 BFF 的 Origin/CSRF 校验 |
+
+Platform Key 必须通过 Admin 的创建、部署确认流程生成；同一平台可以按环境使用不同 Key。模板页面只调用同源 `/api/v1/*`，不会让浏览器直接提交 Platform Key。
+
 Maintenance 调度器应每分钟调用 `/maintenance/v1/billing/jobs/run`，请求体使用 `{ "limit": 5 }`；该路由领取任务并在同一固定 `MAINTENANCE_WORKER_ID` 下分派发现、查询和结算。`schedule.json` 只描述调用元数据，仍需由受控外部调度器实际发起请求。
 
 调度清单每天调用 `/maintenance/v1/idempotency/cleanup`，通过 `job_executor` 受限 wrapper 批量删除已过期的普通用户/Admin 幂等缓存。该任务不删除 `billing_checkout_intents` 或 `billing_orders` 等长期交易绑定；无需新增环境变量。

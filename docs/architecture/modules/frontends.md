@@ -16,10 +16,10 @@
 | /files | 通过中央 Account API 读取、上传、下载和删除配置文件 |
 | /account | 通过中央 Account API 管理资料、偏好和敏感账户动作；邮箱/手机/密码验证仍使用 Supabase Auth |
 | /login | Consumer 邮箱/密码登录，建立同源 scoped session cookies |
-| /subscription | 从中央 API 读取商品/权益，使用同源 BFF 创建 Checkout、轮询真实状态和兑换激活码 |
+| /subscription | 从中央 API 读取商品/权益，使用同源 BFF 创建服务端绑定 Checkout、轮询真实状态和兑换激活码；同时作为 staging 与后续 Consumer 模板的付款测试入口 |
 | /pricing | 重定向到 /subscription |
 
-ReferenceApiCard 展示接口调用示例，不执行示例代码。账户、文件和订阅页均通过同源 BFF 读取中央结果；账户页的邮箱/手机/密码验证仍依赖公开 Supabase Auth 配置。订阅页不伪造支付成功，`granted` 之前不会显示为已开通；BFF 仅代理白名单路径，Provider 回调和真实会话生命周期仍需对应环境配置。Consumer 登录、刷新、退出、OAuth callback 和近期认证位于 `/api/auth/*`，受保护服务端示例位于 `/api/protected/advanced-config`，由 `@kit/account-server` 的 `authorizeProtectedFeature` 读取中央权益，不信任浏览器 plan 字段。
+ReferenceApiCard 展示接口调用示例，不执行示例代码。账户、文件和订阅页均通过同源 BFF 读取中央结果；账户页的邮箱/手机/密码验证仍依赖公开 Supabase Auth 配置。订阅页不伪造支付成功，`granted` 之前不会显示为已开通；购买必须从方案卡创建 Checkout，不能使用没有 `custom_order_id` 的裸 Provider 商品链接。价格、期限、Provider 计划和订单绑定由服务端快照决定，BFF 仅代理白名单路径，Provider 回调和真实会话生命周期仍需对应环境配置。Consumer 登录、刷新、退出、OAuth callback 和近期认证位于 `/api/auth/*`，受保护服务端示例位于 `/api/protected/advanced-config`，由 `@kit/account-server` 的 `authorizeProtectedFeature` 读取中央权益，不信任浏览器 plan 字段。
 
 ## 共享 UI 与安装元数据
 

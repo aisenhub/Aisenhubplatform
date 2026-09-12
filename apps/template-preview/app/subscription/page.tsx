@@ -34,6 +34,12 @@ type PendingPayment = {
   url: string | null;
 };
 
+type CheckoutStatus = {
+  status: string;
+  paid_at: string | null;
+  granted_at: string | null;
+};
+
 function accentFor(code: string): Product['accent'] {
   if (code === 'free') return 'sage';
   if (code === 'lifetime') return 'clay';
@@ -43,6 +49,16 @@ function accentFor(code: string): Product['accent'] {
 function featureCopy(code: string): string[] {
   if (code === 'free') return ['基础功能使用', '有限的配置空间', '个人使用'];
   return ['解锁更多高级功能', '更大的配置空间', '服务端权威权益'];
+}
+
+function termLabel(product: Product): string {
+  if (product.code === 'lifetime') return '永久使用';
+  if (!product.term.duration_value) return '当前周期';
+  return `/ ${product.term.duration_value} ${product.term.duration_unit === 'year' ? '年' : '月'}`;
+}
+
+function errorCode(error: unknown): string {
+  return error instanceof Error ? error.message : '';
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -73,6 +89,8 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export default function SubscriptionPage() {
   const [plans, setPlans] = useState<Product[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState('');
   const [currentPlan, setCurrentPlan] = useState('free');
   const [currentPlanName, setCurrentPlanName] = useState('Free');
   const [feedback, setFeedback] = useState('当前使用免费版');
@@ -80,6 +98,7 @@ export default function SubscriptionPage() {
     null,
   );
   const [paymentFeedback, setPaymentFeedback] = useState('');
+  const [isRefreshingPayment, setIsRefreshingPayment] = useState(false);
   const [activationCode, setActivationCode] = useState('');
   const [redemptionState, setRedemptionState] =
     useState<RedemptionState>('idle');
@@ -102,41 +121,54 @@ export default function SubscriptionPage() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      try {
-        const [products] = await Promise.all([
-          api<Array<Record<string, unknown>>>('v1/subscription/products'),
-          refreshSubscription(),
-        ]);
-        if (cancelled) return;
-        setPlans(
-          products.map((product) => {
-            const code = String(product.code) as Product['code'];
-            const term = (product.term ?? {}) as Product['term'];
-            return {
-              code,
-              name: String(product.name ?? code),
-              description:
-                typeof product.description === 'string'
-                  ? product.description
-                  : null,
-              price: `¥${String(product.price ?? '0.00')}`,
-              term,
-              recommended: product.recommended === true,
-              purchasable: product.purchasable === true,
-              enabled: product.enabled !== false,
-              accent: accentFor(code),
-              features: featureCopy(code),
-            };
-          }),
-        );
-      } catch (error) {
-        if (!cancelled)
-          setFeedback(
-            error instanceof Error && error.message === 'UNAUTHORIZED'
-              ? '请先登录后查看订阅状态'
-              : '订阅服务暂时不可用，请稍后刷新',
+      const productsPromise = api<Array<Record<string, unknown>>>(
+        'v1/subscription/products',
+      )
+        .then((products) => {
+          if (cancelled) return;
+          setPlans(
+            products.map((product) => {
+              const code = String(product.code) as Product['code'];
+              const term = (product.term ?? {}) as Product['term'];
+              return {
+                code,
+                name: String(product.name ?? code),
+                description:
+                  typeof product.description === 'string'
+                    ? product.description
+                    : null,
+                price: `¥${String(product.price ?? '0.00')}`,
+                term,
+                recommended: product.recommended === true,
+                purchasable: product.purchasable === true,
+                enabled: product.enabled !== false,
+                accent: accentFor(code),
+                features: featureCopy(code),
+              };
+            }),
           );
-      }
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setPlansError('商品目录暂时不可用，请检查服务端配置后刷新。');
+        })
+        .finally(() => {
+          if (!cancelled) setPlansLoading(false);
+        });
+
+      const entitlementPromise = refreshSubscription().catch(
+        (error: unknown) => {
+          if (cancelled) return;
+          setFeedback(
+            errorCode(error) === 'UNAUTHORIZED'
+              ? '登录后可创建付款订单'
+              : errorCode(error) === 'ACCOUNT_NOT_ACTIVATED'
+                ? '请先激活工作区，再创建付款订单'
+                : '订阅状态暂时不可用，商品目录仍可查看',
+          );
+        },
+      );
+      await Promise.all([productsPromise, entitlementPromise]);
     }
     void load();
     return () => {
@@ -144,40 +176,62 @@ export default function SubscriptionPage() {
     };
   }, [refreshSubscription]);
 
+  const refreshPendingCheckout = useCallback(
+    async (id: string) => {
+      const checkout = await api<CheckoutStatus>(
+        `v1/subscription/checkout/${id}`,
+      );
+      setPendingPayment((current) =>
+        current ? { ...current, status: checkout.status } : current,
+      );
+      if (checkout.status === 'granted') {
+        setPaymentFeedback('支付已确认，权益已由服务端开通。');
+        setPendingPayment(null);
+        await refreshSubscription();
+      } else if (
+        checkout.status === 'review_required' ||
+        checkout.status === 'resolved'
+      ) {
+        setPaymentFeedback('订单需要人工处理，请保留订单号并稍后查看。');
+      } else if (checkout.status === 'paid') {
+        setPaymentFeedback('已收到付款，正在等待服务端完成权益确认。');
+      } else if (checkout.status === 'expired') {
+        setPaymentFeedback('付款意图已过期，请重新创建订单。');
+      } else {
+        setPaymentFeedback('等待付款完成，页面会自动查询服务端状态。');
+      }
+      return checkout.status;
+    },
+    [refreshSubscription],
+  );
+
   const checkoutId = pendingPayment?.checkoutId;
   useEffect(() => {
     if (!checkoutId) return;
+    const activeCheckoutId = checkoutId;
     let cancelled = false;
     let attempts = 0;
     async function poll() {
       attempts += 1;
       try {
-        const checkout = await api<{
-          status: string;
-          paid_at: string | null;
-          granted_at: string | null;
-        }>(`v1/subscription/checkout/${checkoutId}`);
+        const status = await refreshPendingCheckout(activeCheckoutId);
         if (cancelled) return;
-        setPendingPayment((current) =>
-          current ? { ...current, status: checkout.status } : current,
-        );
-        if (checkout.status === 'granted') {
-          setPaymentFeedback('支付已确认，权益已由服务端开通。');
-          setPendingPayment(null);
-          await refreshSubscription();
-        } else if (
-          checkout.status === 'review_required' ||
-          checkout.status === 'resolved'
-        ) {
-          setPaymentFeedback('订单需要人工处理，请保留订单号并稍后查看。');
-        } else if (checkout.status === 'expired') {
-          setPaymentFeedback('付款意图已过期，请重新创建订单。');
-        }
+        if (
+          status === 'granted' ||
+          status === 'review_required' ||
+          status === 'resolved' ||
+          status === 'expired'
+        )
+          clearInterval(timer);
       } catch {
         if (!cancelled)
           setPaymentFeedback('暂时无法读取订单状态，请稍后重试。');
       }
-      if (attempts >= 12) clearInterval(timer);
+      if (attempts >= 30) {
+        clearInterval(timer);
+        if (!cancelled)
+          setPaymentFeedback('自动查询已暂停，你仍可以手动刷新订单状态。');
+      }
     }
     const timer = window.setInterval(() => void poll(), 4000);
     void poll();
@@ -185,7 +239,7 @@ export default function SubscriptionPage() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [checkoutId, refreshSubscription]);
+  }, [checkoutId, refreshPendingCheckout]);
 
   async function choosePlan(name: string, code: string) {
     if (code === currentPlan || pendingPayment) return;
@@ -225,17 +279,34 @@ export default function SubscriptionPage() {
           setPaymentFeedback('浏览器拦截了新窗口，请点击下方“点此打开”。');
       }
     } catch (error) {
+      const code = errorCode(error);
+      if (code === 'UNAUTHORIZED') {
+        setPaymentFeedback('请先登录账户，再创建付款订单。');
+        window.location.assign('/login');
+        return;
+      }
       setPaymentFeedback(
-        error instanceof Error && error.message === 'CHECKOUT_UNAVAILABLE'
-          ? '当前套餐暂未开放付款，请稍后再试。'
-          : '订单创建失败，请稍后重试。',
+        code === 'ACCOUNT_NOT_ACTIVATED'
+          ? '请先激活工作区，再创建付款订单。'
+          : code === 'CHECKOUT_UNAVAILABLE'
+            ? '当前套餐暂未开放付款，请稍后再试。'
+            : '订单创建失败，请稍后重试。',
       );
     }
   }
 
-  function confirmPayment() {
-    if (!pendingPayment) return;
+  async function confirmPayment() {
+    const id = pendingPayment?.checkoutId;
+    if (!id || isRefreshingPayment) return;
+    setIsRefreshingPayment(true);
     setPaymentFeedback('正在刷新服务端订单状态…');
+    try {
+      await refreshPendingCheckout(id);
+    } catch {
+      setPaymentFeedback('暂时无法读取订单状态，请稍后重试。');
+    } finally {
+      setIsRefreshingPayment(false);
+    }
   }
 
   function cancelPayment() {
@@ -281,6 +352,29 @@ export default function SubscriptionPage() {
       title="订阅方案"
       description="选择适合你的方案，获得更高效、稳定的配置管理体验。"
     >
+      <section
+        className="consumer-checkout-rules"
+        aria-labelledby="checkout-rules-title"
+        data-test="subscription-checkout-entry"
+      >
+        <div>
+          <p className="consumer-overline">
+            {process.env.NEXT_PUBLIC_ENVIRONMENT === 'staging'
+              ? 'STAGING 测试入口'
+              : '模板付款入口'}
+          </p>
+          <h2 id="checkout-rules-title">从方案卡创建绑定订单</h2>
+          <p>
+            请从下方方案卡开始付款，不要直接修改或复制爱发电商品链接。系统会由服务端锁定价格、期限和订单绑定，再打开爱发电付款页。
+          </p>
+        </div>
+        <ol className="consumer-checkout-rule-list">
+          <li>价格与期限以服务端 Checkout 快照为准。</li>
+          <li>付款结果只认服务端订单状态，不信任浏览器回调。</li>
+          <li>支付密钥和平台密钥只留在服务端，不进入浏览器。</li>
+        </ol>
+      </section>
+
       <section className="consumer-current-plan" role="status">
         <span className="consumer-current-plan-icon">
           <Icon name="user" size={20} />
@@ -295,75 +389,92 @@ export default function SubscriptionPage() {
         className={`consumer-plan-grid-wrap${pendingPayment ? ' is-payment-pending' : ''}`}
         aria-busy={Boolean(pendingPayment)}
       >
-        <section className="consumer-plan-grid" aria-label="四种订阅方案">
-          {plans.map((plan) => {
-            const isCurrent = plan.code === currentPlan;
-            return (
-              <article
-                className={`consumer-subscription-card is-${plan.accent}${isCurrent ? ' is-current' : ''}`}
-                key={plan.code}
-              >
-                <div className="consumer-subscription-heading">
-                  <span className="consumer-plan-icon">
-                    <Icon
-                      name={
-                        plan.code === 'free'
-                          ? 'user'
-                          : plan.code === 'lifetime'
-                            ? 'infinity'
-                            : 'card'
-                      }
-                      size={22}
-                    />
-                  </span>
-                  <div>
-                    <h2>{plan.name}</h2>
-                    <div className="consumer-subscription-price">
-                      <strong>{plan.price}</strong>
-                      <span>
-                        {plan.term.duration_value
-                          ? `/ ${plan.term.duration_value} ${plan.term.duration_unit === 'year' ? '年' : '月'}`
-                          : '/ 当前'}
+        <section
+          className="consumer-plan-grid"
+          aria-label="四种订阅方案"
+          data-test="subscription-products"
+        >
+          {plansLoading || plansError ? (
+            <div
+              className="consumer-plan-empty"
+              role="status"
+              data-test="subscription-products-unavailable"
+            >
+              <strong>
+                {plansLoading ? '正在读取订阅方案…' : '暂时无法读取订阅方案'}
+              </strong>
+              <span>
+                {plansError || '价格、期限和购买状态将由服务端返回。'}
+              </span>
+            </div>
+          ) : null}
+          {!plansLoading && !plansError
+            ? plans.map((plan) => {
+                const isCurrent = plan.code === currentPlan;
+                return (
+                  <article
+                    className={`consumer-subscription-card is-${plan.accent}${isCurrent ? ' is-current' : ''}`}
+                    key={plan.code}
+                  >
+                    <div className="consumer-subscription-heading">
+                      <span className="consumer-plan-icon">
+                        <Icon
+                          name={
+                            plan.code === 'free'
+                              ? 'user'
+                              : plan.code === 'lifetime'
+                                ? 'infinity'
+                                : 'card'
+                          }
+                          size={22}
+                        />
                       </span>
+                      <div>
+                        <h2>{plan.name}</h2>
+                        <div className="consumer-subscription-price">
+                          <strong>{plan.price}</strong>
+                          <span>{termLabel(plan)}</span>
+                        </div>
+                      </div>
+                      {isCurrent ? (
+                        <span className="consumer-plan-label">当前使用中</span>
+                      ) : null}
+                      {plan.recommended ? (
+                        <span className="consumer-plan-label is-recommended">
+                          推荐
+                        </span>
+                      ) : null}
                     </div>
-                  </div>
-                  {isCurrent ? (
-                    <span className="consumer-plan-label">当前使用中</span>
-                  ) : null}
-                  {plan.recommended ? (
-                    <span className="consumer-plan-label is-recommended">
-                      推荐
-                    </span>
-                  ) : null}
-                </div>
-                <p className="consumer-subscription-description">
-                  {plan.description}
-                </p>
-                <ul className="consumer-plan-features">
-                  {plan.features.map((feature) => (
-                    <li key={feature}>{feature}</li>
-                  ))}
-                </ul>
-                <button
-                  className={`consumer-plan-button${isCurrent ? ' is-current' : ''}`}
-                  type="button"
-                  disabled={
-                    isCurrent ||
-                    Boolean(pendingPayment) ||
-                    !plan.enabled ||
-                    !plan.purchasable
-                  }
-                  onClick={() => choosePlan(plan.name, plan.code)}
-                >
-                  {isCurrent
-                    ? '当前使用中'
-                    : !plan.enabled || !plan.purchasable
-                      ? '暂未开放'
-                      : '选择方案'}
-                </button>
-              </article>
-            );
-          })}
+                    <p className="consumer-subscription-description">
+                      {plan.description}
+                    </p>
+                    <ul className="consumer-plan-features">
+                      {plan.features.map((feature) => (
+                        <li key={feature}>{feature}</li>
+                      ))}
+                    </ul>
+                    <button
+                      className={`consumer-plan-button${isCurrent ? ' is-current' : ''}`}
+                      type="button"
+                      disabled={
+                        isCurrent ||
+                        Boolean(pendingPayment) ||
+                        !plan.enabled ||
+                        !plan.purchasable
+                      }
+                      onClick={() => choosePlan(plan.name, plan.code)}
+                      data-test={`subscription-plan-${plan.code}`}
+                    >
+                      {isCurrent
+                        ? '当前使用中'
+                        : !plan.enabled || !plan.purchasable
+                          ? '暂未开放'
+                          : '选择方案'}
+                    </button>
+                  </article>
+                );
+              })
+            : null}
         </section>
         {pendingPayment ? (
           <div className="consumer-plan-lock" aria-hidden="true" />
@@ -411,9 +522,10 @@ export default function SubscriptionPage() {
               <button
                 className="consumer-button consumer-button-primary"
                 type="button"
-                onClick={confirmPayment}
+                disabled={isRefreshingPayment}
+                onClick={() => void confirmPayment()}
               >
-                刷新订单状态
+                {isRefreshingPayment ? '查询中…' : '刷新订单状态'}
               </button>
               <button
                 className="consumer-button consumer-button-secondary"

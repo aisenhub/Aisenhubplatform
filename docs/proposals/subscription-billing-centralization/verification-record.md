@@ -268,6 +268,12 @@
 - Lifetime `49.90 CNY`：售卖商品，`product_type=1`，SKU 集合为一个 SKU，期限由本地合同固定为有限 99 年，当前 mapping version 1。
 - 所有当前映射均为 CNY、无优惠、已发布并启用；映射值来自用户提供的公开付款链接。它们仍需一笔真实 staging 付款来完成 Provider round-trip 验收。
 
+### Consumer 模板付款入口/2026-09-12/当前 Agent
+
+- `apps/template-preview` 的 `/subscription` 已作为可复用 Consumer 付款模板：商品目录与权益状态分开加载，方案卡通过同源 BFF 创建服务端绑定 Checkout，订单状态支持自动轮询和手动刷新；页面规则明确禁止直接使用没有 `custom_order_id` 的裸 Afdian 商品链接。
+- 模板示例配置已补充 `model.aisenhub` 的 `ACCOUNT_API_URL`/`ACCOUNT_PLATFORM_KEY` 约束；真实 Platform Key 仍只允许通过 Admin 创建、部署确认流程注入服务端环境。
+- staging 当前 Auth 用户数、system admin 数和 platform 数均为 0，因此尚未创建 `model.aisenhub` 平台或 Platform Key；该初始化需要一个用户指定的 staging 管理员身份，不能用 SQL 伪造为已完成。
+
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
 
 - 选型结论：采用 `Webhook + API`。Webhook 用于实时接收入站订单事件，API `query-order` 用于服务端权威核验、重试和补偿；两者共同完成 Provider round-trip。OAuth2.0 暂不接入，因为它需要向爱发电申请 `client_id/client_secret`，解决的是爱发电用户授权登录/身份绑定，不是收款回调或订单核验。
