@@ -252,3 +252,11 @@
 - 实现行为：加入 Afdian 官方 API MD5 canonical signing、`query-order` 适配、超时/失败分类、服务端环境变量装配；Webhook 支持官方 `data.type=order` envelope、稳定订单状态事件键、可选不可猜路径段和 `ec=200` ACK；不保存原始 webhook body，只写 hash 和 Inbox/Job 结果。新增价格 forward migration，将 monthly/yearly/lifetime 调整为 9.90/39.90/49.90 CNY 并将 price_version 提升至 2，保留 lifetime=99 years。
 - 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（37 files/702 tests）；Afdian/Webhook/Maintenance Deno 定向测试 PASS（22 tests）；`pnpm lint` PASS；`pnpm exec oxfmt --check ...` PASS；`pnpm run docs:check` PASS（44 documents）；`git diff --check` PASS。
 - 证据边界：当前为 Local G-DEV/fixture PASS；未使用真实 Token，未访问 Hosted staging、真实 `query-order`、真实 Afdian Webhook、真实付款、Provider 限流、告警和生产 Secret。Afdian `user_id`、真实 plan/SKU mapping、checkout 链接和 `custom_order_id` round-trip 仍为 G-PROVIDER 待验证项。
+
+### Hosted staging 数据库与 Webhook 边界/2026-09-12/当前 Agent
+
+- staging 项目：Supabase `workendstaging`，仅操作项目 ref `egsokuicabbxspkdccqe`；已确认旧远端迁移链与仓库不一致，且业务订阅/授权/事件数据为空。按用户明确授权的 staging 无保留数据范围执行了 `supabase db reset --linked --yes`，生产未触碰。
+- 已部署函数：`account-api`、`billing-webhook`、`maintenance`，三者均使用当前工作区代码；数据库迁移已覆盖 BILL-01～BILL-10。远端商品结果为 Free、Monthly `9.90 CNY`、Yearly `39.90 CNY`、Lifetime `49.90 CNY`，付费价格版本为 2，Lifetime 仍为有限 99 年。
+- Hosted 修复：发现远端 `postgres` 不能进入 `billing_ingress` 等 executor role，新增 `20260912143000_hosted_runtime_role_membership.sql`；staging 已先行执行同等授权，迁移随后固化。该差异此前只会在 hosted Edge Function 中暴露，本地超级用户测试无法发现。
+- Hosted 真实 HTTP 烟测：使用明确标记的 staging fixture provider account 和 fixture order，Afdian 官方 envelope POST 到 `/functions/v1/billing-webhook/webhooks/afdian` 返回 `200 {"ec":200,"em":"ok"}`；同一字节 payload 重放再次返回 200，数据库仅保留一个事件和一个处理 job。fixture 已清理，`BILLING_PROVIDER_ACCOUNT_ID` 测试 Secret 已移除。
+- 当前未完成：没有真实 Afdian `user_id`、API Token、三个 plan/SKU 映射或真实 checkout 链接，因此没有启用真实 Provider mapping、Checkout 或 `AFDIAN_USER_ID/AFDIAN_API_TOKEN`；真实 `query-order`、真实付款、真实回调和 Hosted maintenance 仍为 G-PROVIDER/G-OPS NOT_RUN。已暴露的旧 Token 仍不得使用，必须在 Afdian 重新生成后通过 Secret 注入。
