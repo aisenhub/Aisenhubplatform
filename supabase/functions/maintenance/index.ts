@@ -8,6 +8,7 @@ import {
 } from '../_shared/storage.ts';
 import { readBoundedBody, UploadFault } from '../_shared/upload.ts';
 import {
+  createAfdianProviderAdapterFromEnv,
   normalizeAfdianOrder,
   toBillingOrderFacts,
 } from '../_shared/afdian.ts';
@@ -636,7 +637,8 @@ async function billingJobProcess(
       error: { code: 'BILLING_SETTLEMENT_DISABLED' },
       request_id: id,
     });
-  const adapter = dependencies.billingProviderAdapter;
+  const adapter =
+    dependencies.billingProviderAdapter ?? createAfdianProviderAdapterFromEnv();
   if (!adapter)
     return response(503, {
       error: { code: 'PROVIDER_NOT_CONFIGURED' },

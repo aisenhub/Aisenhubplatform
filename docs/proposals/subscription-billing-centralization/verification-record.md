@@ -242,6 +242,13 @@
 
 ## 8. 最终结论与交接
 
-实现覆盖：BILL-01～BILL-07 的本地 G-DEV 范围、最终商品/幂等 forward-fix 和 Consumer 本地双来源链路已完成；`docs:check` 与 `contracts:check` 均已 PASS；Hosted 后端、真实渠道、G-OPS 与生产观察：NOT_RUN。Proposal Completed：否，必须取得独立 G-PROVIDER/G-OPS 证据并获部署授权后才能继续发布门槛。
+实现覆盖：BILL-01～BILL-07 的本地 G-DEV 范围、最终商品/幂等 forward-fix、Consumer 本地双来源链路，以及 BILL-10 价格发布和 Afdian transport/Webhook 本地边界已完成；`docs:check` 与 `contracts:check` 均已 PASS；Hosted 后端、真实渠道、G-OPS 与生产观察：NOT_RUN。Proposal Completed：否，必须取得独立 G-PROVIDER/G-OPS 证据并获部署授权后才能继续发布门槛。
 
 记录当时未提交修改归属、需用户决策事项、已解决与剩余失败；不得将本地模拟成功转换为真实支付可用。
+
+### Afdian transport 与价格发布/2026-09-12/当前 Agent
+
+- 实际变更文件：`supabase/functions/_shared/afdian.ts`、`supabase/functions/_shared/afdian.test.ts`、`supabase/functions/billing-webhook/index.ts`、`supabase/functions/billing-webhook/index.test.ts`、`supabase/functions/maintenance/index.ts`、`supabase/migrations/20260912060342_bill_10_afdian_price_release.sql`、`supabase/tests/bill_10_afdian_price_release.sql`、对应 BILL-05/BILL-09 fixture、`docs/reference/configuration.md`。
+- 实现行为：加入 Afdian 官方 API MD5 canonical signing、`query-order` 适配、超时/失败分类、服务端环境变量装配；Webhook 支持官方 `data.type=order` envelope、稳定订单状态事件键、可选不可猜路径段和 `ec=200` ACK；不保存原始 webhook body，只写 hash 和 Inbox/Job 结果。新增价格 forward migration，将 monthly/yearly/lifetime 调整为 9.90/39.90/49.90 CNY 并将 price_version 提升至 2，保留 lifetime=99 years。
+- 验证命令：`pnpm exec supabase db reset --local --yes` PASS；`pnpm test:db` PASS（37 files/702 tests）；Afdian/Webhook/Maintenance Deno 定向测试 PASS（22 tests）；`pnpm lint` PASS；`pnpm exec oxfmt --check ...` PASS；`pnpm run docs:check` PASS（44 documents）；`git diff --check` PASS。
+- 证据边界：当前为 Local G-DEV/fixture PASS；未使用真实 Token，未访问 Hosted staging、真实 `query-order`、真实 Afdian Webhook、真实付款、Provider 限流、告警和生产 Secret。Afdian `user_id`、真实 plan/SKU mapping、checkout 链接和 `custom_order_id` round-trip 仍为 G-PROVIDER 待验证项。

@@ -84,7 +84,7 @@ insert into public.billing_checkout_intents (
   '00000000-0000-4000-8000-000000000904',
   (select id from public.subscription_products where code = 'monthly'),
   '00000000-0000-4000-8000-000000000903', 'monthly', 'finite', 1, 'month',
-  19.90, 1, decode(repeat('cc', 32), 'hex'), decode(repeat('dd', 32), 'hex'),
+  9.90, 2, decode(repeat('cc', 32), 'hex'), decode(repeat('dd', 32), 'hex'),
   now() - interval '1 day'
 );
 

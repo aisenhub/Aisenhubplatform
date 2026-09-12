@@ -41,7 +41,7 @@ insert into public.billing_provider_products (
 ) values (
   '00000000-0000-4000-8000-000000000506', '00000000-0000-4000-8000-000000000505',
   (select id from public.subscription_products where code = 'monthly'), 'plan-monthly',
-  'subscription', '{}'::text[], 0, 1, 19.90, 19.90, 1, 1, 'verified', true, true
+  'subscription', '{}'::text[], 0, 1, 9.90, 9.90, 2, 1, 'verified', true, true
 );
 insert into public.billing_checkout_intents (
   id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
@@ -54,8 +54,8 @@ insert into public.billing_checkout_intents (
   '00000000-0000-4000-8000-000000000504',
   (select id from public.subscription_products where code = 'monthly'),
   '00000000-0000-4000-8000-000000000503', '00000000-0000-4000-8000-000000000505',
-  '00000000-0000-4000-8000-000000000506', 'monthly', 'finite', 1, 'month', 19.90,
-  1, 1, 'bill05-custom-order', 1, decode(repeat('ab', 32), 'hex'),
+  '00000000-0000-4000-8000-000000000506', 'monthly', 'finite', 1, 'month', 9.90,
+  2, 1, 'bill05-custom-order', 1, decode(repeat('ab', 32), 'hex'),
   decode(repeat('cd', 32), 'hex'), decode(repeat('ef', 32), 'hex'), now() + interval '30 minutes'
 );
 insert into public.billing_orders (
@@ -78,7 +78,7 @@ select is(
   (select entitlement_status from private.billing_order_verify_and_settle(
     row('00000000-0000-4000-8000-000000000510', 'bill05-worker', 1, '00000000-0000-4000-8000-000000000511')::private.job_context,
     '00000000-0000-4000-8000-000000000509', '00000000-0000-4000-8000-000000000508', 1,
-    '{"status":"paid","provider_user_id":"provider-user-1","external_plan_id":"plan-monthly","product_type":"subscription","sku_ids":[],"purchase_months":1,"total_amount":"19.90","show_amount":"19.90","currency":"CNY","custom_order_id":"bill05-custom-order"}'::jsonb
+    '{"status":"paid","provider_user_id":"provider-user-1","external_plan_id":"plan-monthly","product_type":"subscription","sku_ids":[],"purchase_months":1,"total_amount":"9.90","show_amount":"9.90","currency":"CNY","custom_order_id":"bill05-custom-order"}'::jsonb
   )), 'granted', 'a matching provider observation grants once'
 );
 select is((select verification_status from public.billing_orders where id = '00000000-0000-4000-8000-000000000508'), 'verified', 'matching order is verified');
@@ -112,7 +112,7 @@ select is(
   (select decision_code from private.billing_order_verify_and_settle(
     row('00000000-0000-4000-8000-000000000516', 'bill05-worker', 1, '00000000-0000-4000-8000-000000000517')::private.job_context,
     '00000000-0000-4000-8000-000000000515', '00000000-0000-4000-8000-000000000514', 1,
-    '{"status":"paid","provider_user_id":"provider-user-1","external_plan_id":"plan-monthly","product_type":"subscription","sku_ids":[],"purchase_months":1,"total_amount":"19.90","show_amount":"19.90","currency":"CNY","custom_order_id":"bill05-custom-order"}'::jsonb
+    '{"status":"paid","provider_user_id":"provider-user-1","external_plan_id":"plan-monthly","product_type":"subscription","sku_ids":[],"purchase_months":1,"total_amount":"9.90","show_amount":"9.90","currency":"CNY","custom_order_id":"bill05-custom-order"}'::jsonb
   )), 'duplicate_payment', 'a second payment for one checkout is manual');
 select is((select settlement_kind from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000514'), 'manual', 'duplicate payment uses manual settlement');
 select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000515'), 'manual_review', 'duplicate payment stops in manual review');
@@ -136,7 +136,7 @@ select is(
   (select decision_code from private.billing_order_verify_and_settle(
     row('00000000-0000-4000-8000-000000000520', 'bill05-worker', 1, '00000000-0000-4000-8000-000000000521')::private.job_context,
     '00000000-0000-4000-8000-000000000519', '00000000-0000-4000-8000-000000000518', 1,
-    '{"status":"paid","provider_user_id":"provider-user-1","external_plan_id":"plan-monthly","product_type":"subscription","sku_ids":[],"purchase_months":1,"total_amount":"19.90","show_amount":"18.90","currency":"CNY","custom_order_id":"bill05-custom-order"}'::jsonb
+    '{"status":"paid","provider_user_id":"provider-user-1","external_plan_id":"plan-monthly","product_type":"subscription","sku_ids":[],"purchase_months":1,"total_amount":"9.90","show_amount":"8.90","currency":"CNY","custom_order_id":"bill05-custom-order"}'::jsonb
   )), 'contract_conflict', 'a mapped amount mismatch is manual');
 select is((select settlement_kind from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000518'), 'manual', 'contract mismatch uses manual settlement');
 select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000519'), 'manual_review', 'contract mismatch stops in manual review');

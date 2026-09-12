@@ -55,6 +55,16 @@ function request(body: string, eventKey = 'provider-event-1') {
   );
 }
 
+function afdianRequest(body: string, path = 'webhooks/afdian') {
+  return new Request(`http://local/functions/v1/billing-webhook/${path}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body,
+  });
+}
+
 Deno.test('billing webhook requires a provider signature before persistence', async () => {
   const valuesSeen: unknown[][] = [];
   const response = await handleBillingWebhookRequest(
@@ -137,4 +147,76 @@ Deno.test('billing webhook intake can be stopped without touching persistence', 
   assertEquals(response.status, 503);
   assertEquals((await response.json()).error.code, 'WEBHOOK_INGRESS_DISABLED');
   assertEquals(valuesSeen, []);
+});
+
+Deno.test('billing webhook accepts the documented Afdian order envelope and returns its ACK', async () => {
+  const valuesSeen: unknown[][] = [];
+  const response = await handleBillingWebhookRequest(
+    afdianRequest(
+      JSON.stringify({
+        ec: 200,
+        em: 'ok',
+        data: {
+          type: 'order',
+          order: {
+            out_trade_no: 'afdian-order-1',
+            user_id: 'afdian-user-1',
+            plan_id: 'plan-monthly',
+            month: 1,
+            total_amount: '9.90',
+            show_amount: '9.90',
+            status: 2,
+          },
+        },
+      }),
+    ),
+    {
+      providerAccountId,
+      database: database(valuesSeen),
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), { ec: 200, em: 'ok' });
+  assertEquals(valuesSeen.length, 1);
+  assertEquals(valuesSeen[0]![1], 'afdian:afdian-order-1:2');
+  assertEquals(valuesSeen[0]![4], 'afdian-order-1');
+});
+
+Deno.test('billing webhook can require a secret Afdian callback path', async () => {
+  const valuesSeen: unknown[][] = [];
+  const rejected = await handleBillingWebhookRequest(
+    afdianRequest(
+      JSON.stringify({
+        data: {
+          type: 'order',
+          order: { out_trade_no: 'afdian-order-2', status: 2 },
+        },
+      }),
+    ),
+    {
+      providerAccountId,
+      afdianWebhookPathSecret: 'staging-secret',
+      database: database(valuesSeen),
+    },
+  );
+  assertEquals(rejected.status, 401);
+  assertEquals(valuesSeen, []);
+
+  const accepted = await handleBillingWebhookRequest(
+    afdianRequest(
+      JSON.stringify({
+        data: {
+          type: 'order',
+          order: { out_trade_no: 'afdian-order-2', status: 2 },
+        },
+      }),
+      'webhooks/afdian/staging-secret',
+    ),
+    {
+      providerAccountId,
+      afdianWebhookPathSecret: 'staging-secret',
+      database: database([]),
+    },
+  );
+  assertEquals(accepted.status, 200);
 });

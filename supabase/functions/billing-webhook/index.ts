@@ -1,10 +1,13 @@
 /// <reference lib="deno.ns" />
 
+import postgres from 'npm:postgres@3.4.3';
+
 import {
   billingSwitchEnabled,
   sha256Bytes,
   constantTimeEqual,
 } from '../_shared/billing.ts';
+import { parseAfdianWebhook } from '../_shared/afdian.ts';
 import { readBoundedBody, UploadFault } from '../_shared/upload.ts';
 
 type Row = Record<string, unknown>;
@@ -21,6 +24,7 @@ interface BillingWebhookDependencies {
   readonly database?: Database;
   readonly providerAccountId?: string;
   readonly webhookIngressEnabled?: boolean;
+  readonly afdianWebhookPathSecret?: string;
   readonly verifySignature?: (
     body: Uint8Array,
     request: Request,
@@ -29,6 +33,23 @@ interface BillingWebhookDependencies {
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+let cachedDatabase: Database | null = null;
+
+function database(): Database {
+  if (cachedDatabase) return cachedDatabase;
+  const url =
+    Deno.env.get('BILLING_WEBHOOK_DB_URL') ??
+    Deno.env.get('SUPABASE_DB_URL') ??
+    Deno.env.get('ACCOUNT_API_DB_URL');
+  if (!url) throw new Error('WEBHOOK_NOT_CONFIGURED');
+  cachedDatabase = postgres(url, {
+    max: 4,
+    prepare: false,
+    connect_timeout: 5,
+  }) as unknown as Database;
+  return cachedDatabase;
+}
 
 function requestId(): string {
   return crypto.randomUUID();
@@ -112,7 +133,7 @@ export async function handleBillingWebhookRequest(
       id,
     );
   const path = new URL(request.url).pathname;
-  if (!path.endsWith('/webhooks/afdian'))
+  if (!path.includes('/webhooks/afdian'))
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id }, id);
   try {
     if (
@@ -127,22 +148,44 @@ export async function handleBillingWebhookRequest(
       Deno.env.get('BILLING_PROVIDER_ACCOUNT_ID');
     if (!providerAccountId || !UUID.test(providerAccountId))
       throw new Error('WEBHOOK_NOT_CONFIGURED');
-    const eventKey = value(request.headers.get('x-provider-event-id'));
-    if (!eventKey || eventKey.length > 255) throw new Error('INVALID_INPUT');
     const { bytes, payload } = await parseBody(request);
-    const orderNo =
-      value(request.headers.get('x-provider-order-no')) ??
-      value(payload.provider_order_no) ??
-      value(payload.order_no);
-    const signature = request.headers.get('x-provider-signature');
-    if (!signature) throw new Error('SIGNATURE_REQUIRED');
-    const verified = await (
-      dependencies.verifySignature ?? defaultVerifySignature
-    )(bytes, request);
-    if (!verified) throw new Error('SIGNATURE_INVALID');
+    const afdian = parseAfdianWebhook(payload);
+    const configuredPathSecret =
+      dependencies.afdianWebhookPathSecret ??
+      Deno.env.get('AFDIAN_WEBHOOK_PATH_SECRET');
+    const isAfdianPath =
+      path === '/webhooks/afdian' ||
+      path.endsWith('/webhooks/afdian') ||
+      (configuredPathSecret !== undefined &&
+        path.endsWith(`/webhooks/afdian/${configuredPathSecret}`));
+    if (!isAfdianPath) throw new Error('NOT_FOUND');
+    if (
+      configuredPathSecret !== undefined &&
+      !path.endsWith(`/webhooks/afdian/${configuredPathSecret}`)
+    )
+      throw new Error('SIGNATURE_INVALID');
+
+    let eventKey: string | null = null;
+    let orderNo: string | null = null;
+    if (afdian) {
+      eventKey = afdian.eventKey;
+      orderNo = afdian.orderNo;
+    } else {
+      eventKey = value(request.headers.get('x-provider-event-id'));
+      if (!eventKey || eventKey.length > 255) throw new Error('INVALID_INPUT');
+      orderNo =
+        value(request.headers.get('x-provider-order-no')) ??
+        value(payload.provider_order_no) ??
+        value(payload.order_no);
+      const signature = request.headers.get('x-provider-signature');
+      if (!signature) throw new Error('SIGNATURE_REQUIRED');
+      const verified = await (
+        dependencies.verifySignature ?? defaultVerifySignature
+      )(bytes, request);
+      if (!verified) throw new Error('SIGNATURE_INVALID');
+    }
     const payloadHash = await sha256Bytes(bytes);
-    const db = dependencies.database;
-    if (!db) throw new Error('WEBHOOK_NOT_CONFIGURED');
+    const db = dependencies.database ?? database();
     const [ingest] = await db.begin(async (transaction) => {
       await transaction.unsafe('set local role billing_ingress');
       return transaction.unsafe<Row>(
@@ -151,6 +194,7 @@ export async function handleBillingWebhookRequest(
       );
     });
     if (!ingest) throw new Error('WEBHOOK_UNAVAILABLE');
+    if (afdian) return response(200, { ec: 200, em: 'ok' }, id);
     return response(
       200,
       {

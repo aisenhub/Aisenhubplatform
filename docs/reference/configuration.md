@@ -53,9 +53,15 @@
 | MAINTENANCE_WORKER_ID | 可选；默认生成 maintenance-UUID |
 | MAINTENANCE_PORT | 直接运行默认 8001 |
 | SUPABASE_URL、SUPABASE_SECRET_KEY | Storage 和 Auth Admin API |
+| BILLING_WEBHOOK_DB_URL | Webhook Inbox 数据库连接；缺失时回退 `SUPABASE_DB_URL`、`ACCOUNT_API_DB_URL` |
 | BILLING_WEBHOOK_INGRESS_ENABLED | `false` 时拒绝新的 Provider webhook 且不写入 Inbox；独立于 Checkout，默认开启 |
+| AFDIAN_WEBHOOK_PATH_SECRET | 可选；为爱发电回调 URL 增加不可猜路径段。配置后 URL 必须使用 `/webhooks/afdian/<secret>` |
 | BILLING_BACKGROUND_PROCESSING_ENABLED | `false` 时停止领取新的 Billing job，既有 lease 等待超时后可恢复，默认开启 |
 | BILLING_AUTO_SETTLEMENT_ENABLED | `false` 时停止 Provider 查询与自动结算，已入队任务保留并可恢复，默认开启 |
+| AFDIAN_USER_ID | 爱发电开发者账号 `user_id`；仅供 maintenance 服务端 API 调用，禁止进入浏览器 |
+| AFDIAN_API_TOKEN | 爱发电开发者 API Token；仅供 maintenance 服务端签名 API 请求，必须通过 Secret 注入 |
+| AFDIAN_API_BASE_URL | 可选；默认 `https://afdian.com/api/open`，staging 可指向测试代理 |
+| AFDIAN_API_TIMEOUT_MS | 可选；Provider API 超时毫秒数，默认 5000 |
 
 调度清单每天调用 `/maintenance/v1/idempotency/cleanup`，通过 `job_executor` 受限 wrapper 批量删除已过期的普通用户/Admin 幂等缓存。该任务不删除 `billing_checkout_intents` 或 `billing_orders` 等长期交易绑定；无需新增环境变量。
 

@@ -9,9 +9,233 @@ import {
 
 type ObjectValue = Record<string, unknown>;
 
+export interface AfdianProviderAdapter {
+  queryOrder(providerOrderNo: string): Promise<{
+    readonly status: 'found' | 'not_found' | 'temporarily_unavailable';
+    readonly order?: unknown;
+    readonly facts?: Record<string, unknown>;
+  }>;
+}
+
+export interface AfdianApiConfig {
+  readonly userId: string;
+  readonly apiToken: string;
+  readonly baseUrl?: string;
+  readonly timeoutMs?: number;
+  readonly fetchImpl?: typeof fetch;
+}
+
+export interface AfdianWebhookObservation {
+  readonly order: ObjectValue;
+  readonly orderNo: string;
+  readonly eventKey: string;
+}
+
+const DEFAULT_API_BASE_URL = 'https://afdian.com/api/open';
+const DEFAULT_TIMEOUT_MS = 5000;
+
+function md5Hex(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  const wordCount = Math.ceil((bytes.length + 9) / 64) * 16;
+  const words = new Uint32Array(wordCount);
+  for (let index = 0; index < bytes.length; index += 1) {
+    const wordIndex = index >>> 2;
+    words[wordIndex] =
+      (words[wordIndex] ?? 0) | (bytes[index]! << ((index & 3) * 8));
+  }
+  const paddingWordIndex = bytes.length >>> 2;
+  words[paddingWordIndex] =
+    (words[paddingWordIndex] ?? 0) | (0x80 << ((bytes.length & 3) * 8));
+  const bitLength = bytes.length * 8;
+  words[wordCount - 2] = bitLength >>> 0;
+  words[wordCount - 1] = Math.floor(bitLength / 0x100000000) >>> 0;
+
+  const shift = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5,
+    9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11,
+    16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10,
+    15, 21,
+  ];
+  const constants = Array.from(
+    { length: 64 },
+    (_, index) => Math.floor(Math.abs(Math.sin(index + 1)) * 0x100000000) >>> 0,
+  );
+  let a0 = 0x67452301;
+  let b0 = 0xefcdab89;
+  let c0 = 0x98badcfe;
+  let d0 = 0x10325476;
+  for (let offset = 0; offset < wordCount; offset += 16) {
+    let a = a0;
+    let b = b0;
+    let c = c0;
+    let d = d0;
+    for (let index = 0; index < 64; index += 1) {
+      let functionValue: number;
+      let wordIndex: number;
+      if (index < 16) {
+        functionValue = (b & c) | (~b & d);
+        wordIndex = index;
+      } else if (index < 32) {
+        functionValue = (d & b) | (~d & c);
+        wordIndex = (5 * index + 1) % 16;
+      } else if (index < 48) {
+        functionValue = b ^ c ^ d;
+        wordIndex = (3 * index + 5) % 16;
+      } else {
+        functionValue = c ^ (b | ~d);
+        wordIndex = (7 * index) % 16;
+      }
+      const rotated =
+        (a + functionValue + constants[index]! + words[offset + wordIndex]!) >>>
+        0;
+      const left =
+        (rotated << shift[index]!) | (rotated >>> (32 - shift[index]!));
+      const next = (b + left) >>> 0;
+      a = d;
+      d = c;
+      c = b;
+      b = next;
+    }
+    a0 = (a0 + a) >>> 0;
+    b0 = (b0 + b) >>> 0;
+    c0 = (c0 + c) >>> 0;
+    d0 = (d0 + d) >>> 0;
+  }
+
+  return [a0, b0, c0, d0]
+    .flatMap((word) => [0, 8, 16, 24].map((offset) => (word >>> offset) & 0xff))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export function afdianCanonicalSign(input: {
+  readonly token: string;
+  readonly params: string;
+  readonly timestamp: number;
+  readonly userId: string;
+}): string {
+  const canonical = `${input.token}params${input.params}ts${input.timestamp}user_id${input.userId}`;
+  return md5Hex(canonical);
+}
+
+function apiResponseOrders(value: unknown): readonly ObjectValue[] | null {
+  const root = objectValue(value);
+  const data = objectValue(root?.data);
+  const list = data?.list;
+  if (!Array.isArray(list)) return null;
+  return list
+    .map((item) => objectValue(item))
+    .filter((item): item is ObjectValue => item !== null);
+}
+
+function stringOrderId(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+export function parseAfdianWebhook(
+  value: unknown,
+): AfdianWebhookObservation | null {
+  const root = objectValue(value);
+  const data = objectValue(root?.data);
+  if (data?.type !== 'order') return null;
+  const order = objectValue(data.order);
+  const orderNo = stringOrderId(order?.out_trade_no ?? order?.order_no);
+  if (!order || !orderNo || orderNo.length > 255) return null;
+  const status = String(order.status ?? '');
+  const eventKey = `afdian:${orderNo}:${status || 'unknown'}`;
+  return { order, orderNo, eventKey };
+}
+
+async function fetchAfdianOrder(
+  config: AfdianApiConfig,
+  providerOrderNo: string,
+): Promise<{
+  readonly status: 'found' | 'not_found' | 'temporarily_unavailable';
+  readonly order?: unknown;
+}> {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const params = JSON.stringify({ out_trade_no: providerOrderNo });
+  const body = JSON.stringify({
+    user_id: config.userId,
+    params,
+    ts: timestamp,
+    sign: afdianCanonicalSign({
+      token: config.apiToken,
+      params,
+      timestamp,
+      userId: config.userId,
+    }),
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+  try {
+    const response = await (config.fetchImpl ?? fetch)(
+      `${(config.baseUrl ?? DEFAULT_API_BASE_URL).replace(/\/$/u, '')}/query-order`,
+      {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body,
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) return { status: 'temporarily_unavailable' };
+    const payload = (await response.json().catch(() => null)) as unknown;
+    const root = objectValue(payload);
+    if (root?.ec !== 200) return { status: 'temporarily_unavailable' };
+    const orders = apiResponseOrders(payload);
+    if (!orders) return { status: 'temporarily_unavailable' };
+    const order = orders.find(
+      (candidate) =>
+        stringOrderId(candidate.out_trade_no ?? candidate.order_no) ===
+        providerOrderNo,
+    );
+    return order ? { status: 'found', order } : { status: 'not_found' };
+  } catch {
+    return { status: 'temporarily_unavailable' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function createAfdianProviderAdapter(
+  config: AfdianApiConfig,
+): AfdianProviderAdapter {
+  if (!config.userId || !config.apiToken)
+    throw new Error('PROVIDER_NOT_CONFIGURED');
+  return {
+    queryOrder(providerOrderNo) {
+      const normalized = providerOrderNo.trim();
+      if (!normalized || normalized.length > 255)
+        return Promise.resolve({ status: 'temporarily_unavailable' });
+      return fetchAfdianOrder(config, normalized);
+    },
+  };
+}
+
+export function createAfdianProviderAdapterFromEnv(): AfdianProviderAdapter | null {
+  const userId = Deno.env.get('AFDIAN_USER_ID');
+  const apiToken = Deno.env.get('AFDIAN_API_TOKEN');
+  if (!userId || !apiToken) return null;
+  return createAfdianProviderAdapter({
+    userId,
+    apiToken,
+    baseUrl: Deno.env.get('AFDIAN_API_BASE_URL') ?? undefined,
+    timeoutMs: Number.parseInt(
+      Deno.env.get('AFDIAN_API_TIMEOUT_MS') ?? String(DEFAULT_TIMEOUT_MS),
+      10,
+    ),
+  });
+}
+
 function objectValue(value: unknown): ObjectValue | null {
   return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as ObjectValue
+    ? (value as ObjectValue)
     : null;
 }
 
@@ -38,7 +262,11 @@ function status(value: unknown): ProviderOrderStatus {
   const normalized = String(value ?? '').toLowerCase();
   if (normalized === '2' || normalized === 'paid' || normalized === 'success')
     return 'paid';
-  if (normalized === '1' || normalized === 'pending' || normalized === 'created')
+  if (
+    normalized === '1' ||
+    normalized === 'pending' ||
+    normalized === 'created'
+  )
     return 'pending';
   return 'failed';
 }
@@ -86,7 +314,8 @@ export function normalizeAfdianOrder(
     !currency ||
     !skuItems ||
     !Number.isFinite(observedAt.getTime())
-  ) return null;
+  )
+    return null;
   const termQuantity = number(input.month ?? input.purchase_months);
   const termUnit = termQuantity === null ? null : 'month';
   return {
