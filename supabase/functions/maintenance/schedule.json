@@ -21,9 +21,9 @@
     },
     {
       "id": "billing-processing",
-      "route": "/maintenance/v1/billing/jobs/claim",
+      "route": "/maintenance/v1/billing/jobs/run",
       "cadence": "every-minute",
-      "body": { "limit": 20 }
+      "body": { "limit": 5 }
     },
     {
       "id": "idempotency-cleanup",

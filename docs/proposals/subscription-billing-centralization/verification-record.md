@@ -259,7 +259,7 @@
 - 已部署函数：`account-api`、`billing-webhook`、`maintenance`，三者均使用当前工作区代码；数据库迁移已覆盖 BILL-01～BILL-10。远端商品结果为 Free、Monthly `9.90 CNY`、Yearly `39.90 CNY`、Lifetime `49.90 CNY`，付费价格版本为 2，Lifetime 仍为有限 99 年。
 - Hosted 修复：发现远端 `postgres` 不能进入 `billing_ingress` 等 executor role，新增 `20260912143000_hosted_runtime_role_membership.sql`；staging 已先行执行同等授权，迁移随后固化。该差异此前只会在 hosted Edge Function 中暴露，本地超级用户测试无法发现。
 - Hosted 真实 HTTP 烟测：使用明确标记的 staging fixture provider account 和 fixture order，Afdian 官方 envelope POST 到 `/functions/v1/billing-webhook/webhooks/afdian` 返回 `200 {"ec":200,"em":"ok"}`；同一字节 payload 重放再次返回 200，数据库仅保留一个事件和一个处理 job。fixture 已清理，`BILLING_PROVIDER_ACCOUNT_ID` 测试 Secret 已移除。
-- 当前未完成：没有真实 Afdian `user_id`、API Token、三个 plan/SKU 映射或真实 checkout 链接，因此没有启用真实 Provider mapping、Checkout 或 `AFDIAN_USER_ID/AFDIAN_API_TOKEN`；真实 `query-order`、真实付款、真实回调和 Hosted maintenance 仍为 G-PROVIDER/G-OPS NOT_RUN。已暴露的旧 Token 仍不得使用，必须在 Afdian 重新生成后通过 Secret 注入。
+- 当前未完成：staging 已注入新的 Afdian `user_id` 与 API Token，并已完成真实 API 请求路径的失败恢复烟测；三个 plan/SKU 映射、真实 checkout 链接、真实付款、成功订单 `query-order`、权益结算、外部调度器和生产观察仍未完成。已暴露的旧 Token 仍不得使用，必须继续通过 Secret 注入并按需轮换。
 
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
 
@@ -273,10 +273,16 @@
 
 - 原因复现：配置 Provider account 前，Webhook 地址的 GET 探测返回 405；POST 请求返回 503 `WEBHOOK_NOT_CONFIGURED`。`AFDIAN_USER_ID` 与 `AFDIAN_API_TOKEN` 本身不能替代本系统内部的 Provider account 绑定。
 - 已处理：在 staging 创建 active Afdian Provider account，绑定当前 Afdian creator `user_id`，并设置 `BILLING_PROVIDER_ACCOUNT_ID` Secret；未操作生产。
-- 待验证：用户需在爱发电后台重新保存同一个 Webhook URL，确认 Provider 的测试订单回调能收到 `{"ec":200,"em":"ok"}`；随后再配置真实 plan/SKU mapping 并执行 API/回调 round-trip。
+- 已验证：用户在爱发电后台发送测试后，Provider 回调已到达 staging，并由入口返回 `{"ec":200,"em":"ok"}`；随后已完成 Worker/API 查询失败恢复路径验证。待继续：配置真实 plan/SKU mapping 并执行 API/回调 round-trip。
 
 ### Hosted staging Afdian 测试回调/2026-09-12/当前 Agent
 
 - 用户点击爱发电后台“发送测试”后，staging 数据库在 `2026-09-12 10:13:34 UTC` 收到 1 条 Afdian Webhook Inbox 事件，并创建 1 个 `webhook_order_discovery` 处理任务。
 - 事件状态为 `queued`，处理任务状态为 `pending`；这证明请求已通过标准 envelope 解析、RSA 签名校验、Provider 绑定校验并持久化。Afdian ACK 在持久化成功后返回 `200 {"ec":200,"em":"ok"}`；爱发电后台不显示可见反馈不等于回调失败。
 - 当前未宣称真实订单已核验或结算：该测试事件尚未完成后台 job processing，且真实 plan/SKU mapping、真实付款和 API `query-order` round-trip 仍待 G-PROVIDER/G-OPS 验证。
+
+### Hosted staging Billing Worker/2026-09-12/当前 Agent
+
+- 修复发现链路：新增 `billing_webhook_discovery_target`、`billing_order_link_checkout` 和受 fencing 保护的事件状态推进；maintenance 增加 `/maintenance/v1/billing/jobs/discover` 与 `/maintenance/v1/billing/jobs/run`，调度入口默认每次顺序处理最多 5 个任务。BILL-11 的列名歧义通过 BILL-12 forward-fix 修复，未修改已应用迁移。
+- staging 已配置专用 `MAINTENANCE_JOB_TOKEN` 与固定 `MAINTENANCE_WORKER_ID`，并重新部署 `maintenance`。Hosted run smoke test 返回 HTTP 200，处理 1 个 `webhook_order_discovery` 任务；API 查询结果为 `PROVIDER_ORDER_NOT_FOUND`，任务和 Webhook 事件均进入 `retryable`，证明 Token 注入、Worker fencing、Afdian API 请求和失败恢复路径已连通。
+- 该结果仅说明爱发电后台测试信号可被系统接收并进入可恢复处理，不代表真实订单、商品映射、付款或权益结算成功。由于 staging Billing 表启用了受限 RLS，测试事件及占位订单未通过直接 DML 删除，而是经正式 Worker lease/finish 接口标记为 `manual_review`，避免继续重试并保留审计证据；真实调度器仍需由 G-OPS 受控配置，`schedule.json` 本身不安装定时器。

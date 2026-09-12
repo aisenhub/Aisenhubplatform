@@ -687,6 +687,231 @@ async function billingJobProcess(
   return response(200, { result: result ?? null, request_id: id });
 }
 
+async function finishBillingJob(
+  db: Database,
+  jobContext: readonly unknown[],
+  jobId: string,
+  fence: number,
+  state: 'retryable' | 'completed' | 'manual_review',
+  errorClass: string | null,
+  errorCodeValue: string | null,
+): Promise<Row | null> {
+  const [result] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_processing_job_finish(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
+      [...jobContext, jobId, fence, state, errorClass, errorCodeValue],
+    ),
+  );
+  return result ?? null;
+}
+
+async function billingJobDiscover(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  const fence = Number(input.fence);
+  if (
+    !jobId ||
+    !Number.isSafeInteger(fence) ||
+    Object.keys(input).some((key) => !['job_id', 'fence'].includes(key))
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  if (
+    !(
+      dependencies.automaticSettlementEnabled ??
+      billingSwitchEnabled('BILLING_AUTO_SETTLEMENT_ENABLED')
+    )
+  )
+    return response(503, {
+      error: { code: 'BILLING_SETTLEMENT_DISABLED' },
+      request_id: id,
+    });
+  const adapter =
+    dependencies.billingProviderAdapter ?? createAfdianProviderAdapterFromEnv();
+  if (!adapter)
+    return response(503, {
+      error: { code: 'PROVIDER_NOT_CONFIGURED' },
+      request_id: id,
+    });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id, fence);
+  try {
+    const [target] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.billing_webhook_discovery_target(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint)',
+        [...jobContext, jobId, fence],
+      ),
+    );
+    if (!target)
+      return response(503, {
+        error: { code: 'JOB_UNAVAILABLE' },
+        request_id: id,
+      });
+
+    // Provider network I/O is deliberately outside the database transaction.
+    const observed = await adapter.queryOrder(String(target.provider_order_no));
+    if (observed.status !== 'found') {
+      const result = await finishBillingJob(
+        db,
+        jobContext,
+        jobId,
+        fence,
+        'retryable',
+        'provider',
+        observed.status === 'not_found'
+          ? 'PROVIDER_ORDER_NOT_FOUND'
+          : 'PROVIDER_UNAVAILABLE',
+      );
+      return response(200, { result, request_id: id });
+    }
+
+    let facts: Record<string, unknown>;
+    if (observed.facts) {
+      facts = observed.facts;
+    } else {
+      const normalized = normalizeAfdianOrder(observed.order);
+      if (!normalized) {
+        const result = await finishBillingJob(
+          db,
+          jobContext,
+          jobId,
+          fence,
+          'manual_review',
+          'provider_contract',
+          'PROVIDER_RESPONSE_INVALID',
+        );
+        return response(200, { result, request_id: id });
+      }
+      facts = toBillingOrderFacts(normalized);
+    }
+    const customOrderId =
+      typeof facts.custom_order_id === 'string' ? facts.custom_order_id : null;
+    await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.billing_order_link_checkout(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::text)',
+        [...jobContext, jobId, target.order_id, fence, customOrderId],
+      ),
+    );
+    const [result] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.billing_order_verify_and_settle(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::jsonb)',
+        [...jobContext, jobId, target.order_id, fence, JSON.stringify(facts)],
+      ),
+    );
+    return response(200, { result: result ?? null, request_id: id });
+  } catch (error) {
+    const failureCode = errorCode(error);
+    try {
+      const result = await finishBillingJob(
+        db,
+        jobContext,
+        jobId,
+        fence,
+        'retryable',
+        'worker',
+        failureCode,
+      );
+      return response(200, { result, request_id: id });
+    } catch {
+      return response(503, {
+        error: { code: 'JOB_PROCESSING_FAILED' },
+        request_id: id,
+      });
+    }
+  }
+}
+
+async function billingJobRun(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const limit = input.limit === undefined ? 5 : Number(input.limit);
+  if (
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > 20 ||
+    Object.keys(input).some((key) => key !== 'limit')
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  if (
+    !(
+      dependencies.backgroundProcessingEnabled ??
+      billingSwitchEnabled('BILLING_BACKGROUND_PROCESSING_ENABLED')
+    )
+  )
+    return response(503, {
+      error: { code: 'BILLING_PROCESSING_DISABLED' },
+      request_id: id,
+    });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const claimed = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_processing_job_claim(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::integer)',
+      [...context(workerId, id), limit],
+    ),
+  );
+  const results: Array<Record<string, unknown>> = [];
+  for (const job of claimed) {
+    const jobId = uuid(job.job_id);
+    const fence = Number(job.fence);
+    if (!jobId || !Number.isSafeInteger(fence)) {
+      results.push({ job_kind: job.job_kind, status: 'invalid_claim' });
+      continue;
+    }
+    if (job.job_kind === 'webhook_order_discovery') {
+      const jobResponse = await billingJobDiscover(
+        new Request('http://local/maintenance/v1/billing/jobs/discover', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ job_id: jobId, fence }),
+        }),
+        { ...dependencies, workerId },
+        requestId(),
+      );
+      results.push({ job_kind: job.job_kind, status: jobResponse.status });
+      continue;
+    }
+    const orderId = uuid(job.billing_order_id);
+    if (!orderId) {
+      const result = await finishBillingJob(
+        db,
+        context(workerId, id, fence),
+        jobId,
+        fence,
+        'manual_review',
+        'worker',
+        'MISSING_BILLING_ORDER',
+      );
+      results.push({ job_kind: job.job_kind, status: result?.state ?? null });
+      continue;
+    }
+    const jobResponse = await billingJobProcess(
+      new Request('http://local/maintenance/v1/billing/jobs/process', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ job_id: jobId, order_id: orderId, fence }),
+      }),
+      { ...dependencies, workerId },
+      requestId(),
+    );
+    results.push({ job_kind: job.job_kind, status: jobResponse.status });
+  }
+  return response(200, { processed: results.length, results, request_id: id });
+}
+
 async function retentionRun(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -755,10 +980,14 @@ export async function handleMaintenanceRequest(
       return await deletionJobAuth(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/claim')
       return await billingJobClaim(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/jobs/run')
+      return await billingJobRun(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/finish')
       return await billingJobFinish(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/process')
       return await billingJobProcess(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/jobs/discover')
+      return await billingJobDiscover(request, dependencies, id);
     if (path === '/maintenance/v1/accounts/retention')
       return await retentionRun(request, dependencies, id);
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });

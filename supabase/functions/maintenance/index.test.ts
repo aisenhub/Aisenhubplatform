@@ -583,6 +583,192 @@ Deno.test('maintenance performs provider I/O outside the settlement transaction'
   ]);
 });
 
+Deno.test('maintenance discovers a webhook order before verification', async () => {
+  events.length = 0;
+  const discoveryDatabase: TestDatabase = {
+    async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
+      events.push('begin');
+      return callback({
+        async unsafe<T extends TestRow = TestRow>(query: string) {
+          if (query.startsWith('set local role')) {
+            events.push('role');
+            return [] as T[];
+          }
+          if (query.includes('billing_webhook_discovery_target')) {
+            events.push('billing-discovery-target');
+            return [
+              {
+                order_id: jobId,
+                provider_account_id: accountId,
+                provider_order_no: 'provider-order-discovery',
+              },
+            ] as unknown as T[];
+          }
+          if (query.includes('billing_order_link_checkout')) {
+            events.push('billing-link');
+            return [{ order_id: jobId, linked: true }] as unknown as T[];
+          }
+          if (query.includes('billing_order_verify_and_settle')) {
+            events.push('billing-verify');
+            return [
+              {
+                order_id: jobId,
+                verification_status: 'verified',
+                entitlement_status: 'granted',
+                decision_code: 'granted',
+              },
+            ] as unknown as T[];
+          }
+          return [] as T[];
+        },
+      });
+    },
+  };
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/discover', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ job_id: jobId, fence: 3 }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: discoveryDatabase,
+      automaticSettlementEnabled: true,
+      billingProviderAdapter: {
+        async queryOrder(orderNo) {
+          events.push(`provider-query:${orderNo}`);
+          return {
+            status: 'found',
+            facts: {
+              status: 'paid',
+              provider_user_id: 'provider-user',
+              external_plan_id: 'plan-monthly',
+              product_type: 'subscription',
+              sku_ids: [],
+              purchase_months: 1,
+              total_amount: '9.90',
+              show_amount: '9.90',
+              currency: 'CNY',
+              custom_order_id: 'checkout-1',
+            },
+          };
+        },
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(events, [
+    'begin',
+    'role',
+    'billing-discovery-target',
+    'provider-query:provider-order-discovery',
+    'begin',
+    'role',
+    'billing-link',
+    'begin',
+    'role',
+    'billing-verify',
+  ]);
+});
+
+Deno.test('maintenance run dispatches a claimed discovery job', async () => {
+  events.length = 0;
+  const runDatabase: TestDatabase = {
+    async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
+      events.push('begin');
+      return callback({
+        async unsafe<T extends TestRow = TestRow>(query: string) {
+          if (query.startsWith('set local role')) {
+            events.push('role');
+            return [] as T[];
+          }
+          if (query.includes('billing_processing_job_claim')) {
+            events.push('billing-claim');
+            return [
+              { job_id: jobId, job_kind: 'webhook_order_discovery', fence: 3 },
+            ] as unknown as T[];
+          }
+          if (query.includes('billing_webhook_discovery_target')) {
+            events.push('billing-discovery-target');
+            return [
+              {
+                order_id: jobId,
+                provider_account_id: accountId,
+                provider_order_no: 'provider-order-run',
+              },
+            ] as unknown as T[];
+          }
+          if (query.includes('billing_order_link_checkout')) {
+            events.push('billing-link');
+            return [{ order_id: jobId, linked: false }] as unknown as T[];
+          }
+          if (query.includes('billing_order_verify_and_settle')) {
+            events.push('billing-verify');
+            return [
+              { order_id: jobId, decision_code: 'unlinked_order' },
+            ] as unknown as T[];
+          }
+          return [] as T[];
+        },
+      });
+    },
+  };
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/run', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ limit: 1 }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: runDatabase,
+      automaticSettlementEnabled: true,
+      billingProviderAdapter: {
+        async queryOrder(orderNo) {
+          events.push(`provider-query:${orderNo}`);
+          return {
+            status: 'found',
+            facts: {
+              status: 'paid',
+              external_plan_id: 'plan-monthly',
+              product_type: 'subscription',
+              sku_ids: [],
+              purchase_months: 1,
+              total_amount: '9.90',
+              show_amount: '9.90',
+              currency: 'CNY',
+            },
+          };
+        },
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(events, [
+    'begin',
+    'role',
+    'billing-claim',
+    'begin',
+    'role',
+    'billing-discovery-target',
+    'provider-query:provider-order-run',
+    'begin',
+    'role',
+    'billing-link',
+    'begin',
+    'role',
+    'billing-verify',
+  ]);
+});
+
 Deno.test('maintenance gates Auth deletion on provider success before checkpoint advance', async () => {
   events.length = 0;
   const response = await handleMaintenanceRequest(
