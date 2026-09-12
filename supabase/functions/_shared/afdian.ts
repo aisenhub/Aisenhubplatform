@@ -32,7 +32,35 @@ export interface AfdianWebhookObservation {
 }
 
 const DEFAULT_API_BASE_URL = 'https://afdian.com/api/open';
+const DEFAULT_CHECKOUT_BASE_URL = 'https://afdian.com/order/create';
 const DEFAULT_TIMEOUT_MS = 5000;
+
+export function buildAfdianCheckoutUrl(input: {
+  readonly baseUrl?: string;
+  readonly productType: string;
+  readonly externalPlanId: string;
+  readonly externalSkuIds?: readonly string[];
+  readonly customOrderId: string;
+}): string {
+  const url = new URL(input.baseUrl ?? DEFAULT_CHECKOUT_BASE_URL);
+  if (url.protocol !== 'https:' && url.protocol !== 'http:')
+    throw new Error('AFDIAN_CHECKOUT_URL_INVALID');
+  if (!input.productType || !input.externalPlanId || !input.customOrderId)
+    throw new Error('AFDIAN_CHECKOUT_FACTS_INCOMPLETE');
+  url.searchParams.set('product_type', input.productType);
+  url.searchParams.set('plan_id', input.externalPlanId);
+  const skuIds = (input.externalSkuIds ?? []).filter(
+    (skuId) => skuId.length > 0,
+  );
+  if (skuIds.length > 0) {
+    url.searchParams.set(
+      'sku',
+      JSON.stringify(skuIds.map((skuId) => ({ sku_id: skuId, count: 1 }))),
+    );
+  }
+  url.searchParams.set('custom_order_id', input.customOrderId);
+  return url.toString();
+}
 
 function md5Hex(value: string): string {
   const bytes = new TextEncoder().encode(value);

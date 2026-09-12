@@ -41,6 +41,7 @@
 | SUPABASE_SECRET_KEY | Storage 服务端凭据 |
 | ACCOUNT_API_PORT | 直接 Deno 运行端口，默认 8000 |
 | BILLING_CHECKOUT_ENABLED | `false` 时仅停止新 Checkout 签发；已有订单和 webhook 不受此开关影响，默认关闭，须在 G-PROVIDER/G-OPS 通过后显式开启 |
+| AFDIAN_CHECKOUT_BASE_URL | 可选；服务端生成 Afdian Checkout URL 的 base，默认 `https://afdian.com/order/create`；不能由浏览器传入 |
 
 ## Maintenance
 

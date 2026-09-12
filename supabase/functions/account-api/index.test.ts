@@ -107,7 +107,10 @@ async function signedEcdsaJwt(): Promise<{
   return { token: `${input}.${encodeBytes(signature)}`, jwk };
 }
 
-function fakeDatabase(onQuery?: (query: string) => void) {
+function fakeDatabase(
+  onQuery?: (query: string) => void,
+  checkoutFacts: readonly Record<string, unknown>[] = [],
+) {
   return {
     async begin<T>(
       callback: (transaction: {
@@ -195,6 +198,13 @@ function fakeDatabase(onQuery?: (query: string) => void) {
                 platform_account_id: userId,
               },
             ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
+              'select * from private.subscription_checkout_payment_facts',
+            )
+          ) {
+            return checkoutFacts as R[];
           }
           if (
             query.startsWith(
@@ -619,6 +629,50 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
   );
   assertEquals(read.status, 200);
   assertEquals((await read.json()).data.product_code, 'monthly');
+});
+
+Deno.test('Account API returns a server-built Afdian payment URL', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'checkout-afdian-link-1',
+        },
+        body: JSON.stringify({ product_code: 'monthly' }),
+      },
+    ),
+    {
+      database: fakeDatabase(undefined, [
+        {
+          custom_order_id: 'checkout-001',
+          external_plan_id: 'plan-monthly',
+          product_type: '1',
+          external_sku_ids: ['sku-monthly'],
+        },
+      ]),
+      platformKeySecret: 'm3-test-platform-secret',
+      checkoutEnabled: true,
+      checkoutSecret: 'checkout-test-secret',
+      checkoutKeyVersion: 1,
+      checkoutProviderAccountId: '00000000-0000-4000-8000-000000000401',
+      afdianCheckoutBaseUrl: 'https://afdian.test/order/create',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 201);
+  const paymentUrl = new URL((await response.json()).data.payment_url);
+  assertEquals(paymentUrl.origin, 'https://afdian.test');
+  assertEquals(paymentUrl.searchParams.get('plan_id'), 'plan-monthly');
+  assertEquals(paymentUrl.searchParams.get('custom_order_id'), 'checkout-001');
+  assertEquals(
+    paymentUrl.searchParams.get('sku'),
+    JSON.stringify([{ sku_id: 'sku-monthly', count: 1 }]),
+  );
 });
 
 Deno.test('Account API can stop new checkout issuance independently', async () => {

@@ -3,11 +3,31 @@
 import { assertEquals, assert } from 'jsr:@std/assert@1';
 
 import {
+  buildAfdianCheckoutUrl,
   afdianCanonicalSign,
   createAfdianProviderAdapter,
   normalizeAfdianOrder,
   toBillingOrderFacts,
 } from './afdian.ts';
+
+Deno.test('Afdian checkout URLs keep the server checkout binding intact', () => {
+  const checkoutUrl = buildAfdianCheckoutUrl({
+    baseUrl: 'https://afdian.test/order/create',
+    productType: '1',
+    externalPlanId: 'plan-monthly',
+    externalSkuIds: ['sku-monthly'],
+    customOrderId: 'checkout-001',
+  });
+  const url = new URL(checkoutUrl);
+  assertEquals(url.pathname, '/order/create');
+  assertEquals(url.searchParams.get('product_type'), '1');
+  assertEquals(url.searchParams.get('plan_id'), 'plan-monthly');
+  assertEquals(url.searchParams.get('custom_order_id'), 'checkout-001');
+  assertEquals(
+    url.searchParams.get('sku'),
+    JSON.stringify([{ sku_id: 'sku-monthly', count: 1 }]),
+  );
+});
 
 Deno.test('Afdian API signing follows the documented canonical vector', () => {
   assertEquals(

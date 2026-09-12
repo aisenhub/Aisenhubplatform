@@ -17,6 +17,7 @@ import {
   billingSwitchEnabled,
   deriveCheckoutToken,
 } from '../_shared/billing.ts';
+import { buildAfdianCheckoutUrl } from '../_shared/afdian.ts';
 
 type Row = Record<string, unknown>;
 
@@ -37,6 +38,7 @@ interface AccountApiDependencies {
   readonly checkoutKeyVersion?: number;
   readonly checkoutProviderAccountId?: string;
   readonly checkoutEnabled?: boolean;
+  readonly afdianCheckoutBaseUrl?: string;
   readonly redemptionSecret?: string;
   readonly redemptionKeyVersion?: number;
   readonly redemptionSecrets?: readonly {
@@ -884,7 +886,10 @@ function subscriptionProductDto(row: Row): Record<string, unknown> {
   };
 }
 
-function subscriptionCheckoutDto(row: Row): SubscriptionCheckoutDto {
+function subscriptionCheckoutDto(
+  row: Row,
+  paymentUrl: string | null = null,
+): SubscriptionCheckoutDto {
   return {
     checkout_id: uuidValue(row.checkout_id ?? row.id) ?? '',
     status: (stringValue(row.status) ??
@@ -902,10 +907,44 @@ function subscriptionCheckoutDto(row: Row): SubscriptionCheckoutDto {
     },
     expires_at: isoDate(row.expires_at) ?? new Date(0).toISOString(),
     provider_display_name: stringValue(row.provider_display_name),
-    payment_url: null,
+    payment_url: paymentUrl,
     paid_at: isoDate(row.paid_at),
     granted_at: isoDate(row.granted_at),
   };
+}
+
+function stringArrayValue(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+async function checkoutPaymentUrl(
+  transaction: Transaction,
+  contextValues: readonly unknown[],
+  checkout: Row,
+  dependencies: AccountApiDependencies,
+): Promise<string | null> {
+  if (stringValue(checkout.status) !== 'pending') return null;
+  const checkoutId = uuidValue(checkout.checkout_id ?? checkout.id);
+  if (!checkoutId) return null;
+  const [facts] = await transaction.unsafe<Row>(
+    'select * from private.subscription_checkout_payment_facts(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+    [...contextValues, checkoutId],
+  );
+  if (!facts) return null;
+  try {
+    return buildAfdianCheckoutUrl({
+      baseUrl:
+        dependencies.afdianCheckoutBaseUrl ??
+        Deno.env.get('AFDIAN_CHECKOUT_BASE_URL'),
+      productType: stringValue(facts.product_type) ?? '',
+      externalPlanId: stringValue(facts.external_plan_id) ?? '',
+      externalSkuIds: stringArrayValue(facts.external_sku_ids),
+      customOrderId: stringValue(facts.custom_order_id) ?? '',
+    });
+  } catch {
+    return null;
+  }
 }
 
 async function body(request: Request): Promise<Record<string, unknown>> {
@@ -1065,7 +1104,18 @@ async function dispatchAccount(
       ],
     );
     if (!checkout) throw new ApiFault(503, 'CHECKOUT_UNAVAILABLE');
-    return { status: 201, data: subscriptionCheckoutDto(checkout) };
+    return {
+      status: 201,
+      data: subscriptionCheckoutDto(
+        checkout,
+        await checkoutPaymentUrl(
+          transaction,
+          contextValues,
+          checkout,
+          dependencies,
+        ),
+      ),
+    };
   }
   const checkoutMatch = /^v1\/subscription\/checkout\/([^/]+)$/u.exec(path);
   if (checkoutMatch && request.method === 'GET') {
@@ -1076,7 +1126,18 @@ async function dispatchAccount(
       [...contextValues, checkoutId],
     );
     if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
-    return { status: 200, data: subscriptionCheckoutDto(checkout) };
+    return {
+      status: 200,
+      data: subscriptionCheckoutDto(
+        checkout,
+        await checkoutPaymentUrl(
+          transaction,
+          contextValues,
+          checkout,
+          dependencies,
+        ),
+      ),
+    };
   }
   if (path === 'v1/config-files' && request.method === 'GET') {
     const cursorValue = new URL(request.url).searchParams.get('cursor');
