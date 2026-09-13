@@ -68,12 +68,12 @@
 
 ## Consumer 模板
 
-`apps/template-preview` 是 `model.aisenhub` 的 Consumer BFF 模板。模板服务端需要配置：
+`apps/template-preview` 是 `aisentest` 的 Consumer BFF 模板。模板服务端需要配置：
 
 | 变量 | 行为 |
 | --- | --- |
 | `ACCOUNT_API_URL` | 中央 Account API 地址；staging 使用 Supabase Edge Function 的 `/functions/v1/account-api` 地址 |
-| `ACCOUNT_PLATFORM_KEY` | `model.aisenhub` 对应的服务端 Platform Key；只读服务端环境变量，不能使用 `NEXT_PUBLIC_` 前缀、不能进入浏览器、日志或 Git |
+| `ACCOUNT_PLATFORM_KEY` | `aisentest` 对应的服务端 Platform Key；只读服务端环境变量，不能使用 `NEXT_PUBLIC_` 前缀、不能进入浏览器、日志或 Git |
 | `TEMPLATE_ORIGIN` | 模板页面的精确 origin，用于 BFF 的 Origin/CSRF 校验 |
 
 Platform Key 必须通过 Admin 的创建、部署确认流程生成；同一平台可以按环境使用不同 Key。模板页面只调用同源 `/api/v1/*`，不会让浏览器直接提交 Platform Key。

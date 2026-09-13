@@ -271,8 +271,8 @@
 ### Consumer 模板付款入口/2026-09-12/当前 Agent
 
 - `apps/template-preview` 的 `/subscription` 已作为可复用 Consumer 付款模板：商品目录与权益状态分开加载，方案卡通过同源 BFF 创建服务端绑定 Checkout，订单状态支持自动轮询和手动刷新；页面规则明确禁止直接使用没有 `custom_order_id` 的裸 Afdian 商品链接。
-- 模板示例配置已补充 `model.aisenhub` 的 `ACCOUNT_API_URL`/`ACCOUNT_PLATFORM_KEY` 约束；真实 Platform Key 仍只允许通过 Admin 创建、部署确认流程注入服务端环境。
-- staging 已由用户提供一个已确认邮箱的 Auth 用户，并通过一次性的 staging 管理员引导登记写入 `private.system_admin`；当前 Auth 用户数为 1、system admin 数为 1、platform 数仍为 0。`model.aisenhub` 平台与 Platform Key 尚未创建，必须由该管理员在已登录的 Admin 控制台中走正式创建/部署确认流程，不能用 SQL 伪造为已完成。
+- 模板示例配置已补充 `aisentest` 的 `ACCOUNT_API_URL`/`ACCOUNT_PLATFORM_KEY` 约束；真实 Platform Key 仍只允许通过 Admin 创建、部署确认流程注入服务端环境。
+- staging 已由用户提供一个已确认邮箱的 Auth 用户，并通过一次性的 staging 管理员引导登记写入 `private.system_admin`；当前 Auth 用户数为 1、system admin 数为 1、`aisentest` 平台为 active、Platform Key 数仍为 0。Platform Key 必须由该管理员在已登录的 Admin 控制台中走正式创建/部署确认流程，不能用 SQL 伪造为已完成。
 - 当前工作区已临时启动连接 staging 的本地 Admin 控制台 `http://localhost:3000/admin/login`；该入口只用于本次 staging 初始化，不代表已有托管 Admin 域名，也不包含任何真实密钥。
 
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
