@@ -321,4 +321,5 @@
 - 新增 `20260913112306_bill_16_billing_worker_cron.sql`：启用 hosted Supabase 的 `pg_cron`/`pg_net`，创建 `private.billing_maintenance_cron()`，并注册 `billing-worker-every-minute`（每分钟、每次最多 5 个任务）。入口只从 Vault 读取 `billing_maintenance_function_url` 与 `billing_maintenance_job_token`；缺少运行密钥时安全跳过，不把密钥写入迁移、仓库或日志。
 - staging 已轮换并注入 Maintenance Edge Function 的 Worker Token，同时写入同值 Vault；Worker ID 保持为 `staging-billing-worker`。生产未操作，生产仍需独立配置自己的 Vault/Edge Secret 后才会自动执行。
 - 运行证据：staging `cron.job` 显示任务 `active=true`、schedule=`* * * * *`；连续观察到 `cron.job_run_details` 于 `11:28`、`11:29`、`11:30 UTC` 均为 `succeeded`，`net._http_response` 返回 HTTP 200、JSON、未超时。验证时没有待处理/可重试任务，因此本次证明的是自动调用链已接管，不新增虚构订单。
+- Supabase 安全审查仍提示 hosted `pg_net` 位于 `public` schema；尝试 `SET SCHEMA` 时平台返回该扩展不支持此操作，因此未保留不可部署的修复迁移。密码泄露保护与既有未覆盖外键索引告警未在本任务范围内修改，`net.http_post` 自动调用已由 staging HTTP 200 运行证据验证。
 - 本地 `pnpm exec supabase db reset --local --yes` PASS，BILL-16 迁移可从空库重放；仍需后续完成 staging 停机恢复、密钥轮换后的实际积压任务演练，以及生产 G-OPS 审批/告警配置。
