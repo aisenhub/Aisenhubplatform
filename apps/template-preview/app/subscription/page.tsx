@@ -104,6 +104,7 @@ export default function SubscriptionPage() {
   const [workspaceStatus, setWorkspaceStatus] =
     useState<WorkspaceStatus>('unknown');
   const [isActivatingWorkspace, setIsActivatingWorkspace] = useState(false);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(
     null,
   );
@@ -261,8 +262,10 @@ export default function SubscriptionPage() {
   }, [checkoutId, refreshPendingCheckout]);
 
   async function choosePlan(name: string, code: string) {
-    if (code === currentPlan || pendingPayment) return;
+    if (code === currentPlan || pendingPayment || isCreatingCheckout) return;
     const idempotencyKey = crypto.randomUUID();
+    setIsCreatingCheckout(true);
+    setFeedback(`正在创建付款订单 · ${name}`);
     setPaymentFeedback('正在创建服务端定价订单…');
     try {
       const checkout = await api<{
@@ -301,16 +304,20 @@ export default function SubscriptionPage() {
       const code = errorCode(error);
       if (code === 'UNAUTHORIZED') {
         setPaymentFeedback('请先登录账户，再创建付款订单。');
+        setFeedback('请先登录账户，再创建付款订单。');
         window.location.assign('/login');
         return;
       }
-      setPaymentFeedback(
+      const message =
         code === 'ACCOUNT_NOT_ACTIVATED'
           ? '请先激活工作区，再创建付款订单。'
           : code === 'CHECKOUT_UNAVAILABLE'
             ? '当前套餐暂未开放付款，请稍后再试。'
-            : '订单创建失败，请稍后重试。',
-      );
+            : '订单创建失败，请稍后重试。';
+      setPaymentFeedback(message);
+      setFeedback(message);
+    } finally {
+      setIsCreatingCheckout(false);
     }
   }
 
@@ -520,17 +527,20 @@ export default function SubscriptionPage() {
                       disabled={
                         isCurrent ||
                         Boolean(pendingPayment) ||
+                        isCreatingCheckout ||
                         !plan.enabled ||
                         !plan.purchasable
                       }
                       onClick={() => choosePlan(plan.name, plan.code)}
                       data-test={`subscription-plan-${plan.code}`}
                     >
-                      {isCurrent
-                        ? '当前使用中'
+                      {isCreatingCheckout && !isCurrent
+                        ? '创建中…'
+                        : isCurrent
+                          ? '当前使用中'
                         : !plan.enabled || !plan.purchasable
-                          ? '暂未开放'
-                          : '选择方案'}
+                            ? '暂未开放'
+                            : '选择方案'}
                     </button>
                   </article>
                 );

@@ -280,7 +280,8 @@
 - staging 的 `aisentest` 平台默认免费 Plan、付费 Plan 与订阅配置已由 Admin 流程完成；月度、年度、永久三个商品均启用，价格分别为 `9.90`、`39.90`、`49.90 CNY`。
 - `GET /v1/subscription/products` 通过本地 `template-preview` BFF 返回 HTTP 200；Monthly、Yearly、Lifetime 均为 `enabled=true`、`purchasable=true`、`reason=ready`。这只证明配置、Key 与 Provider mapping 可用，不代表真实付款已完成。
 - `apps/template-preview` 已补齐 staging 公共 Auth 环境注入，并在 `/subscription` 增加首次登录后的“激活工作区”入口；模板服务端仍只使用本地忽略文件中的 Platform Key，未写入仓库。
-- 已通过模板类型检查、仓库 `pnpm lint`、`git diff --check`，并验证本地 `/login` 与 `/subscription` 可返回 HTTP 200。下一步仍需用户登录模板、激活工作区并完成一笔月度真实付款，之后才能验证 Afdian Webhook、`query-order` 权威核验和权益结算。
+- 首次点击月度方案时，服务端日志确认请求已到达，但返回 `503 CHECKOUT_UNAVAILABLE`；原因是 staging 的独立 `BILLING_CHECKOUT_ENABLED` 默认关闭。已仅对 staging 设置为 `true`，并在模板中补充“创建中…”状态与重复点击保护。
+- 已通过模板类型检查、仓库 `pnpm lint`、`git diff --check`，并验证本地 `/login` 与 `/subscription` 可返回 HTTP 200。下一步仍需刷新模板、重新创建一笔月度订单并完成真实付款，之后才能验证 Afdian Webhook、`query-order` 权威核验和权益结算。
 
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
 
