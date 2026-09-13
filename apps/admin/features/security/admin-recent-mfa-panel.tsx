@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { KeyboardEvent } from 'react';
 import Link from 'next/link';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
@@ -72,8 +72,7 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
     void loadFactors();
   }, [loadFactors]);
 
-  async function verify(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function verify() {
     if (!factorId || !/^\d{6}$/u.test(code)) {
       setErrorMessage('请输入认证器生成的 6 位验证码。');
       return;
@@ -112,6 +111,12 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
     } finally {
       setPending(false);
     }
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'Enter' || pending) return;
+    event.preventDefault();
+    void verify();
   }
 
   if (state === 'loading') {
@@ -171,7 +176,12 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
           proof 由服务端签发并绑定当前 Admin session；页面不会计算或保存有效期。
         </p>
       </div>
-      <form className="grid gap-3" onSubmit={verify}>
+      <div
+        className="grid gap-3"
+        role="group"
+        onKeyDown={handleKeyDown}
+        data-test="recent-mfa-form"
+      >
         {factors.length > 1 ? (
           <div className="grid gap-2">
             <Label htmlFor="recent-mfa-factor">认证器</Label>
@@ -215,15 +225,16 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
           </p>
         ) : null}
         <Button
-          type="submit"
+          type="button"
           size="sm"
           className="w-fit"
           disabled={pending}
+          onClick={() => void verify()}
           data-test="recent-mfa-submit"
         >
           {pending ? '验证中…' : '验证近期 MFA'}
         </Button>
-      </form>
+      </div>
       {state === 'error' ? (
         <Button
           type="button"
