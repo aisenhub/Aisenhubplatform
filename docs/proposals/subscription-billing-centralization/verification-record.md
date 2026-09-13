@@ -32,7 +32,7 @@
 |---|---|---|
 | G-DEV | PASS | `packages/domain/src/contracts/billing.ts` 冻结四商品期限、金额字符串、Checkout snapshot、Provider snapshot、操作来源/版本和结算状态；BILL-02 增加固定商品目录/配置与合同；BILL-03 增加 Redemption V2 snapshot、码规范化和 correction 链；BILL-04 增加 Checkout/Order/Inbox/Job schema、Account checkout DTO/SDK、hash-only webhook 和 lease/fence maintenance；BILL-05 增加 Provider-neutral 归一化、验证/结算、游标和 worker；BILL-06 增加中央 Billing Admin、Consumer Auth/BFF、服务端授权和动态订阅页；Node/Deno/SQL/前端固定测试通过 |
 | G-PROVIDER | NOT_RUN | 真实渠道未验证 |
-| G-OPS | PARTIAL_LOCAL | 本地 stop switch、停机不写库/不查 Provider、停机后积压保持并可在重启后重新领取、lease 可恢复路径已由 maintenance/webhook/API fixture 验证；真实调度密钥、限流预算、告警责任人与恢复演练仍未运行 |
+| G-OPS | PARTIAL_STAGING | 本地 stop switch、停机不写库/不查 Provider、停机后积压保持并可在重启后重新领取、lease 可恢复路径已由 maintenance/webhook/API fixture 验证；staging 已配置 Vault 令牌与每分钟 pg_cron/pg_net 自动调用并观察到 HTTP 200；生产调度密钥、限流预算、告警责任人与恢复演练仍未运行 |
 
 | 协议项目 | 官方来源/日期/版本 | 脱敏操作与结果 | 状态 |
 |---|---|---|---|
@@ -234,10 +234,10 @@
 
 ## 7. 调度与上线准备
 
-- 调用方/认证/频率/批量/超时/限流预算：未确定。
+- staging 调用方/认证/频率/批量/超时：Supabase pg_cron → pg_net → `maintenance`，Vault 自定义 Worker Token，每分钟、每次最多 5 个任务、HTTP 超时 5 秒；Provider 限流预算仍未冻结。
 - 报警阈值/接收责任人/oldest_pending目标：未确定。
-- 新购买/入站/结算/后台领取独立开关：本地已验证；幂等缓存清理每日调度入口已加入并通过 maintenance fixture；生产配置变更、调度责任人、限流预算和告警仍未验证。
-- 调度停机恢复/密钥轮换/积压与重复结算演练：未验证。
+- 新购买/入站/结算/后台领取独立开关：本地已验证；幂等缓存清理每日调度入口已加入并通过 maintenance fixture；staging 自动 Worker 已验证；生产配置变更、限流预算和告警仍未验证。
+- staging 调度停机恢复/密钥轮换/积压与重复结算演练：尚未完整演练；生产仍未验证。
 - G-PROVIDER/G-OPS通过和真实购买启用授权：未记录。
 
 ## 8. 最终结论与交接
@@ -315,3 +315,10 @@
 - 修复发现链路：新增 `billing_webhook_discovery_target`、`billing_order_link_checkout` 和受 fencing 保护的事件状态推进；maintenance 增加 `/maintenance/v1/billing/jobs/discover` 与 `/maintenance/v1/billing/jobs/run`，调度入口默认每次顺序处理最多 5 个任务。BILL-11 的列名歧义通过 BILL-12 forward-fix 修复，未修改已应用迁移。
 - staging 已配置专用 `MAINTENANCE_JOB_TOKEN` 与固定 `MAINTENANCE_WORKER_ID`，并重新部署 `maintenance`。Hosted run smoke test 返回 HTTP 200，处理 1 个 `webhook_order_discovery` 任务；API 查询结果为 `PROVIDER_ORDER_NOT_FOUND`，任务和 Webhook 事件均进入 `retryable`，证明 Token 注入、Worker fencing、Afdian API 请求和失败恢复路径已连通。
 - 该结果仅说明爱发电后台测试信号可被系统接收并进入可恢复处理，不代表真实订单、商品映射、付款或权益结算成功。由于 staging Billing 表启用了受限 RLS，测试事件及占位订单未通过直接 DML 删除，而是经正式 Worker lease/finish 接口标记为 `manual_review`，避免继续重试并保留审计证据；真实调度器仍需由 G-OPS 受控配置，`schedule.json` 本身不安装定时器。
+
+### Hosted staging 自动 Billing Worker/2026-09-13/当前 Agent
+
+- 新增 `20260913112306_bill_16_billing_worker_cron.sql`：启用 hosted Supabase 的 `pg_cron`/`pg_net`，创建 `private.billing_maintenance_cron()`，并注册 `billing-worker-every-minute`（每分钟、每次最多 5 个任务）。入口只从 Vault 读取 `billing_maintenance_function_url` 与 `billing_maintenance_job_token`；缺少运行密钥时安全跳过，不把密钥写入迁移、仓库或日志。
+- staging 已轮换并注入 Maintenance Edge Function 的 Worker Token，同时写入同值 Vault；Worker ID 保持为 `staging-billing-worker`。生产未操作，生产仍需独立配置自己的 Vault/Edge Secret 后才会自动执行。
+- 运行证据：staging `cron.job` 显示任务 `active=true`、schedule=`* * * * *`；连续观察到 `cron.job_run_details` 于 `11:28`、`11:29`、`11:30 UTC` 均为 `succeeded`，`net._http_response` 返回 HTTP 200、JSON、未超时。验证时没有待处理/可重试任务，因此本次证明的是自动调用链已接管，不新增虚构订单。
+- 本地 `pnpm exec supabase db reset --local --yes` PASS，BILL-16 迁移可从空库重放；仍需后续完成 staging 停机恢复、密钥轮换后的实际积压任务演练，以及生产 G-OPS 审批/告警配置。
