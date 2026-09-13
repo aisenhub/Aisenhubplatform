@@ -271,9 +271,16 @@
 ### Consumer 模板付款入口/2026-09-12/当前 Agent
 
 - `apps/template-preview` 的 `/subscription` 已作为可复用 Consumer 付款模板：商品目录与权益状态分开加载，方案卡通过同源 BFF 创建服务端绑定 Checkout，订单状态支持自动轮询和手动刷新；页面规则明确禁止直接使用没有 `custom_order_id` 的裸 Afdian 商品链接。
-- 模板示例配置已补充 `aisentest` 的 `ACCOUNT_API_URL`/`ACCOUNT_PLATFORM_KEY` 约束；真实 Platform Key 仍只允许通过 Admin 创建、部署确认流程注入服务端环境。
-- staging 已由用户提供一个已确认邮箱的 Auth 用户，并通过一次性的 staging 管理员引导登记写入 `private.system_admin`；当前 Auth 用户数为 1、system admin 数为 1、`aisentest` 平台为 active、Platform Key 数仍为 0。Platform Key 必须由该管理员在已登录的 Admin 控制台中走正式创建/部署确认流程，不能用 SQL 伪造为已完成。
+- 模板示例配置已补充 `aisentest` 的 `ACCOUNT_API_URL`/`ACCOUNT_PLATFORM_KEY` 约束；真实 Platform Key 只通过 Admin 创建、部署确认流程注入本地模板服务端环境。
+- staging 已由用户提供一个已确认邮箱的 Auth 用户，并通过一次性的 staging 管理员引导登记写入 `private.system_admin`；`aisentest` 平台为 active，Platform Key 已由用户在 Admin 控制台完成创建与部署确认。该确认状态来自服务端持久化结果，不以浏览器弹窗是否自动关闭作为证据。
 - 当前工作区已临时启动连接 staging 的本地 Admin 控制台 `http://localhost:3000/admin/login`；该入口只用于本次 staging 初始化，不代表已有托管 Admin 域名，也不包含任何真实密钥。
+
+### Hosted staging 配置与 Consumer 付款入口复核/2026-09-13/当前 Agent
+
+- staging 的 `aisentest` 平台默认免费 Plan、付费 Plan 与订阅配置已由 Admin 流程完成；月度、年度、永久三个商品均启用，价格分别为 `9.90`、`39.90`、`49.90 CNY`。
+- `GET /v1/subscription/products` 通过本地 `template-preview` BFF 返回 HTTP 200；Monthly、Yearly、Lifetime 均为 `enabled=true`、`purchasable=true`、`reason=ready`。这只证明配置、Key 与 Provider mapping 可用，不代表真实付款已完成。
+- `apps/template-preview` 已补齐 staging 公共 Auth 环境注入，并在 `/subscription` 增加首次登录后的“激活工作区”入口；模板服务端仍只使用本地忽略文件中的 Platform Key，未写入仓库。
+- 已通过模板类型检查、仓库 `pnpm lint`、`git diff --check`，并验证本地 `/login` 与 `/subscription` 可返回 HTTP 200。下一步仍需用户登录模板、激活工作区并完成一笔月度真实付款，之后才能验证 Afdian Webhook、`query-order` 权威核验和权益结算。
 
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
 

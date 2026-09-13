@@ -905,6 +905,10 @@ h2 {
   display: grid;
   gap: 0.18rem;
 }
+.consumer-current-plan > .consumer-button {
+  margin-left: auto;
+  flex-shrink: 0;
+}
 .consumer-current-plan strong {
   font-size: 0.8rem;
 }

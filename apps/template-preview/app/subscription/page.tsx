@@ -23,6 +23,13 @@ type Entitlement = {
   plan: { code: string; name: string } | null;
 };
 
+type WorkspaceStatus =
+  | 'unknown'
+  | 'unauthorized'
+  | 'not_activated'
+  | 'active'
+  | 'unavailable';
+
 const activationCodePattern = /^[A-Z0-9-]{16,159}$/u;
 type RedemptionState = 'idle' | 'invalid' | 'checking' | 'error';
 
@@ -94,6 +101,9 @@ export default function SubscriptionPage() {
   const [currentPlan, setCurrentPlan] = useState('free');
   const [currentPlanName, setCurrentPlanName] = useState('Free');
   const [feedback, setFeedback] = useState('当前使用免费版');
+  const [workspaceStatus, setWorkspaceStatus] =
+    useState<WorkspaceStatus>('unknown');
+  const [isActivatingWorkspace, setIsActivatingWorkspace] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(
     null,
   );
@@ -109,6 +119,7 @@ export default function SubscriptionPage() {
     const planCode = entitlement.plan?.code ?? 'free';
     setCurrentPlan(planCode);
     setCurrentPlanName(entitlement.plan?.name ?? 'Free');
+    setWorkspaceStatus('active');
     setFeedback(
       entitlement.effective_status === 'active'
         ? `服务端已确认 · ${entitlement.plan?.name ?? '当前方案'}`
@@ -159,10 +170,18 @@ export default function SubscriptionPage() {
       const entitlementPromise = refreshSubscription().catch(
         (error: unknown) => {
           if (cancelled) return;
+          const code = errorCode(error);
+          setWorkspaceStatus(
+            code === 'UNAUTHORIZED'
+              ? 'unauthorized'
+              : code === 'ACCOUNT_NOT_ACTIVATED'
+                ? 'not_activated'
+                : 'unavailable',
+          );
           setFeedback(
-            errorCode(error) === 'UNAUTHORIZED'
-              ? '登录后可创建付款订单'
-              : errorCode(error) === 'ACCOUNT_NOT_ACTIVATED'
+            code === 'UNAUTHORIZED'
+              ? '登录后可激活工作区并创建付款订单'
+              : code === 'ACCOUNT_NOT_ACTIVATED'
                 ? '请先激活工作区，再创建付款订单'
                 : '订阅状态暂时不可用，商品目录仍可查看',
           );
@@ -295,6 +314,33 @@ export default function SubscriptionPage() {
     }
   }
 
+  async function activateWorkspace() {
+    if (isActivatingWorkspace) return;
+
+    setIsActivatingWorkspace(true);
+    setPaymentFeedback('正在激活当前平台工作区…');
+    try {
+      await api('v1/account/activate', { method: 'POST' });
+      setWorkspaceStatus('active');
+      setPaymentFeedback('工作区已激活，正在读取最新权益状态。');
+      await refreshSubscription();
+    } catch (error) {
+      const code = errorCode(error);
+      if (code === 'UNAUTHORIZED') {
+        setPaymentFeedback('请先登录账户，再激活工作区。');
+        window.location.assign('/login');
+      } else {
+        setPaymentFeedback(
+          code === 'ACTIVATION_DISABLED'
+            ? '当前平台暂未开放新工作区激活。'
+            : '工作区激活失败，请稍后重试。',
+        );
+      }
+    } finally {
+      setIsActivatingWorkspace(false);
+    }
+  }
+
   async function confirmPayment() {
     const id = pendingPayment?.checkoutId;
     if (!id || isRefreshingPayment) return;
@@ -383,6 +429,21 @@ export default function SubscriptionPage() {
           <strong>当前方案：{currentPlanName}</strong>
           <small>{feedback}</small>
         </span>
+        {workspaceStatus === 'not_activated' ? (
+          <button
+            className="consumer-button consumer-button-primary"
+            type="button"
+            disabled={isActivatingWorkspace}
+            onClick={() => void activateWorkspace()}
+            data-test="subscription-activate-account"
+          >
+            {isActivatingWorkspace ? '激活中…' : '激活工作区'}
+          </button>
+        ) : workspaceStatus === 'unauthorized' ? (
+          <a className="consumer-button consumer-button-secondary" href="/login">
+            去登录
+          </a>
+        ) : null}
       </section>
 
       <div
