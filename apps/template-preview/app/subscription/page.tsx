@@ -47,6 +47,50 @@ type CheckoutStatus = {
   granted_at: string | null;
 };
 
+const pendingPaymentStorageKey = 'aisenhub.subscription.pending-payment';
+
+function readPendingPayment(): PendingPayment | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const value: unknown = JSON.parse(
+      window.sessionStorage.getItem(pendingPaymentStorageKey) ?? 'null',
+    );
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      return null;
+    const candidate = value as Record<string, unknown>;
+    if (
+      typeof candidate.checkoutId !== 'string' ||
+      typeof candidate.code !== 'string' ||
+      typeof candidate.name !== 'string'
+    )
+      return null;
+    return {
+      checkoutId: candidate.checkoutId,
+      code: candidate.code,
+      name: candidate.name,
+      status:
+        typeof candidate.status === 'string' ? candidate.status : 'pending',
+      url: typeof candidate.url === 'string' ? candidate.url : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistPendingPayment(payment: PendingPayment | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (payment)
+      window.sessionStorage.setItem(
+        pendingPaymentStorageKey,
+        JSON.stringify(payment),
+      );
+    else window.sessionStorage.removeItem(pendingPaymentStorageKey);
+  } catch {
+    // Session storage is only a navigation convenience; checkout remains server-side.
+  }
+}
+
 function accentFor(code: string): Product['accent'] {
   if (code === 'free') return 'sage';
   if (code === 'lifetime') return 'clay';
@@ -106,7 +150,7 @@ export default function SubscriptionPage() {
   const [isActivatingWorkspace, setIsActivatingWorkspace] = useState(false);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(
-    null,
+    readPendingPayment,
   );
   const [paymentFeedback, setPaymentFeedback] = useState('');
   const [isRefreshingPayment, setIsRefreshingPayment] = useState(false);
@@ -114,6 +158,10 @@ export default function SubscriptionPage() {
   const [redemptionState, setRedemptionState] =
     useState<RedemptionState>('idle');
   const [redemptionMessage, setRedemptionMessage] = useState('');
+
+  useEffect(() => {
+    persistPendingPayment(pendingPayment);
+  }, [pendingPayment]);
 
   const refreshSubscription = useCallback(async () => {
     const entitlement = await api<Entitlement>('v1/subscription');
@@ -278,13 +326,17 @@ export default function SubscriptionPage() {
         headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify({ product_code: code }),
       });
-      setPendingPayment({
+      const pending = {
         checkoutId: checkout.checkout_id,
         code,
         name,
         status: checkout.status,
         url: checkout.payment_url,
-      });
+      } satisfies PendingPayment;
+      // Persist before navigating so returning from the Provider restores the
+      // server-side checkout snapshot and resumes status polling.
+      persistPendingPayment(pending);
+      setPendingPayment(pending);
       setFeedback(`等待支付 · ${name}`);
       setPaymentFeedback(
         checkout.payment_url
@@ -292,13 +344,10 @@ export default function SubscriptionPage() {
           : '订单已创建，当前 Provider 付款入口尚未配置。',
       );
       if (checkout.payment_url) {
-        const paymentWindow = window.open(
-          checkout.payment_url,
-          '_blank',
-          'noopener,noreferrer',
-        );
-        if (!paymentWindow)
-          setPaymentFeedback('浏览器拦截了新窗口，请点击下方“点此打开”。');
+        // The request completes asynchronously, so a new-window call here is
+        // commonly blocked as a popup. Navigating this tab is deterministic;
+        // the pending checkout is persisted so returning here resumes polling.
+        window.location.assign(checkout.payment_url);
       }
     } catch (error) {
       const code = errorCode(error);
@@ -447,7 +496,10 @@ export default function SubscriptionPage() {
             {isActivatingWorkspace ? '激活中…' : '激活工作区'}
           </button>
         ) : workspaceStatus === 'unauthorized' ? (
-          <a className="consumer-button consumer-button-secondary" href="/login">
+          <a
+            className="consumer-button consumer-button-secondary"
+            href="/login"
+          >
             去登录
           </a>
         ) : null}
@@ -538,7 +590,7 @@ export default function SubscriptionPage() {
                         ? '创建中…'
                         : isCurrent
                           ? '当前使用中'
-                        : !plan.enabled || !plan.purchasable
+                          : !plan.enabled || !plan.purchasable
                             ? '暂未开放'
                             : '选择方案'}
                     </button>
