@@ -2765,7 +2765,23 @@ export async function handleRequest(
   }
 }
 
+function runtimeDependencies(): AccountApiDependencies {
+  const checkoutKeyVersion = Number.parseInt(
+    Deno.env.get('BILLING_CHECKOUT_KEY_VERSION') ?? '',
+    10,
+  );
+  return {
+    checkoutSecret: Deno.env.get('BILLING_CHECKOUT_SECRET'),
+    checkoutKeyVersion:
+      Number.isSafeInteger(checkoutKeyVersion) && checkoutKeyVersion > 0
+        ? checkoutKeyVersion
+        : undefined,
+    checkoutProviderAccountId: Deno.env.get('BILLING_PROVIDER_ACCOUNT_ID'),
+  };
+}
+
 if (import.meta.main) {
   const port = Number.parseInt(Deno.env.get('ACCOUNT_API_PORT') ?? '8000', 10);
-  Deno.serve({ port }, (request) => handleRequest(request));
+  const dependencies = runtimeDependencies();
+  Deno.serve({ port }, (request) => handleRequest(request, dependencies));
 }

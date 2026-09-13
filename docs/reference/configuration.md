@@ -40,6 +40,9 @@
 | REDEMPTION_HMAC_PREVIOUS_KEY_VERSION | 上一兑换 Secret 的版本 |
 | SUPABASE_SECRET_KEY | Storage 服务端凭据 |
 | ACCOUNT_API_PORT | 直接 Deno 运行端口，默认 8000 |
+| BILLING_CHECKOUT_SECRET | 服务端 Checkout 绑定令牌的 HMAC Secret；只用于生成 hash，不得进入浏览器、日志或 Git；未配置时 Checkout 拒绝签发 |
+| BILLING_CHECKOUT_KEY_VERSION | Checkout HMAC Secret 版本，必须是正整数，并与 Secret 轮换记录一致 |
+| BILLING_PROVIDER_ACCOUNT_ID | Checkout 与 Webhook 共用的 active `billing_provider_accounts.id`；必须与当前 Provider mapping 一致，禁止写入前端 |
 | BILLING_CHECKOUT_ENABLED | `false` 时仅停止新 Checkout 签发；已有订单和 webhook 不受此开关影响，默认关闭，须在 G-PROVIDER/G-OPS 通过后显式开启 |
 | AFDIAN_CHECKOUT_BASE_URL | 可选；服务端生成 Afdian Checkout URL 的 base，默认 `https://afdian.com/order/create`；不能由浏览器传入 |
 
