@@ -55,9 +55,9 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
   const [unknownOutcome, setUnknownOutcome] = useState(false);
   const [message, setMessage] = useState<ResourceError | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (preserveMessage = false) => {
     setLoading(true);
-    setMessage(null);
+    if (!preserveMessage) setMessage(null);
     setUnknownOutcome(false);
     try {
       const [configResponse, plansResponse] = await Promise.all([
@@ -144,13 +144,15 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
         );
         return;
       }
-      await load();
+      if (payload?.data) setConfig(payload.data);
+      setSaving(false);
       setMessage({
         title: '订阅配置已保存',
-        description: '页面已重新读取服务端配置，当前版本号以服务端返回为准。',
+        description: '服务端已保存；页面正在后台刷新最新配置。',
         requestId: response.headers.get('x-request-id'),
         technicalDetail: null,
       });
+      void load(true);
     } catch {
       setUnknownOutcome(true);
       setMessage({
