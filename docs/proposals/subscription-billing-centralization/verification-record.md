@@ -282,7 +282,7 @@
 - `apps/template-preview` 已补齐 staging 公共 Auth 环境注入，并在 `/subscription` 增加首次登录后的“激活工作区”入口；模板服务端仍只使用本地忽略文件中的 Platform Key，未写入仓库。
 - 首次点击月度方案时，服务端日志确认请求已到达，但返回 `503 CHECKOUT_UNAVAILABLE`；原因是 staging 的独立 `BILLING_CHECKOUT_ENABLED` 默认关闭。已仅对 staging 设置为 `true`，并在模板中补充“创建中…”状态与重复点击保护。
 - 重新开启开关并部署后，第二个 `503 CHECKOUT_UNAVAILABLE` 已定位为 `account-api` 生产入口未将服务端 Checkout 令牌输入注入 `handleRequest`；数据库函数按设计以 `checkout_key_unavailable` 失败关闭，且没有写入 checkout intent。已补齐 `BILLING_CHECKOUT_SECRET`、`BILLING_CHECKOUT_KEY_VERSION`、`BILLING_PROVIDER_ACCOUNT_ID` 的运行时依赖接线，并将 staging `account-api` 部署为 version 37。
-- 修复后本地模板收到 `POST /api/v1/subscription/checkout` 的 `201`，随后查询接口返回 `200`；staging 已生成一笔 `monthly`、`9.90 CNY`、`pending` 的 Checkout intent，证明服务端付款 URL 创建链路已打通。模板付款入口改为当前标签页可靠跳转，并把 pending Checkout 临时保存在 session storage，返回模板时可继续轮询；真实付款验收结果见下方。
+- 修复后本地模板收到 `POST /api/v1/subscription/checkout` 的 `201`，随后查询接口返回 `200`；staging 已生成一笔 `monthly`、`9.90 CNY`、`pending` 的 Checkout intent，证明服务端付款 URL 创建链路已打通。模板付款入口会在用户点击时预留新标签页，再将异步创建的付款 URL 写入该标签页；原平台页保留并继续轮询 pending Checkout，真实付款验收结果见下方。
 - 真实 staging 付款验收已完成：爱发电 Webhook 入站签名为 `verified`；官方 `query-order` 返回的无 `currency`、数字 `product_type` 格式已兼容为 CNY/字符串 Provider facts；订单核验结果为 `paid`、`9.90 CNY`、`verified`，Checkout 为 `granted`，Webhook discovery job 为 `completed`。
 - 权益投影已核对：`Aisentest Paid` 订阅为 `active`，月度有效期从付款时间起至一个月后；`subscription_grants.source=billing_order` 且存在 `granted` 事件。期间 staging Maintenance job token 已轮换用于手动恢复并运行 Worker，真实 Secret 未写入仓库；生产未操作。
 - 为恢复这条因旧 Provider 解析器进入 `manual_review` 的测试任务，新增了仅允许 `PROVIDER_RESPONSE_INVALID` 的受保护 requeue 运维边界；同时统一 Maintenance 的 `jsonb` 参数绑定，避免结算阶段的 `settlement_invalid_input`。相关迁移与函数已部署 staging。

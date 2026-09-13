@@ -311,6 +311,13 @@ export default function SubscriptionPage() {
 
   async function choosePlan(name: string, code: string) {
     if (code === currentPlan || pendingPayment || isCreatingCheckout) return;
+    // Reserve a tab while the click still has transient user activation. The
+    // checkout URL is created by the server asynchronously, so opening the
+    // tab after await can be blocked as a popup by the browser.
+    const paymentWindow =
+      typeof window === 'undefined'
+        ? null
+        : window.open('about:blank', '_blank', 'noopener,noreferrer');
     const idempotencyKey = crypto.randomUUID();
     setIsCreatingCheckout(true);
     setFeedback(`正在创建付款订单 · ${name}`);
@@ -344,12 +351,21 @@ export default function SubscriptionPage() {
           : '订单已创建，当前 Provider 付款入口尚未配置。',
       );
       if (checkout.payment_url) {
-        // The request completes asynchronously, so a new-window call here is
-        // commonly blocked as a popup. Navigating this tab is deterministic;
-        // the pending checkout is persisted so returning here resumes polling.
-        window.location.assign(checkout.payment_url);
+        if (paymentWindow && !paymentWindow.closed) {
+          paymentWindow.location.replace(checkout.payment_url);
+          setPaymentFeedback(
+            '订单已创建，已在新标签页打开付款页面；请保留当前页面，支付完成后这里会自动更新。',
+          );
+        } else {
+          setPaymentFeedback(
+            '订单已创建，但浏览器阻止了新标签页；请点击下方链接打开付款页面。',
+          );
+        }
+      } else {
+        paymentWindow?.close();
       }
     } catch (error) {
+      paymentWindow?.close();
       const code = errorCode(error);
       if (code === 'UNAUTHORIZED') {
         setPaymentFeedback('请先登录账户，再创建付款订单。');
@@ -635,7 +651,11 @@ export default function SubscriptionPage() {
               {pendingPayment.url ? (
                 <>
                   没看到付款页？
-                  <a href={pendingPayment.url} target="_blank" rel="noreferrer">
+                  <a
+                    href={pendingPayment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     点此打开
                   </a>
                 </>
