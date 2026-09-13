@@ -65,6 +65,10 @@ async function dispatch(
     if (proof) headers['X-Recent-Auth-Proof'] = proof;
     const contentType = request.headers.get('content-type');
     if (contentType) headers['Content-Type'] = contentType;
+    for (const name of ['if-match', 'if-none-match', 'idempotency-key']) {
+      const value = request.headers.get(name);
+      if (value) headers[name] = value;
+    }
     const upstream = await fetch(target, {
       method: request.method,
       headers,
@@ -83,6 +87,9 @@ async function dispatch(
           'X-Content-Type-Options':
             upstream.headers.get('x-content-type-options') ?? 'nosniff',
           'X-Request-Id': id,
+          ...(upstream.headers.get('etag')
+            ? { ETag: upstream.headers.get('etag') as string }
+            : {}),
         },
       });
     }
@@ -93,6 +100,9 @@ async function dispatch(
         'Cache-Control': 'no-store',
         'Content-Type': 'application/json',
         'X-Request-Id': id,
+        ...(upstream.headers.get('etag')
+          ? { ETag: upstream.headers.get('etag') as string }
+          : {}),
       },
     });
   } catch {
