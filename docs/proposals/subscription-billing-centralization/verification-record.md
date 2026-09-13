@@ -286,6 +286,7 @@
 - 真实 staging 付款验收已完成：爱发电 Webhook 入站签名为 `verified`；官方 `query-order` 返回的无 `currency`、数字 `product_type` 格式已兼容为 CNY/字符串 Provider facts；订单核验结果为 `paid`、`9.90 CNY`、`verified`，Checkout 为 `granted`，Webhook discovery job 为 `completed`。
 - 权益投影已核对：`Aisentest Paid` 订阅为 `active`，月度有效期从付款时间起至一个月后；`subscription_grants.source=billing_order` 且存在 `granted` 事件。期间 staging Maintenance job token 已轮换用于手动恢复并运行 Worker，真实 Secret 未写入仓库；生产未操作。
 - 为恢复这条因旧 Provider 解析器进入 `manual_review` 的测试任务，新增了仅允许 `PROVIDER_RESPONSE_INVALID` 的受保护 requeue 运维边界；同时统一 Maintenance 的 `jsonb` 参数绑定，避免结算阶段的 `settlement_invalid_input`。相关迁移与函数已部署 staging。
+- 为降低本轮 staging 真实付款成本，Lifetime 暂时切换为 `1.00 CNY`（商品 `price_version=3`、映射 `mapping_version=2`）；原 `49.90 CNY` 映射保留但停用，生产正式价格未变。永久方案验收结束后应恢复 staging 正式价格并重新发布对应映射。
 - 已通过模板类型检查、仓库 `pnpm lint`、`git diff --check`，并验证本地 `/login` 与 `/subscription` 可返回 HTTP 200；本节 staging 真实付款、Webhook、`query-order` 和权益结算验收已完成，后续只需配置正式环境前的 G-PROVIDER/G-OPS 审批与生产 Secret 注入。
 
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
