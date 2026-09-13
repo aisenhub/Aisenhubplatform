@@ -199,6 +199,25 @@ Deno.test('Afdian normalizer keeps only provider-neutral billing facts', () => {
   assertEquals(toBillingOrderFacts(snapshot).custom_order_id, 'checkout-1');
 });
 
+Deno.test('Afdian normalizer accepts the documented query-order shape', () => {
+  const snapshot = normalizeAfdianOrder({
+    out_trade_no: '202609131738029749515423849',
+    custom_order_id: 'checkout-1',
+    user_id: 'provider-user-1',
+    plan_id: 'plan-monthly',
+    month: 1,
+    total_amount: '9.90',
+    show_amount: '9.90',
+    status: 2,
+    product_type: 0,
+    sku_detail: [],
+  });
+  assert(snapshot !== null);
+  assertEquals(snapshot.currency, 'CNY');
+  assertEquals(snapshot.product_type, '0');
+  assertEquals(snapshot.status, 'paid');
+});
+
 Deno.test('Afdian normalizer rejects incomplete or malformed observations', () => {
   assertEquals(normalizeAfdianOrder({ out_trade_no: 'order-1' }), null);
   assertEquals(

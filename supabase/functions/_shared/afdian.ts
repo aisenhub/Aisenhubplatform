@@ -409,13 +409,18 @@ export function normalizeAfdianOrder(
   const externalOrderId = text(input.out_trade_no ?? input.order_no);
   const totalAmount = money(input.total_amount);
   const displayAmount = money(input.show_amount ?? input.total_amount);
-  const currency = text(input.currency);
+  // Afdian's documented API/Webhook order shape does not include currency;
+  // Afdian settlement is CNY, so normalize the provider omission here.
+  const currency = text(input.currency) ?? 'CNY';
+  const productType =
+    input.product_type === 0 || input.product_type === 1
+      ? String(input.product_type)
+      : text(input.product_type);
   const skuItems = skuIds(input.sku_detail ?? input.sku_items);
   if (
     !externalOrderId ||
     !totalAmount ||
     !displayAmount ||
-    !currency ||
     !skuItems ||
     !Number.isFinite(observedAt.getTime())
   )
@@ -432,7 +437,7 @@ export function normalizeAfdianOrder(
     status: status(input.status),
     term_quantity: termQuantity,
     term_unit: termUnit,
-    product_type: text(input.product_type),
+    product_type: productType,
     sku_items: skuItems.map((externalSkuId) => ({
       external_sku_id: externalSkuId,
       quantity: 1,

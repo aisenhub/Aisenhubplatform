@@ -17,6 +17,7 @@ type TestTransaction = {
     query: string,
     values?: unknown[],
   ): Promise<T[]>;
+  json(value: unknown): unknown;
 };
 type TestDatabase = {
   begin<T>(callback: (transaction: TestTransaction) => Promise<T>): Promise<T>;
@@ -27,6 +28,9 @@ function database(): TestDatabase {
     async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
       events.push('begin');
       return callback({
+        json(value: unknown) {
+          return value;
+        },
         async unsafe<T extends TestRow = TestRow>(
           query: string,
           _values?: unknown[],
@@ -55,22 +59,26 @@ function database(): TestDatabase {
                                 : query.includes('billing_processing_job_claim')
                                   ? 'billing-claim'
                                   : query.includes(
-                                        'billing_processing_job_finish',
+                                        'billing_processing_job_requeue_contract',
                                       )
-                                    ? 'billing-finish'
+                                    ? 'billing-requeue'
                                     : query.includes(
-                                          'billing_order_query_target',
+                                          'billing_processing_job_finish',
                                         )
-                                      ? 'billing-target'
+                                      ? 'billing-finish'
                                       : query.includes(
-                                            'billing_order_verify_and_settle',
+                                            'billing_order_query_target',
                                           )
-                                        ? 'billing-verify'
+                                        ? 'billing-target'
                                         : query.includes(
-                                              'deletion_job_backup_barrier_guard',
+                                              'billing_order_verify_and_settle',
                                             )
-                                          ? 'barrier-guard'
-                                          : 'finish',
+                                          ? 'billing-verify'
+                                          : query.includes(
+                                                'deletion_job_backup_barrier_guard',
+                                              )
+                                            ? 'barrier-guard'
+                                            : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -119,6 +127,10 @@ function database(): TestDatabase {
           if (query.includes('billing_processing_job_finish'))
             return [
               { job_id: jobId, state: 'completed', fence: 3 },
+            ] as unknown as T[];
+          if (query.includes('billing_processing_job_requeue_contract'))
+            return [
+              { job_id: jobId, state: 'pending', fence: 3 },
             ] as unknown as T[];
           if (query.includes('billing_order_query_target'))
             return [
@@ -439,6 +451,9 @@ Deno.test('maintenance backlog remains claimable after the worker switch restart
     async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
       events.push('begin');
       return callback({
+        json(value: unknown) {
+          return value;
+        },
         async unsafe<T extends TestRow = TestRow>(query: string): Promise<T[]> {
           if (query.startsWith('set local role')) {
             events.push('role');
@@ -534,6 +549,28 @@ Deno.test('maintenance backlog remains claimable after the worker switch restart
   ]);
 });
 
+Deno.test('maintenance can requeue only provider-contract discovery failures', async () => {
+  events.length = 0;
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/requeue-contract', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ job_id: jobId }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: database(),
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data.result.state, 'pending');
+  assertEquals(events, ['begin', 'role', 'billing-requeue']);
+});
+
 Deno.test('maintenance performs provider I/O outside the settlement transaction', async () => {
   events.length = 0;
   const response = await handleMaintenanceRequest(
@@ -589,6 +626,9 @@ Deno.test('maintenance discovers a webhook order before verification', async () 
     async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
       events.push('begin');
       return callback({
+        json(value: unknown) {
+          return value;
+        },
         async unsafe<T extends TestRow = TestRow>(query: string) {
           if (query.startsWith('set local role')) {
             events.push('role');
@@ -681,6 +721,9 @@ Deno.test('maintenance run dispatches a claimed discovery job', async () => {
     async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
       events.push('begin');
       return callback({
+        json(value: unknown) {
+          return value;
+        },
         async unsafe<T extends TestRow = TestRow>(query: string) {
           if (query.startsWith('set local role')) {
             events.push('role');

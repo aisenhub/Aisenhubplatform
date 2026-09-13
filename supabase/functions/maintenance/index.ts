@@ -18,6 +18,7 @@ type Row = Record<string, unknown>;
 
 interface Transaction {
   unsafe<T extends Row = Row>(query: string, values?: unknown[]): Promise<T[]>;
+  json(value: unknown): unknown;
 }
 
 interface Database {
@@ -609,6 +610,30 @@ async function billingJobFinish(
   return response(200, { result: result ?? null, request_id: id });
 }
 
+async function billingJobRequeueContract(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  if (!jobId || Object.keys(input).some((key) => key !== 'job_id'))
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id);
+  const [result] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_processing_job_requeue_contract(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid)',
+      [...jobContext, jobId],
+    ),
+  );
+  return response(200, { result: result ?? null, request_id: id });
+}
+
 async function billingJobProcess(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -682,7 +707,7 @@ async function billingJobProcess(
     const [result] = await withJobRole(db, (transaction) =>
       transaction.unsafe<Row>(
         'select * from private.billing_order_verify_and_settle(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::jsonb)',
-        [...jobContext, jobId, orderId, fence, JSON.stringify(facts)],
+        [...jobContext, jobId, orderId, fence, transaction.json(facts)],
       ),
     );
     return response(200, { result: result ?? null, request_id: id });
@@ -814,18 +839,33 @@ async function billingJobDiscover(
     }
     const customOrderId =
       typeof facts.custom_order_id === 'string' ? facts.custom_order_id : null;
-    await withJobRole(db, (transaction) =>
-      transaction.unsafe<Row>(
-        'select * from private.billing_order_link_checkout(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::text)',
-        [...jobContext, jobId, target.order_id, fence, customOrderId],
-      ),
-    );
-    const [result] = await withJobRole(db, (transaction) =>
-      transaction.unsafe<Row>(
-        'select * from private.billing_order_verify_and_settle(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::jsonb)',
-        [...jobContext, jobId, target.order_id, fence, JSON.stringify(facts)],
-      ),
-    );
+    try {
+      await withJobRole(db, (transaction) =>
+        transaction.unsafe<Row>(
+          'select * from private.billing_order_link_checkout(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::text)',
+          [...jobContext, jobId, target.order_id, fence, customOrderId],
+        ),
+      );
+    } catch (error) {
+      throw new Error(`checkout_link_${errorCode(error)}`);
+    }
+    let result: Row | undefined;
+    try {
+      [result] = await withJobRole(db, (transaction) =>
+        transaction.unsafe<Row>(
+          'select * from private.billing_order_verify_and_settle(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::bigint, $8::jsonb)',
+          [
+            ...jobContext,
+            jobId,
+            target.order_id,
+            fence,
+            transaction.json(facts),
+          ],
+        ),
+      );
+    } catch (error) {
+      throw new Error(`settlement_${errorCode(error)}`);
+    }
     return response(200, { result: result ?? null, request_id: id });
   } catch (error) {
     const failureCode = errorCode(error);
@@ -1003,6 +1043,8 @@ export async function handleMaintenanceRequest(
       return await billingJobClaim(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/run')
       return await billingJobRun(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/jobs/requeue-contract')
+      return await billingJobRequeueContract(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/finish')
       return await billingJobFinish(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/process')
