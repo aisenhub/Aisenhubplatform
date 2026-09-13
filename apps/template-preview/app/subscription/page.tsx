@@ -150,8 +150,9 @@ export default function SubscriptionPage() {
   const [isActivatingWorkspace, setIsActivatingWorkspace] = useState(false);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(
-    readPendingPayment,
+    null,
   );
+  const [pendingPaymentReady, setPendingPaymentReady] = useState(false);
   const [paymentFeedback, setPaymentFeedback] = useState('');
   const [isRefreshingPayment, setIsRefreshingPayment] = useState(false);
   const [activationCode, setActivationCode] = useState('');
@@ -160,8 +161,14 @@ export default function SubscriptionPage() {
   const [redemptionMessage, setRedemptionMessage] = useState('');
 
   useEffect(() => {
+    setPendingPayment(readPendingPayment());
+    setPendingPaymentReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingPaymentReady) return;
     persistPendingPayment(pendingPayment);
-  }, [pendingPayment]);
+  }, [pendingPayment, pendingPaymentReady]);
 
   const refreshSubscription = useCallback(async () => {
     const entitlement = await api<Entitlement>('v1/subscription');
@@ -317,7 +324,11 @@ export default function SubscriptionPage() {
     const paymentWindow =
       typeof window === 'undefined'
         ? null
-        : window.open('about:blank', '_blank', 'noopener,noreferrer');
+        : window.open('about:blank', '_blank');
+    // Do not pass `noopener` to window.open here: Chromium may return a null
+    // handle while still creating the tab, leaving the blank tab unreachable.
+    // The handle is needed to navigate after the async checkout request.
+    if (paymentWindow) paymentWindow.opener = null;
     const idempotencyKey = crypto.randomUUID();
     setIsCreatingCheckout(true);
     setFeedback(`正在创建付款订单 · ${name}`);
