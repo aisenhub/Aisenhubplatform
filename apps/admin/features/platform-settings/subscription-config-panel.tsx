@@ -320,7 +320,19 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
               />
             </div>
           </div>
-          {needsMfa ? <AdminRecentMfaPanel onVerified={() => setNeedsMfa(false)} /> : null}
+          {needsMfa ? (
+            <AdminRecentMfaPanel
+              onVerified={() => {
+                setNeedsMfa(false);
+                setMessage({
+                  title: '近期 MFA 已验证',
+                  description: '请再次点击“保存订阅配置”提交刚才的修改。',
+                  requestId: null,
+                  technicalDetail: null,
+                });
+              }}
+            />
+          ) : null}
           {unknownOutcome ? (
             <Button variant="outline" onClick={() => void load()}>
               重新读取配置
