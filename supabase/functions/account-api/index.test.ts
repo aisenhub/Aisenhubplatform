@@ -176,6 +176,13 @@ function fakeDatabase(
           }
           if (
             query.startsWith(
+              'select * from private.subscription_lifetime_purchase_status',
+            )
+          ) {
+            return [{ lifetime_purchased: true }] as unknown as R[];
+          }
+          if (
+            query.startsWith(
               'select * from private.account_principal_presented',
             )
           ) {
@@ -583,6 +590,29 @@ Deno.test('Account API exposes products without a bearer session and preserves p
   assertEquals(payload.data[0].term.duration_value, 99);
   assertEquals(payload.data[0].purchasable, false);
   assertEquals(payload.data[0].reason, 'provider_mapping_unavailable');
+});
+
+Deno.test('Account API disables lifetime after an authenticated lifetime purchase', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/products',
+      {
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 200);
+  const payload = await response.json();
+  assertEquals(payload.data[0].purchasable, false);
+  assertEquals(payload.data[0].reason, 'lifetime_already_purchased');
 });
 
 Deno.test('Account API creates and reads a server-priced checkout snapshot', async () => {

@@ -872,7 +872,12 @@ function entitlementDto(row: Row) {
   };
 }
 
-function subscriptionProductDto(row: Row): Record<string, unknown> {
+function subscriptionProductDto(
+  row: Row,
+  lifetimeAlreadyPurchased = false,
+): Record<string, unknown> {
+  const lifetimeBlocked =
+    lifetimeAlreadyPurchased && stringValue(row.product_code) === 'lifetime';
   return {
     code: stringValue(row.product_code) ?? 'free',
     name: stringValue(row.product_name) ?? '',
@@ -890,8 +895,10 @@ function subscriptionProductDto(row: Row): Record<string, unknown> {
     price_version: Number(row.price_version ?? 1),
     recommended: row.recommended === true,
     enabled: row.enabled === true,
-    purchasable: row.purchasable === true,
-    reason: stringValue(row.reason) ?? 'provider_mapping_unavailable',
+    purchasable: lifetimeBlocked ? false : row.purchasable === true,
+    reason: lifetimeBlocked
+      ? 'lifetime_already_purchased'
+      : (stringValue(row.reason) ?? 'provider_mapping_unavailable'),
   };
 }
 
@@ -1008,9 +1015,19 @@ async function dispatchAccount(
         'select * from private.subscription_products_list($1::uuid, $2::uuid)',
         [key.platformId, key.keyId],
       );
+      let lifetimeAlreadyPurchased = false;
+      if (session) {
+        const [purchaseStatus] = await transaction.unsafe<Row>(
+          'select * from private.subscription_lifetime_purchase_status(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
+          accountContextValues(session, key),
+        );
+        lifetimeAlreadyPurchased = purchaseStatus?.lifetime_purchased === true;
+      }
       return {
         status: 200,
-        data: rows.map(subscriptionProductDto),
+        data: rows.map((row) =>
+          subscriptionProductDto(row, lifetimeAlreadyPurchased),
+        ),
       };
     }
     const rows = await transaction.unsafe<Row>(
@@ -2688,12 +2705,13 @@ export async function handleRequest(
   const id = requestId();
   try {
     const path = requestPath(request);
+    const optionalSessionRead =
+      request.method === 'GET' &&
+      (path === 'v1/plans' || path === 'v1/subscription/products');
     const session =
       path.startsWith('admin/') ||
-      !(
-        (path === 'v1/plans' || path === 'v1/subscription/products') &&
-        request.method === 'GET'
-      )
+      (optionalSessionRead && request.headers.has('authorization')) ||
+      !optionalSessionRead
         ? await verifiedSessionFromRequest(request, dependencies)
         : undefined;
     const reauthSession =

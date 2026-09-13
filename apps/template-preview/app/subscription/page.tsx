@@ -13,6 +13,7 @@ type Product = {
   term: { duration_value: number | null; duration_unit: string | null };
   recommended: boolean;
   purchasable: boolean;
+  reason: string;
   enabled: boolean;
   accent: 'sage' | 'green' | 'clay';
   features: string[];
@@ -216,6 +217,7 @@ export default function SubscriptionPage() {
                 term,
                 recommended: product.recommended === true,
                 purchasable: product.purchasable === true,
+                reason: String(product.reason ?? ''),
                 enabled: product.enabled !== false,
                 accent: accentFor(code),
                 features: featureCopy(code),
@@ -567,7 +569,9 @@ export default function SubscriptionPage() {
             ? plans.map((plan) => {
                 const isCurrent = plan.code === currentPlan;
                 const lifetimeAlreadyOwned =
-                  plan.code === 'lifetime' && currentPlan === 'lifetime';
+                  plan.code === 'lifetime' &&
+                  (currentPlan === 'lifetime' ||
+                    plan.reason === 'lifetime_already_purchased');
                 return (
                   <article
                     className={`consumer-subscription-card is-${plan.accent}${isCurrent ? ' is-current' : ''}`}

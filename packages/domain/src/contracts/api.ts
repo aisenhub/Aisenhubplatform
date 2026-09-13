@@ -89,6 +89,7 @@ export type SubscriptionProductReason =
   | 'paid_plan_unavailable'
   | 'product_disabled'
   | 'provider_mapping_unavailable'
+  | 'lifetime_already_purchased'
   | 'platform_disabled';
 
 export interface SubscriptionProductDto {
