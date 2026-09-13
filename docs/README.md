@@ -4,6 +4,7 @@
 - [优化设计与实施计划](proposals/README.md)
 - [平台账户与安全边界决策](decisions/0001-platform-account-boundaries.md)
 - [决策记录索引](decisions/README.md)
+- [归档资料](archive/README.md)
 - [运行拓扑](architecture/deployment.md)
 - [身份与安全](architecture/modules/identity-security.md)
 - [权益与兑换](architecture/modules/entitlements.md)

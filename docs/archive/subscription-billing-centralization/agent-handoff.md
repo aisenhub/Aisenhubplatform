@@ -1,13 +1,13 @@
 # Agent 交接与执行边界
 
-> 稳定执行规则。实施证据只写 [verification-record.md](verification-record.md)。当前全部功能阶段未开始。
+> 本 proposal 已归档，不再作为实施入口。历史实施证据见 [verification-record.md](verification-record.md)；如需继续真实 Provider、G-OPS 或生产门槛，须另行派发任务并重新核对现行架构与配置。
 
 ## 1. 可派发提示词
 
 ~~~text
 请实施用户本次明确指定的 BILL-XX 阶段，仅执行该阶段及必要依赖检查。
 先读取根AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md、
-docs/proposals/subscription-billing-centralization/AisenFlow_Subscription_Billing_Architecture.md、
+docs/archive/subscription-billing-centralization/AisenFlow_Subscription_Billing_Architecture.md、
 本目录00-master-plan.md、verification-record.md及对应phases文件，再读源码和合同。
 最新架构是唯一目标依据；旧Phase编号/历史文件名不是执行内容。
 核对pwd、remote、branch、HEAD、status、固定工具与现有测试入口，保护其他修改。

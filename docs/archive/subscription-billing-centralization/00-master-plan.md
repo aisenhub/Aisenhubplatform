@@ -1,6 +1,6 @@
 # 统一订阅与中央支付总计划
 
-> 状态：In Progress。BILL-01～BILL-07 的本地实现/验证已完成，并通过最终本地 forward-fix 补齐了已验证 Provider 映射的商品可购买状态、普通幂等缓存清理和 Consumer 账户/文件真实链路；真实 Provider、G-OPS、Hosted 后端与生产门槛仍未运行。
+> 状态：Archived。BILL-01～BILL-07 的本地实现/验证已完成，并通过最终本地 forward-fix 补齐了已验证 Provider 映射的商品可购买状态、普通幂等缓存清理和 Consumer 账户/文件真实链路；真实 Provider、G-OPS、Hosted 后端与生产门槛仍未运行。本文件仅作历史计划和验收边界记录。
 
 目标依据：[最新架构](AisenFlow_Subscription_Billing_Architecture.md)；[设计差距](design.md)；[交接](agent-handoff.md)；[证据](verification-record.md)；[Afdian 调试参考](afdian-debug-reference.md)。
 

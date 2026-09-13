@@ -1,6 +1,6 @@
 # 目标设计入口与当前实现差距
 
-> 状态：Proposed。唯一目标依据为 [最新架构](AisenFlow_Subscription_Billing_Architecture.md)。
+> 状态：Archived proposal。唯一目标依据为 [最新架构](AisenFlow_Subscription_Billing_Architecture.md)；本文件仅作历史设计入口。
 
 本文件不再复制架构正文和旧34条冻结项；冲突必须回到唯一架构修订，再同步计划与消费者，不能在局部阶段偷偷选择另一套规则。
 
