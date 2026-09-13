@@ -566,6 +566,8 @@ export default function SubscriptionPage() {
           {!plansLoading && !plansError
             ? plans.map((plan) => {
                 const isCurrent = plan.code === currentPlan;
+                const lifetimeAlreadyOwned =
+                  plan.code === 'lifetime' && currentPlan === 'lifetime';
                 return (
                   <article
                     className={`consumer-subscription-card is-${plan.accent}${isCurrent ? ' is-current' : ''}`}
@@ -613,6 +615,7 @@ export default function SubscriptionPage() {
                       type="button"
                       disabled={
                         isCurrent ||
+                        lifetimeAlreadyOwned ||
                         Boolean(pendingPayment) ||
                         isCreatingCheckout ||
                         !plan.enabled ||
@@ -623,11 +626,13 @@ export default function SubscriptionPage() {
                     >
                       {isCreatingCheckout && !isCurrent
                         ? '创建中…'
-                        : isCurrent
-                          ? '当前使用中'
-                          : !plan.enabled || !plan.purchasable
-                            ? '暂未开放'
-                            : '选择方案'}
+                        : lifetimeAlreadyOwned
+                          ? '已购买'
+                          : isCurrent
+                            ? '当前使用中'
+                            : !plan.enabled || !plan.purchasable
+                              ? '暂未开放'
+                              : '选择方案'}
                     </button>
                   </article>
                 );
