@@ -1,6 +1,6 @@
 begin;
 
-select plan(44);
+select plan(45);
 
 select has_table('public', 'subscriptions', 'subscription projection exists');
 select has_table('public', 'subscription_grants', 'immutable grant ledger exists');
@@ -45,6 +45,7 @@ select ok(exists (select 1 from pg_index where indexrelid = 'public.subscription
 select ok(exists (select 1 from pg_index where indexrelid = 'public.subscription_one_reversal_per_grant'::regclass and indisunique), 'one reversal event per grant');
 select ok((select prosecdef from pg_proc where oid = 'private.entitlement_read(private.account_context)'::regprocedure), 'read is security definer');
 select ok((select array_to_string(proconfig, ',') like 'search_path=pg_catalog%' from pg_proc where oid = 'private.entitlement_read(private.account_context)'::regprocedure), 'read pins search_path');
+select ok((select pg_get_function_result('private.entitlement_read(private.account_context)'::regprocedure) like '%subscription_product_code%'), 'read exposes the effective subscription product');
 select ok(exists (select 1 from pg_policy where polrelid = 'public.subscriptions'::regclass and polname = 'subscriptions_domain_owner'), 'projection has domain owner policy');
 
 select * from finish();

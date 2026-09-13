@@ -158,6 +158,11 @@ export interface EntitlementDto {
   readonly effective_status: 'active' | 'none' | 'suspended';
   readonly entitlement_kind: 'free' | 'term' | 'perpetual' | 'none';
   readonly plan: PlanDto | null;
+  /** The concrete catalog product currently supplying this entitlement. */
+  readonly subscription_product: {
+    readonly code: 'free' | 'monthly' | 'yearly' | 'lifetime';
+    readonly name: string;
+  } | null;
   readonly features: Readonly<Record<string, unknown>>;
   readonly started_at: string | null;
   readonly current_period_end: string | null;

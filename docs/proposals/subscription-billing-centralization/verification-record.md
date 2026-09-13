@@ -323,3 +323,10 @@
 - 运行证据：staging `cron.job` 显示任务 `active=true`、schedule=`* * * * *`；连续观察到 `cron.job_run_details` 于 `11:28`、`11:29`、`11:30 UTC` 均为 `succeeded`，`net._http_response` 返回 HTTP 200、JSON、未超时。验证时没有待处理/可重试任务，因此本次证明的是自动调用链已接管，不新增虚构订单。
 - Supabase 安全审查仍提示 hosted `pg_net` 位于 `public` schema；尝试 `SET SCHEMA` 时平台返回该扩展不支持此操作，因此未保留不可部署的修复迁移。密码泄露保护与既有未覆盖外键索引告警未在本任务范围内修改，`net.http_post` 自动调用已由 staging HTTP 200 运行证据验证。
 - 本地 `pnpm exec supabase db reset --local --yes` PASS，BILL-16 迁移可从空库重放；仍需后续完成 staging 停机恢复、密钥轮换后的实际积压任务演练，以及生产 G-OPS 审批/告警配置。
+
+### Consumer 当前方案显示修复/2026-09-13/当前 Agent
+
+- 原因：`GET /v1/subscription` 原先只返回共用的权限 Plan（staging 为 `Aisentest Paid`），没有返回实际付款商品的期限，因此模板无法区分 Monthly/Yearly/Lifetime。
+- 新增 `20260913124532_bill_18_entitlement_subscription_product.sql`：Account API 的 entitlement 增加 `subscription_product`，由当前生效的 Billing Grant 关联 Checkout 商品得到；前端使用该字段设置当前卡片、标题和反馈文案，缺失时才回退到权限 Plan 名称。
+- 当前 staging 账户的生效商品经只读查询为 `monthly`；已付款但尚未开始的后续 Lifetime Grant 不会提前冒充当前方案，待其生效后页面自动显示 Lifetime。
+- BILL-18 迁移已应用 staging，`account-api` 已重新部署；本地数据库 718 条断言、Account API 30 tests、Domain 8 tests、模板 typecheck、OpenAPI 和文档检查均通过。

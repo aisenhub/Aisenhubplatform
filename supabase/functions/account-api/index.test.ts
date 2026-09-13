@@ -510,6 +510,8 @@ function fakeDatabase(
                 code: 'free',
                 name: 'Free',
                 description: null,
+                subscription_product_code: 'free',
+                subscription_product_name: 'Free',
                 features: { quota: 1 },
                 started_at: null,
                 current_period_end: null,
@@ -767,7 +769,12 @@ Deno.test('Account API maps an entitlement read to the stable DTO', async () => 
     },
   );
   assertEquals(response.status, 200);
-  assertEquals((await response.json()).data.entitlement_kind, 'free');
+  const entitlement = (await response.json()).data;
+  assertEquals(entitlement.entitlement_kind, 'free');
+  assertEquals(entitlement.subscription_product, {
+    code: 'free',
+    name: 'Free',
+  });
 });
 
 Deno.test('Account API sends current and previous redemption HMAC candidates atomically', async () => {

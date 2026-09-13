@@ -21,6 +21,10 @@ type Product = {
 type Entitlement = {
   effective_status: 'active' | 'none' | 'suspended';
   plan: { code: string; name: string } | null;
+  subscription_product: {
+    code: Product['code'];
+    name: string;
+  } | null;
 };
 
 type WorkspaceStatus =
@@ -172,13 +176,17 @@ export default function SubscriptionPage() {
 
   const refreshSubscription = useCallback(async () => {
     const entitlement = await api<Entitlement>('v1/subscription');
-    const planCode = entitlement.plan?.code ?? 'free';
+    const planCode = entitlement.subscription_product?.code ?? 'free';
+    const displayName =
+      entitlement.subscription_product?.name ??
+      entitlement.plan?.name ??
+      'Free';
     setCurrentPlan(planCode);
-    setCurrentPlanName(entitlement.plan?.name ?? 'Free');
+    setCurrentPlanName(displayName);
     setWorkspaceStatus('active');
     setFeedback(
       entitlement.effective_status === 'active'
-        ? `服务端已确认 · ${entitlement.plan?.name ?? '当前方案'}`
+        ? `服务端已确认 · ${displayName}`
         : entitlement.effective_status === 'suspended'
           ? '账户已暂停，权益不再生效'
           : '当前使用免费版',

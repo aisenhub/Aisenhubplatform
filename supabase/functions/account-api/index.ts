@@ -831,6 +831,7 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 
 function entitlementDto(row: Row) {
   const code = stringValue(row.code);
+  const subscriptionProductCode = stringValue(row.subscription_product_code);
   return {
     effective_status: stringValue(row.effective_status) ?? 'none',
     entitlement_kind: stringValue(row.entitlement_kind) ?? 'none',
@@ -841,6 +842,14 @@ function entitlementDto(row: Row) {
           description: stringValue(row.description),
           kind: stringValue(row.entitlement_kind) === 'free' ? 'free' : 'paid',
           features: objectValue(row.features),
+        }
+      : null,
+    subscription_product: subscriptionProductCode
+      ? {
+          code: subscriptionProductCode,
+          name:
+            stringValue(row.subscription_product_name) ??
+            subscriptionProductCode,
         }
       : null,
     features: objectValue(row.features),

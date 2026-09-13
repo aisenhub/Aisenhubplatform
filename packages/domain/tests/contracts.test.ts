@@ -48,6 +48,7 @@ describe('domain contract boundary', () => {
       effective_status: 'none',
       entitlement_kind: 'none',
       plan: null,
+      subscription_product: null,
       features: {},
       started_at: null,
       current_period_end: null,
