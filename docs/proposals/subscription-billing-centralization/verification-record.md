@@ -266,7 +266,7 @@
 - Monthly `9.90 CNY`：普通订阅，`product_type=0`，`purchase_months=1`，当前 mapping version 2；旧售卖商品映射已停用。
 - Yearly `39.90 CNY`：普通订阅，`product_type=0`，`purchase_months=12`，当前 mapping version 2；旧售卖商品映射已停用。
 - Lifetime `49.90 CNY`：售卖商品，`product_type=1`，SKU 集合为一个 SKU，期限由本地合同固定为有限 99 年，当前 mapping version 1。
-- 所有当前映射均为 CNY、无优惠、已发布并启用；映射值来自用户提供的公开付款链接。月度映射已完成真实 staging Provider round-trip 验收，年度与永久方案仍待分别验收。
+- 所有正式映射均为 CNY、无优惠、已发布并启用；映射值来自用户提供的公开付款链接。月度映射与 Lifetime staging 临时价已完成 Provider round-trip 验收，年度方案仍待验收。
 
 ### Consumer 模板付款入口/2026-09-12/当前 Agent
 
@@ -287,7 +287,8 @@
 - 权益投影已核对：`Aisentest Paid` 订阅为 `active`，月度有效期从付款时间起至一个月后；`subscription_grants.source=billing_order` 且存在 `granted` 事件。期间 staging Maintenance job token 已轮换用于手动恢复并运行 Worker，真实 Secret 未写入仓库；生产未操作。
 - 为恢复这条因旧 Provider 解析器进入 `manual_review` 的测试任务，新增了仅允许 `PROVIDER_RESPONSE_INVALID` 的受保护 requeue 运维边界；同时统一 Maintenance 的 `jsonb` 参数绑定，避免结算阶段的 `settlement_invalid_input`。相关迁移与函数已部署 staging。
 - 为降低本轮 staging 真实付款成本，Lifetime 暂时切换为 `1.00 CNY`（商品 `price_version=3`、映射 `mapping_version=2`）；原 `49.90 CNY` 映射保留但停用，生产正式价格未变。永久方案验收结束后应恢复 staging 正式价格并重新发布对应映射。
-- 已通过模板类型检查、仓库 `pnpm lint`、`git diff --check`，并验证本地 `/login` 与 `/subscription` 可返回 HTTP 200；本节 staging 真实付款、Webhook、`query-order` 和权益结算验收已完成，后续只需配置正式环境前的 G-PROVIDER/G-OPS 审批与生产 Secret 注入。
+- Lifetime 临时价 round-trip 也已完成：订单为 `1.00 CNY`、`paid`、`verified`，Checkout 与权益均为 `granted`；现有月度 Grant 结束后接续 Lifetime 的有限 99 年 Grant，订阅投影有效期至 2125 年。结算直接完成 job 时曾遗漏 Webhook 事件收尾，已通过 BILL-15 触发器修复并回填为 `processed`。
+- 已通过模板类型检查、仓库 `pnpm lint`、`git diff --check`，并验证本地 `/login` 与 `/subscription` 可返回 HTTP 200；本节 staging 月度与 Lifetime 真实付款、Webhook、`query-order` 和权益结算验收已完成，后续只需年度方案验收、正式环境 G-PROVIDER/G-OPS 审批与生产 Secret 注入。
 
 ### Afdian 接入方式选型与 Webhook 签名/2026-09-12/当前 Agent
 
