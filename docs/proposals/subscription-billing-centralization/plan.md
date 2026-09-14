@@ -1,6 +1,6 @@
 # 订阅支付审查修复总计划
 
-状态：**执行中**。TASK-0001 已完成本地基线冻结，TASK-0002 完成本地静态门槛审查，TASK-0101/0103、TASK-0301～0306、TASK-0402、TASK-0601/0603/0605/0609 已完成本地实现或回归；Hosted 配置、Provider、Staging、生产和真实支付仍未完成。计划完整不代表功能完成。
+状态：**执行中**。TASK-0001 已完成本地基线冻结，TASK-0002 完成本地静态门槛审查，TASK-0702 已完成本地 forward-fix 与回归，TASK-0101/0103、TASK-0301～0306、TASK-0402、TASK-0601/0603/0605/0609 已完成本地实现或回归；Hosted 配置、Provider、Staging、生产和真实支付仍未完成。计划完整不代表功能完成。
 
 本文件是本次修复的唯一总计划。[问题唯一清单](repair-issues.md) · [全部矩阵](repair-matrices.md) · [设计与不变量](design.md) · [Agent入口](agent-handoff.md) · [验证记录模板](verification-record.md)。
 

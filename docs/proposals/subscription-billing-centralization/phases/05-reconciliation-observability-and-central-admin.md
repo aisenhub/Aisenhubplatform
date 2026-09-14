@@ -2,7 +2,7 @@
 
 ## 1. 阶段名称和状态
 
-状态：Proposed／计划中；本轮只制定计划，所有修复实现未开始。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
+状态：In Progress；TASK-0702 已完成本地 forward-fix 与 Local 回归，TASK-0701/0703～0706 仍未开始或受前置门槛影响。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
 
 ## 2. 阶段目标
 
@@ -137,7 +137,7 @@ RC-03；退款差异依赖RC-04；无需等UI完成可先执行。每个任务�
 - 影响范围：F14；cron/观测。
 - 前置依赖：TASK-0002,TASK-0302,TASK-0303。每个前置交付必须核对源码和实际证据，不只检查任务状态文字。
 - 变更目录：`supabase/functions/maintenance`、`supabase`、`docs/reference`；`supabase/migrations`（仅新增）。
-- 变更文件：`supabase/functions/maintenance/index.ts`、`supabase/functions/maintenance/schedule.json`、`supabase/functions/maintenance/index.test.ts`、`supabase/config.toml`、`docs/reference/configuration.md`。历史迁移仅作只读定义来源，不可修改：`supabase/migrations/20260913112306_bill_16_billing_worker_cron.sql`。
+- 变更文件：`supabase/migrations/20260914081243_repair_task_0702.sql`、`supabase/tests/repair_task_0702_billing_worker_cron.sql`、`supabase/tests/t09_security_helpers.sql`、`docs/reference/configuration.md`、`docs/guides/operations.md`。历史迁移仅作只读定义来源，不可修改：`supabase/migrations/20260913112306_bill_16_billing_worker_cron.sql`；maintenance 运行接口和 `schedule.json` 保持不变。
 - 是否涉及数据库迁移：是；候选 migration slug `repair_task_0702`，用固定CLI生成真实时间戳，列出最终函数及约束diff后方可执行。
 - 是否涉及公共合同：本任务不改运行接口；核对并消费前置已冻结合同，不增加第二定义。
 - 是否涉及 Consumer UI：不直接修改；通过后续对应任务验收。
@@ -152,7 +152,7 @@ RC-03；退款差异依赖RC-04；无需等UI完成可先执行。每个任务�
 - 并发/重试/恢复测试：用例标识建议 `TASK-0702-REC`；每分钟重叠批次、密钥错配、禁用/恢复期间已有Job接管。真并发使用至少两连接/两进程；mock不能替代租约接管或事务并发证明。
 - 用户体验验收：后端任务：以对应Consumer任务验证，不在本任务新增页面；用户不能看到虚假成功。
 - 管理员操作验收：后端任务：保留可追溯的错误/操作ID，由对应Admin任务呈现；不得任意写表。
-- 验收命令：下列为未来实施验收入口，本轮均未作为业务验证运行；先增加上述具名用例并核对runner覆盖，不能只运行旧套件计通过。环境守卫与类别见第13节。
+- 验收命令：本轮已执行 Local 迁移、SQL、Worker、合同、文档和类型检查；Hosted HTTP/pg_net/恢复演练仍需独立环境证据，不能由 Local 结果替代。
 
 - `pnpm test:db`
 - `pnpm run test:sql:bill-05-concurrency`
@@ -165,7 +165,7 @@ RC-03；退款差异依赖RC-04；无需等UI完成可先执行。每个任务�
 
 - 预期结果：记录scheduler调用、受理和业务完成三层结果，processing可恢复；不随意放开verify_jwt以过网关。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
 - 回滚方式：采用expand-first；停止本任务新动作/必要时关闭新购买，继续保存已付款入站；回退到兼容且不含已知漏洞的应用版本，保留新增表/列/Order/Grant/幂等及审计，另发forward-fix。不得down删除账本或重写旧迁移。
-- 完成状态：未开始；实施测试状态NOT_RUN。
+- 完成状态：本地实现完成；Local PASS（49 个 SQL 文件、920 个断言；maintenance 15/15；contracts/docs/typecheck PASS）；Hosted 配置、真实 HTTP/pg_net、超时和恢复演练仍 BLOCKED/NOT_RUN。
 
 <a id="task-0703"></a>
 ### TASK-0703：建立积压失联与资金权益差异告警

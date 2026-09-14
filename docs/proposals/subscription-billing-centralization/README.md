@@ -1,6 +1,6 @@
 # 订阅支付审查修复计划
 
-状态：执行中（TASK-0001 基线冻结、TASK-0101/0103、TASK-0301～0306、TASK-0402、TASK-0601/0603/0605/0609 已完成本地实现或回归；TASK-0002 完成本地静态门槛审查）。其余F01–F17任务仍按依赖推进，不能以本地结果宣称阶段或生产完成。旧方案在编写期间由外部提交归档，见[历史资料](../../archive/subscription-billing-centralization/README.md)；不恢复、不重写、不复制其验证结果。
+状态：执行中（TASK-0001 基线冻结、TASK-0002 本地静态审查及 TASK-0702 本地 forward-fix、TASK-0101/0103、TASK-0301～0306、TASK-0402、TASK-0601/0603/0605/0609 已完成本地实现或回归）。Hosted 配置、Provider、Staging、生产和真实支付仍按验证记录处理；不能以本地结果宣称阶段或生产完成。旧方案在编写期间由外部提交归档，见[历史资料](../../archive/subscription-billing-centralization/README.md)；不恢复、不重写、不复制其验证结果。
 
 - [唯一修复总计划](plan.md)
 - [问题总表](repair-issues.md)

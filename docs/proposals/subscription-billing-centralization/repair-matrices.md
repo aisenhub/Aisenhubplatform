@@ -74,7 +74,7 @@
 | [TASK-0613](phases/08-admin-billing-repair.md#task-0613) | RC-06 | TASK-0404,TASK-0405,TASK-0610 | F16 | 未开始 |
 | [TASK-0614](phases/08-admin-billing-repair.md#task-0614) | RC-06 | TASK-0701,TASK-0703,TASK-0605,TASK-0606 | F06,F11,F14 | 未开始 |
 | [TASK-0701](phases/05-reconciliation-observability-and-central-admin.md#task-0701) | RC-07 | TASK-0301,TASK-0302,TASK-0304,TASK-0201 | F06,F12 | 未开始 |
-| [TASK-0702](phases/05-reconciliation-observability-and-central-admin.md#task-0702) | RC-07 | TASK-0002,TASK-0302,TASK-0303 | F14 | 未开始 |
+| [TASK-0702](phases/05-reconciliation-observability-and-central-admin.md#task-0702) | RC-07 | TASK-0002,TASK-0302,TASK-0303 | F14 | 本地 forward-fix 与回归 PASS；Hosted HTTP/pg_net/恢复待验证 |
 | [TASK-0703](phases/05-reconciliation-observability-and-central-admin.md#task-0703) | RC-07 | TASK-0701,TASK-0702,TASK-0402 | F14,F06,F03 | 未开始 |
 | [TASK-0704](phases/05-reconciliation-observability-and-central-admin.md#task-0704) | RC-07 | TASK-0702,TASK-0404,TASK-0305 | F13,F14,F16,F17 | 未开始 |
 | [TASK-0705](phases/05-reconciliation-observability-and-central-admin.md#task-0705) | RC-07 | TASK-0002,TASK-0702 | F14,F17 | 未开始 |

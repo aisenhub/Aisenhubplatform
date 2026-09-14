@@ -69,6 +69,15 @@
 | AFDIAN_API_BASE_URL | 可选；默认 `https://afdian.com/api/open`，staging 可指向测试代理 |
 | AFDIAN_API_TIMEOUT_MS | 可选；Provider API 超时毫秒数，默认 5000 |
 
+Hosted Billing 调度只从 Vault 读取两个运行时 Secret：
+
+| Vault name | 约束 |
+| --- | --- |
+| `billing_maintenance_function_url` | 必须是 HTTPS maintenance 函数基址，路径以 `/maintenance` 结尾；系统规范化后只调用 `/maintenance/v1/billing/jobs/run`，拒绝缺少 maintenance 路径、query 或 fragment 的值 |
+| `billing_maintenance_job_token` | 仅用于 maintenance Bearer 鉴权；缺失或空值时 Cron 记录 `MISSING_RUNTIME_CONFIG` 并安全跳过，不把 Secret 写入日志或调度记录 |
+
+Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 个任务。`private.billing_cron_invocations` 分开记录 scheduler 调用、请求受理、HTTP 完成和 Worker 业务结果；该表不是 Data API 消费者入口，响应摘要只保留计数和非敏感错误码。
+
 ## Consumer 模板
 
 `apps/template-preview` 是 `aisentest` 的 Consumer BFF 模板。模板服务端需要配置：

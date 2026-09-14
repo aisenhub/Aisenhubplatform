@@ -149,6 +149,19 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 - 未完成/阻塞/责任人/下一任务：待填写
 - Commit与push：TASK-0301/0302 提交 `96b0a1c`、TASK-0304 提交 `8fe03a0` 已推送到工作分支；`origin/main` 与工作分支均核对为 `8fe03a0`。
 
+## 追加实施记录（2026-09-14，TASK-0702）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0702：修正 Billing Cron 路由契约、请求受理/HTTP完成/Worker业务结果观测和有界保留；不修改已应用 BILL-16，不放开 verify_jwt，不连接 Hosted Vault/真实 Provider。 |
+| 起始与归属 | 分支 `codex/billing-architecture-review`；起始 HEAD `68e6799`；保留工作区已有 AGENTS/架构/指南和架构评审产物，不纳入本任务。 |
+| 实际变更 | 新增 `20260914081243_repair_task_0702.sql`：规范化 `/maintenance/v1/billing/jobs/run`，拒绝错误基址、query/fragment 和缺失运行 Secret；记录 scheduler skip/queue failure、pg_net request id、HTTP状态/超时、处理数量/失败数量和脱敏错误码；响应历史保留30天。新增 `repair_task_0702_billing_worker_cron.sql` 覆盖路径、权限、RLS、响应成功/失败/超时；同步安全测试、配置和运维文档。 |
+| 数据库验证 | `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：49 个 SQL 文件、920 个断言。新增任务用例通过；RLS 数量回归由14同步为15。 |
+| Worker/静态验证 | `pnpm test:maintenance` PASS：15/15；`pnpm contracts:check` PASS（account=21、admin=44；4 contracts/39 fields）；`pnpm docs:check` PASS（64 documents）；`pnpm typecheck` PASS（9/9）；`git diff --check` PASS。 |
+| 外部环境 | Hosted Vault、真实 pg_cron/pg_net HTTP、网关路径、401/404/503、超时、重叠批次、Secret 轮换、告警和恢复演练：NOT_RUN；不能以 Local 结果代替。 |
+| 结论 | TASK-0702 Local 实现及回归 PASS；G-OPS 和 Staging 门槛仍未完成，下一项可独立任务为 TASK-0703，但其告警实现需明确阈值、接收人和 Hosted 证据。 |
+| Commit与push | 本记录随 TASK-0702 代码变更待提交；未将未授权的 Hosted/生产状态写成完成。 |
+
 ## 外部门槛
 
 | 门槛 | 当前结果 | 所需证据 |
