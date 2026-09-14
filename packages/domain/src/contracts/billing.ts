@@ -11,6 +11,119 @@ export const BILLING_PRODUCT_CODES = [
 
 export type BillingProductCode = (typeof BILLING_PRODUCT_CODES)[number];
 
+/**
+ * These values mirror the persisted billing state machines. Keep observation,
+ * processing, and entitlement decisions separate: an unknown provider value
+ * must never be coerced into a negative business result.
+ */
+export const BILLING_CHECKOUT_STATUSES = [
+  'pending',
+  'expired',
+  'paid',
+  'verified',
+  'granted',
+  'review_required',
+  'resolved',
+] as const;
+
+export type BillingCheckoutStatus = (typeof BILLING_CHECKOUT_STATUSES)[number];
+
+export const BILLING_VERIFICATION_STATUSES = [
+  'unverified',
+  'verified',
+  'rejected',
+] as const;
+
+export type BillingVerificationStatus =
+  (typeof BILLING_VERIFICATION_STATUSES)[number];
+
+export const BILLING_ENTITLEMENT_STATUSES = [
+  'not_started',
+  'blocked',
+  'granted',
+  'rejected',
+] as const;
+
+export type BillingEntitlementStatus =
+  (typeof BILLING_ENTITLEMENT_STATUSES)[number];
+
+export const BILLING_LINKAGE_STATUSES = [
+  'unlinked',
+  'linked',
+  'ambiguous',
+] as const;
+
+export type BillingLinkageStatus = (typeof BILLING_LINKAGE_STATUSES)[number];
+
+export const BILLING_RESOLUTION_STATUSES = ['open', 'resolved'] as const;
+
+export type BillingResolutionStatus =
+  (typeof BILLING_RESOLUTION_STATUSES)[number];
+
+export const BILLING_WEBHOOK_PROCESSING_STATUSES = [
+  'received',
+  'queued',
+  'processing',
+  'processed',
+  'retryable',
+  'manual_review',
+] as const;
+
+export type BillingWebhookProcessingStatus =
+  (typeof BILLING_WEBHOOK_PROCESSING_STATUSES)[number];
+
+export const BILLING_JOB_STATES = [
+  'pending',
+  'processing',
+  'retryable',
+  'completed',
+  'manual_review',
+] as const;
+
+export type BillingJobState = (typeof BILLING_JOB_STATES)[number];
+
+/** State stored by billing_settlements.state. */
+export const BILLING_SETTLEMENT_RECORD_STATES = [
+  'retryable',
+  'blocked',
+  'review_required',
+  'finalized',
+] as const;
+
+export type BillingSettlementRecordState =
+  (typeof BILLING_SETTLEMENT_RECORD_STATES)[number];
+
+export const BILLING_SETTLEMENT_KINDS = [
+  'automatic',
+  'manual',
+  'correction',
+] as const;
+
+export type BillingSettlementKind = (typeof BILLING_SETTLEMENT_KINDS)[number];
+
+export const BILLING_ERROR_CODES = [
+  'INVALID_INPUT',
+  'PROVIDER_NOT_PAID',
+  'PROVIDER_UNAVAILABLE',
+  'PROVIDER_ORDER_NOT_FOUND',
+  'PROVIDER_TIMEOUT',
+  'PROVIDER_RATE_LIMITED',
+  'PROVIDER_RESPONSE_INVALID',
+  'CONTRACT_CONFLICT',
+  'DUPLICATE_PAYMENT',
+  'UNLINKED_ORDER',
+  'PLAN_CONFLICT',
+  'ALREADY_PERPETUAL',
+  'ACCOUNT_NOT_ACTIVE',
+  'PLAN_UNAVAILABLE',
+  'FENCE_CONFLICT',
+  'JOB_ORDER_CONFLICT',
+  'RETRY_BUDGET_EXHAUSTED',
+  'RESOURCE_NOT_FOUND',
+] as const;
+
+export type BillingErrorCode = (typeof BILLING_ERROR_CODES)[number];
+
 export type BillingTermKind = 'free' | 'finite';
 export type BillingDurationUnit = 'month' | 'year';
 
@@ -97,6 +210,78 @@ export function toMoneyAmount(value: string): MoneyAmount | null {
 
 export type ProviderOrderStatus = 'unknown' | 'pending' | 'paid' | 'failed';
 
+const BILLING_CHECKOUT_STATUS_SET = new Set<string>(BILLING_CHECKOUT_STATUSES);
+const BILLING_VERIFICATION_STATUS_SET = new Set<string>(
+  BILLING_VERIFICATION_STATUSES,
+);
+const BILLING_ENTITLEMENT_STATUS_SET = new Set<string>(
+  BILLING_ENTITLEMENT_STATUSES,
+);
+const BILLING_LINKAGE_STATUS_SET = new Set<string>(BILLING_LINKAGE_STATUSES);
+const BILLING_RESOLUTION_STATUS_SET = new Set<string>(
+  BILLING_RESOLUTION_STATUSES,
+);
+const BILLING_WEBHOOK_PROCESSING_STATUS_SET = new Set<string>(
+  BILLING_WEBHOOK_PROCESSING_STATUSES,
+);
+const BILLING_JOB_STATE_SET = new Set<string>(BILLING_JOB_STATES);
+const BILLING_SETTLEMENT_RECORD_STATE_SET = new Set<string>(
+  BILLING_SETTLEMENT_RECORD_STATES,
+);
+
+export function isBillingCheckoutStatus(
+  value: unknown,
+): value is BillingCheckoutStatus {
+  return typeof value === 'string' && BILLING_CHECKOUT_STATUS_SET.has(value);
+}
+
+export function isBillingVerificationStatus(
+  value: unknown,
+): value is BillingVerificationStatus {
+  return (
+    typeof value === 'string' && BILLING_VERIFICATION_STATUS_SET.has(value)
+  );
+}
+
+export function isBillingEntitlementStatus(
+  value: unknown,
+): value is BillingEntitlementStatus {
+  return typeof value === 'string' && BILLING_ENTITLEMENT_STATUS_SET.has(value);
+}
+
+export function isBillingLinkageStatus(
+  value: unknown,
+): value is BillingLinkageStatus {
+  return typeof value === 'string' && BILLING_LINKAGE_STATUS_SET.has(value);
+}
+
+export function isBillingResolutionStatus(
+  value: unknown,
+): value is BillingResolutionStatus {
+  return typeof value === 'string' && BILLING_RESOLUTION_STATUS_SET.has(value);
+}
+
+export function isBillingWebhookProcessingStatus(
+  value: unknown,
+): value is BillingWebhookProcessingStatus {
+  return (
+    typeof value === 'string' &&
+    BILLING_WEBHOOK_PROCESSING_STATUS_SET.has(value)
+  );
+}
+
+export function isBillingJobState(value: unknown): value is BillingJobState {
+  return typeof value === 'string' && BILLING_JOB_STATE_SET.has(value);
+}
+
+export function isBillingSettlementRecordState(
+  value: unknown,
+): value is BillingSettlementRecordState {
+  return (
+    typeof value === 'string' && BILLING_SETTLEMENT_RECORD_STATE_SET.has(value)
+  );
+}
+
 export interface ProviderSkuItemDto {
   readonly external_sku_id: string;
   readonly quantity: number;
@@ -182,6 +367,20 @@ export const BILLING_ADMIN_ORDER_STATUSES = [
 
 export type BillingAdminOrderStatus =
   (typeof BILLING_ADMIN_ORDER_STATUSES)[number];
+
+/**
+ * The order projection is intentionally a product of independent state
+ * machines. Consumers must not infer settlement or entitlement from one
+ * provider status field.
+ */
+export interface BillingOrderStatusProjectionDto {
+  readonly provider_status: ProviderOrderStatus;
+  readonly verification_status: BillingVerificationStatus;
+  readonly entitlement_status: BillingEntitlementStatus;
+  readonly linkage_status: BillingLinkageStatus;
+  readonly resolution_status: BillingResolutionStatus;
+  readonly settlement_state: BillingSettlementRecordState | null;
+}
 
 export const BILLING_JOB_ERROR_CLASSES = [
   'provider',

@@ -885,6 +885,44 @@
           }
         }
       },
+      "BillingOrderStatusProjection": {
+        "type": "object",
+        "required": [
+          "provider_status",
+          "verification_status",
+          "entitlement_status",
+          "linkage_status",
+          "resolution_status",
+          "settlement_state"
+        ],
+        "properties": {
+          "provider_status": {
+            "type": "string",
+            "enum": ["unknown", "pending", "paid", "failed"]
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": ["unverified", "verified", "rejected"]
+          },
+          "entitlement_status": {
+            "type": "string",
+            "enum": ["not_started", "blocked", "granted", "rejected"]
+          },
+          "linkage_status": {
+            "type": "string",
+            "enum": ["unlinked", "linked", "ambiguous"]
+          },
+          "resolution_status": {
+            "type": "string",
+            "enum": ["open", "resolved"]
+          },
+          "settlement_state": {
+            "type": ["string", "null"],
+            "enum": ["retryable", "blocked", "review_required", "finalized", null]
+          }
+        },
+        "additionalProperties": false
+      },
       "ErrorEnvelope": {
         "type": "object",
         "required": ["error", "request_id"],

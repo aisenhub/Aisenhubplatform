@@ -1,3 +1,5 @@
+import type { BillingCheckoutStatus } from './billing.ts';
+
 export type ApiErrorCode =
   | 'INVALID_INPUT'
   | 'UPLOAD_SIZE_MISMATCH'
@@ -128,14 +130,8 @@ export interface SubscriptionConfigDto {
   readonly preflight_blocking_count: number;
 }
 
-export type SubscriptionCheckoutStatus =
-  | 'pending'
-  | 'expired'
-  | 'paid'
-  | 'verified'
-  | 'granted'
-  | 'review_required'
-  | 'resolved';
+/** Backward-compatible API name; the state source is the billing contract. */
+export type SubscriptionCheckoutStatus = BillingCheckoutStatus;
 
 export interface SubscriptionCheckoutDto {
   readonly checkout_id: string;

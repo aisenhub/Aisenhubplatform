@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BILLING_CHECKOUT_STATUSES,
+  BILLING_JOB_STATES,
+  BILLING_SETTLEMENT_RECORD_STATES,
   BILLING_PRODUCT_SPECS,
   classifyBillingJobFailure,
   getBillingProductSpec,
+  isBillingCheckoutStatus,
+  isBillingJobState,
+  isBillingSettlementRecordState,
+  isBillingVerificationStatus,
   isFinalBillingSettlementState,
   isMoneyAmount,
   isProviderOrderSnapshot,
@@ -21,6 +28,33 @@ import {
 } from '../src/redemption.ts';
 
 describe('billing contract foundation', () => {
+  it('keeps independent persisted state machines explicit and fail-closed', () => {
+    expect(BILLING_CHECKOUT_STATUSES).toEqual([
+      'pending',
+      'expired',
+      'paid',
+      'verified',
+      'granted',
+      'review_required',
+      'resolved',
+    ]);
+    expect(BILLING_JOB_STATES).toContain('manual_review');
+    expect(BILLING_SETTLEMENT_RECORD_STATES).toEqual([
+      'retryable',
+      'blocked',
+      'review_required',
+      'finalized',
+    ]);
+    expect(isBillingCheckoutStatus('active')).toBe(false);
+    expect(isBillingCheckoutStatus('paid')).toBe(true);
+    expect(isBillingVerificationStatus('unknown')).toBe(false);
+    expect(isBillingVerificationStatus('verified')).toBe(true);
+    expect(isBillingJobState('failed')).toBe(false);
+    expect(isBillingJobState('retryable')).toBe(true);
+    expect(isBillingSettlementRecordState('granted')).toBe(false);
+    expect(isBillingSettlementRecordState('finalized')).toBe(true);
+  });
+
   it('freezes the four product terms without embedding prices', () => {
     expect(BILLING_PRODUCT_SPECS).toEqual({
       free: {
