@@ -172,6 +172,18 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | Hosted/Staging/Production | 函数部署、网关前缀、verify_jwt、executor 角色、Vault Secret、实际 Cron 安装、告警和恢复：NOT_RUN。 |
 | 结论 | TASK-0705 静态调用方准备完成；完整任务仍需环境证据，不能关闭 F14/F17。 |
 
+## 追加实施记录（2026-09-14，TASK-0602 Local 边界回归与 forward-fix）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0602 的 Local 权限负例、中央 Admin wrapper 边界和跨平台 Checkout 隔离；不新增租户管理员模型，不执行 Hosted/Provider/真实支付或生产配置变更。 |
+| 实际变更 | 使用固定 Supabase CLI 2.111.0 生成 `supabase/migrations/20260914085126_repair_task_0602.sql`；forward-fix 限定 `subscription_checkout_read_v2` 的 `facts.expires_at` 和最终投影列，修复 PL/pgSQL `RETURNS TABLE` 输出变量遮蔽导致的 Checkout 读取异常。新增 `supabase/tests/repair_task_0602_admin_boundary.sql`，覆盖 wrapper 权限、直接表访问、强制 RLS、伪造 Admin context、同一用户跨平台读取和错误 Platform Key。 |
+| 失败证据与修复 | 首次专项测试真实触发 `column reference "expires_at" is ambiguous`，随后又触发未限定 `product_code` 的同类遮蔽；未删除失败用例，forward-fix 对所有最终投影列显式限定来源。 |
+| 数据库验证 | `pnpm db:reset -- --yes` 最终完成迁移；`pnpm test:db` PASS：50 个 SQL 文件、941 个断言；新增专项测试 21/21 PASS。中途一次 reset 因 Storage 容器健康检查未就绪失败，容器恢复 healthy 后未改变结论。 |
+| 边界结论 | Local 已证明 account executor/job executor 不能调用中央 Billing Admin wrapper，Admin executor 无直接 Billing 表读写权限，伪造 context 被拒绝，同一用户不能跨平台读取 Checkout；未证明 Hosted 角色、真实 HTTP、撤销会话/在途操作和 Admin 浏览器 E2E。 |
+| 未完成/阻塞 | 前置 TASK-0102 的生命周期策略 D1/D2/D3 仍待业务确认；Hosted/Staging 权限、迁移、Admin E2E、双会话并发恢复和发布门槛仍为 NOT_RUN。TASK-0602 不关闭为完整 PASS。 |
+| Commit与push | 本记录随 TASK-0602 变更提交到 `codex/billing-architecture-review` 前复核；因 R3 Hosted/Staging 门槛未完成，不合并 `main`。 |
+
 ## 外部门槛
 
 | 门槛 | 当前结果 | 所需证据 |

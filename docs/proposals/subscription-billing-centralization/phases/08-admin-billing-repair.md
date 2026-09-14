@@ -2,7 +2,7 @@
 
 ## 1. 阶段名称和状态
 
-状态：Proposed／计划中；本轮只制定计划，所有修复实现未开始。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
+状态：In Progress；TASK-0601、TASK-0603、TASK-0605、TASK-0609 已完成本地实现或回归，TASK-0602 已完成本地权限与跨平台隔离回归及 forward-fix；TASK-0604、0606～0608、0610～0614 仍未开始或受前置策略/环境门槛影响。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
 
 ## 2. 阶段目标
 
@@ -159,7 +159,7 @@ RC-03/RC-04；积压视图依赖TASK-0703。每个任务的前置比阶段概述
 - 影响范围：F11,F17；Admin检索、环境/CI/备份/文档。
 - 前置依赖：TASK-0102,TASK-0601。每个前置交付必须核对源码和实际证据，不只检查任务状态文字。
 - 变更目录：`apps/admin/features/billing`、`apps/admin/app/api/v1/[...path]`、`tests/spikes/e2e`、`supabase/functions/account-api`、`supabase/tests`；`supabase/migrations`（仅新增）。
-- 变更文件：`apps/admin/features/billing/central-billing-page.tsx`、`apps/admin/app/api/v1/[...path]/route.ts`、`tests/spikes/e2e/t12-r2-admin.mjs`、`supabase/functions/account-api/index.ts`、`supabase/tests/t10_role_negative.sql`、`supabase/tests/t13_platform_key_principal.sql`。历史迁移仅作只读定义来源，不可修改：`supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql`。
+- 变更文件：`supabase/migrations/20260914085126_repair_task_0602.sql`、`supabase/tests/repair_task_0602_admin_boundary.sql`。本地回归未改变 Admin 页面、BFF 或公共合同；历史迁移和 TASK-0306 原迁移仅作只读定义来源，不可修改：`supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql`、`supabase/migrations/20260914052934_repair_task_0306.sql`。
 - 是否涉及数据库迁移：是；候选 migration slug `repair_task_0602`，用固定CLI生成真实时间戳，列出最终函数及约束diff后方可执行。
 - 是否涉及公共合同：是；逐字段同步SQL返回、Edge、OpenAPI、DTO、SDK/BFF及测试，详见影响矩阵。
 - 是否涉及 Consumer UI：不直接修改；通过后续对应任务验收。
@@ -174,7 +174,7 @@ RC-03/RC-04；积压视图依赖TASK-0703。每个任务的前置比阶段概述
 - 并发/重试/恢复测试：用例标识建议 `TASK-0602-REC`；权限撤销/Session退出与在途重查、双会话跨账户operation重用。真并发使用至少两连接/两进程；mock不能替代租约接管或事务并发证明。
 - 用户体验验收：跨平台用户404且不泄露存在性。
 - 管理员操作验收：全局管理员过滤准确，非管理员不可见。
-- 验收命令：下列为未来实施验收入口，本轮均未作为业务验证运行；先增加上述具名用例并核对runner覆盖，不能只运行旧套件计通过。环境守卫与类别见第13节。
+- 验收命令：本轮已增加具名 `TASK-0602-NEG` 用例并执行 Local SQL/RLS 回归；Hosted/Admin E2E/真实并发和策略依赖仍按门槛记录为 NOT_RUN。环境守卫与类别见第13节。
 
 - `pnpm test:db`
 - `pnpm run test:sql:bill-05-concurrency`
@@ -185,9 +185,10 @@ RC-03/RC-04；积压视图依赖TASK-0703。每个任务的前置比阶段概述
 - `pnpm contracts:check`
 - `git diff --check`
 
-- 预期结果：中央可见与用户隔离分开证明，无新增租户角色或宽RLS。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
+- 实际结果：`repair_task_0602_admin_boundary.sql` 覆盖 Admin wrapper 权限、直接表访问、强制 RLS、伪造 `admin_context`、同一用户跨平台 Checkout 读取和错误 Platform Key；同时发现并通过 forward-fix 修复 TASK-0306 `subscription_checkout_read_v2` 中未限定 `expires_at`/投影字段导致的 PL/pgSQL 名称遮蔽。全量 `pnpm test:db` 通过 50 个 SQL 文件、941 个断言，专项测试 21/21 通过。
+- 预期结果：中央可见与用户隔离分开证明，无新增租户角色或宽RLS。Local 负例和回归已通过；TASK-0102 生命周期策略、Hosted 权限、Admin E2E、双会话撤销/在途操作和 Staging 仍未完成。
 - 回滚方式：采用expand-first；停止本任务新动作/必要时关闭新购买，继续保存已付款入站；回退到兼容且不含已知漏洞的应用版本，保留新增表/列/Order/Grant/幂等及审计，另发forward-fix。不得down删除账本或重写旧迁移。
-- 完成状态：未开始；实施测试状态NOT_RUN。
+- 完成状态：Local 权限/跨平台隔离回归及 forward-fix 完成；完整任务仍 BLOCKED/NOT_RUN（TASK-0102、Hosted/Staging、Admin E2E 和恢复并发证据待完成）。
 
 <a id="task-0603"></a>
 ### TASK-0603：聚合订单详情和完整证据时间线

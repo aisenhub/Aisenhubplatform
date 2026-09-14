@@ -60,7 +60,7 @@
 | [TASK-0511](phases/06-consumer-sdk-and-reference-template.md#task-0511) | RC-05 | TASK-0505,TASK-0506 | F15 | 未开始 |
 | [TASK-0512](phases/06-consumer-sdk-and-reference-template.md#task-0512) | RC-05 | TASK-0502,TASK-0508,TASK-0404 | F13,F15,F16 | 未开始 |
 | [TASK-0601](phases/08-admin-billing-repair.md#task-0601) | RC-06 | TASK-0101,TASK-0304 | F11 | 本地实现及回归PASS；外部门槛待验证 |
-| [TASK-0602](phases/08-admin-billing-repair.md#task-0602) | RC-06 | TASK-0102,TASK-0601 | F11,F17 | 未开始 |
+| [TASK-0602](phases/08-admin-billing-repair.md#task-0602) | RC-06 | TASK-0102,TASK-0601 | F11,F17 | Local 权限/跨平台隔离回归及 forward-fix PASS；策略、Hosted/Admin E2E 待验证 |
 | [TASK-0603](phases/08-admin-billing-repair.md#task-0603) | RC-06 | TASK-0601,TASK-0402 | F11,F03 | 本地实现及回归PASS；外部门槛待验证 |
 | [TASK-0604](phases/08-admin-billing-repair.md#task-0604) | RC-06 | TASK-0402,TASK-0609,TASK-0610 | F03,F10,F11 | 未开始 |
 | [TASK-0605](phases/08-admin-billing-repair.md#task-0605) | RC-06 | TASK-0302,TASK-0303,TASK-0603 | F02,F11,F13 | 本地实现及回归PASS；外部门槛待验证 |
