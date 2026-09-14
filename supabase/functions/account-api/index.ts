@@ -757,6 +757,42 @@ function isoDate(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
+type BillingOrderCursor =
+  | { readonly createdAt: string; readonly orderId: string }
+  | { readonly legacyCreatedAt: string };
+
+function encodeBillingOrderCursor(row: Row): string | null {
+  const createdAt = isoDate(row.created_at);
+  const orderId = uuidValue(row.order_id);
+  if (!createdAt || !orderId) return null;
+  const encoded = btoa(
+    JSON.stringify({ created_at: createdAt, order_id: orderId }),
+  )
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '');
+  return `v1.${encoded}`;
+}
+
+function parseBillingOrderCursor(value: string): BillingOrderCursor | null {
+  if (!value.startsWith('v1.')) {
+    const legacyDate = new Date(value);
+    return Number.isNaN(legacyDate.getTime())
+      ? null
+      : { legacyCreatedAt: legacyDate.toISOString() };
+  }
+  try {
+    const decoded = objectValue(JSON.parse(base64UrlDecode(value.slice(3))));
+    const createdAt = stringValue(decoded.created_at);
+    const orderId = uuidValue(decoded.order_id);
+    if (!createdAt || !orderId || Number.isNaN(new Date(createdAt).getTime()))
+      return null;
+    return { createdAt: new Date(createdAt).toISOString(), orderId };
+  } catch {
+    return null;
+  }
+}
+
 function fileDto(row: Row): Record<string, unknown> {
   return {
     file_id: uuidValue(row.file_id ?? row.id),
@@ -1617,31 +1653,63 @@ async function dispatchAdmin(
   }
   if (path === 'admin/api/v1/billing/orders' && request.method === 'GET') {
     const cursorValue = url.searchParams.get('cursor');
-    const cursor = cursorValue === null ? null : new Date(cursorValue);
+    const cursor =
+      cursorValue === null ? null : parseBillingOrderCursor(cursorValue);
     const status = url.searchParams.get('status');
-    if (cursor !== null && Number.isNaN(cursor.getTime()))
-      throw new ApiFault(400, 'INVALID_INPUT');
     if (
       status !== null &&
       !(BILLING_ADMIN_ORDER_STATUSES as readonly string[]).includes(status)
     )
       throw new ApiFault(400, 'INVALID_INPUT');
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const platformId = url.searchParams.get('platform_id');
+    const platformAccountId = url.searchParams.get('platform_account_id');
+    const providerAccountId = url.searchParams.get('provider_account_id');
+    const queryValue = url.searchParams.get('q');
+    const query = queryValue?.trim() || null;
+    if (
+      (platformId !== null && !uuidValue(platformId)) ||
+      (platformAccountId !== null && !uuidValue(platformAccountId)) ||
+      (providerAccountId !== null && !uuidValue(providerAccountId)) ||
+      (query !== null && query.length > 128) ||
+      (cursorValue !== null && cursor === null)
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    if (
+      cursor &&
+      'legacyCreatedAt' in cursor &&
+      (platformId !== null ||
+        platformAccountId !== null ||
+        providerAccountId !== null ||
+        query !== null)
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_billing_order_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::integer, $6::text)',
-      [
-        ...context,
-        cursor === null ? null : cursor.toISOString(),
-        boundedLimit(url.searchParams.get('limit')),
-        status,
-      ],
+      cursor && 'legacyCreatedAt' in cursor
+        ? 'select * from private.admin_billing_order_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::integer, $6::text)'
+        : 'select * from private.admin_billing_order_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::uuid, $6::integer, $7::text, $8::uuid, $9::uuid, $10::uuid, $11::text)',
+      cursor && 'legacyCreatedAt' in cursor
+        ? [...context, cursor.legacyCreatedAt, limit, status]
+        : [
+            ...context,
+            cursor && 'createdAt' in cursor ? cursor.createdAt : null,
+            cursor && 'createdAt' in cursor ? cursor.orderId : null,
+            limit,
+            status,
+            platformId === null ? null : uuidValue(platformId),
+            platformAccountId === null ? null : uuidValue(platformAccountId),
+            providerAccountId === null ? null : uuidValue(providerAccountId),
+            query,
+          ],
     );
+    const nextCursor =
+      rows.length === limit ? encodeBillingOrderCursor(rows.at(-1)!) : null;
+    if (rows.length === limit && !nextCursor)
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     return {
       status: 200,
       data: rows,
-      next_cursor:
-        rows.length === boundedLimit(url.searchParams.get('limit'))
-          ? isoDate(rows.at(-1)?.created_at)
-          : null,
+      next_cursor: nextCursor,
     };
   }
   if (path === 'admin/api/v1/billing/metrics' && request.method === 'GET') {

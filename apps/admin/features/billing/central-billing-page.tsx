@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
@@ -56,6 +56,22 @@ type BillingMetrics = {
   processing_last_success_at: string | null;
 };
 
+type BillingFilters = {
+  query: string;
+  status: string;
+  platformId: string;
+  platformAccountId: string;
+  providerAccountId: string;
+};
+
+const EMPTY_BILLING_FILTERS: BillingFilters = {
+  query: '',
+  status: '',
+  platformId: '',
+  platformAccountId: '',
+  providerAccountId: '',
+};
+
 type ResolutionDecision =
   | 'refund_confirmed'
   | 'closed_anomaly'
@@ -88,46 +104,97 @@ export function CentralBillingPage() {
   const [actionError, setActionError] = useState<ResourceError | null>(null);
   const [busy, setBusy] = useState(false);
   const [needsMfa, setNeedsMfa] = useState(false);
+  const [draftFilters, setDraftFilters] = useState<BillingFilters>(
+    EMPTY_BILLING_FILTERS,
+  );
+  const [filters, setFilters] = useState<BillingFilters>(EMPTY_BILLING_FILTERS);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const cursorRef = useRef<string | null>(null);
 
-  const load = useCallback(async () => {
-    setState('loading');
-    setError(null);
-    try {
-      const [ordersResponse, metricsResponse] = await Promise.all([
-        adminAuthSession.request(
-          '/api/v1/admin/api/v1/billing/orders?limit=50',
-          { cache: 'no-store' },
-        ),
-        adminAuthSession.request('/api/v1/admin/api/v1/billing/metrics', {
-          cache: 'no-store',
-        }),
-      ]);
-      const ordersPayload =
-        await readApiPayload<BillingOrder[]>(ordersResponse);
-      const metricsPayload =
-        await readApiPayload<BillingMetrics>(metricsResponse);
-      if (!ordersResponse.ok || !Array.isArray(ordersPayload?.data)) {
-        setError(resourceError(ordersResponse, ordersPayload, 'Billing 订单'));
-        setState('error');
-        return;
+  const load = useCallback(
+    async ({ append = false }: { append?: boolean } = {}) => {
+      if (append && !cursorRef.current) return;
+      if (append) setLoadingMore(true);
+      else {
+        setState('loading');
+        setError(null);
+        cursorRef.current = null;
+        setNextCursor(null);
       }
-      setOrders(ordersPayload.data);
-      setMetrics(metricsPayload?.data ?? null);
-      setState('success');
-    } catch (caught) {
-      setError({
-        title: 'Billing 读取失败',
-        description: sessionErrorMessage(caught),
-        requestId: null,
-        technicalDetail: null,
-      });
-      setState('error');
-    }
-  }, []);
+      const params = new URLSearchParams({ limit: '50' });
+      if (filters.query) params.set('q', filters.query);
+      if (filters.status) params.set('status', filters.status);
+      if (filters.platformId) params.set('platform_id', filters.platformId);
+      if (filters.platformAccountId)
+        params.set('platform_account_id', filters.platformAccountId);
+      if (filters.providerAccountId)
+        params.set('provider_account_id', filters.providerAccountId);
+      if (append && cursorRef.current) params.set('cursor', cursorRef.current);
+      try {
+        const [ordersResponse, metricsResponse] = await Promise.all([
+          adminAuthSession.request(
+            `/api/v1/admin/api/v1/billing/orders?${params.toString()}`,
+            { cache: 'no-store' },
+          ),
+          append
+            ? Promise.resolve(null)
+            : adminAuthSession.request('/api/v1/admin/api/v1/billing/metrics', {
+                cache: 'no-store',
+              }),
+        ]);
+        const ordersPayload =
+          await readApiPayload<BillingOrder[]>(ordersResponse);
+        const metricsPayload = metricsResponse
+          ? await readApiPayload<BillingMetrics>(metricsResponse)
+          : null;
+        if (!ordersResponse.ok || !Array.isArray(ordersPayload?.data)) {
+          setError(
+            resourceError(ordersResponse, ordersPayload, 'Billing 订单'),
+          );
+          setState('error');
+          return;
+        }
+        setOrders((current) =>
+          append ? [...current, ...ordersPayload.data!] : ordersPayload.data!,
+        );
+        cursorRef.current = ordersPayload.next_cursor ?? null;
+        setNextCursor(cursorRef.current);
+        if (metricsPayload) setMetrics(metricsPayload.data ?? null);
+        setState('success');
+      } catch (caught) {
+        setError({
+          title: 'Billing 读取失败',
+          description: sessionErrorMessage(caught),
+          requestId: null,
+          technicalDetail: null,
+        });
+        setState('error');
+      } finally {
+        if (append) setLoadingMore(false);
+      }
+    },
+    [filters],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  function applyFilters() {
+    setFilters({
+      query: draftFilters.query.trim(),
+      status: draftFilters.status,
+      platformId: draftFilters.platformId.trim(),
+      platformAccountId: draftFilters.platformAccountId.trim(),
+      providerAccountId: draftFilters.providerAccountId.trim(),
+    });
+  }
+
+  function clearFilters() {
+    setDraftFilters(EMPTY_BILLING_FILTERS);
+    setFilters(EMPTY_BILLING_FILTERS);
+  }
 
   async function inspect(orderId: string) {
     setActionError(null);
@@ -256,6 +323,107 @@ export function CentralBillingPage() {
       ) : (
         <>
           <section
+            className="rounded-xl border border-border bg-card p-4"
+            aria-label="Billing 订单筛选"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="font-semibold">筛选订单</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  搜索与筛选在服务端执行，分页游标会绑定订单时间和
+                  ID，避免同一时间创建的订单漏读。
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={clearFilters}>
+                  清除
+                </Button>
+                <Button onClick={applyFilters}>应用筛选</Button>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <label className="grid gap-1 text-sm">
+                <span>Provider 订单号</span>
+                <Input
+                  aria-label="Provider 订单号"
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      query: event.target.value,
+                    }))
+                  }
+                  placeholder="输入订单号"
+                  value={draftFilters.query}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>状态</span>
+                <select
+                  aria-label="Billing 状态"
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      status: event.target.value,
+                    }))
+                  }
+                  value={draftFilters.status}
+                >
+                  <option value="">全部状态</option>
+                  <option value="pending">待处理</option>
+                  <option value="retryable">可重试</option>
+                  <option value="manual_review">人工审核</option>
+                  <option value="finalized">已结算</option>
+                  <option value="granted">已发放</option>
+                  <option value="rejected">已拒绝</option>
+                  <option value="unlinked">未关联</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>平台 ID</span>
+                <Input
+                  aria-label="平台 ID"
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      platformId: event.target.value,
+                    }))
+                  }
+                  placeholder="UUID"
+                  value={draftFilters.platformId}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>平台账号 ID</span>
+                <Input
+                  aria-label="平台账号 ID"
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      platformAccountId: event.target.value,
+                    }))
+                  }
+                  placeholder="UUID"
+                  value={draftFilters.platformAccountId}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>Provider 账号 ID</span>
+                <Input
+                  aria-label="Provider 账号 ID"
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      providerAccountId: event.target.value,
+                    }))
+                  }
+                  placeholder="UUID"
+                  value={draftFilters.providerAccountId}
+                />
+              </label>
+            </div>
+          </section>
+          <section
             className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
             aria-label="Billing 指标"
           >
@@ -289,7 +457,9 @@ export function CentralBillingPage() {
               <div className="divide-y divide-border">
                 {orders.length === 0 ? (
                   <p className="p-6 text-sm text-muted-foreground">
-                    暂无订单。
+                    {Object.values(filters).some(Boolean)
+                      ? '没有匹配当前筛选条件的订单。'
+                      : '暂无订单。'}
                   </p>
                 ) : null}
                 {orders.map((order) => (
@@ -318,6 +488,18 @@ export function CentralBillingPage() {
                   </button>
                 ))}
               </div>
+              {nextCursor ? (
+                <div className="border-t border-border p-4">
+                  <Button
+                    className="w-full"
+                    disabled={loadingMore}
+                    onClick={() => void load({ append: true })}
+                    variant="outline"
+                  >
+                    {loadingMore ? '正在加载更多…' : '加载更多订单'}
+                  </Button>
+                </div>
+              ) : null}
             </div>
             <aside
               className="rounded-xl border border-border bg-card p-5"

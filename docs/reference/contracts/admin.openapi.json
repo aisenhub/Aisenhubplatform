@@ -473,7 +473,11 @@
         "parameters": [
           { "$ref": "#/components/parameters/BillingCursor" },
           { "$ref": "#/components/parameters/Limit" },
-          { "$ref": "#/components/parameters/BillingStatus" }
+          { "$ref": "#/components/parameters/BillingStatus" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/BillingPlatformId" },
+          { "$ref": "#/components/parameters/BillingAccountId" },
+          { "$ref": "#/components/parameters/BillingProviderAccountId" }
         ],
         "responses": {
           "200": { "$ref": "#/components/responses/Page" },
@@ -659,7 +663,8 @@
         "name": "cursor",
         "in": "query",
         "required": false,
-        "schema": { "type": "string", "format": "date-time" }
+        "description": "Opaque cursor returned by the previous page. It binds created_at and order_id for stable pagination.",
+        "schema": { "type": "string", "minLength": 1, "maxLength": 512 }
       },
       "BillingStatus": {
         "name": "status",
@@ -677,6 +682,24 @@
             "unlinked"
           ]
         }
+      },
+      "BillingPlatformId": {
+        "name": "platform_id",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "BillingAccountId": {
+        "name": "platform_account_id",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "BillingProviderAccountId": {
+        "name": "provider_account_id",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "format": "uuid" }
       },
       "BillingOrderId": {
         "name": "orderId",

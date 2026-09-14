@@ -108,7 +108,7 @@ async function signedEcdsaJwt(): Promise<{
 }
 
 function fakeDatabase(
-  onQuery?: (query: string) => void,
+  onQuery?: (query: string, values?: readonly unknown[]) => void,
   checkoutFacts: readonly Record<string, unknown>[] = [],
   checkoutRow: Record<string, unknown> = {},
 ) {
@@ -128,8 +128,9 @@ function fakeDatabase(
         },
         async unsafe<R extends Record<string, unknown>>(
           query: string,
+          values?: unknown[],
         ): Promise<R[]> {
-          onQuery?.(query);
+          onQuery?.(query, values);
           if (
             query.startsWith(
               'select * from private.platform_key_verify_presented',
@@ -1502,6 +1503,61 @@ Deno.test('Account API exposes central Billing order and requery wrappers', asyn
   );
   assertEquals(requery.status, 202);
   assertEquals((await requery.json()).data.state, 'pending');
+});
+
+Deno.test('Account API uses stable Billing cursors and server-side filters', async () => {
+  const calls: Array<{ query: string; values?: readonly unknown[] }> = [];
+  const base = 'http://local/functions/v1/account-api/admin/api/v1/billing';
+  const response = await handleRequest(
+    new Request(
+      `${base}/orders?limit=1&status=unlinked&q=provider-order&platform_id=${platformId}&platform_account_id=${userId}&provider_account_id=${keyId}`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase((query, values) => calls.push({ query, values })),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 200);
+  const payload = await response.json();
+  assertMatch(payload.next_cursor, /^v1\./);
+  const listCall = calls.find((call) =>
+    call.query.startsWith('select * from private.admin_billing_order_list_v2'),
+  );
+  assertEquals(Boolean(listCall), true);
+  assertEquals(listCall?.values?.slice(3), [
+    null,
+    null,
+    1,
+    'unlinked',
+    platformId,
+    userId,
+    keyId,
+    'provider-order',
+  ]);
+
+  const next = await handleRequest(
+    new Request(
+      `${base}/orders?limit=1&cursor=${encodeURIComponent(payload.next_cursor)}`,
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+      },
+    ),
+    {
+      database: fakeDatabase((query, values) => calls.push({ query, values })),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(next.status, 200);
+  const nextCall = calls.at(-1);
+  assertEquals(
+    nextCall?.query.startsWith(
+      'select * from private.admin_billing_order_list_v2',
+    ),
+    true,
+  );
+  assertEquals(nextCall?.values?.[3], '2026-09-11T00:00:00.000Z');
+  assertEquals(nextCall?.values?.[4], keyId);
 });
 
 Deno.test('Account API exposes subscription config ETags and step-up mutation boundary', async () => {
