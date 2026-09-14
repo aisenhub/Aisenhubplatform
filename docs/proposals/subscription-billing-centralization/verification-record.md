@@ -310,5 +310,8 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 业务决策 | D3 已确认：暂停立即阻止新的付费 Checkout，已有有限期权益继续到期；删除保留最小账务/审计事实，个人信息按法定或财务期限匿名化；Plan 归档后禁止新 Checkout，保留历史订单、快照和已有权益，旧 Plan 不再修改。 |
 | 数据库实际变更 | 新增 `supabase/migrations/20260914223608_repair_task_d3_lifecycle.sql`：`purchases_paused` 独立购买闸门；Checkout 插入前锁序校验；归档 Plan 不可变终态；`account_retention_policy` 显式配置保留天数/来源/依据，未配置时匿名化失败关闭；清理只匿名化个人与可识别审计字段，保留订单、结算、Grant、快照等长期事实。 |
 | 消费者与合同 | Admin 订阅配置新增“暂停新购买”开关和行为提示；Account API 使用 v2 配置 wrapper；新增 `PURCHASES_PAUSED` 稳定错误码；商品目录暴露 `purchases_paused` reason；同步 Domain、Account/Admin OpenAPI、模板预览和 API 参考文档。 |
-| 回归覆盖 | 更新商品就绪、保留清理测试；新增 `supabase/tests/repair_task_d3_lifecycle.sql`，覆盖暂停闸门、归档终态、政策 fail-closed、账户匿名化、审计事实保留和保留天数记录。测试结果以本记录后续门禁执行结果为准。 |
-| 未完成/阻塞 | 法务/财务尚未提供实际保留天数、政策来源和依据，生产配置不能凭代码默认值生成；Hosted/Staging 正向认证支付、并发、Provider 和浏览器 E2E 仍需安全 fixture；Production 未执行。 |
+| 回归覆盖 | 更新商品就绪、保留清理测试；新增 `supabase/tests/repair_task_d3_lifecycle.sql`，覆盖暂停闸门、归档终态、政策 fail-closed、账户匿名化、审计事实保留和保留天数记录。Local `pnpm test:db` PASS：56 个 SQL 文件、1058 个断言；D3 专项 24/24。 |
+| Local/CI/静态验证 | `pnpm db:reset -- --yes` PASS；Account API 35/35 PASS；全 Edge 基线 73/73 PASS；Domain 11/11 PASS；`pnpm typecheck` PASS（9/9）；`pnpm lint` PASS；`pnpm contracts:check` PASS（Account 22、Admin 44、Consumer 4/39）；`pnpm docs:check` PASS（67 documents）；`git diff --check` 与 staged sensitive-pattern scan PASS；Local DB advisors 无问题。 |
+| Hosted/Staging | Staging linked migration list 已确认前序一致；应用 `20260914223608` PASS；`account-api` 部署 PASS；未认证 `/functions/v1/account-api/v1/plans` smoke 返回预期 401 且带 request-id。Staging advisors 保留两个既有 WARN：`pg_net` 位于 public schema、Auth 泄漏密码保护未开启；未因本任务擅自变更。 |
+| 未完成/阻塞 | 法务/财务尚未提供实际保留天数、政策来源和依据，生产配置不能凭代码默认值生成；带安全 fixture 的 Staging 正向认证支付、并发、Provider 和浏览器 E2E 仍 NOT_RUN；Provider/Production 未执行。 |
+| Commit与push | `e0971b5 feat(billing): implement d3 lifecycle rules` 已推送 `origin/codex/billing-architecture-review`，并安全快进合并 `origin/main`；远端两个分支均已核对为 `e0971b5454e6cce242ae4e2a7538709444e54083`。 |
