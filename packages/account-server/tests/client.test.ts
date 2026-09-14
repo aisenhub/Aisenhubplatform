@@ -95,6 +95,10 @@ describe('account API server client', () => {
       'access-token',
       '00000000-0000-4000-8000-000000000001',
     );
+    await client.getSubscriptionCheckoutByIdempotencyKey(
+      'access-token',
+      'checkout-idem-1',
+    );
     expect(requests[0]).toMatchObject({
       url: 'https://account.example.invalid/v1/subscription/checkout',
       init: {
@@ -109,6 +113,16 @@ describe('account API server client', () => {
     expect(requests[1]?.url).toBe(
       'https://account.example.invalid/v1/subscription/checkout/00000000-0000-4000-8000-000000000001',
     );
+    expect(requests[2]).toMatchObject({
+      url: 'https://account.example.invalid/v1/subscription/checkout',
+      init: {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer access-token',
+          'Idempotency-Key': 'checkout-idem-1',
+        },
+      },
+    });
   });
 
   it('forwards the independently verified reauthentication token only as a header', async () => {

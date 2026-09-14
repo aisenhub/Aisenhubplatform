@@ -1182,6 +1182,29 @@ async function dispatchAccount(
   }
 
   const contextValues = accountContextValues(session, key);
+  if (path === 'v1/subscription/checkout' && request.method === 'GET') {
+    assertAllowed(row);
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (!idempotencyKey || idempotencyKey.length > 128)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [checkout] = await transaction.unsafe<Row>(
+      'select * from private.subscription_checkout_read_by_idempotency(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text)',
+      [...contextValues, idempotencyKey],
+    );
+    if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return {
+      status: 200,
+      data: subscriptionCheckoutDto(
+        checkout,
+        await checkoutPaymentUrl(
+          transaction,
+          contextValues,
+          checkout,
+          dependencies,
+        ),
+      ),
+    };
+  }
   if (path === 'v1/subscription/checkout' && request.method === 'POST') {
     assertAllowed(row);
     if (

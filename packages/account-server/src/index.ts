@@ -210,6 +210,10 @@ export interface AccountApiClient {
     accessToken: string,
     checkoutId: string,
   ) => Promise<SubscriptionCheckoutDto>;
+  readonly getSubscriptionCheckoutByIdempotencyKey: (
+    accessToken: string,
+    idempotencyKey: string,
+  ) => Promise<SubscriptionCheckoutDto>;
   readonly getPrincipal: (accessToken: string) => Promise<AccountPrincipalDto>;
   readonly activate: (accessToken: string) => Promise<AccountPrincipalDto>;
   readonly getProfile: (accessToken: string) => Promise<ProfileDto>;
@@ -628,6 +632,13 @@ export function createAccountApiClient(input: {
         method: 'GET',
         path: `/v1/subscription/checkout/${encodeURIComponent(checkoutId)}`,
         accessToken,
+      }),
+    getSubscriptionCheckoutByIdempotencyKey: (accessToken, idempotencyKey) =>
+      request<SubscriptionCheckoutDto>({
+        method: 'GET',
+        path: '/v1/subscription/checkout',
+        accessToken,
+        idempotencyKey,
       }),
     getPrincipal: (accessToken) =>
       request<AccountPrincipalDto>({

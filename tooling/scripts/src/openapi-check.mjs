@@ -98,9 +98,9 @@ checkReferences(admin.document, admin.document);
 
 const accountOps = checkOperations(account.document, 'account');
 const adminOps = checkOperations(admin.document, 'admin');
-if (accountOps.length !== 21)
+if (accountOps.length !== 22)
   fail(
-    `account contract must freeze 21 operations, found ${accountOps.length}`,
+    `account contract must freeze 22 operations, found ${accountOps.length}`,
   );
 if (adminOps.length < 25)
   fail(

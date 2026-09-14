@@ -28,6 +28,7 @@ function isAllowedPath(method: string, path: string): boolean {
       path === 'v1/preferences' ||
       path === 'v1/subscription' ||
       path === 'v1/subscription/products' ||
+      path === 'v1/subscription/checkout' ||
       path === 'v1/config-files' ||
       new RegExp(`^v1/subscription/checkout/${id}$`, 'u').test(path) ||
       new RegExp(`^v1/config-files/${id}$`, 'u').test(path) ||

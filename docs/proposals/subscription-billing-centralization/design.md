@@ -37,3 +37,9 @@ Consumer/Admin同源BFF、Supabase Auth/JWT/Session/MFA、受控executor与priva
 `supabase/migrations/20260914093019_repair_task_0201_checkout_snapshot.sql` 采用 expand-first forward-fix：不修改历史迁移，新增 Checkout Provider 合同快照字段，并由触发器在创建时从当前 mapping 填充或逐字段校验。快照覆盖 external plan/type、SKU 全集与数量、Provider 期限、展示价、实付价和 price version；Checkout 自身的商品、期限、价格、币种、price version 与 mapping version 也必须和当前发布商品/mapping 一致。已发布或已被 Checkout 引用的 mapping 合同字段不得原地修改；需要调价时应发布新的 mapping 版本。
 
 结算过程和付款链接重建都只读取 Checkout 快照。旧 Checkout 若缺少这些证据不会从当前 mapping 猜测，而是进入 `contract_conflict`/人工复核或不再签发可付款链接。Local 专项同时证明快照落库、客户端金额注入被拒绝、mapping 原地改价被拒绝以及付款链接事实不再读取当前 mapping；真实 Provider、旧付款链接迟到、并发发布/调价及 Hosted/Staging 仍不在本地证据范围内。
+
+## TASK-0202 已落地的 Local recovery path
+
+`supabase/migrations/20260914095321_repair_task_0202_checkout_recovery.sql` 新增只读 `private.subscription_checkout_read_by_idempotency` wrapper。它先按当前平台与认证账户计算并查找 Idempotency-Key 的 SHA-256 绑定，再复用 `subscription_checkout_read_v2` 的状态投影；未知 key 返回 `resource_not_found`，不会创建 Checkout，也不会把已付/已授予记录降回过期。Account API 暴露 `GET /v1/subscription/checkout` + `Idempotency-Key` 作为响应丢失后的恢复入口，SDK、OpenAPI、Next 路由和 Local 负例已同步。
+
+这只完成同一意图的持久化恢复入口；跨 Tab 不同 key 的多意图治理、Provider 取消/迟到 paid 的业务政策、两笔付款的全链路并发证明和真实 HTTP/Provider 仍需后续任务与环境门槛。

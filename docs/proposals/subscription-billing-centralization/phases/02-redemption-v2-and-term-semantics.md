@@ -2,7 +2,7 @@
 
 ## 1. 阶段名称和状态
 
-状态：In Progress；TASK-0201 已完成 Local 数据库 forward-fix 与回归，TASK-0202 未开始，TASK-0203 受 D1 阻塞。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
+状态：In Progress；TASK-0201 已完成 Local 数据库 forward-fix 与回归，TASK-0202 已完成同一 Idempotency-Key 的 Local recovery path 及 API/SDK 回归，TASK-0203 受 D1 阻塞。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
 
 ## 2. 阶段目标
 
@@ -37,6 +37,7 @@ TASK-0201 Local forward-fix 已将已发布或已被 Checkout 引用的 mapping 
 下列为未来实施候选，历史迁移只读；本轮仅该阶段计划文件发生文档改动。
 
 - `supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql`：只读旧定义；新增forward-fix代替编辑它。
+- `supabase/migrations/20260914095321_repair_task_0202_checkout_recovery.sql`：TASK-0202 已生成的 recovery forward-fix；旧迁移保持只读。
 - `supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql`：只读旧定义；新增forward-fix代替编辑它。
 - `supabase/migrations/20260912150000_afdian_checkout_payment_link.sql`：只读旧定义；新增forward-fix代替编辑它。
 - `supabase/functions/account-api/index.ts`
@@ -51,6 +52,7 @@ TASK-0201 Local forward-fix 已将已发布或已被 Checkout 引用的 mapping 
 - `supabase/tests/bill_04_checkout_order_inbox_jobs.sql`
 - `supabase/tests/bill_12_afdian_checkout_payment_link.sql`
 - `supabase/tests/bill_09_idempotency_cleanup.sql`
+- `supabase/tests/repair_task_0202_checkout_recovery.sql`：TASK-0202-NEG 同 key 恢复、未知 key 不创建、输入/权限边界。
 - `supabase/migrations/20260913130407_bill_19_lifetime_purchase_guard.sql`：只读旧定义；新增forward-fix代替编辑它。
 - `supabase/tests/bill_19_lifetime_purchase_guard.sql`
 - `supabase/migrations/20260914093019_repair_task_0201_checkout_snapshot.sql`：TASK-0201 已生成的 Local forward-fix；旧迁移保持只读。
@@ -122,7 +124,7 @@ TASK-0201 Local forward-fix 已将已发布或已被 Checkout 引用的 mapping 
 ### TASK-0202：建立服务端购买意图恢复及取消后迟到款规则
 
 - 目标：同一意图最多一个Checkout；未知结果可查询；同Checkout两笔钱均保留但只一笔自动Grant。
-- 问题证据：F09：`apps/template-preview/app/subscription/page.tsx:342,451; supabase/migrations/20260913130407_bill_19_lifetime_purchase_guard.sql:14; supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql:181`；F05：`supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql:438; supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql:204; apps/template-preview/app/subscription/page.tsx:264`。原行为/上轮反例见唯一问题表，本轮未重跑业务测试。
+- 问题证据：F09：`apps/template-preview/app/subscription/page.tsx:342,451; supabase/migrations/20260913130407_bill_19_lifetime_purchase_guard.sql:14; supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql:181`；F05：`supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql:438; supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql:204; apps/template-preview/app/subscription/page.tsx:264`。本轮 Local 负例证明未知 Idempotency-Key 不创建新 Checkout、恢复结果按账户/平台隔离；跨意图重复、Provider 迟到 paid 和 Lifetime 政策仍待处理。
 - 影响范围：F09,F05；Checkout幂等、Checkout/Consumer。
 - 前置依赖：TASK-0201,TASK-0101。每个前置交付必须核对源码和实际证据，不只检查任务状态文字。
 - 变更目录：`supabase/functions/account-api`、`packages/domain/src/contracts`、`docs/reference/contracts`、`packages/account-server/src`、`apps/template-preview/app/api/v1/[...path]`、`apps/admin/app/api/v1/[...path]`、`supabase/tests`；`supabase/migrations`（仅新增）。
@@ -141,7 +143,7 @@ TASK-0201 Local forward-fix 已将已发布或已被 Checkout 引用的 mapping 
 - 并发/重试/恢复测试：用例标识建议 `TASK-0202-REC`；提交后断响应再请求同key；跨Tab不同key；取消后外部成功。真并发使用至少两连接/两进程；mock不能替代租约接管或事务并发证明。
 - 用户体验验收：后端任务：以对应Consumer任务验证，不在本任务新增页面；用户不能看到虚假成功。
 - 管理员操作验收：后端任务：保留可追溯的错误/操作ID，由对应Admin任务呈现；不得任意写表。
-- 验收命令：下列为未来实施验收入口，本轮均未作为业务验证运行；先增加上述具名用例并核对runner覆盖，不能只运行旧套件计通过。环境守卫与类别见第13节。
+- 验收命令：下列为完整任务的验收入口；本轮已运行 Local reset、全量 SQL、Account API Deno、Account Server/Domain 单测、typecheck、contracts 和 docs，跨意图并发/Provider/远程环境仍未运行。环境守卫与类别见第13节。
 
 - `pnpm test:db`
 - `pnpm run test:sql:bill-05-concurrency`
@@ -152,9 +154,9 @@ TASK-0201 Local forward-fix 已将已发布或已被 Checkout 引用的 mapping 
 - `pnpm contracts:check`
 - `git diff --check`
 
-- 预期结果：同一意图最多一个Checkout；未知结果可查询；同Checkout两笔钱均保留但只一笔自动Grant。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
+- 预期结果：Local 已支持同一平台/账户按 Idempotency-Key 恢复现有 Checkout，未知 key 不创建新意图，并复用当前进度投影；同 Checkout 两笔付款、跨 Tab 不同 key、取消后迟到 paid、真实 HTTP/Provider/Hosted/Staging/生产仍未验证，不能关闭完整 TASK-0202。
 - 回滚方式：采用expand-first；停止本任务新动作/必要时关闭新购买，继续保存已付款入站；回退到兼容且不含已知漏洞的应用版本，保留新增表/列/Order/Grant/幂等及审计，另发forward-fix。不得down删除账本或重写旧迁移。
-- 完成状态：未开始；实施测试状态NOT_RUN。
+- 完成状态：Local recovery path 完成；实施测试状态：`pnpm test:db` PASS（53 个 SQL 文件、964 个断言，TASK-0202 专项 8/8），Account API Deno 34/34、Account Server 16/16、Domain 11/11、`pnpm typecheck` PASS、`pnpm contracts:check` PASS（Account 22/Admin 44）、`pnpm docs:check` PASS。跨意图并发、Provider/Hosted/Staging/生产仍 NOT_RUN。
 
 <a id="task-0203"></a>
 ### TASK-0203：按已确认Lifetime策略收敛双付款及购买资格

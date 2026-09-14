@@ -46,6 +46,24 @@
       }
     },
     "/v1/subscription/checkout": {
+      "get": {
+        "operationId": "getSubscriptionCheckoutByIdempotencyKey",
+        "tags": ["subscription"],
+        "description": "Recovers a durable Checkout intent by the authenticated account's Idempotency-Key after an unknown create response. This endpoint never creates a new Checkout.",
+        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformKey" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/SubscriptionCheckout" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      },
       "post": {
         "operationId": "createSubscriptionCheckout",
         "tags": ["subscription"],

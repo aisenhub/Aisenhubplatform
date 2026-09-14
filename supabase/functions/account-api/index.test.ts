@@ -692,6 +692,25 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
   );
   assertEquals(read.status, 200);
   assertEquals((await read.json()).data.product_code, 'monthly');
+
+  const recovered = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        headers: {
+          ...headers,
+          'Idempotency-Key': 'checkout-test-1',
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(recovered.status, 200);
+  assertEquals((await recovered.json()).data.checkout_id, '00000000-0000-4000-8000-000000000011');
 });
 
 Deno.test('Account API preserves paid progress even when the snapshot expiry is in the past', async () => {

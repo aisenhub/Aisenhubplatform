@@ -244,4 +244,15 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 未完成/阻塞 | Provider 真实付款链接、旧链接迟到、发布/调价与创建双连接并发、旧快照恢复、Hosted/Staging/Production 迁移和 Admin/Consumer E2E 仍 NOT_RUN；TASK-0201 不关闭为完整远程验收。 |
 | Commit与push | 待静态检查后形成独立小提交并推送 `origin/codex/billing-architecture-review`；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
 
+## 追加实施记录（2026-09-14，TASK-0202 Checkout recovery path）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0202 的同一 Idempotency-Key 持久化恢复：未知创建响应后可按当前平台/账户查询已有 Checkout；不决定跨 Tab 不同 key 的购买意图策略、Provider 取消/迟到 paid 或 D1 Lifetime 政策。 |
+| 实际变更 | 使用固定 Supabase CLI 2.111.0 生成 `supabase/migrations/20260914095321_repair_task_0202_checkout_recovery.sql`；新增只读 `subscription_checkout_read_by_idempotency` wrapper，复用 `subscription_checkout_read_v2` 状态投影；Account API 新增 `GET /v1/subscription/checkout` + `Idempotency-Key` 恢复入口；同步 Next allowlist、Account SDK、OpenAPI 与消费者检查。 |
+| 失败证据与修复 | 新增 `TASK-0202-NEG`：未知 key 返回 `resource_not_found`、空 key 返回 `invalid_input`、普通 authenticated 角色和直接表读取均被拒绝；恢复不会创建新 Checkout。 |
+| 验证 | `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：53 个 SQL 文件、964 个断言，TASK-0202 专项 8/8；Account API Deno 34/34；Account Server 16/16；Domain 11/11；`pnpm typecheck` PASS；`pnpm contracts:check` PASS（Account 22/Admin 44）；`pnpm docs:check` PASS；`git diff --check` PASS。 |
+| 未完成/阻塞 | 跨 Tab 不同 key 并发、同 Checkout 双付款、取消后 Provider 迟到 paid、真实 HTTP/Provider、Hosted/Staging/Production 和 Consumer 浏览器 E2E 仍 NOT_RUN；TASK-0202 不关闭为完整验收。 |
+| Commit与push | 本轮待形成独立小提交并推送 `origin/codex/billing-architecture-review`；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
+
 检查不改变其余TASK未开始状态；远程提交状态已由 `git ls-remote` 核对。最终工作区及静态复核在本轮回复报告。

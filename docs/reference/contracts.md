@@ -75,7 +75,7 @@ DomainResult<T>为成功data或确定性业务拒绝code/status，不把业务�
 
 Admin Grant必须有operation_id UUID和reason；兑换operation_id来自code.id；source+operation_id永久唯一。重放先重新鉴权。Profiles/Preferences增加row_version bigint（初始1、每次成功patch+1），ETag为服务端生成的不透明版本表示，客户端仅If-Match回传；updated_at仍用于展示。
 
-OpenAPI必须覆盖API专题当前全部21个Account方法/路径组合、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。结账创建/读取必须同步声明服务端定价、幂等、跨账户404和CHECKOUT_UNAVAILABLE；尚未实现路由不应暴露成功假数据。
+OpenAPI必须覆盖API专题当前全部22个Account方法/路径组合、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。结账创建/读取/按Idempotency-Key恢复必须同步声明服务端定价、幂等、跨账户404和CHECKOUT_UNAVAILABLE；尚未实现路由不应暴露成功假数据。
 
 Admin路径固定为/admin/api/v1，具体动作：
 
@@ -92,7 +92,7 @@ Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文�
 
 ## 5. OpenAPI 与 DTO 合同
 
-Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含21个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账接口需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。Billing Admin 的订单列表使用服务端时间游标，详情返回归一化 Provider facts，写操作声明近期 MFA、`If-Match`、`operation_id`、reason 和 412/403 等失败边界。所有未实现的操作不得暴露成功假数据。数据库到 Registry 的字段级生产者/消费者/测试责任见 [消费者兼容清单](contract-consumer-matrix.md)，其机器可读索引由 `contracts:check` 校验。
+Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含22个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账创建、读取和按 Idempotency-Key 恢复都需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。Billing Admin 的订单列表使用服务端时间游标，详情返回归一化 Provider facts，写操作声明近期 MFA、`If-Match`、`operation_id`、reason 和 412/403 等失败边界。所有未实现的操作不得暴露成功假数据。数据库到 Registry 的字段级生产者/消费者/测试责任见 [消费者兼容清单](contract-consumer-matrix.md)，其机器可读索引由 `contracts:check` 校验。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证必须使用服务端 session-bound proof；OpenAPI 的存在不代表路由、Provider 或真实会话生命周期已经完成。
 
