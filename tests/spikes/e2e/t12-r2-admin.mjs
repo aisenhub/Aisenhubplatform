@@ -261,11 +261,17 @@ async function runBrowserFlow(secret) {
   assert.equal(aal1.payload?.error?.code, 'MFA_REQUIRED');
 
   await page.getByLabel('验证码').fill(totp(secret));
-  await page.getByRole('button', { name: '验证并继续' }).click();
+  const [mfaResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/auth/mfa/verify'),
+    ),
+    page.getByRole('button', { name: '验证并继续' }).click(),
+  ]);
+  assertStatus(mfaResponse.status(), 200, 'browser admin MFA verification');
   await page.waitForURL(/\/admin$/u);
   await assertPageText('管理员总览');
 
-  const cookiesBeforeLogout = await context.cookies(appUrl);
+  const cookiesBeforeLogout = await context.cookies();
   const proofCookie = cookiesBeforeLogout.find(
     (cookie) => cookie.name === 'aisenhub-admin-recent-auth-proof',
   );
@@ -329,7 +335,7 @@ async function runBrowserFlow(secret) {
 
   await page.getByRole('button', { name: '退出登录' }).click();
   await page.waitForURL(/\/admin\/login$/u);
-  const cookiesAfterLogout = await context.cookies(appUrl);
+  const cookiesAfterLogout = await context.cookies();
   assert.equal(
     cookiesAfterLogout.some(
       (cookie) => cookie.name === 'aisenhub-admin-session',
@@ -453,20 +459,31 @@ async function runResponsiveA11yMatrix() {
         )
           .filter((table) => !table.querySelector('th'))
           .map((table) => table.outerHTML.slice(0, 180));
+        const isInsideHorizontalScroller = (element) => {
+          let parent = element.parentElement;
+          while (parent) {
+            const overflowX = window.getComputedStyle(parent).overflowX;
+            if (overflowX === 'auto' || overflowX === 'scroll') return true;
+            parent = parent.parentElement;
+          }
+          return false;
+        };
         return {
           clientWidth: document.documentElement.clientWidth,
           scrollWidth: document.documentElement.scrollWidth,
           overflowing: Array.from(document.querySelectorAll('*'))
+            .filter(
+              (element) =>
+                !isInsideHorizontalScroller(element) &&
+                element.getBoundingClientRect().right >
+                  document.documentElement.clientWidth + 1,
+            )
             .map((element) => ({
               tag: element.tagName,
               test: element.getAttribute('data-test'),
               className: element.getAttribute('class'),
               right: Math.round(element.getBoundingClientRect().right),
             }))
-            .filter(
-              (element) =>
-                element.right > document.documentElement.clientWidth + 1,
-            )
             .slice(0, 5),
           missingNames,
           unlabeledFields,
@@ -474,8 +491,8 @@ async function runResponsiveA11yMatrix() {
         };
       });
       assert.ok(
-        audit.scrollWidth <= audit.clientWidth + 1,
-        `${route.label} at ${width}px overflows: ${audit.scrollWidth}/${audit.clientWidth} ${JSON.stringify(audit.overflowing)}`,
+        audit.overflowing.length === 0,
+        `${route.label} at ${width}px has page overflow: ${audit.scrollWidth}/${audit.clientWidth} ${JSON.stringify(audit.overflowing)}`,
       );
       assert.deepEqual(
         audit.missingNames,

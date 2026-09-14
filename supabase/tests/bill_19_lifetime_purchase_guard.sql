@@ -1,6 +1,6 @@
 begin;
 
-select plan(6);
+select plan(7);
 
 select has_function(
   'private',
@@ -18,14 +18,14 @@ select ok(
   'lifetime purchase history has a partial index'
 );
 select ok(
-  exists (
+  not exists (
     select 1
     from pg_trigger
     where tgrelid = 'public.billing_checkout_intents'::regclass
       and tgname = 'billing_checkout_intents_lifetime_purchase_guard'
       and not tgisinternal
   ),
-  'lifetime purchase guard is attached to checkout transitions'
+  'repeatable lifetime policy no longer blocks checkout transitions'
 );
 
 insert into auth.users (id, aud, role, email, encrypted_password, created_at, updated_at)
@@ -85,20 +85,72 @@ select is(
   'the first lifetime checkout can become paid'
 );
 
-select throws_ok(
-  $$
-    update public.billing_checkout_intents
-    set status = 'paid', paid_at = now()
-    where id = '00000000-0000-4000-8000-000000001906'
-  $$,
-  'P0001',
-  'lifetime_already_purchased',
-  'a second lifetime purchase is rejected for the same account'
-);
+update public.billing_checkout_intents
+set status = 'paid', paid_at = now()
+where id = '00000000-0000-4000-8000-000000001906';
 select is(
   (select status from public.billing_checkout_intents where id = '00000000-0000-4000-8000-000000001906'),
-  'pending',
-  'the rejected lifetime checkout remains pending'
+  'paid',
+  'a second lifetime purchase is accepted for the same account'
+);
+
+insert into public.billing_provider_accounts (
+  id, provider, name, status, secret_reference
+) values (
+  '00000000-0000-4000-8000-000000001909',
+  'afdian', 'BILL-19 fixture provider', 'disabled', 'vault://bill19-fixture'
+);
+insert into public.billing_orders (
+  id, provider_account_id, provider_order_no, platform_id, platform_account_id,
+  provider_status, currency
+) values
+(
+  '00000000-0000-4000-8000-000000001907',
+  '00000000-0000-4000-8000-000000001909',
+  'bill19-order-1',
+  '00000000-0000-4000-8000-000000001902',
+  '00000000-0000-4000-8000-000000001904',
+  'paid', 'CNY'
+),
+(
+  '00000000-0000-4000-8000-000000001908',
+  '00000000-0000-4000-8000-000000001909',
+  'bill19-order-2',
+  '00000000-0000-4000-8000-000000001902',
+  '00000000-0000-4000-8000-000000001904',
+  'paid', 'CNY'
+);
+
+select * from private.entitlement_apply(
+  '00000000-0000-4000-8000-000000001902',
+  '00000000-0000-4000-8000-000000001904',
+  '00000000-0000-4000-8000-000000001903',
+  'billing_order',
+  '00000000-0000-4000-8000-000000001907',
+  99, 'year', null, 'billing_order_settlement', null
+);
+select * from private.entitlement_apply(
+  '00000000-0000-4000-8000-000000001902',
+  '00000000-0000-4000-8000-000000001904',
+  '00000000-0000-4000-8000-000000001903',
+  'billing_order',
+  '00000000-0000-4000-8000-000000001908',
+  99, 'year', null, 'billing_order_settlement', null
+);
+select ok(
+  (select count(*) = 2 from public.subscription_grants
+   where platform_id = '00000000-0000-4000-8000-000000001902'
+     and platform_account_id = '00000000-0000-4000-8000-000000001904'
+     and plan_id = '00000000-0000-4000-8000-000000001903'),
+  'each repeat purchase creates an independent entitlement grant'
+);
+select ok(
+  (select max(ends_at) - min(starts_at) > interval '190 years'
+   from public.subscription_grants
+   where platform_id = '00000000-0000-4000-8000-000000001902'
+     and platform_account_id = '00000000-0000-4000-8000-000000001904'
+     and plan_id = '00000000-0000-4000-8000-000000001903'),
+  'repeat purchases extend the backend entitlement horizon by another 99 years'
 );
 
 select * from finish();

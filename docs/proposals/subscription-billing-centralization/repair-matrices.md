@@ -14,9 +14,9 @@
 | ID | 冲突/缺口 | 处理策略 | 阻塞任务 |
 | --- | --- | --- | --- |
 | D0 | 原plan.md为兼容入口、00-master-plan为唯一总计划；研究中旧目录被外部提交归档 | 本次修复只保留一个活跃plan.md；归档原文不复制为第二活跃方案；按用户指定的原活跃路径保存本次修复，保留外部归档不变 | 已采用原请求路径；实施前重新核对目录归属 |
-| D1 | 旧目标允许99年后月/年/99年续购；BILL-19当前一次购买，UI同商品禁用 | 在TASK-0003比较两个方案，推荐先保留当前购买限制并收敛第二笔paid人工处理；恢复续购必须明确业务选择，不删guard测试偷改规则 | TASK-0203及0504相关Lifetime分支；普通幂等和文案不阻塞 |
-| D2 | 自动退款在旧phase-2；本轮发现结案不退款/不撤权 | 本次先计划必要的独立退款事实、人工确认与受控Grant补偿；全额/部分/拒付政策由负责人决定，自动Provider退款API仍不擅自扩展 | TASK-0403、0510、0606退款动作、0803 |
-| D3 | 暂停起算、关闭删除保留/匿名、Plan归档锁尚未一致 | 先设计统一生命周期与锁表；不伪造法定保留年限；未决定的分支隔离，平台disabled fail-closed可独立修 | TASK-0401政策分支、0403、0706 |
+| D1 | 旧目标允许99年后月/年/99年续购；BILL-19当前一次购买，UI同商品禁用 | **已确认允许同一Plan重复购买**；每次成功付款在当前结束时间后增加99年；付款前提示“额外打赏”；保留订单/Grant独立事实、幂等和不同Plan冲突 | TASK-0203及0504相关Lifetime分支；详见[决策对比](decision-options-d1-d3.md) |
+| D2 | 自动退款在旧phase-2；本轮发现结案不退款/不撤权 | **已确认网站不提供退款**；不调用Provider退款API，不因普通请求自动撤权；Provider退款/拒付仍记录事实并进入人工补偿告警，受适用法律/平台强制规则约束 | TASK-0403、0510、0606退款动作、0803；详见[决策对比](decision-options-d1-d3.md) |
+| D3 | 暂停起算、关闭删除保留/匿名、Plan归档锁尚未一致 | 业务尚未确认具体生命周期细节；推荐暂停阻止新购买但已有权益继续、删除按法定/财务期限最小化匿名、归档阻止新购但保留旧权益和快照 | TASK-0401政策分支、0403、0706；详见[D3简明说明](d3-lifecycle-explained.md) |
 | D4 | 历史G-DEV PASS与当前反例并存；README/记录中的Staging叙述前后不一 | 保留历史；上轮49/61/724通过和实际反例分别登记，当前修复所有业务验证NOT_RUN | 所有关闭问题的验收 |
 | D5 | “永久使用”与finite/99/year；文档26位格式与实际31默认 | 99年事实已定无需再询问；保留已发行码协议，改显示/文档不能重解释旧码 | 0501/0404/0804 |
 | D6 | Admin列表全局可见但用户要求检查跨租户 | 保留中央system_admin，不新增平台Admin；分别证明用户隔离、Admin身份和服务端筛选 | 0602 |
@@ -75,7 +75,7 @@
 | [TASK-0614](phases/08-admin-billing-repair.md#task-0614) | RC-06 | TASK-0701,TASK-0703,TASK-0605,TASK-0606 | F06,F11,F14 | 未开始 |
 | [TASK-0701](phases/05-reconciliation-observability-and-central-admin.md#task-0701) | RC-07 | TASK-0301,TASK-0302,TASK-0304,TASK-0201 | F06,F12 | Local实现及回归PASS；Hosted/Provider/Staging/Production待验证 |
 | [TASK-0702](phases/05-reconciliation-observability-and-central-admin.md#task-0702) | RC-07 | TASK-0002,TASK-0302,TASK-0303 | F14 | 本地 forward-fix 与回归 PASS；Hosted HTTP/pg_net/恢复待验证 |
-| [TASK-0703](phases/05-reconciliation-observability-and-central-admin.md#task-0703) | RC-07 | TASK-0701,TASK-0702,TASK-0402 | F14,F06,F03 | 未开始 |
+| [TASK-0703](phases/05-reconciliation-observability-and-central-admin.md#task-0703) | RC-07 | TASK-0701,TASK-0702,TASK-0402 | F14,F06,F03 | Local实现及回归PASS；Hosted/Staging告警接收器与生产阈值待验证 |
 | [TASK-0704](phases/05-reconciliation-observability-and-central-admin.md#task-0704) | RC-07 | TASK-0702,TASK-0404,TASK-0305 | F13,F14,F16,F17 | 未开始 |
 | [TASK-0705](phases/05-reconciliation-observability-and-central-admin.md#task-0705) | RC-07 | TASK-0002,TASK-0702 | F14,F17 | 静态调用方矩阵完成；Hosted角色/网关/调度安装待验证 |
 | [TASK-0706](phases/05-reconciliation-observability-and-central-admin.md#task-0706) | RC-07 | TASK-0401,TASK-0402,TASK-0705 | F17,F08,F03 | 未开始 |
@@ -92,8 +92,8 @@
 | --- | --- | --- |
 | `.github/workflows/workflow.yml` | TASK-0801 | 本轮不修改；实施任务获派发后按清单修改 |
 | `apps/admin/app/api/v1/[...path]/route.ts` | TASK-0101、TASK-0103、TASK-0201、TASK-0202、TASK-0203、TASK-0601、TASK-0602、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0611、TASK-0612、TASK-0613、TASK-0614 | 本轮不修改；实施任务获派发后按清单修改 |
-| `apps/admin/features/billing/central-billing-page.tsx` | TASK-0601、TASK-0602、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0611、TASK-0612、TASK-0614 | 本轮不修改；实施任务获派发后按清单修改 |
-| `apps/admin/features/operations/operations-center-page.tsx` | TASK-0614、TASK-0703 | 本轮不修改；实施任务获派发后按清单修改 |
+| `apps/admin/features/billing/central-billing-page.tsx` | TASK-0601、TASK-0602、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0611、TASK-0612、TASK-0614、TASK-0703 | 已接入队列/租约/游标/告警与送达状态；继续补充Hosted观察证据 |
+| `apps/admin/features/operations/operations-center-page.tsx` | TASK-0614、TASK-0703 | 运行告警当前集中在中央Billing页；Operations页仍待统一入口整理 |
 | `apps/admin/features/redemption/platform-redemption-batches-page.tsx` | TASK-0404、TASK-0613 | 本轮不修改；实施任务获派发后按清单修改 |
 | `apps/admin/features/security/admin-recent-mfa-panel.tsx` | TASK-0610 | 本轮不修改；实施任务获派发后按清单修改 |
 | `apps/admin/features/subscriptions/platform-subscription-page.tsx` | TASK-0403、TASK-0607、TASK-0608 | 本轮不修改；实施任务获派发后按清单修改 |
@@ -105,7 +105,7 @@
 | `docs/architecture/modules/files-jobs.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/architecture/modules/frontends.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/architecture/overview.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
-| `docs/guides/operations.md` | TASK-0703、TASK-0704、TASK-0705、TASK-0706、TASK-0802、TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
+| `docs/guides/operations.md` | TASK-0703、TASK-0704、TASK-0705、TASK-0706、TASK-0802、TASK-0804 | 已补充0703告警生命周期、接收器和D2退款规则；后续任务继续同步 |
 | `docs/guides/testing.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/proposals/subscription-billing-centralization/design.md` | TASK-0003、TASK-0101、TASK-0102 | 本轮计划；后续执行记录按实际更新 |
 | `docs/proposals/subscription-billing-centralization/plan.md` | TASK-0003、TASK-0804 | 本轮计划；后续执行记录按实际更新 |
@@ -116,7 +116,7 @@
 | `docs/reference/configuration.md` | TASK-0702、TASK-0704、TASK-0705、TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/reference/contracts.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/reference/contracts/account.openapi.json` | TASK-0101、TASK-0103、TASK-0201、TASK-0202、TASK-0203、TASK-0301、TASK-0306、TASK-0404、TASK-0405 | 本轮不修改；实施任务获派发后按清单修改 |
-| `docs/reference/contracts/admin.openapi.json` | TASK-0101、TASK-0103、TASK-0201、TASK-0202、TASK-0203、TASK-0301、TASK-0303、TASK-0304、TASK-0402、TASK-0403、TASK-0404、TASK-0405、TASK-0601、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0611、TASK-0613、TASK-0614、TASK-0703 | 本轮不修改；实施任务获派发后按清单修改 |
+| `docs/reference/contracts/admin.openapi.json` | TASK-0101、TASK-0103、TASK-0201、TASK-0202、TASK-0203、TASK-0301、TASK-0303、TASK-0304、TASK-0402、TASK-0403、TASK-0404、TASK-0405、TASK-0601、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0611、TASK-0613、TASK-0614、TASK-0703 | 已声明BillingObservability响应和告警字段 |
 | `docs/reference/data-model.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/reference/sdk.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `package.json` | TASK-0801 | 本轮不修改；实施任务获派发后按清单修改 |
@@ -138,11 +138,11 @@
 | `supabase/functions/_shared/afdian.ts` | TASK-0301、TASK-0305、TASK-0402、TASK-0701、TASK-0704 | TASK-0701 已新增独立分页适配；后续TASK继续复用 |
 | `supabase/functions/_shared/billing.ts` | TASK-0704 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/functions/account-api/index.test.ts` | TASK-0306、TASK-0405 | 本轮不修改；实施任务获派发后按清单修改 |
-| `supabase/functions/account-api/index.ts` | TASK-0101、TASK-0103、TASK-0201、TASK-0202、TASK-0203、TASK-0301、TASK-0304、TASK-0306、TASK-0403、TASK-0404、TASK-0405、TASK-0512、TASK-0601、TASK-0602、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0613、TASK-0614、TASK-0703 | 本轮不修改；实施任务获派发后按清单修改 |
+| `supabase/functions/account-api/index.ts` | TASK-0101、TASK-0103、TASK-0201、TASK-0202、TASK-0203、TASK-0301、TASK-0304、TASK-0306、TASK-0403、TASK-0404、TASK-0405、TASK-0512、TASK-0601、TASK-0602、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0613、TASK-0614、TASK-0703 | metrics改读admin_billing_observability，保留旧指标并扩展告警/调度字段 |
 | `supabase/functions/billing-webhook/index.test.ts` | TASK-0305 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/functions/billing-webhook/index.ts` | TASK-0305、TASK-0405 | 本轮不修改；实施任务获派发后按清单修改 |
-| `supabase/functions/maintenance/index.test.ts` | TASK-0302、TASK-0303、TASK-0701、TASK-0702、TASK-0703、TASK-0704 | TASK-0701 已新增分页发现/失败停留回归 |
-| `supabase/functions/maintenance/index.ts` | TASK-0301、TASK-0302、TASK-0303、TASK-0402、TASK-0604、TASK-0701、TASK-0702、TASK-0703、TASK-0704、TASK-0705 | TASK-0701 已新增分页发现入口并接入批次运行 |
+| `supabase/functions/maintenance/index.test.ts` | TASK-0302、TASK-0303、TASK-0701、TASK-0702、TASK-0703、TASK-0704 | 已新增告警评估、注入接收器和送达状态回归 |
+| `supabase/functions/maintenance/index.ts` | TASK-0301、TASK-0302、TASK-0303、TASK-0402、TASK-0604、TASK-0701、TASK-0702、TASK-0703、TASK-0704、TASK-0705 | 已新增告警评估入口、批次运行接入、超时受控Webhook接收器 |
 | `supabase/functions/maintenance/schedule.json` | TASK-0702、TASK-0705 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/migrations/20260907103848_security_helpers.sql` | TASK-0405 | 只读历史证据；通过新迁移forward-fix |
 | `supabase/migrations/20260908103340_m3_dual_secret_redeem.sql` | TASK-0401 | 只读历史证据；通过新迁移forward-fix |

@@ -847,6 +847,8 @@ Deno.test('maintenance run dispatches a claimed discovery job', async () => {
   assertEquals(events, [
     'begin',
     'role',
+    'begin',
+    'role',
     'billing-claim',
     'begin',
     'role',
@@ -927,7 +929,10 @@ Deno.test('maintenance discovers provider pages before order verification', asyn
           pages.push(page);
           return {
             status: 'found',
-            orders: [{ out_trade_no: 'page-order-1' }, { out_trade_no: 'page-order-2' }],
+            orders: [
+              { out_trade_no: 'page-order-1' },
+              { out_trade_no: 'page-order-2' },
+            ],
             totalPage: 3,
           };
         },
@@ -1069,4 +1074,67 @@ Deno.test('maintenance gates Auth deletion on provider success before checkpoint
     'role',
     'delete-step',
   ]);
+});
+
+Deno.test('maintenance evaluates and delivers billing observability alerts', async () => {
+  const alertId = '00000000-0000-4000-8000-000000000009';
+  const alertEvents: string[] = [];
+  const alertDatabase: TestDatabase = {
+    async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
+      return callback({
+        json(value: unknown) {
+          return value;
+        },
+        async unsafe<T extends TestRow>(query: string) {
+          if (query.startsWith('set local role')) {
+            alertEvents.push('role');
+            return [] as T[];
+          }
+          if (query.includes('billing_alerts_evaluate')) {
+            alertEvents.push('evaluate');
+            return [
+              {
+                alert_id: alertId,
+                alert_key: 'billing.jobs.expired_lease',
+                status: 'active',
+                needs_delivery: true,
+              },
+            ] as unknown as T[];
+          }
+          if (query.includes('billing_alert_delivery_update')) {
+            alertEvents.push('delivery');
+            return [
+              { alert_id: alertId, delivery_status: 'delivered' },
+            ] as unknown as T[];
+          }
+          return [] as T[];
+        },
+      });
+    },
+  };
+  const delivered: string[] = [];
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/alerts/evaluate', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ thresholds: { expired_lease_count: 2 } }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: alertDatabase,
+      billingAlertReceiver: {
+        async deliver(alert) {
+          delivered.push(String(alert.alert_key));
+        },
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data.receiver_status, 'delivered');
+  assertEquals(delivered, ['billing.jobs.expired_lease']);
+  assertEquals(alertEvents, ['role', 'evaluate', 'role', 'delivery']);
 });

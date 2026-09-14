@@ -278,3 +278,27 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | Commit与push | 本轮待形成独立小提交并推送 `origin/codex/billing-architecture-review`；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
 
 检查不改变其余TASK未开始状态；远程提交状态已由 `git ls-remote` 核对。最终工作区及静态复核在本轮回复报告。
+
+## 追加实施记录（2026-09-14，TASK-0703 可观测性与 D1/D2 前向修复）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 业务决策 | D1 已确认：99 年商品允许重复购买，同一有效 Plan 的每次成功购买在当前结束时间后增加 99 年；D2 已确认：网站不提供退款，购买权益视为对开发者的搭赏，不自动调用 Provider 退款 API，也不因普通退款请求自动撤销权益；Provider 退款/拒付/逆向事实仍需记录并人工处理。D3 仍待确认，解释见 `decision-options-d1-d3.md` 与 `d3-lifecycle-explained.md`。 |
+| D1 实际变更 | 新增 `supabase/migrations/20260914115740_repair_task_d1_repeat_lifetime.sql` 移除一次性 Lifetime trigger；保留不同有效 Plan 冲突与共享 `entitlement_apply` 的顺延累加规则。更新 `bill_19_lifetime_purchase_guard.sql` 回归重复 Checkout、独立 Grant 和超过 190 年的累计权益期限；Account API 不再按历史购买禁用 Lifetime；Consumer 付款前弹窗明确“搭赏”、重复购买顺延 99 年和不退款规则。 |
+| TASK-0703 实际变更 | 新增 `20260914112916_repair_task_0703.sql`：退款观测事实、告警状态/指纹去重/恢复、队列年龄/租约/重试预算/对账游标/调度器指标、告警送达结果和 Admin 只读聚合；新增 maintenance 告警评估入口并接入 Billing worker，每次成功 HTTP 投递后才标记 delivered，接收器未配置或失败保持可见；Account API metrics 切换到 `admin_billing_observability`，Admin Billing 页面展示告警、送达和运行指标；同步 Admin OpenAPI 与运维文档。 |
+| 失败证据与修复 | 首次 0703 SQL 专项触发聚合分组错误、Cron 原始表权限越界、PL/pgSQL 输出变量遮蔽和 job executor 下 pgtap 断言权限问题；分别通过先聚合观测时间、增加 postgres-owned Cron 观测 wrapper、限定别名、切回 postgres 做断言并保留 job executor 调用验证修复。Maintenance 首次回归仅为新增告警事务造成既有事件序列差异，更新测试期望后通过，未放宽业务断言。 |
+| 数据库验证 | `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：55 个 SQL 文件、1027 个断言；0703 专项通过，D1 Lifetime 专项通过，RLS/角色负例通过。 |
+| Edge/API/UI/静态验证 | maintenance Deno 18/18 PASS；Account API Deno 34/34 PASS；`pnpm typecheck` PASS（9/9）；`pnpm lint` PASS；`pnpm contracts:check` PASS（Account 22、Admin 44；4 contracts/39 fields）；`pnpm docs:check` PASS（67 documents）；目标文件 `oxfmt --check` PASS。 |
+| Hosted/Staging与未完成 | 用户已授权 Hosted/Staging 测试，但本记录更新时尚未取得/确认可用的目标项目引用、远程迁移清单和告警接收器配置；Hosted/Staging 迁移、真实 Cron/pg_net、Webhook 接收失败/恢复、真实 Provider 退款事实和浏览器 E2E 仍 NOT_RUN。Production、真实支付和 Provider 退款操作未被本轮授权推断覆盖。 |
+| Commit与push | 本轮代码尚未提交；待 Hosted/Staging 只读配置核对和任务 0801 CI 门槛完成后形成独立小提交并推送，按 R3 门槛再评估是否允许合并 `main`。 |
+
+## 追加实施记录（2026-09-15，TASK-0801 全量本地门禁与浏览器回归）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 验证入口 | 新增 `pnpm run verify:task:0801`，统一执行本地数据库重置、格式/静态检查、SDK 构建、类型检查、Consumer/Admin 构建、Edge/API/SQL 回归、并发回归、浏览器回归、文档和合同校验；占位 `test:api` 被明确识别为 `NOT_RUN`，不计为 PASS。 |
+| 全量门禁 | `TASK-0801 PASS: 21 executable gates passed.`；SQL 55 个文件/1027 个断言 PASS，Edge 73/73，Account API 34/34，maintenance 18/18，Account Server 16/16，Domain 11/11，类型检查 9/9，Consumer/Admin build PASS，结算并发 PASS，SDK/模板/运行时边界 PASS。 |
+| 浏览器验收 | T16 全部 21 项通过；T12 登录、AAL1 拒绝、MFA、HttpOnly proof、敏感写入、旧 JWT 失效均 PASS；Admin 70 条路由在 320/375/390/768/1440 视口的溢出、语义控件、对话框焦点和键盘导航均 PASS。同步修复了窄屏平台头部/切换器/资源 ID 溢出和设置页只读字段标签关联。 |
+| 文档/合同 | `pnpm docs:check` PASS（67 documents）；OpenAPI PASS（Account 22、Admin 44 operations）；Consumer compatibility PASS（4 contracts、39 fields）。变更文件范围内格式检查 PASS；仓库全量格式基线仍有 58 个未修改历史文件问题，未将其伪报为本轮通过。 |
+| Hosted/Staging | 已按用户授权完成 Staging 迁移清单核对并应用新增迁移，部署 `maintenance` 与 `account-api`；未认证 smoke endpoint 按预期返回 401。带真实测试身份、平台密钥、maintenance token 和 Provider sandbox 的正向支付/告警/浏览器 E2E 因安全 fixture 尚未提供，保持 `NOT_RUN`。Production 未执行。 |
+| 未完成/阻塞 | D3 的暂停生效、删除/匿名化保留周期、Plan 归档规则仍需业务/合规确认；Hosted/Staging 正向认证 E2E 需要安全注入测试 fixture；前端部署需要确认目标托管项目。 |

@@ -42,6 +42,7 @@
     "test:consumer:m5-05": "node tests/spikes/consumer/m5-05-install.mjs",
     "test:consumer:fe-r1-ui": "node tests/spikes/consumer/fe-r1-ui-ui-install.mjs",
     "test:maintenance": "D:\\APP\\Codex\\Deno\\bin\\deno.exe test --allow-env --allow-net --allow-read --allow-import supabase/functions/maintenance/index.test.ts",
+    "verify:task:0801": "node tooling/scripts/src/task-0801.mjs",
     "test:e2e": "node tests/spikes/e2e/t16-r2-account.mjs",
     "runtime:probe": "pnpm run --filter scripts runtime:probe",
     "docs:check": "pnpm run --filter scripts docs:check",

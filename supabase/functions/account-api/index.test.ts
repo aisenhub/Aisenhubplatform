@@ -299,14 +299,24 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           }
-          if (query.startsWith('select * from private.admin_billing_metrics'))
+          if (
+            query.startsWith(
+              'select * from private.admin_billing_observability',
+            )
+          )
             return [
               {
                 pending_count: 0,
+                processing_count: 0,
                 retryable_count: 1,
+                completed_count: 3,
                 manual_review_count: 0,
                 duplicate_payment_count: 0,
                 oldest_pending_age_seconds: 0,
+                active_alert_count: 1,
+                pending_alert_delivery_count: 1,
+                alert_threshold_source: 'local_default',
+                alerts: [],
               },
             ] as unknown as R[];
           if (
@@ -621,7 +631,7 @@ Deno.test('Account API fails closed when the catalog DTO is invalid', async () =
   assertEquals((await response.json()).error.code, 'AUTHORIZATION_UNAVAILABLE');
 });
 
-Deno.test('Account API disables lifetime after an authenticated lifetime purchase', async () => {
+Deno.test('Account API keeps repeat lifetime purchase available after prior purchase', async () => {
   const response = await handleRequest(
     new Request(
       'http://local/functions/v1/account-api/v1/subscription/products',
@@ -633,15 +643,23 @@ Deno.test('Account API disables lifetime after an authenticated lifetime purchas
       },
     ),
     {
-      database: fakeDatabase(),
+      database: fakeDatabase(
+        undefined,
+        [],
+        {},
+        {
+          purchasable: true,
+          reason: 'ready',
+        },
+      ),
       platformKeySecret: 'm3-test-platform-secret',
       verifyAccessToken: async () => userId,
     },
   );
   assertEquals(response.status, 200);
   const payload = await response.json();
-  assertEquals(payload.data[0].purchasable, false);
-  assertEquals(payload.data[0].reason, 'lifetime_already_purchased');
+  assertEquals(payload.data[0].purchasable, true);
+  assertEquals(payload.data[0].reason, 'ready');
 });
 
 Deno.test('Account API creates and reads a server-priced checkout snapshot', async () => {
@@ -710,7 +728,10 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
     },
   );
   assertEquals(recovered.status, 200);
-  assertEquals((await recovered.json()).data.checkout_id, '00000000-0000-4000-8000-000000000011');
+  assertEquals(
+    (await recovered.json()).data.checkout_id,
+    '00000000-0000-4000-8000-000000000011',
+  );
 });
 
 Deno.test('Account API preserves paid progress even when the snapshot expiry is in the past', async () => {
@@ -1528,7 +1549,10 @@ Deno.test('Account API exposes central Billing order and requery wrappers', asyn
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
   );
   assertEquals(metrics.status, 200);
-  assertEquals((await metrics.json()).data.retryable_count, 1);
+  const metricsPayload = await metrics.json();
+  assertEquals(metricsPayload.data.retryable_count, 1);
+  assertEquals(metricsPayload.data.active_alert_count, 1);
+  assertEquals(metricsPayload.data.alert_threshold_source, 'local_default');
 
   const detail = await handleRequest(
     new Request(`${base}/orders/${keyId}`, { headers: auth }),

@@ -4,7 +4,9 @@
 
 ## 1. 环境和发布
 
-Local 和 Production 使用独立 Supabase 项目/实例，不共享 Auth 用户、数据库、对象、Secret、Platform Key、HMAC、兑换码或数据库凭据。本项目不设置 Staging 环境；Preview 仅作为 Local 的开发预览，只接 Local，禁止连接 Production。生产数据不作为 Local fixture。
+Staging不随部署清空；按[开发流程第5.2节](development-release-workflow.md#52-staging数据保留批次清理与重建)保留基础数据和验收证据、按批次清理临时数据。未完成交易/任务和外部回调绑定不得随意删除；全库重建属于需明确授权的独立操作。
+
+Local本机Supabase Docker、独立Hosted Staging和独立Hosted Production不共享Auth用户、数据库、对象、Secret、Platform Key、HMAC、兑换码或数据库凭据。Admin与平台前端分别连接对应环境；Local/Preview禁止连接Production，明确连接Staging的本地前端只计远程联调，不能替代Hosted前端验收。生产数据不作为Local或日常Staging fixture。工作规则见[开发与发布流程](development-release-workflow.md)，环境存在与可用性仍需实际核验。
 
 迁移由Supabase CLI生成时间戳文件，版本固定后先读CLI help。Auth/Storage/Origin/调度配置纳入受控配置与漂移检查，不能依赖开发者手工Dashboard操作。Secrets只存各环境Secret Manager，仓库保存变量名与配置模板。
 
@@ -12,7 +14,7 @@ CI 负责执行仓库中已配置的格式、lint、typecheck、构建、领域�
 
 安全、审计、并发和恢复测试在对应功能开发时建立；发布前执行统一回归。生产迁移是独立release gate，不随普通merge执行。数据库变更采用expand→兼容部署→验证→contract；已产生业务数据后优先forward-fix，不通过删除Ledger来“回滚”。
 
-发布路径固定为 Local → Production。Local 验证通过并取得上线授权后，才执行生产迁移和部署；不创建、不维护、也不把 Staging 验证作为发布条件。高风险数据库、Auth、Storage、权限或并发变更仍须在 Local 完成定向验证，并准备生产迁移的回退/前向修复方案。
+标准发布路径为Local → Staging → 生产前门槛 → Production。R0不部署应用，严格限定的R1展示修改可跳过Staging但仍须精简门槛；R2/R3必须Hosted验收。生产迁移、Secret/配置、权限、数据修正和开启真实支付同样需要适用门槛与明确授权。CI保留质量检查，Git推送不等于生产部署；完整分类、G0–G6与例外处理唯一维护在[开发与发布流程](development-release-workflow.md)。
 
 发布证据包含依赖锁、上游commit/license、迁移结果、测试报告、备份manifest、恢复演练、Key轮换、配置漂移检查和实际Edge/BFF限制报告。缺证据标为未验收，不用勾选符号假装已完成。
 
@@ -69,7 +71,7 @@ Auth完全不可用时不绕过认证开放Admin网页；通过基础设施运�
 
 清理/删除重试每分钟运行，对象对账每小时分批运行，普通过期幂等缓存每天通过 `/maintenance/v1/idempotency/cleanup` 分批清理，联合备份每天运行。幂等清理只删除 `private.idempotency_keys` 与 `private.admin_idempotency` 的过期缓存，不删除 `billing_checkout_intents` 或 `billing_orders` 等长期交易绑定。Billing processing 使用独立的 job lease/fencing：`/maintenance/v1/billing/jobs/run` 领取并分派批次，发现任务在 `/maintenance/v1/billing/jobs/discover` 中于事务外调用 Provider adapter，订单核验使用 `/maintenance/v1/billing/jobs/process` 进入 `billing_order_query_target`/`billing_order_verify_and_settle`，`/maintenance/v1/billing/jobs/finish` 以 lease 结算成功/失败；Provider 网络等待不持有数据库事务。任务用数据库job lease、fencing_token、retry_count和next_attempt_at，禁止将Edge响应后的未跟踪Promise作为可靠任务。
 
-当前仓库调度清单每分钟调用 `/maintenance/v1/billing/jobs/run`，默认领取并顺序处理最多5个 Billing job；该入口在同一受控 worker 身份下分派 `webhook_order_discovery` 与订单核验，Provider 网络等待仍在数据库事务之外。Hosted Cron 由 `private.billing_maintenance_cron()` 规范化 Vault 中的 maintenance 函数基址后发起 pg_net 请求，并在下一次调度观察 `private.billing_cron_invocations` 中的请求受理、HTTP 响应和 Worker 业务计数；缺少配置、错误路径、超时或非 2xx 不被记为健康。schedule.json 只是调用元数据，不安装定时器，也不能仅凭存在HTTP入口宣称已自动调度。发现游标和处理游标独立记录，Admin metrics 同时展示两者的最后成功时间、pending/retryable/manual_review 和 oldest pending。Checkout、Webhook、后台领取和自动结算分别由 `BILLING_CHECKOUT_ENABLED`、`BILLING_WEBHOOK_INGRESS_ENABLED`、`BILLING_BACKGROUND_PROCESSING_ENABLED`、`BILLING_AUTO_SETTLEMENT_ENABLED` 控制；关闭 Checkout 不会误关已付款入站，关闭结算不会删除积压任务。真实 Vault 调度密钥、Provider 限流预算、告警接收人和停机恢复演练属于 G-OPS，当前 NOT_RUN。
+当前仓库调度清单每分钟调用 `/maintenance/v1/billing/jobs/run`，默认领取并顺序处理最多5个 Billing job；该入口在同一受控 worker 身份下分派 `webhook_order_discovery` 与订单核验，Provider 网络等待仍在数据库事务之外。每次批次运行会先调用 Billing 告警评估，告警以 `alert_key + fingerprint` 去重，恢复会生成可追踪的恢复状态；可选的 `BILLING_ALERT_WEBHOOK_URL` 接收器只有在 HTTP 成功后才把记录标记为 `delivered`，未配置或失败均保留为待送达/失败并展示在 Admin。Hosted Cron 由 `private.billing_maintenance_cron()` 规范化 Vault 中的 maintenance 函数基址后发起 pg_net 请求，并在下一次调度观察 `private.billing_cron_invocations` 中的请求受理、HTTP 响应和 Worker 业务计数；缺少配置、错误路径、超时或非 2xx 不被记为健康。schedule.json 只是调用元数据，不安装定时器，也不能仅凭存在HTTP入口宣称已自动调度。发现游标和处理游标独立记录，Admin metrics 同时展示队列年龄、租约、重试预算、退款观测待补偿、两条游标的最后成功时间、告警和送达状态；本地默认阈值仅用于开发/验收，不能直接当作生产阈值审批。Checkout、Webhook、后台领取和自动结算分别由 `BILLING_CHECKOUT_ENABLED`、`BILLING_WEBHOOK_INGRESS_ENABLED`、`BILLING_BACKGROUND_PROCESSING_ENABLED`、`BILLING_AUTO_SETTLEMENT_ENABLED` 控制；关闭 Checkout 不会误关已付款入站，关闭结算不会删除积压任务。当前 D2 业务规则是不提供网站退款；购买权益视为对开发者的搭赏，系统不自动调用 Provider 退款 API，也不因普通退款请求自动撤销权益，但 Provider 退款/拒付/逆向事实仍须记录并进入人工处理。真实 Vault 调度密钥、Provider 限流预算、告警接收人和停机恢复演练属于 G-OPS，当前 NOT_RUN。
 
 数据库临界区短事务，不跨Storage网络等待。失效lease的worker不能提交新状态；不把fencing等同Storage的写入取消。未知Storage写入保留配额直到确认结算，无法确认时转人工，不无限释放预算重试。
 

@@ -537,7 +537,7 @@
         "operationId": "adminGetBillingMetrics",
         "security": [{ "adminBearer": [] }],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
+          "200": { "$ref": "#/components/responses/BillingObservability" },
           "403": { "$ref": "#/components/responses/Forbidden" }
         }
       }
@@ -784,6 +784,24 @@
           }
         }
       },
+      "BillingObservability": {
+        "description": "Read-only Billing queue, reconciliation, scheduler, refund-observation, and alert delivery observability.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["data", "request_id"],
+              "properties": {
+                "data": { "$ref": "#/components/schemas/BillingObservability" },
+                "request_id": { "type": "string", "format": "uuid" }
+              }
+            }
+          }
+        }
+      },
       "Object": {
         "description": "JSON response with data and request_id.",
         "headers": {
@@ -901,6 +919,110 @@
           },
           "next_cursor": { "type": ["string", "null"] },
           "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "BillingObservability": {
+        "type": "object",
+        "required": [
+          "observed_at",
+          "pending_count",
+          "processing_count",
+          "retryable_count",
+          "completed_count",
+          "manual_review_count",
+          "expired_lease_count",
+          "retry_attempts_total",
+          "retry_budget_exhausted_count",
+          "duplicate_payment_count",
+          "refund_mismatch_count",
+          "active_alert_count",
+          "pending_alert_delivery_count",
+          "alert_thresholds",
+          "alert_threshold_source",
+          "alerts"
+        ],
+        "properties": {
+          "observed_at": { "type": "string", "format": "date-time" },
+          "pending_count": { "type": "integer", "minimum": 0 },
+          "processing_count": { "type": "integer", "minimum": 0 },
+          "retryable_count": { "type": "integer", "minimum": 0 },
+          "completed_count": { "type": "integer", "minimum": 0 },
+          "manual_review_count": { "type": "integer", "minimum": 0 },
+          "oldest_pending_age_seconds": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "oldest_processing_age_seconds": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "expired_lease_count": { "type": "integer", "minimum": 0 },
+          "retry_attempts_total": { "type": "integer", "minimum": 0 },
+          "retry_budget_exhausted_count": { "type": "integer", "minimum": 0 },
+          "duplicate_payment_count": { "type": "integer", "minimum": 0 },
+          "refund_mismatch_count": { "type": "integer", "minimum": 0 },
+          "discovery_last_success_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "processing_last_success_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "discovery_lag_seconds": { "type": ["number", "null"], "minimum": 0 },
+          "processing_lag_seconds": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "scheduler_last_accepted_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "scheduler_last_completed_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "scheduler_failure_count": { "type": "integer", "minimum": 0 },
+          "active_alert_count": { "type": "integer", "minimum": 0 },
+          "pending_alert_delivery_count": { "type": "integer", "minimum": 0 },
+          "alert_thresholds": {
+            "type": "object",
+            "additionalProperties": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "alert_threshold_source": {
+            "type": "string",
+            "enum": ["local_default", "configured"]
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "alert_id",
+                "alert_key",
+                "severity",
+                "status",
+                "delivery_status",
+                "details"
+              ],
+              "properties": {
+                "alert_id": { "type": "string", "format": "uuid" },
+                "alert_key": { "type": "string" },
+                "severity": {
+                  "type": "string",
+                  "enum": ["warning", "high", "critical"]
+                },
+                "status": { "type": "string", "enum": ["active", "recovered"] },
+                "occurrence_count": { "type": "integer", "minimum": 1 },
+                "delivery_status": {
+                  "type": "string",
+                  "enum": ["pending", "delivered", "failed"]
+                },
+                "delivery_attempts": { "type": "integer", "minimum": 0 },
+                "details": { "type": "object", "additionalProperties": true }
+              }
+            }
+          }
         }
       },
       "BillingJobFailure": {

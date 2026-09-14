@@ -191,8 +191,17 @@ export function PlatformSettingsPage() {
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <ReadOnlyField label="平台名称" value={platform.name} />
-            <ReadOnlyField label="平台 code" value={platform.code} mono />
+            <ReadOnlyField
+              id="platform-setting-name"
+              label="平台名称"
+              value={platform.name}
+            />
+            <ReadOnlyField
+              id="platform-setting-code"
+              label="平台 code"
+              value={platform.code}
+              mono
+            />
             <div className="sm:col-span-2">
               <div className="text-xs text-muted-foreground">平台 ID</div>
               <ResourceId value={platform.platform_id} className="mt-2" />
@@ -269,18 +278,23 @@ export function PlatformSettingsPage() {
 }
 
 function ReadOnlyField({
+  id,
   label,
   value,
   mono = false,
 }: {
+  id: string;
   label: string;
   value: string;
   mono?: boolean;
 }) {
   return (
     <div className="grid gap-2">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Label htmlFor={id} className="text-xs text-muted-foreground">
+        {label}
+      </Label>
       <Input
+        id={id}
         readOnly
         value={value}
         className={mono ? 'font-mono text-xs' : ''}

@@ -923,12 +923,7 @@ function entitlementDto(row: Row) {
   };
 }
 
-function subscriptionProductDto(
-  row: Row,
-  lifetimeAlreadyPurchased = false,
-): SubscriptionProductDto {
-  const lifetimeBlocked =
-    lifetimeAlreadyPurchased && stringValue(row.product_code) === 'lifetime';
+function subscriptionProductDto(row: Row): SubscriptionProductDto {
   const dto: unknown = {
     code: stringValue(row.product_code),
     name: stringValue(row.product_name),
@@ -946,10 +941,8 @@ function subscriptionProductDto(
     price_version: Number(row.price_version),
     recommended: row.recommended === true,
     enabled: row.enabled === true,
-    purchasable: lifetimeBlocked ? false : row.purchasable === true,
-    reason: lifetimeBlocked
-      ? 'lifetime_already_purchased'
-      : stringValue(row.reason),
+    purchasable: row.purchasable === true,
+    reason: stringValue(row.reason),
   };
   if (!isSubscriptionProductDto(dto))
     throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
@@ -1116,19 +1109,9 @@ async function dispatchAccount(
         'select * from private.subscription_products_list($1::uuid, $2::uuid)',
         [key.platformId, key.keyId],
       );
-      let lifetimeAlreadyPurchased = false;
-      if (session) {
-        const [purchaseStatus] = await transaction.unsafe<Row>(
-          'select * from private.subscription_lifetime_purchase_status(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
-          accountContextValues(session, key),
-        );
-        lifetimeAlreadyPurchased = purchaseStatus?.lifetime_purchased === true;
-      }
       return {
         status: 200,
-        data: rows.map((row) =>
-          subscriptionProductDto(row, lifetimeAlreadyPurchased),
-        ),
+        data: rows.map((row) => subscriptionProductDto(row)),
       };
     }
     const rows = await transaction.unsafe<Row>(
@@ -1744,7 +1727,7 @@ async function dispatchAdmin(
   }
   if (path === 'admin/api/v1/billing/metrics' && request.method === 'GET') {
     const [result] = await transaction.unsafe<Row>(
-      'select * from private.admin_billing_metrics(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context)',
+      'select * from private.admin_billing_observability(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context)',
       context,
     );
     return { status: 200, data: result ?? null };

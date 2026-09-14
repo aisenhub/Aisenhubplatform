@@ -633,12 +633,34 @@ select:focus-visible {
 
 .platform-context-header {
   gap: 1.35rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.platform-context-header > div {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+.platform-context-header .platform-switcher {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+.platform-context-header .platform-switcher select {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .platform-breadcrumb {
+  min-width: 0;
   color: #94a096;
   font-size: 0.76rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .platform-breadcrumb span:last-child {
@@ -646,15 +668,21 @@ select:focus-visible {
 }
 
 .platform-meta {
+  min-width: 0;
   color: #7e8981;
   font-size: 0.77rem;
 }
 
 .platform-meta .font-mono {
+  min-width: 0;
   color: var(--foreground);
+  overflow-wrap: anywhere;
 }
 
 .platform-navigation {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
   padding-bottom: 0.25rem;
   border-bottom: 1px solid #e7ebe5;
 }

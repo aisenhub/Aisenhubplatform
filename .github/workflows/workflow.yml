@@ -38,26 +38,5 @@ jobs:
         with:
           deno-version: v2.9.6
 
-      - name: Format check
-        run: pnpm run format:check
-
-      - name: Lint
-        run: pnpm run lint
-
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Build
-        run: pnpm run build
-
-      - name: Unit tests
-        run: pnpm run test:unit
-
-      - name: Runtime import probe
-        run: pnpm run runtime:probe
-
-      - name: Documentation check
-        run: pnpm run docs:check
-
-      - name: OpenAPI contract check
-        run: pnpm run contracts:check
+      - name: TASK-0801 full local verification
+        run: pnpm run verify:task:0801

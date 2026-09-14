@@ -26,6 +26,9 @@ const orderIds = [crypto.randomUUID(), crypto.randomUUID()];
 const jobIds = [crypto.randomUUID(), crypto.randomUUID()];
 const leaseOwner = 'bill05-concurrency-worker';
 let monthlyProductId;
+let monthlyPrice;
+let monthlyPriceVersion;
+let monthlyCurrency;
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -74,10 +77,17 @@ try {
   userId = await signup();
   await asRole('domain_owner', async (transaction) => {
     const [monthlyProduct] = await transaction`
-      select id from public.subscription_products where code = 'monthly'
+      select id, price_amount, price_version, currency
+      from public.subscription_products where code = 'monthly'
     `;
     assert(monthlyProduct?.id, 'monthly subscription product is required');
     monthlyProductId = monthlyProduct.id;
+    monthlyPrice = monthlyProduct.price_amount;
+    monthlyPriceVersion = monthlyProduct.price_version;
+    monthlyCurrency = monthlyProduct.currency;
+    facts.total_amount = monthlyPrice;
+    facts.show_amount = monthlyPrice;
+    facts.currency = monthlyCurrency;
     await transaction`
       insert into public.platforms (id, code, name)
       values (${platformId}, ${`bill05-concurrency-${platformId.slice(0, 8)}`}, 'BILL-05 concurrency fixture')
@@ -106,7 +116,7 @@ try {
         price_version, mapping_version, validation_status, published, enabled
       ) values (
         ${providerProductId}, ${providerAccountId}, ${monthlyProductId}, 'bill05-concurrency-plan',
-        'subscription', '{}'::text[], 0, 1, 19.90, 19.90, 1, 1, 'verified', true, true
+        'subscription', '{}'::text[], 0, 1, ${monthlyPrice}, ${monthlyPrice}, ${monthlyPriceVersion}, 1, 'verified', true, true
       )
     `;
     await transaction`
@@ -117,8 +127,8 @@ try {
         mapping_version, custom_order_id, idempotency_key_hash, request_hash, expires_at
       ) values (
         ${checkoutId}, ${platformId}, ${accountId}, ${monthlyProductId}, ${planId},
-        ${providerAccountId}, ${providerProductId}, 'monthly', 'finite', 1, 'month', 19.90,
-        1, 1, ${facts.custom_order_id}, ${Buffer.alloc(32, 0x11)}, ${Buffer.alloc(32, 0x22)}, now() + interval '30 minutes'
+        ${providerAccountId}, ${providerProductId}, 'monthly', 'finite', 1, 'month', ${monthlyPrice},
+        ${monthlyPriceVersion}, 1, ${facts.custom_order_id}, ${Buffer.alloc(32, 0x11)}, ${Buffer.alloc(32, 0x22)}, now() + interval '30 minutes'
       )
     `;
     for (let index = 0; index < orderIds.length; index += 1) {
@@ -258,11 +268,14 @@ try {
     () =>
       sql`delete from public.subscriptions where platform_id = ${platformId}`,
   );
-  await cleanup(
-    'provider products',
-    () =>
-      sql`delete from public.billing_provider_products where provider_account_id = ${providerAccountId}`,
-  );
+  await cleanup('provider products', async () => {
+    await sql`
+        update public.billing_provider_products
+        set published = false, enabled = false
+        where provider_account_id = ${providerAccountId}
+      `;
+    await sql`delete from public.billing_provider_products where provider_account_id = ${providerAccountId}`;
+  });
   await cleanup(
     'provider account',
     () =>

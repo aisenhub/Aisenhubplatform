@@ -57,7 +57,7 @@ const centralUrl = 'http://127.0.0.1:8789';
 const consumerAUrl = 'http://127.0.0.1:3110';
 const consumerBUrl = 'http://127.0.0.1:3111';
 const adminUrl = 'http://127.0.0.1:3112';
-const denoPath = 'D:\\APP\\Codex\\Deno\\bin\\deno.exe';
+const denoPath = process.env.DENO_BIN?.trim() || 'deno';
 const consumerDirectory = process.env.T16_CONSUMER_DIR?.trim() ?? '';
 
 if (!authUrl || !anonKey || !publishableKey || !databaseUrl)
@@ -1686,6 +1686,16 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/files`, {
       waitUntil: 'domcontentloaded',
     });
+    await page.waitForFunction(() => {
+      const button = document.querySelector(
+        '[data-test="platform-files-refresh"]',
+      );
+      return button instanceof HTMLButtonElement && !button.disabled;
+    });
+    await page.locator('[data-test="platform-files-refresh"]').click();
+    await page
+      .locator(`[data-test="platform-file-row-${acceptedFileId}"]`)
+      .waitFor();
     const policyPanel = page.locator('[data-test="platform-file-policy"]');
     await policyPanel
       .locator('[data-test="platform-file-policy-save"]')
@@ -1759,10 +1769,17 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       3,
       'policy 412 must not trigger an automatic retry',
     );
-
-    await acceptedRow
-      .locator(`[data-test="platform-file-delete-${acceptedFileId}"]`)
-      .click();
+    await acceptedRow.waitFor();
+    const acceptedDeleteButton = acceptedRow.locator(
+      `[data-test="platform-file-delete-${acceptedFileId}"]`,
+    );
+    await acceptedDeleteButton.waitFor();
+    assert.equal(
+      await acceptedDeleteButton.isDisabled(),
+      false,
+      'accepted active file must remain deletable after policy precondition failure',
+    );
+    await acceptedDeleteButton.click();
     await page
       .locator('[data-test="confirm-action-reason"]')
       .fill('T16 R2 accepted file delete');

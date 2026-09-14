@@ -35,6 +35,8 @@ interface MaintenanceDependencies {
   readonly billingProviderAdapter?: BillingProviderAdapter;
   readonly backgroundProcessingEnabled?: boolean;
   readonly automaticSettlementEnabled?: boolean;
+  readonly billingAlertReceiver?: BillingAlertReceiver;
+  readonly billingAlertThresholds?: Readonly<Record<string, number>>;
 }
 
 interface AuthAdminAdapter {
@@ -53,6 +55,23 @@ interface BillingProviderAdapter {
     readonly totalPage?: number;
   }>;
 }
+
+interface BillingAlertReceiver {
+  deliver(alert: Row): Promise<void>;
+}
+
+const BILLING_ALERT_THRESHOLD_KEYS = new Set([
+  'pending_age_seconds',
+  'processing_age_seconds',
+  'discovery_stale_seconds',
+  'processing_stale_seconds',
+  'expired_lease_count',
+  'manual_review_count',
+  'duplicate_payment_count',
+  'retry_budget_exhausted_count',
+  'refund_mismatch_count',
+  'scheduler_failure_count',
+]);
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -113,6 +132,33 @@ function authAdminAdapter(): AuthAdminAdapter {
       if (!response.ok) {
         await response.text();
         throw new Error(`AUTH_DELETE_FAILED_${response.status}`);
+      }
+    },
+  };
+}
+
+function billingAlertReceiver(): BillingAlertReceiver | undefined {
+  const target = Deno.env.get('BILLING_ALERT_WEBHOOK_URL')?.trim();
+  if (!target) return undefined;
+  return {
+    async deliver(alert) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const delivered = await fetch(target, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ event: 'billing.alert', alert }),
+          signal: controller.signal,
+        });
+        if (!delivered.ok)
+          throw new Error(`ALERT_RECEIVER_HTTP_${delivered.status}`);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError')
+          throw new Error('ALERT_RECEIVER_TIMEOUT');
+        throw error;
+      } finally {
+        clearTimeout(timer);
       }
     },
   };
@@ -183,6 +229,129 @@ function response(status: number, data: unknown): Response {
   return new Response(JSON.stringify({ data }), {
     status,
     headers: { 'content-type': 'application/json' },
+  });
+}
+
+function alertThresholds(value: unknown): Record<string, number> {
+  if (value === undefined) return {};
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('INVALID_INPUT');
+  const result: Record<string, number> = {};
+  for (const [key, raw] of Object.entries(value)) {
+    const numeric = typeof raw === 'number' ? raw : Number.NaN;
+    if (
+      !BILLING_ALERT_THRESHOLD_KEYS.has(key) ||
+      !Number.isFinite(numeric) ||
+      numeric <= 0
+    )
+      throw new Error('INVALID_INPUT');
+    result[key] = numeric;
+  }
+  return result;
+}
+
+type BillingAlertEvaluation = {
+  readonly observedCount: number;
+  readonly activeCount: number;
+  readonly recoveredCount: number;
+  readonly deliveredCount: number;
+  readonly pendingDeliveryCount: number;
+  readonly receiverStatus: 'delivered' | 'not_configured' | 'failed';
+  readonly receiverFailures: readonly string[];
+  readonly alerts: readonly Row[];
+};
+
+async function evaluateBillingAlerts(
+  input: Record<string, unknown>,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<BillingAlertEvaluation> {
+  if (Object.keys(input).some((key) => key !== 'thresholds'))
+    throw new Error('INVALID_INPUT');
+  const requestedThresholds = alertThresholds(input.thresholds);
+  const thresholds = {
+    ...(dependencies.billingAlertThresholds ?? {}),
+    ...requestedThresholds,
+  };
+  alertThresholds(thresholds);
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = billingContext(workerId, id, crypto.randomUUID(), 1);
+  const rows = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_alerts_evaluate(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::jsonb)',
+      [...jobContext, transaction.json(thresholds)],
+    ),
+  );
+  const receiver = dependencies.billingAlertReceiver ?? billingAlertReceiver();
+  const receiverFailures: string[] = [];
+  let deliveredCount = 0;
+  for (const alert of rows) {
+    if (alert.needs_delivery !== true || !receiver) continue;
+    try {
+      await receiver.deliver(alert);
+      await withJobRole(db, (transaction) =>
+        transaction.unsafe<Row>(
+          'select * from private.billing_alert_delivery_update(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::text, null::text)',
+          [...jobContext, alert.alert_id, 'delivered'],
+        ),
+      );
+      deliveredCount += 1;
+    } catch (error) {
+      const code = errorCode(error);
+      receiverFailures.push(code);
+      try {
+        await withJobRole(db, (transaction) =>
+          transaction.unsafe<Row>(
+            'select * from private.billing_alert_delivery_update(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::text, $7::text)',
+            [...jobContext, alert.alert_id, 'failed', code],
+          ),
+        );
+      } catch (deliveryError) {
+        receiverFailures.push(errorCode(deliveryError));
+      }
+    }
+  }
+  const pendingDeliveryCount =
+    rows.filter((alert) => alert.needs_delivery === true).length -
+    deliveredCount;
+  return {
+    observedCount: rows.length,
+    activeCount: rows.filter((alert) => alert.status === 'active').length,
+    recoveredCount: rows.filter((alert) => alert.status === 'recovered').length,
+    deliveredCount,
+    pendingDeliveryCount: Math.max(0, pendingDeliveryCount),
+    receiverStatus:
+      receiverFailures.length > 0
+        ? 'failed'
+        : receiver
+          ? 'delivered'
+          : 'not_configured',
+    receiverFailures,
+    alerts: rows,
+  };
+}
+
+async function billingAlertsEvaluate(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const result = await evaluateBillingAlerts(input, dependencies, id);
+  return response(200, {
+    observed_count: result.observedCount,
+    active_count: result.activeCount,
+    recovered_count: result.recoveredCount,
+    delivered_count: result.deliveredCount,
+    pending_delivery_count: result.pendingDeliveryCount,
+    receiver_status: result.receiverStatus,
+    receiver_failures: result.receiverFailures,
+    alerts: result.alerts,
+    request_id: id,
   });
 }
 
@@ -1048,7 +1217,9 @@ async function billingReconciliationPage(
       request_id: id,
     });
 
-  let observed: Awaited<ReturnType<NonNullable<BillingProviderAdapter['listOrders']>>>;
+  let observed: Awaited<
+    ReturnType<NonNullable<BillingProviderAdapter['listOrders']>>
+  >;
   try {
     observed = await adapter.listOrders(page);
   } catch {
@@ -1075,7 +1246,9 @@ async function billingReconciliationPage(
     (observed.totalPage as number) < page
   ) {
     const failure = await recordFailure(
-      observed.status === 'found' ? 'PROVIDER_RESPONSE_INVALID' : 'PROVIDER_UNAVAILABLE',
+      observed.status === 'found'
+        ? 'PROVIDER_RESPONSE_INVALID'
+        : 'PROVIDER_UNAVAILABLE',
     );
     if (!failure)
       return response(409, {
@@ -1149,6 +1322,24 @@ async function billingJobRun(
     `maintenance-${crypto.randomUUID()}`;
   const db = dependencies.database ?? database();
   const results: Array<Record<string, unknown>> = [];
+  try {
+    const alertEvaluation = await evaluateBillingAlerts({}, dependencies, id);
+    results.push({
+      job_kind: 'billing_alert_evaluation',
+      status: alertEvaluation.receiverStatus,
+      observed_count: alertEvaluation.observedCount,
+      active_count: alertEvaluation.activeCount,
+      recovered_count: alertEvaluation.recoveredCount,
+      pending_delivery_count: alertEvaluation.pendingDeliveryCount,
+      receiver_failures: alertEvaluation.receiverFailures,
+    });
+  } catch (error) {
+    results.push({
+      job_kind: 'billing_alert_evaluation',
+      status: 'failed',
+      error: errorCode(error),
+    });
+  }
   const automaticSettlementEnabled =
     dependencies.automaticSettlementEnabled ??
     billingSwitchEnabled('BILLING_AUTO_SETTLEMENT_ENABLED');
@@ -1293,6 +1484,8 @@ export async function handleMaintenanceRequest(
       return await billingJobClaim(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/run')
       return await billingJobRun(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/alerts/evaluate')
+      return await billingAlertsEvaluate(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/requeue-contract')
       return await billingJobRequeueContract(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/requeue')

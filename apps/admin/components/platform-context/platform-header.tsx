@@ -55,9 +55,12 @@ export function PlatformHeader({ platform, actions }: PlatformHeaderProps) {
           <div className="platform-meta flex flex-wrap items-center gap-x-3 gap-y-2">
             <span className="font-mono">{platform.code}</span>
             <span aria-hidden="true">·</span>
-            <span className="inline-flex min-w-0 items-center gap-2">
+            <span className="inline-flex min-w-0 max-w-full items-center gap-2">
               <span className="shrink-0">平台 ID</span>
-              <ResourceId value={platform.platform_id} />
+              <ResourceId
+                value={platform.platform_id}
+                className="min-w-0 max-w-full"
+              />
             </span>
           </div>
         </div>

@@ -32,6 +32,11 @@ type WorkspaceStatus =
   | 'active'
   | 'unavailable';
 
+type ContributionPlan = {
+  name: string;
+  code: SubscriptionCheckoutDto['product_code'];
+};
+
 const activationCodePattern = /^[A-Z0-9-]{16,159}$/u;
 type RedemptionState = 'idle' | 'invalid' | 'checking' | 'error';
 
@@ -145,9 +150,10 @@ function productFacts(product: Product): string[] {
   return [termLabel(product.term), availability];
 }
 
-function hasCheckoutSnapshot(
-  value: Record<string, unknown>,
-): value is Record<string, unknown> & {
+function hasCheckoutSnapshot(value: Record<string, unknown>): value is Record<
+  string,
+  unknown
+> & {
   price: SubscriptionCheckoutDto['price'];
   currency: SubscriptionCheckoutDto['currency'];
   term: SubscriptionCheckoutDto['term'];
@@ -208,6 +214,8 @@ export default function SubscriptionPage() {
     useState<WorkspaceStatus>('unknown');
   const [isActivatingWorkspace, setIsActivatingWorkspace] = useState(false);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [pendingContributionPlan, setPendingContributionPlan] =
+    useState<ContributionPlan | null>(null);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(
     null,
   );
@@ -375,7 +383,7 @@ export default function SubscriptionPage() {
     };
   }, [checkoutId, refreshPendingCheckout]);
 
-  async function choosePlan(
+  async function createCheckout(
     name: string,
     code: SubscriptionCheckoutDto['product_code'],
   ) {
@@ -458,6 +466,24 @@ export default function SubscriptionPage() {
     } finally {
       setIsCreatingCheckout(false);
     }
+  }
+
+  function choosePlan(
+    name: string,
+    code: SubscriptionCheckoutDto['product_code'],
+  ) {
+    if (code === 'lifetime') {
+      setPendingContributionPlan({ name, code });
+      return;
+    }
+    void createCheckout(name, code);
+  }
+
+  function confirmContribution() {
+    if (!pendingContributionPlan) return;
+    const plan = pendingContributionPlan;
+    setPendingContributionPlan(null);
+    void createCheckout(plan.name, plan.code);
   }
 
   async function activateWorkspace() {
@@ -621,10 +647,6 @@ export default function SubscriptionPage() {
           {!plansLoading && !plansError
             ? plans.map((plan) => {
                 const isCurrent = plan.code === currentPlan;
-                const lifetimeAlreadyOwned =
-                  plan.code === 'lifetime' &&
-                  (currentPlan === 'lifetime' ||
-                    plan.reason === 'lifetime_already_purchased');
                 return (
                   <article
                     className={`consumer-subscription-card is-${plan.accent}${isCurrent ? ' is-current' : ''}`}
@@ -672,7 +694,6 @@ export default function SubscriptionPage() {
                       type="button"
                       disabled={
                         isCurrent ||
-                        lifetimeAlreadyOwned ||
                         Boolean(pendingPayment) ||
                         isCreatingCheckout ||
                         !plan.enabled ||
@@ -686,13 +707,11 @@ export default function SubscriptionPage() {
                     >
                       {isCreatingCheckout && !isCurrent
                         ? '创建中…'
-                        : lifetimeAlreadyOwned
-                          ? '已购买'
-                          : isCurrent
-                            ? '当前使用中'
-                            : !plan.enabled || !plan.purchasable
-                              ? '暂未开放'
-                              : '选择方案'}
+                        : isCurrent
+                          ? '当前使用中'
+                          : !plan.enabled || !plan.purchasable
+                            ? '暂未开放'
+                            : '选择方案'}
                     </button>
                   </article>
                 );
@@ -839,6 +858,50 @@ export default function SubscriptionPage() {
           </p>
         </form>
       </section>
+
+      {pendingContributionPlan ? (
+        <div
+          className="consumer-modal-backdrop"
+          data-test="lifetime-contribution-dialog"
+        >
+          <div
+            className="consumer-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="lifetime-contribution-title"
+            aria-describedby="lifetime-contribution-description"
+          >
+            <div className="consumer-modal-icon" aria-hidden="true">
+              <Icon name="infinity" size={22} />
+            </div>
+            <h2 id="lifetime-contribution-title">确认购买 99 年商品？</h2>
+            <p
+              className="consumer-modal-description"
+              id="lifetime-contribution-description"
+            >
+              该商品允许重复购买。成功付款会记录为对开发者的搭赏；如果账户已有同一商品的有效期，本次会在当前到期时间后再增加
+              99 年。按当前网站规则，购买权益不提供退款。
+            </p>
+            <div className="consumer-modal-actions">
+              <button
+                className="consumer-button consumer-button-secondary"
+                type="button"
+                onClick={() => setPendingContributionPlan(null)}
+              >
+                返回选择
+              </button>
+              <button
+                className="consumer-button consumer-button-primary"
+                type="button"
+                autoFocus
+                onClick={confirmContribution}
+              >
+                确认并创建付款订单
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </ConsumerShell>
   );
 }

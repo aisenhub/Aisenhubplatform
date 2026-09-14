@@ -84,7 +84,7 @@ export function PlatformSwitcher({ current }: PlatformSwitcherProps) {
   }
 
   return (
-    <div className="grid min-w-44 gap-1.5 sm:min-w-56">
+    <div className="platform-switcher grid min-w-44 gap-1.5 sm:min-w-56">
       <Label
         htmlFor="platform-switcher"
         className="text-xs text-muted-foreground"
