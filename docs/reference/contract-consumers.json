@@ -1,0 +1,404 @@
+{
+  "schema_version": "1.0.0",
+  "task": "TASK-0103",
+  "scope": "database-to-registry consumer compatibility",
+  "contracts": [
+    {
+      "id": "subscription-product-catalog",
+      "producer": {
+        "path": "supabase/migrations/20260911161052_bill_08_purchase_readiness.sql",
+        "contains": "private.subscription_products_list"
+      },
+      "edge": {
+        "path": "supabase/functions/account-api/index.ts",
+        "contains": "subscriptionProductDto"
+      },
+      "openapi": {
+        "path": "docs/reference/contracts/account.openapi.json",
+        "pointer": "#/components/schemas/SubscriptionProduct"
+      },
+      "consumers": [
+        {
+          "id": "account-server",
+          "path": "packages/account-server/src/index.ts",
+          "contains": "listSubscriptionProducts"
+        },
+        {
+          "id": "consumer-bff",
+          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
+          "contains": "v1/subscription/products"
+        },
+        {
+          "id": "consumer-ui",
+          "path": "apps/template-preview/app/subscription/page.tsx",
+          "contains": "isSubscriptionProductList"
+        },
+        {
+          "id": "registry",
+          "path": "registry/templates.json",
+          "contains": "subscription-status"
+        }
+      ],
+      "test_owners": [
+        {
+          "id": "TASK-0103-NEG",
+          "path": "packages/domain/tests/billing.test.ts",
+          "contains": "validates the product DTO"
+        },
+        {
+          "id": "TASK-0103-REC",
+          "path": "packages/account-server/tests/client.test.ts",
+          "contains": "lists subscription products"
+        },
+        {
+          "id": "account-api-public-products",
+          "path": "supabase/functions/account-api/index.test.ts",
+          "contains": "exposes products without a bearer session"
+        },
+        {
+          "id": "account-api-product-contract",
+          "path": "supabase/functions/account-api/index.test.ts",
+          "contains": "fails closed when the catalog DTO is invalid"
+        }
+      ],
+      "fields": [
+        {
+          "name": "code",
+          "consumers": ["account-server", "consumer-ui", "registry"],
+          "tests": [
+            "TASK-0103-NEG",
+            "account-api-public-products",
+            "account-api-product-contract"
+          ]
+        },
+        {
+          "name": "name",
+          "consumers": ["consumer-ui", "registry"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "description",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "price",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "currency",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "term.kind",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "term.duration_value",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "term.duration_unit",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "price_version",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "recommended",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "enabled",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
+        },
+        {
+          "name": "purchasable",
+          "consumers": ["consumer-ui"],
+          "tests": [
+            "TASK-0103-NEG",
+            "account-api-public-products",
+            "account-api-product-contract"
+          ]
+        },
+        {
+          "name": "reason",
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG", "account-api-public-products"]
+        }
+      ]
+    },
+    {
+      "id": "subscription-checkout",
+      "producer": {
+        "path": "supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql",
+        "contains": "private.subscription_checkout_create"
+      },
+      "edge": {
+        "path": "supabase/functions/account-api/index.ts",
+        "contains": "subscriptionCheckoutDto"
+      },
+      "openapi": {
+        "path": "docs/reference/contracts/account.openapi.json",
+        "pointer": "#/components/schemas/SubscriptionCheckoutData"
+      },
+      "consumers": [
+        {
+          "id": "account-server",
+          "path": "packages/account-server/src/index.ts",
+          "contains": "createSubscriptionCheckout"
+        },
+        {
+          "id": "consumer-bff",
+          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
+          "contains": "v1/subscription/checkout"
+        },
+        {
+          "id": "consumer-ui",
+          "path": "apps/template-preview/app/subscription/page.tsx",
+          "contains": "SubscriptionCheckoutDto"
+        }
+      ],
+      "test_owners": [
+        {
+          "id": "checkout-api",
+          "path": "supabase/functions/account-api/index.test.ts",
+          "contains": "creates and reads a server-priced checkout snapshot"
+        },
+        {
+          "id": "checkout-sdk",
+          "path": "packages/account-server/tests/client.test.ts",
+          "contains": "creates and reads subscription checkout"
+        }
+      ],
+      "fields": [
+        {
+          "name": "checkout_id",
+          "consumers": ["account-server", "consumer-ui"],
+          "tests": ["checkout-api", "checkout-sdk"]
+        },
+        {
+          "name": "status",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api", "checkout-sdk"]
+        },
+        {
+          "name": "product_code",
+          "consumers": ["account-server", "consumer-ui"],
+          "tests": ["checkout-api", "checkout-sdk"]
+        },
+        {
+          "name": "price",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "currency",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "term",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "expires_at",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "payment_url",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "paid_at",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "granted_at",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "progress",
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
+        }
+      ]
+    },
+    {
+      "id": "entitlement-projection",
+      "producer": {
+        "path": "supabase/migrations/20260913124532_bill_18_entitlement_subscription_product.sql",
+        "contains": "private.entitlement_read"
+      },
+      "edge": {
+        "path": "supabase/functions/account-api/index.ts",
+        "contains": "entitlementDto"
+      },
+      "openapi": {
+        "path": "docs/reference/contracts/account.openapi.json",
+        "pointer": "#/components/schemas/Entitlement"
+      },
+      "consumers": [
+        {
+          "id": "account-server",
+          "path": "packages/account-server/src/index.ts",
+          "contains": "getSubscription"
+        },
+        {
+          "id": "consumer-bff",
+          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
+          "contains": "v1/subscription"
+        },
+        {
+          "id": "consumer-ui",
+          "path": "apps/template-preview/app/subscription/page.tsx",
+          "contains": "EntitlementDto"
+        }
+      ],
+      "test_owners": [
+        {
+          "id": "entitlement-api",
+          "path": "supabase/functions/account-api/index.test.ts",
+          "contains": "maps an entitlement read to the stable DTO"
+        },
+        {
+          "id": "domain-entitlement",
+          "path": "packages/domain/tests/billing.test.ts",
+          "contains": "keeps independent persisted state machines explicit"
+        }
+      ],
+      "fields": [
+        {
+          "name": "effective_status",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
+        },
+        {
+          "name": "entitlement_kind",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
+        },
+        {
+          "name": "plan",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api", "domain-entitlement"]
+        },
+        {
+          "name": "subscription_product",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
+        },
+        {
+          "name": "features",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api", "domain-entitlement"]
+        },
+        {
+          "name": "started_at",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
+        },
+        {
+          "name": "current_period_end",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
+        },
+        {
+          "name": "evaluated_at",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
+        },
+        {
+          "name": "next_transition_at",
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
+        }
+      ]
+    },
+    {
+      "id": "admin-billing-evidence",
+      "producer": {
+        "path": "supabase/migrations/20260914064806_repair_task_0603.sql",
+        "contains": "private.admin_billing_order_read_v2"
+      },
+      "edge": {
+        "path": "supabase/functions/account-api/index.ts",
+        "contains": "admin_billing_order_read_v3"
+      },
+      "openapi": {
+        "path": "docs/reference/contracts/admin.openapi.json",
+        "pointer": "#/components/schemas/BillingOrderDetail"
+      },
+      "consumers": [
+        {
+          "id": "admin-bff",
+          "path": "apps/admin/app/api/v1/[...path]/route.ts",
+          "contains": "authSessionGate"
+        },
+        {
+          "id": "admin-ui",
+          "path": "apps/admin/features/billing/central-billing-page.tsx",
+          "contains": "adminAuthSession"
+        }
+      ],
+      "test_owners": [
+        {
+          "id": "admin-billing-timeline",
+          "path": "supabase/tests/bill_15_admin_billing_timeline.sql",
+          "contains": "timeline"
+        },
+        {
+          "id": "admin-billing-diagnostics",
+          "path": "supabase/tests/bill_16_admin_billing_diagnostics.sql",
+          "contains": "lease_owner_fingerprint"
+        }
+      ],
+      "fields": [
+        {
+          "name": "order_id",
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-timeline"]
+        },
+        {
+          "name": "provider_facts",
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-timeline"]
+        },
+        {
+          "name": "timeline",
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-timeline", "admin-billing-diagnostics"]
+        },
+        {
+          "name": "timeline.job_id",
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-diagnostics"]
+        },
+        {
+          "name": "timeline.payload_hash_prefix",
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-diagnostics"]
+        },
+        {
+          "name": "timeline.lease_owner_fingerprint",
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-diagnostics"]
+        }
+      ]
+    }
+  ]
+}

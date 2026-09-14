@@ -111,6 +111,7 @@ function fakeDatabase(
   onQuery?: (query: string, values?: readonly unknown[]) => void,
   checkoutFacts: readonly Record<string, unknown>[] = [],
   checkoutRow: Record<string, unknown> = {},
+  productRow: Record<string, unknown> = {},
 ) {
   return {
     async begin<T>(
@@ -173,6 +174,7 @@ function fakeDatabase(
                 enabled: true,
                 purchasable: false,
                 reason: 'provider_mapping_unavailable',
+                ...productRow,
               },
             ] as unknown as R[];
           }
@@ -602,6 +604,21 @@ Deno.test('Account API exposes products without a bearer session and preserves p
   assertEquals(payload.data[0].term.duration_value, 99);
   assertEquals(payload.data[0].purchasable, false);
   assertEquals(payload.data[0].reason, 'provider_mapping_unavailable');
+});
+
+Deno.test('Account API fails closed when the catalog DTO is invalid', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/products',
+      { headers: { 'X-Platform-Key': `phk_v1_${keyId}_fixture` } },
+    ),
+    {
+      database: fakeDatabase(undefined, [], {}, { price_amount: '999.9' }),
+      platformKeySecret: 'm3-test-platform-secret',
+    },
+  );
+  assertEquals(response.status, 503);
+  assertEquals((await response.json()).error.code, 'AUTHORIZATION_UNAVAILABLE');
 });
 
 Deno.test('Account API disables lifetime after an authenticated lifetime purchase', async () => {

@@ -3,30 +3,27 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import {
+  isBillingCheckoutStatus,
+  isBillingProductCode,
+  isSubscriptionProductList,
+  type EntitlementDto,
+  type SubscriptionCheckoutDto,
+  type SubscriptionProductDto,
+} from '@kit/domain/contracts';
+
 import { ConsumerShell, Icon } from '../../components/consumer-shell';
 
-type Product = {
-  code: 'free' | 'monthly' | 'yearly' | 'lifetime';
-  name: string;
-  description: string | null;
-  price: string;
-  term: { duration_value: number | null; duration_unit: string | null };
-  recommended: boolean;
-  purchasable: boolean;
-  reason: string;
-  enabled: boolean;
+type Product = SubscriptionProductDto & {
   accent: 'sage' | 'green' | 'clay';
   features: string[];
+  displayPrice: string;
 };
 
-type Entitlement = {
-  effective_status: 'active' | 'none' | 'suspended';
-  plan: { code: string; name: string } | null;
-  subscription_product: {
-    code: Product['code'];
-    name: string;
-  } | null;
-};
+type Entitlement = Pick<
+  EntitlementDto,
+  'effective_status' | 'plan' | 'subscription_product'
+>;
 
 type WorkspaceStatus =
   | 'unknown'
@@ -40,17 +37,16 @@ type RedemptionState = 'idle' | 'invalid' | 'checking' | 'error';
 
 type PendingPayment = {
   checkoutId: string;
-  code: string;
+  code: SubscriptionCheckoutDto['product_code'];
   name: string;
-  status: string;
+  status: SubscriptionCheckoutDto['status'];
   url: string | null;
 };
 
-type CheckoutStatus = {
-  status: string;
-  paid_at: string | null;
-  granted_at: string | null;
-};
+type CheckoutStatus = Pick<
+  SubscriptionCheckoutDto,
+  'status' | 'paid_at' | 'granted_at'
+>;
 
 const pendingPaymentStorageKey = 'aisenhub.subscription.pending-payment';
 
@@ -63,18 +59,21 @@ function readPendingPayment(): PendingPayment | null {
     if (!value || typeof value !== 'object' || Array.isArray(value))
       return null;
     const candidate = value as Record<string, unknown>;
+    const code = candidate.code;
+    const status = candidate.status;
     if (
       typeof candidate.checkoutId !== 'string' ||
-      typeof candidate.code !== 'string' ||
-      typeof candidate.name !== 'string'
+      !isBillingProductCode(code) ||
+      code === 'free' ||
+      typeof candidate.name !== 'string' ||
+      !isBillingCheckoutStatus(status)
     )
       return null;
     return {
       checkoutId: candidate.checkoutId,
-      code: candidate.code,
+      code,
       name: candidate.name,
-      status:
-        typeof candidate.status === 'string' ? candidate.status : 'pending',
+      status,
       url: typeof candidate.url === 'string' ? candidate.url : null,
     };
   } catch {
@@ -197,30 +196,18 @@ export default function SubscriptionPage() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const productsPromise = api<Array<Record<string, unknown>>>(
-        'v1/subscription/products',
-      )
+      const productsPromise = api<unknown>('v1/subscription/products')
         .then((products) => {
           if (cancelled) return;
+          if (!isSubscriptionProductList(products))
+            throw new Error('INVALID_SUBSCRIPTION_PRODUCT');
           setPlans(
             products.map((product) => {
-              const code = String(product.code) as Product['code'];
-              const term = (product.term ?? {}) as Product['term'];
               return {
-                code,
-                name: String(product.name ?? code),
-                description:
-                  typeof product.description === 'string'
-                    ? product.description
-                    : null,
-                price: `¥${String(product.price ?? '0.00')}`,
-                term,
-                recommended: product.recommended === true,
-                purchasable: product.purchasable === true,
-                reason: String(product.reason ?? ''),
-                enabled: product.enabled !== false,
-                accent: accentFor(code),
-                features: featureCopy(code),
+                ...product,
+                accent: accentFor(product.code),
+                features: featureCopy(product.code),
+                displayPrice: `¥${product.price}`,
               };
             }),
           );
@@ -326,7 +313,10 @@ export default function SubscriptionPage() {
     };
   }, [checkoutId, refreshPendingCheckout]);
 
-  async function choosePlan(name: string, code: string) {
+  async function choosePlan(
+    name: string,
+    code: SubscriptionCheckoutDto['product_code'],
+  ) {
     if (code === currentPlan || pendingPayment || isCreatingCheckout) return;
     // Reserve a tab while the click still has transient user activation. The
     // checkout URL is created by the server asynchronously, so opening the
@@ -344,19 +334,17 @@ export default function SubscriptionPage() {
     setFeedback(`正在创建付款订单 · ${name}`);
     setPaymentFeedback('正在创建服务端定价订单…');
     try {
-      const checkout = await api<{
-        checkout_id: string;
-        status: string;
-        product_code: string;
-        payment_url: string | null;
-      }>('v1/subscription/checkout', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': idempotencyKey },
-        body: JSON.stringify({ product_code: code }),
-      });
+      const checkout = await api<SubscriptionCheckoutDto>(
+        'v1/subscription/checkout',
+        {
+          method: 'POST',
+          headers: { 'Idempotency-Key': idempotencyKey },
+          body: JSON.stringify({ product_code: code }),
+        },
+      );
       const pending = {
         checkoutId: checkout.checkout_id,
-        code,
+        code: checkout.product_code,
         name,
         status: checkout.status,
         url: checkout.payment_url,
@@ -593,7 +581,7 @@ export default function SubscriptionPage() {
                       <div>
                         <h2>{plan.name}</h2>
                         <div className="consumer-subscription-price">
-                          <strong>{plan.price}</strong>
+                          <strong>{plan.displayPrice}</strong>
                           <span>{termLabel(plan)}</span>
                         </div>
                       </div>
@@ -625,7 +613,10 @@ export default function SubscriptionPage() {
                         !plan.enabled ||
                         !plan.purchasable
                       }
-                      onClick={() => choosePlan(plan.name, plan.code)}
+                      onClick={() => {
+                        if (plan.code !== 'free')
+                          void choosePlan(plan.name, plan.code);
+                      }}
                       data-test={`subscription-plan-${plan.code}`}
                     >
                       {isCreatingCheckout && !isCurrent

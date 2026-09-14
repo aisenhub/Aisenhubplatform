@@ -12,7 +12,11 @@ import {
   generateRedemptionCodes,
   normalizeRedemptionCode,
 } from '../../../packages/domain/src/redemption.ts';
-import type { SubscriptionCheckoutDto } from '../../../packages/domain/src/contracts/api.ts';
+import {
+  isSubscriptionProductDto,
+  type SubscriptionCheckoutDto,
+  type SubscriptionProductDto,
+} from '../../../packages/domain/src/contracts/api.ts';
 import { BILLING_ADMIN_ORDER_STATUSES } from '../../../packages/domain/src/contracts/billing.ts';
 import {
   isBillingCheckoutStatus,
@@ -922,31 +926,34 @@ function entitlementDto(row: Row) {
 function subscriptionProductDto(
   row: Row,
   lifetimeAlreadyPurchased = false,
-): Record<string, unknown> {
+): SubscriptionProductDto {
   const lifetimeBlocked =
     lifetimeAlreadyPurchased && stringValue(row.product_code) === 'lifetime';
-  return {
-    code: stringValue(row.product_code) ?? 'free',
-    name: stringValue(row.product_name) ?? '',
+  const dto: unknown = {
+    code: stringValue(row.product_code),
+    name: stringValue(row.product_name),
     description: stringValue(row.product_description),
-    price: String(row.price_amount ?? '0.00'),
-    currency: stringValue(row.currency) ?? 'CNY',
+    price: stringValue(row.price_amount),
+    currency: stringValue(row.currency),
     term: {
-      kind: stringValue(row.term_kind) ?? 'free',
+      kind: stringValue(row.term_kind),
       duration_value:
         row.duration_value === null || row.duration_value === undefined
           ? null
           : Number(row.duration_value),
       duration_unit: stringValue(row.duration_unit),
     },
-    price_version: Number(row.price_version ?? 1),
+    price_version: Number(row.price_version),
     recommended: row.recommended === true,
     enabled: row.enabled === true,
     purchasable: lifetimeBlocked ? false : row.purchasable === true,
     reason: lifetimeBlocked
       ? 'lifetime_already_purchased'
-      : (stringValue(row.reason) ?? 'provider_mapping_unavailable'),
+      : stringValue(row.reason),
   };
+  if (!isSubscriptionProductDto(dto))
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  return dto;
 }
 
 function subscriptionCheckoutDto(

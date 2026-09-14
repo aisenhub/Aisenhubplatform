@@ -92,7 +92,7 @@ Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文�
 
 ## 5. OpenAPI 与 DTO 合同
 
-Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含21个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账接口需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。Billing Admin 的订单列表使用服务端时间游标，详情返回归一化 Provider facts，写操作声明近期 MFA、`If-Match`、`operation_id`、reason 和 412/403 等失败边界。所有未实现的操作不得暴露成功假数据。
+Account与Admin的OpenAPI 3.1合同维护在`contracts/account.openapi.json`和`contracts/admin.openapi.json`。Account合同当前包含21个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账接口需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。Billing Admin 的订单列表使用服务端时间游标，详情返回归一化 Provider facts，写操作声明近期 MFA、`If-Match`、`operation_id`、reason 和 412/403 等失败边界。所有未实现的操作不得暴露成功假数据。数据库到 Registry 的字段级生产者/消费者/测试责任见 [消费者兼容清单](contract-consumer-matrix.md)，其机器可读索引由 `contracts:check` 校验。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证必须使用服务端 session-bound proof；OpenAPI 的存在不代表路由、Provider 或真实会话生命周期已经完成。
 

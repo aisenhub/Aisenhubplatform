@@ -15,6 +15,8 @@ import {
   isMoneyAmount,
   isProviderOrderStatus,
   isProviderOrderSnapshot,
+  isSubscriptionProductDto,
+  isSubscriptionProductList,
   toMoneyAmount,
 } from '../src/index.ts';
 import {
@@ -90,6 +92,35 @@ describe('billing contract foundation', () => {
       },
     });
     expect(getBillingProductSpec('unknown')).toBeNull();
+  });
+
+  it('validates the product DTO before consumers render or act on it', () => {
+    const product = {
+      code: 'monthly',
+      name: 'Monthly',
+      description: null,
+      price: '19.90',
+      currency: 'CNY',
+      term: { kind: 'finite', duration_value: 1, duration_unit: 'month' },
+      price_version: 1,
+      recommended: false,
+      enabled: true,
+      purchasable: true,
+      reason: 'ready',
+    } as const;
+
+    expect(isSubscriptionProductDto(product)).toBe(true);
+    expect(isSubscriptionProductList([product])).toBe(true);
+    expect(isSubscriptionProductDto({ ...product, price: '19.9' })).toBe(false);
+    expect(
+      isSubscriptionProductDto({
+        ...product,
+        term: { kind: 'finite', duration_value: 1, duration_unit: 'year' },
+      }),
+    ).toBe(false);
+    expect(isSubscriptionProductList([product, { malformed: true }])).toBe(
+      false,
+    );
   });
 
   it('accepts fixed-point money strings and rejects floating-point ambiguity', () => {

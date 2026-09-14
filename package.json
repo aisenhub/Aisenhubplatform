@@ -45,7 +45,7 @@
     "test:e2e": "node tests/spikes/e2e/t16-r2-account.mjs",
     "runtime:probe": "pnpm run --filter scripts runtime:probe",
     "docs:check": "pnpm run --filter scripts docs:check",
-    "contracts:check": "node tooling/scripts/src/openapi-check.mjs",
+    "contracts:check": "node tooling/scripts/src/openapi-check.mjs && node tooling/scripts/src/contract-consumer-check.mjs",
     "db:start": "pnpm run --filter scripts supabase start",
     "db:stop": "pnpm run --filter scripts supabase stop",
     "db:reset": "pnpm run --filter scripts supabase db-reset",

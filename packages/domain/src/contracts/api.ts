@@ -1,4 +1,14 @@
+import {
+  getBillingProductSpec,
+  isBillingProductCode,
+  isMoneyAmount,
+} from './billing.ts';
 import type {
+  BillingCheckoutProgressDto,
+  BillingCheckoutStatus,
+} from './billing.ts';
+
+export type {
   BillingCheckoutProgressDto,
   BillingCheckoutStatus,
 } from './billing.ts';
@@ -97,6 +107,18 @@ export type SubscriptionProductReason =
   | 'lifetime_already_purchased'
   | 'platform_disabled';
 
+export const SUBSCRIPTION_PRODUCT_REASONS = [
+  'ready',
+  'free_plan_source',
+  'free_plan_not_configured',
+  'paid_plan_not_configured',
+  'paid_plan_unavailable',
+  'product_disabled',
+  'provider_mapping_unavailable',
+  'lifetime_already_purchased',
+  'platform_disabled',
+] as const satisfies readonly SubscriptionProductReason[];
+
 export interface SubscriptionProductDto {
   readonly code: 'free' | 'monthly' | 'yearly' | 'lifetime';
   readonly name: string;
@@ -113,6 +135,54 @@ export interface SubscriptionProductDto {
   readonly enabled: boolean;
   readonly purchasable: boolean;
   readonly reason: SubscriptionProductReason;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isSubscriptionProductReason(
+  value: unknown,
+): value is SubscriptionProductReason {
+  return (
+    typeof value === 'string' &&
+    (SUBSCRIPTION_PRODUCT_REASONS as readonly string[]).includes(value)
+  );
+}
+
+export function isSubscriptionProductDto(
+  value: unknown,
+): value is SubscriptionProductDto {
+  if (!isRecord(value)) return false;
+  const code = value.code;
+  if (!isBillingProductCode(code)) return false;
+  const spec = getBillingProductSpec(code);
+  const term = value.term;
+  if (!spec || !isRecord(term)) return false;
+
+  return (
+    typeof value.name === 'string' &&
+    value.name.length > 0 &&
+    (typeof value.description === 'string' || value.description === null) &&
+    isMoneyAmount(value.price) &&
+    value.currency === 'CNY' &&
+    term.kind === spec.term_kind &&
+    term.duration_value === spec.duration_value &&
+    term.duration_unit === spec.duration_unit &&
+    typeof value.price_version === 'number' &&
+    Number.isSafeInteger(value.price_version) &&
+    value.price_version > 0 &&
+    typeof value.recommended === 'boolean' &&
+    typeof value.enabled === 'boolean' &&
+    typeof value.purchasable === 'boolean' &&
+    isSubscriptionProductReason(value.reason)
+  );
+}
+
+export function isSubscriptionProductList(
+  value: unknown,
+): value is readonly SubscriptionProductDto[] {
+  return Array.isArray(value) && value.every(isSubscriptionProductDto);
 }
 
 export interface SubscriptionConfigDto {

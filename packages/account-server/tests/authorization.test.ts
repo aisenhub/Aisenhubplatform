@@ -73,6 +73,7 @@ describe('server authorization guards', () => {
       effective_status: 'active' as const,
       entitlement_kind: 'term' as const,
       plan: null,
+      subscription_product: null,
       features: { advanced_config: true },
       started_at: '2026-09-11T00:00:00Z',
       current_period_end: '2026-10-11T00:00:00Z',
