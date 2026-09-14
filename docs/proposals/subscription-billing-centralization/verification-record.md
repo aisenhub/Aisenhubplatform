@@ -184,6 +184,19 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 未完成/阻塞 | 前置 TASK-0102 的生命周期策略 D1/D2/D3 仍待业务确认；Hosted/Staging 权限、迁移、Admin E2E、双会话并发恢复和发布门槛仍为 NOT_RUN。TASK-0602 不关闭为完整 PASS。 |
 | Commit与push | 本记录随 TASK-0602 变更提交到 `codex/billing-architecture-review` 前复核；因 R3 Hosted/Staging 门槛未完成，不合并 `main`。 |
 
+## 追加实施记录（2026-09-14，TASK-0102 平台生命周期局部 forward-fix）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0102 可独立部分：统一授予入口的平台禁用 fail-closed、平台行锁和具名 Local 负例；不虚构 D1/D2/D3 策略，不宣称完成完整锁表/删除并发。 |
+| 起始与归属 | 分支 `codex/billing-architecture-review`；起始 HEAD `4763477`；保留用户已有工作区文档和架构评审产物，不纳入本任务。 |
+| 实际变更 | 使用固定 Supabase CLI 2.111.0 生成 `supabase/migrations/20260914090949_repair_task_0102_platform_lifecycle.sql`；`private.entitlement_apply` 对新授予先取 `platforms FOR SHARE` 并检查 `active`，再锁目标账户；新增 `supabase/tests/repair_task_0102_platform_lifecycle.sql`。 |
+| 失败证据与修复 | 修复前专项用例 5/5 FAIL：禁用平台仍成功写入 1 条 `subscription_grants` 与 1 条 `subscription_events`，函数定义也无平台锁/拒绝分支；保留该具名回归用例，未删除失败证据。 |
+| 数据库验证 | 第二次 `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：51 个 SQL 文件、946 个断言；TASK-0102 专项 5/5 PASS。第一次 reset 因 Storage 健康检查未就绪退出，容器恢复 healthy 后重跑成功。 |
+| 静态验证 | `pnpm docs:check` PASS（65 documents）；`pnpm contracts:check` PASS（Account 21、Admin 44；4 contracts/39 fields）；`git diff --check` PASS；本任务不改 OpenAPI/DTO/SDK。 |
+| 未完成/阻塞 | `identity_lifecycle`、batch/code、checkout/order/job 完整锁顺序，暂停/删除语义，双连接并发、Hosted/Staging 权限与 Admin/Provider E2E 仍 NOT_RUN/BLOCKED；TASK-0003 D1/D2/D3 仍待业务确认。 |
+| Commit与push | 待本任务验证后形成独立小提交并推送 `origin/codex/billing-architecture-review`；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
+
 ## 外部门槛
 
 | 门槛 | 当前结果 | 所需证据 |

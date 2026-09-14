@@ -124,9 +124,9 @@ TASK-0001；涉及业务政策的部分等待TASK-0003。每个任务的前置�
 - 问题证据：F03：`supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql:68,95; supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql:297,364; supabase/functions/_shared/afdian.ts:365`；F07：`supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql:411; supabase/migrations/20260912142647_bill_13_afdian_sale_product_month_contract.sql:126; supabase/migrations/20260912150000_afdian_checkout_payment_link.sql:29`；F08：`supabase/migrations/20260911134658_bill_05_provider_verification_settlement.sql:82,104,125; supabase/migrations/20260908103340_m3_dual_secret_redeem.sql:48`；F16：`packages/domain/src/redemption.ts:1,13,91,111; docs/architecture/modules/entitlements.md:243; docs/architecture/modules/identity-security.md:101`。原行为/上轮反例见唯一问题表，本轮未重跑业务测试。
 - 影响范围：F03,F07,F08,F16；Order/Settlement/退款、Catalog/Snapshot、权益/生命周期、兑换码。
 - 前置依赖：TASK-0001；具体政策依赖TASK-0003。D3影响的生命周期政策需确认
-- 变更目录：`docs/proposals/subscription-billing-centralization`。
-- 变更文件：`docs/proposals/subscription-billing-centralization/design.md`、`docs/proposals/subscription-billing-centralization/repair-matrices.md`。
-- 是否涉及数据库迁移：否；发现需迁移时先补本任务依赖/回退/消费者，不能静默扩范围。
+- 变更目录：`docs/proposals/subscription-billing-centralization`、`supabase/migrations`、`supabase/tests`。
+- 变更文件：`docs/proposals/subscription-billing-centralization/design.md`、`docs/proposals/subscription-billing-centralization/repair-matrices.md`、`supabase/migrations/20260914090949_repair_task_0102_platform_lifecycle.sql`、`supabase/tests/repair_task_0102_platform_lifecycle.sql`。
+- 是否涉及数据库迁移：是；使用固定 Supabase CLI 2.111.0 生成 forward-fix，不修改已应用旧迁移；完整锁表仍需补依赖和回退/消费者方案。
 - 是否涉及公共合同：本任务不改运行接口；核对并消费前置已冻结合同，不增加第二定义。
 - 是否涉及 Consumer UI：不直接修改；通过后续对应任务验收。
 - 是否涉及 Admin UI：不直接修改；后续Admin任务消费本任务输出。
@@ -136,19 +136,21 @@ TASK-0001；涉及业务政策的部分等待TASK-0003。每个任务的前置�
     1. 追踪最新entitlement_apply/recompute、兑换与Admin correction、删除/保留过程。
     2. 列出identity/platform/account/plan/batch/code/checkout/order/job锁获取与反向路径，记录冲突。
     3. 冻结只在领域过程写权益/配额/兑换/结算，外部网络在事务外，暂停/关闭/删除回执为显式结果。
-- 必须保留或新增的失败测试：用例标识建议 `TASK-0102-NEG`；跨平台FK、任意executor DML、旧Session/旧fence及删除后复活负例。已证实缺陷先在旧实现复现FAIL，再记录修复后结果；已有正确防护保留为回归断言，不人为制造失败，不删除旧失败记录。
+- 必须保留或新增的失败测试：用例标识建议 `TASK-0102-NEG`；跨平台FK、任意executor DML、旧Session/旧fence及删除后复活负例。已新增禁用平台授予负例：旧实现 5/5 FAIL（写入 1 Grant/1 Event），forward-fix 后 PASS；已有正确防护保留为回归断言，不人为制造失败，不删除旧失败记录。
 - 并发/重试/恢复测试：用例标识建议 `TASK-0102-REC`；统一锁后时间点；Plan下架/批次禁用/暂停/删除与授予的串行解释。真并发使用至少两连接/两进程；mock不能替代租约接管或事务并发证明。
 - 用户体验验收：中央不可用时拒绝受保护动作。
 - 管理员操作验收：SQL可信上下文不能来自浏览器指定账户。
-- 验收命令：下列为未来实施验收入口，本轮均未作为业务验证运行；先增加上述具名用例并核对runner覆盖，不能只运行旧套件计通过。环境守卫与类别见第13节。
+- 验收命令：本轮已运行 `pnpm db:reset -- --yes`、`pnpm test:db`；其余双连接并发、Hosted/Staging、Admin E2E 仍是后续验收，不以旧套件单独代替。环境守卫与类别见第13节。
 
 - `pnpm docs:check`
 - `pnpm contracts:check`
+- `pnpm db:reset -- --yes`
+- `pnpm test:db`
 - `git diff --check`
 
 - 预期结果：提供每个写入口前置和锁表；无死锁靠重试掩盖或HTTP重复算法。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
 - 回滚方式：仅回退本任务兼容应用/文档变更；持久操作与审计不回滚，未知外部结果先查单再补偿，不靠创建新订单恢复。
-- 完成状态：阻塞（需所列决策/外部授权；独立准备可执行）；实施测试状态NOT_RUN。
+- 完成状态：局部完成（共享授予入口的平台禁用 fail-closed 与 Local 回归 PASS）；完整任务仍阻塞（D3 生命周期策略、全锁表/并发、Hosted/Staging/Admin E2E 未验证）。
 
 <a id="task-0103"></a>
 ### TASK-0103：建立数据库到Registry的消费者兼容清单

@@ -25,3 +25,9 @@ Consumer/Admin同源BFF、Supabase Auth/JWT/Session/MFA、受控executor与priva
 ## 跨阶段唯一来源
 
 字段/状态兼容由TASK-0101输出，锁/生命周期由0102输出，消费者清单由0103输出；执行时实际schema/OpenAPI/DTO是实现合同，不能复制第二套定义。未完成的决策留在proposal，不先改architecture。
+
+## TASK-0102 已落地的局部边界
+
+2026-09-14 的 Local forward-fix 已将共享 `private.entitlement_apply` 的授予前置冻结为：幂等重放先返回既有结果；新授予先对 `platforms` 取 `FOR SHARE` 并要求 `status = active`，再对目标 `platform_accounts` 取 `FOR UPDATE`，随后校验账户和套餐。这样 Billing settlement、Admin Grant 与兑换码共用同一平台禁用闸门，平台状态更新与新授予按数据库锁串行化。
+
+这只是 TASK-0102 的可独立安全修复，不宣称完整锁表已完成：`identity_lifecycle`、batch/code、checkout/order/job 及暂停/删除策略仍需 D3 和 Hosted/Staging 双连接证据后统一冻结。
