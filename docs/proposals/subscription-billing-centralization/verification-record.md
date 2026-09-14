@@ -233,4 +233,15 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 既有文件保护核对 | PASS | 8个原未跟踪图表文件及18个归档文件的SHA-256与本轮写计划前一致 |
 | Provider、Staging、生产验证 | NOT_RUN | 本轮未连接真实 Provider、Staging 或生产 |
 
+## 追加实施记录（2026-09-14，TASK-0201 Checkout Provider 合同快照与 mapping 冻结）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0201 的数据库合同与 Local 回归：冻结已发布/已引用 mapping 合同字段，保存 Checkout Provider 快照，拒绝客户端商业字段注入；付款链接和结算统一使用快照；未扩展 API、DTO、OpenAPI、SDK、Consumer/Admin UI 或远程环境。 |
+| 实际变更 | 使用固定 Supabase CLI 2.111.0 生成 `supabase/migrations/20260914093019_repair_task_0201_checkout_snapshot.sql`；新增 Provider plan/type/SKU/数量/期限/展示价/实付价/price version 快照，创建时校验商品、期限、价格、币种、price version 和 mapping version；已发布或已引用 mapping 的合同字段不可原地修改；付款链接和结算改用 Checkout 快照，旧无快照行进入 `contract_conflict`/人工复核。新增 `supabase/tests/repair_task_0201_checkout_snapshot.sql`。 |
+| 失败证据与修复 | 修复前 `TASK-0201-NEG` 证明把 mapping 从 9.90 改为 8.00 不会报错且可造成合同漂移；迁移后 mapping 原地改价、客户端注入 8.00、快照缺失/冲突均被拒绝。测试保留失败语义并转为回归断言。 |
+| 数据库验证 | `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：52 个 SQL 文件、956 个断言；TASK-0201 专项 6/6 PASS。 |
+| 未完成/阻塞 | Provider 真实付款链接、旧链接迟到、发布/调价与创建双连接并发、旧快照恢复、Hosted/Staging/Production 迁移和 Admin/Consumer E2E 仍 NOT_RUN；TASK-0201 不关闭为完整远程验收。 |
+| Commit与push | 待静态检查后形成独立小提交并推送 `origin/codex/billing-architecture-review`；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
+
 检查不改变其余TASK未开始状态；远程提交状态已由 `git ls-remote` 核对。最终工作区及静态复核在本轮回复报告。
