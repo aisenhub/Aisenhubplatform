@@ -1744,7 +1744,7 @@ async function dispatchAdmin(
     request.method === 'GET'
   ) {
     const [result] = await transaction.unsafe<Row>(
-      'select * from private.admin_billing_order_read_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+      'select * from private.admin_billing_order_read_v3(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
       [...context, billingOrderMatch[1]],
     );
     if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');

@@ -309,7 +309,7 @@ function fakeDatabase(
             ] as unknown as R[];
           if (
             query.startsWith(
-              'select * from private.admin_billing_order_read_v2',
+              'select * from private.admin_billing_order_read_v3',
             )
           )
             return [

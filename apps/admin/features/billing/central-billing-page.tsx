@@ -123,6 +123,24 @@ function timelineSummary(event: BillingTimelineEvent) {
   const summary = [event.status, event.state, event.code].filter(Boolean);
   const reason = event.details.reason;
   if (typeof reason === 'string' && reason) summary.push(`原因：${reason}`);
+  const health = event.details.health ?? event.details.job_health;
+  if (health === 'lost') summary.unshift('失联');
+  else if (health === 'active') summary.unshift('租约有效');
+  const attempts = event.details.attempts;
+  const maxAttempts = event.details.max_attempts;
+  if (typeof attempts === 'number') {
+    summary.push(
+      `尝试 ${attempts}${typeof maxAttempts === 'number' ? `/${maxAttempts}` : ''}`,
+    );
+  }
+  const nextAttemptAt = event.details.next_attempt_at;
+  if (typeof nextAttemptAt === 'string')
+    summary.push(`下次尝试：${formatDate(nextAttemptAt)}`);
+  const ownerFingerprint = event.details.lease_owner_fingerprint;
+  if (typeof ownerFingerprint === 'string')
+    summary.push(`Owner：${ownerFingerprint}`);
+  const hashPrefix = event.details.payload_hash_prefix;
+  if (typeof hashPrefix === 'string') summary.push(`Hash：${hashPrefix}…`);
   return summary.join(' · ') || '—';
 }
 
