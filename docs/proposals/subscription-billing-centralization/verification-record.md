@@ -290,7 +290,7 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 数据库验证 | `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：55 个 SQL 文件、1027 个断言；0703 专项通过，D1 Lifetime 专项通过，RLS/角色负例通过。 |
 | Edge/API/UI/静态验证 | maintenance Deno 18/18 PASS；Account API Deno 34/34 PASS；`pnpm typecheck` PASS（9/9）；`pnpm lint` PASS；`pnpm contracts:check` PASS（Account 22、Admin 44；4 contracts/39 fields）；`pnpm docs:check` PASS（67 documents）；目标文件 `oxfmt --check` PASS。 |
 | Hosted/Staging与未完成 | 用户已授权 Hosted/Staging 测试，但本记录更新时尚未取得/确认可用的目标项目引用、远程迁移清单和告警接收器配置；Hosted/Staging 迁移、真实 Cron/pg_net、Webhook 接收失败/恢复、真实 Provider 退款事实和浏览器 E2E 仍 NOT_RUN。Production、真实支付和 Provider 退款操作未被本轮授权推断覆盖。 |
-| Commit与push | 本轮代码尚未提交；待 Hosted/Staging 只读配置核对和任务 0801 CI 门槛完成后形成独立小提交并推送，按 R3 门槛再评估是否允许合并 `main`。 |
+| Commit与push | 主实现已提交为 `4e5973b` 并推送 `origin/codex/billing-architecture-review`，随后在 `origin/main` 为祖先的前提下安全快进更新 `origin/main`；本条记录状态更新另形成后续小提交。 |
 
 ## 追加实施记录（2026-09-15，TASK-0801 全量本地门禁与浏览器回归）
 
