@@ -47,7 +47,7 @@
 | [TASK-0403](phases/03-billing-core-and-afdian-checkout.md#task-0403) | RC-04 | TASK-0401,TASK-0402；D2/D3 | F03 | 阻塞（独立准备可做） |
 | [TASK-0404](phases/03-billing-core-and-afdian-checkout.md#task-0404) | RC-04 | TASK-0102,TASK-0401 | F16 | 未开始 |
 | [TASK-0405](phases/03-billing-core-and-afdian-checkout.md#task-0405) | RC-04 | TASK-0404,TASK-0305 | F16,F13 | 未开始 |
-| [TASK-0501](phases/06-consumer-sdk-and-reference-template.md#task-0501) | RC-05 | TASK-0201,TASK-0103 | F07,F15 | 未开始 |
+| [TASK-0501](phases/06-consumer-sdk-and-reference-template.md#task-0501) | RC-05 | TASK-0201,TASK-0103 | F07,F15 | Local Consumer 展示、独立安装与双来源浏览器回归完成；Hosted/Provider/生产待验证 |
 | [TASK-0502](phases/06-consumer-sdk-and-reference-template.md#task-0502) | RC-05 | TASK-0103,TASK-0401 | F15,F08 | 未开始 |
 | [TASK-0503](phases/06-consumer-sdk-and-reference-template.md#task-0503) | RC-05 | TASK-0202,TASK-0502 | F09,F15 | 未开始 |
 | [TASK-0504](phases/06-consumer-sdk-and-reference-template.md#task-0504) | RC-05 | TASK-0202,TASK-0503 | F09 | 未开始 |

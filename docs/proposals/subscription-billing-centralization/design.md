@@ -43,3 +43,7 @@ Consumer/Admin同源BFF、Supabase Auth/JWT/Session/MFA、受控executor与priva
 `supabase/migrations/20260914095321_repair_task_0202_checkout_recovery.sql` 新增只读 `private.subscription_checkout_read_by_idempotency` wrapper。它先按当前平台与认证账户计算并查找 Idempotency-Key 的 SHA-256 绑定，再复用 `subscription_checkout_read_v2` 的状态投影；未知 key 返回 `resource_not_found`，不会创建 Checkout，也不会把已付/已授予记录降回过期。Account API 暴露 `GET /v1/subscription/checkout` + `Idempotency-Key` 作为响应丢失后的恢复入口，SDK、OpenAPI、Next 路由和 Local 负例已同步。
 
 这只完成同一意图的持久化恢复入口；跨 Tab 不同 key 的多意图治理、Provider 取消/迟到 paid 的业务政策、两笔付款的全链路并发证明和真实 HTTP/Provider 仍需后续任务与环境门槛。
+
+## TASK-0501 已落地的 Consumer 展示边界
+
+订阅页面现在直接消费目录返回的 `currency`、`price`、`term`、`enabled`、`purchasable` 与 `reason`，不再写死货币符号或通用权益承诺；finite lifetime 明确显示为 99 年有限期。创建 Checkout 后，待支付摘要保存并展示 API 返回的价格、币种和期限快照；状态轮询再次读取 Checkout 时会覆盖恢复中的摘要，旧 Session Storage 数据缺少快照时先显示读取中，不用当前目录价格冒充订单价格。浏览器级目录展示回归已加入 T16 探针，并已随独立 Consumer 安装链路在 Local 双来源 E2E 中通过；Hosted 双平台仍未运行。

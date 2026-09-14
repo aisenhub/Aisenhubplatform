@@ -208,6 +208,16 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 未完成/阻塞 | 仍未证明真实双连接 Delete-start/Grant 竞争、batch/code/checkout/order/job 锁顺序、暂停政策及 Hosted/Staging/Provider/Admin E2E；这些继续标记 NOT_RUN/BLOCKED。 |
 | Commit与push | 待静态检查后形成独立小提交并推送；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
 
+## 追加实施记录（2026-09-14，TASK-0501 Consumer 目录与 Checkout snapshot 展示）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0501 的 Consumer 目录价格/币种/期限/资格展示、Checkout snapshot 摘要和模板边界回归；不改数据库、不改公共 API 字段、不处理 D1/D2/D3 未决策略。 |
+| 实际变更 | `apps/template-preview/app/subscription/page.tsx` 使用 API 返回的 `currency`/`price`/`term`/`reason`；移除写死的 `¥` 和通用 feature 承诺；lifetime 按有限 99 年显示。Checkout 创建和状态轮询保存/刷新价格、币种、期限快照；旧 Session Storage 缺少快照时显示读取中。`tests/spikes/registry/m5-04-template.mjs` 增加静态边界断言，`tests/spikes/e2e/t16-r2-account.mjs` 增加目录快照浏览器用例。 |
+| Local 验证 | `pnpm --filter template-preview typecheck` PASS；`node tests/spikes/registry/m5-04-template.mjs` PASS；`pnpm test:consumer:m5-05` PASS（独立安装、typecheck、build、模板路由、Local 双来源 Consumer E2E 均 PASS）。首次 E2E 断言因同一文案在价格和事实列表重复而失败，收紧定位后重跑通过。 |
+| 未完成/阻塞 | 脚本报告 Hosted 双平台 E2E 为 `NOT_RUN (X05/hosted backend unavailable)`；真实 Provider、Hosted/Staging/Production 和 Checkout 并发恢复仍 NOT_RUN。 |
+| Commit与push | 待本任务定向验证和差异检查后形成独立小提交并推送 `origin/codex/billing-architecture-review`；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
+
 ## 外部门槛
 
 | 门槛 | 当前结果 | 所需证据 |

@@ -2,7 +2,7 @@
 
 ## 1. 阶段名称和状态
 
-状态：Proposed／计划中；本轮只制定计划，所有修复实现未开始。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
+状态：执行中；TASK-0501 已完成 Local Consumer 目录/期限/Checkout snapshot 展示实现与静态回归，TASK-0502 及其余 Consumer 任务仍按依赖关系推进。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
 
 ## 2. 阶段目标
 
@@ -137,7 +137,7 @@ RC-02/RC-03/RC-04的对应合同；可先做纯展示/可访问性。每个任�
 
 - 预期结果：页面金额/商品/期限与所购snapshot一致。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
 - 回滚方式：仅回退本任务兼容应用/文档变更；持久操作与审计不回滚，未知外部结果先查单再补偿，不靠创建新订单恢复。
-- 完成状态：未开始；实施测试状态NOT_RUN。
+- 完成状态：Local Consumer 实现完成；实施测试状态：`pnpm --filter template-preview typecheck` PASS、`node tests/spikes/registry/m5-04-template.mjs` PASS、`pnpm test:consumer:m5-05` PASS（独立安装/typecheck/build/Local 双来源 Consumer E2E）；Hosted 双平台、Provider/生产仍 NOT_RUN。
 
 <a id="task-0502"></a>
 ### TASK-0502：统一登录、平台激活与Session刷新恢复

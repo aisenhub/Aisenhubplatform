@@ -575,6 +575,81 @@ async function exerciseAuthenticatedTemplateRoutes(page, baseUrl) {
   }
 }
 
+async function exerciseSubscriptionCatalogSnapshot(page, baseUrl) {
+  const productsPath = '/api/v1/subscription/products';
+  const entitlementPath = '/api/v1/subscription';
+  const products = [
+    {
+      code: 'free',
+      name: 'Free',
+      description: '免费方案',
+      price: '0.00',
+      currency: 'CNY',
+      term: { kind: 'free', duration_value: null, duration_unit: null },
+      price_version: 1,
+      recommended: false,
+      enabled: true,
+      purchasable: true,
+      reason: 'free_plan_source',
+    },
+    {
+      code: 'lifetime',
+      name: 'Lifetime',
+      description: '一次性购买',
+      price: '999.00',
+      currency: 'CNY',
+      term: { kind: 'finite', duration_value: 99, duration_unit: 'year' },
+      price_version: 1,
+      recommended: true,
+      enabled: true,
+      purchasable: true,
+      reason: 'ready',
+    },
+  ];
+  const entitlement = {
+    effective_status: 'active',
+    entitlement_kind: 'free',
+    plan: null,
+    subscription_product: { code: 'free', name: 'Free' },
+    features: {},
+    started_at: null,
+    current_period_end: null,
+    evaluated_at: new Date().toISOString(),
+    next_transition_at: null,
+  };
+  const fulfill = (route, data) =>
+    route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ data, request_id: crypto.randomUUID() }),
+    });
+  const productsRoute = (url) => new URL(url).pathname === productsPath;
+  const entitlementRoute = (url) => new URL(url).pathname === entitlementPath;
+  await page.route(productsRoute, (route) => fulfill(route, products));
+  await page.route(entitlementRoute, (route) => fulfill(route, entitlement));
+  try {
+    const response = await page.goto(`${baseUrl}/subscription`, {
+      waitUntil: 'domcontentloaded',
+    });
+    assert.equal(response?.status(), 200, 'subscription catalog route');
+    const productsPanel = page.locator('[data-test="subscription-products"]');
+    await productsPanel
+      .locator('li')
+      .filter({ hasText: '99 年有效期' })
+      .first()
+      .waitFor();
+    await productsPanel.getByText('¥999.00', { exact: true }).waitFor();
+    assert.equal(
+      (await productsPanel.innerText()).includes('永久使用'),
+      false,
+      'finite lifetime catalog term must not be labeled perpetual',
+    );
+  } finally {
+    await page.unroute(productsRoute);
+    await page.unroute(entitlementRoute);
+  }
+}
+
 async function readMailpitToken(email) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const { stdout } = await execFileAsync('docker', [
@@ -2731,6 +2806,7 @@ try {
   await exercisePublicTemplateRoutes(pageA, consumerAUrl);
   await exerciseAuthResponsive(pageA, consumerAUrl, ['/login']);
   await loginConsumer(pageA, consumerAUrl, platformAId);
+  await exerciseSubscriptionCatalogSnapshot(pageA, consumerAUrl);
   await loginConsumer(pageB, consumerBUrl, platformBId);
   await exerciseAuthenticatedTemplateRoutes(pageA, consumerAUrl);
   await exerciseSubscriptionAndFiles(pageA, consumerAUrl, redemptionCodeA);

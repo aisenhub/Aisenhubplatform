@@ -1,6 +1,6 @@
 # 订阅支付审查修复总计划
 
-状态：**执行中**。TASK-0001 已完成本地基线冻结，TASK-0002 完成本地静态门槛审查，TASK-0702 已完成本地 forward-fix 与回归，TASK-0101/0103、TASK-0301～0306、TASK-0402、TASK-0601/0603/0605/0609 已完成本地实现或回归，TASK-0602 已完成本地权限/跨平台隔离回归与 forward-fix，TASK-0102 已完成共享授予入口的平台禁用与 Global Delete identity barrier 局部 forward-fix 及 Local 回归，TASK-0201 已完成 Checkout Provider 合同快照、mapping 不可变保护及 Local SQL 回归，TASK-0202 已完成同一 Idempotency-Key 的持久化 Checkout recovery path 及 Local/API/SDK 回归；Hosted 配置、Provider、Staging、生产和真实支付仍未完成。计划完整不代表功能完成。
+状态：**执行中**。TASK-0001 已完成本地基线冻结，TASK-0002 完成本地静态门槛审查，TASK-0702 已完成本地 forward-fix 与回归，TASK-0101/0103、TASK-0301～0306、TASK-0402、TASK-0601/0603/0605/0609 已完成本地实现或回归，TASK-0602 已完成本地权限/跨平台隔离回归与 forward-fix，TASK-0102 已完成共享授予入口的平台禁用与 Global Delete identity barrier 局部 forward-fix 及 Local 回归，TASK-0201 已完成 Checkout Provider 合同快照、mapping 不可变保护及 Local SQL 回归，TASK-0202 已完成同一 Idempotency-Key 的持久化 Checkout recovery path 及 Local/API/SDK 回归，TASK-0501 已完成 Local Consumer 目录/期限/Checkout snapshot 展示实现与静态回归；Hosted 配置、Provider、Staging、生产和真实支付仍未完成。计划完整不代表功能完成。
 
 本文件是本次修复的唯一总计划。[问题唯一清单](repair-issues.md) · [全部矩阵](repair-matrices.md) · [设计与不变量](design.md) · [Agent入口](agent-handoff.md) · [验证记录模板](verification-record.md)。
 

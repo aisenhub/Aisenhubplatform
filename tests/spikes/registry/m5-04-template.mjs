@@ -56,6 +56,15 @@ assert(
   !/from\s+['"]@kit\/account-server['"]/u.test(sourceFiles),
   'server SDK imported by browser route',
 );
+assert(
+  !sourceFiles.includes('¥') && !sourceFiles.includes('永久使用'),
+  'subscription UI must not hardcode currency or mislabel the finite lifetime term',
+);
+assert(
+  sourceFiles.includes('product.currency') &&
+    sourceFiles.includes('product.term'),
+  'subscription UI must render catalog currency and term fields',
+);
 
 console.log(
   JSON.stringify(

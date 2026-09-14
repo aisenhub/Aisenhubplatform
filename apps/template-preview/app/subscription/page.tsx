@@ -6,6 +6,7 @@ import type { FormEvent } from 'react';
 import {
   isBillingCheckoutStatus,
   isBillingProductCode,
+  isMoneyAmount,
   isSubscriptionProductList,
   type EntitlementDto,
   type SubscriptionCheckoutDto,
@@ -16,7 +17,6 @@ import { ConsumerShell, Icon } from '../../components/consumer-shell';
 
 type Product = SubscriptionProductDto & {
   accent: 'sage' | 'green' | 'clay';
-  features: string[];
   displayPrice: string;
 };
 
@@ -41,11 +41,14 @@ type PendingPayment = {
   name: string;
   status: SubscriptionCheckoutDto['status'];
   url: string | null;
+  price?: SubscriptionCheckoutDto['price'];
+  currency?: SubscriptionCheckoutDto['currency'];
+  term?: SubscriptionCheckoutDto['term'];
 };
 
 type CheckoutStatus = Pick<
   SubscriptionCheckoutDto,
-  'status' | 'paid_at' | 'granted_at'
+  'status' | 'paid_at' | 'granted_at' | 'price' | 'currency' | 'term'
 >;
 
 const pendingPaymentStorageKey = 'aisenhub.subscription.pending-payment';
@@ -75,6 +78,13 @@ function readPendingPayment(): PendingPayment | null {
       name: candidate.name,
       status,
       url: typeof candidate.url === 'string' ? candidate.url : null,
+      ...(hasCheckoutSnapshot(candidate)
+        ? {
+            price: candidate.price,
+            currency: candidate.currency,
+            term: candidate.term,
+          }
+        : {}),
     };
   } catch {
     return null;
@@ -101,15 +111,60 @@ function accentFor(code: string): Product['accent'] {
   return 'green';
 }
 
-function featureCopy(code: string): string[] {
-  if (code === 'free') return ['基础功能使用', '有限的配置空间', '个人使用'];
-  return ['解锁更多高级功能', '更大的配置空间', '服务端权威权益'];
+function formatPrice(
+  price: SubscriptionProductDto['price'],
+  currency: SubscriptionProductDto['currency'],
+): string {
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice)) return `${price} ${currency}`;
+  return new Intl.NumberFormat('zh-CN', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericPrice);
 }
 
-function termLabel(product: Product): string {
-  if (product.code === 'lifetime') return '永久使用';
-  if (!product.term.duration_value) return '当前周期';
-  return `/ ${product.term.duration_value} ${product.term.duration_unit === 'year' ? '年' : '月'}`;
+function termLabel(term: SubscriptionProductDto['term']): string {
+  if (term.kind === 'free') return '免费方案';
+  if (!term.duration_value || !term.duration_unit) return '期限以服务端为准';
+  const unit = term.duration_unit === 'year' ? '年' : '个月';
+  return `${term.duration_value} ${unit}有效期`;
+}
+
+function productFacts(product: Product): string[] {
+  const availability = product.purchasable
+    ? '可创建服务端订单'
+    : product.reason === 'lifetime_already_purchased'
+      ? '该账户已购买此方案'
+      : product.reason === 'provider_mapping_unavailable'
+        ? '付款入口暂未配置'
+        : product.enabled
+          ? '当前不可购买'
+          : '当前未开放';
+  return [termLabel(product.term), availability];
+}
+
+function hasCheckoutSnapshot(
+  value: Record<string, unknown>,
+): value is Record<string, unknown> & {
+  price: SubscriptionCheckoutDto['price'];
+  currency: SubscriptionCheckoutDto['currency'];
+  term: SubscriptionCheckoutDto['term'];
+} {
+  const term = value.term;
+  return (
+    isMoneyAmount(value.price) &&
+    value.currency === 'CNY' &&
+    typeof term === 'object' &&
+    term !== null &&
+    !Array.isArray(term) &&
+    (term as Record<string, unknown>).kind === 'finite' &&
+    typeof (term as Record<string, unknown>).duration_value === 'number' &&
+    Number.isSafeInteger((term as Record<string, unknown>).duration_value) &&
+    ((term as Record<string, unknown>).duration_unit === 'month' ||
+      (term as Record<string, unknown>).duration_unit === 'year')
+  );
 }
 
 function errorCode(error: unknown): string {
@@ -206,8 +261,7 @@ export default function SubscriptionPage() {
               return {
                 ...product,
                 accent: accentFor(product.code),
-                features: featureCopy(product.code),
-                displayPrice: `¥${product.price}`,
+                displayPrice: formatPrice(product.price, product.currency),
               };
             }),
           );
@@ -254,7 +308,15 @@ export default function SubscriptionPage() {
         `v1/subscription/checkout/${id}`,
       );
       setPendingPayment((current) =>
-        current ? { ...current, status: checkout.status } : current,
+        current
+          ? {
+              ...current,
+              status: checkout.status,
+              price: checkout.price,
+              currency: checkout.currency,
+              term: checkout.term,
+            }
+          : current,
       );
       if (checkout.status === 'granted') {
         setPaymentFeedback('支付已确认，权益已由服务端开通。');
@@ -348,6 +410,9 @@ export default function SubscriptionPage() {
         name,
         status: checkout.status,
         url: checkout.payment_url,
+        price: checkout.price,
+        currency: checkout.currency,
+        term: checkout.term,
       } satisfies PendingPayment;
       // Persist before navigating so returning from the Provider restores the
       // server-side checkout snapshot and resumes status polling.
@@ -582,7 +647,7 @@ export default function SubscriptionPage() {
                         <h2>{plan.name}</h2>
                         <div className="consumer-subscription-price">
                           <strong>{plan.displayPrice}</strong>
-                          <span>{termLabel(plan)}</span>
+                          <span>{termLabel(plan.term)}</span>
                         </div>
                       </div>
                       {isCurrent ? (
@@ -598,7 +663,7 @@ export default function SubscriptionPage() {
                       {plan.description}
                     </p>
                     <ul className="consumer-plan-features">
-                      {plan.features.map((feature) => (
+                      {productFacts(plan).map((feature) => (
                         <li key={feature}>{feature}</li>
                       ))}
                     </ul>
@@ -656,6 +721,18 @@ export default function SubscriptionPage() {
             </div>
           </div>
           <p className="consumer-payment-description">
+            {pendingPayment.price && pendingPayment.term ? (
+              <strong>
+                {formatPrice(
+                  pendingPayment.price,
+                  pendingPayment.currency ?? 'CNY',
+                )}{' '}
+                · {termLabel(pendingPayment.term)}
+              </strong>
+            ) : (
+              <strong>正在读取服务端订单快照…</strong>
+            )}
+            <br />
             {pendingPayment.url
               ? '已在浏览器打开 Provider 付款页。支付完成后权益状态会由服务端自动确认。'
               : '订单已保存，但 Provider 付款入口尚未配置；请稍后刷新订单状态。'}
