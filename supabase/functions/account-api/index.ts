@@ -13,6 +13,7 @@ import {
   normalizeRedemptionCode,
 } from '../../../packages/domain/src/redemption.ts';
 import type { SubscriptionCheckoutDto } from '../../../packages/domain/src/contracts/api.ts';
+import { BILLING_ADMIN_ORDER_STATUSES } from '../../../packages/domain/src/contracts/billing.ts';
 import {
   billingSwitchEnabled,
   deriveCheckoutToken,
@@ -1560,7 +1561,13 @@ async function dispatchAdmin(
   if (path === 'admin/api/v1/billing/orders' && request.method === 'GET') {
     const cursorValue = url.searchParams.get('cursor');
     const cursor = cursorValue === null ? null : new Date(cursorValue);
+    const status = url.searchParams.get('status');
     if (cursor !== null && Number.isNaN(cursor.getTime()))
+      throw new ApiFault(400, 'INVALID_INPUT');
+    if (
+      status !== null &&
+      !(BILLING_ADMIN_ORDER_STATUSES as readonly string[]).includes(status)
+    )
       throw new ApiFault(400, 'INVALID_INPUT');
     const rows = await transaction.unsafe<Row>(
       'select * from private.admin_billing_order_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::integer, $6::text)',
@@ -1568,7 +1575,7 @@ async function dispatchAdmin(
         ...context,
         cursor === null ? null : cursor.toISOString(),
         boundedLimit(url.searchParams.get('limit')),
-        url.searchParams.get('status'),
+        status,
       ],
     );
     return {

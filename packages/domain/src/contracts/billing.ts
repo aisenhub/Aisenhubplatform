@@ -168,6 +168,21 @@ export type BillingSettlementState =
   | 'granted'
   | 'rejected';
 
+export type BillingOrderLinkageStatus = 'linked' | 'unlinked';
+
+export const BILLING_ADMIN_ORDER_STATUSES = [
+  'pending',
+  'retryable',
+  'manual_review',
+  'finalized',
+  'granted',
+  'rejected',
+  'unlinked',
+] as const;
+
+export type BillingAdminOrderStatus =
+  (typeof BILLING_ADMIN_ORDER_STATUSES)[number];
+
 export function isFinalBillingSettlementState(
   value: BillingSettlementState,
 ): value is 'granted' | 'rejected' {

@@ -672,7 +672,8 @@
             "manual_review",
             "finalized",
             "granted",
-            "rejected"
+            "rejected",
+            "unlinked"
           ]
         }
       },

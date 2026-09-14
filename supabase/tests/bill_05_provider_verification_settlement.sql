@@ -1,6 +1,6 @@
 begin;
 
-select plan(51);
+select plan(66);
 
 select has_column('public', 'billing_checkout_intents', 'custom_order_id', 'checkout has custom order binding');
 select has_column('public', 'billing_orders', 'custom_order_id', 'order stores custom order observation');
@@ -232,6 +232,121 @@ select is(
 );
 select is((select count(*)::integer from public.subscription_grants where billing_order_id = '00000000-0000-4000-8000-000000000528'), 0, 'missing provider plan creates no grant');
 select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000529'), 'manual_review', 'incomplete provider facts enter manual review');
+
+insert into public.billing_orders (
+  id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
+  platform_account_id, subscription_product_id, linkage_status
+) values (
+  '00000000-0000-4000-8000-000000000541', '00000000-0000-4000-8000-000000000505',
+  'provider-order-scope-check', '00000000-0000-4000-8000-000000000507',
+  '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
+  (select id from public.subscription_products where code = 'monthly'), 'linked'
+);
+select throws_ok(
+  $$insert into public.billing_settlements (
+    billing_order_id, checkout_intent_id, platform_id, platform_account_id,
+    settlement_kind, state, operation_id, decision_code
+  ) values (
+    '00000000-0000-4000-8000-000000000541',
+    '00000000-0000-4000-8000-000000000507', null, null,
+    'manual', 'review_required', '00000000-0000-4000-8000-000000000542',
+    'contract_conflict'
+  )$$,
+  '23514', null, 'linked settlements cannot lose their platform scope'
+);
+
+insert into public.billing_orders (
+  id, provider_account_id, provider_order_no, linkage_status
+) values (
+  '00000000-0000-4000-8000-000000000543', '00000000-0000-4000-8000-000000000505',
+  'provider-order-unlinked', 'unlinked'
+);
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000544', 'order_verification',
+  '00000000-0000-4000-8000-000000000543', 'processing', 1, 'bill05-unlinked-worker', now() + interval '1 minute', 1
+);
+select is(
+  (select decision_code from private.billing_order_verify_and_settle(
+    row('00000000-0000-4000-8000-000000000545', 'bill05-unlinked-worker', 1, '00000000-0000-4000-8000-000000000546')::private.job_context,
+    '00000000-0000-4000-8000-000000000544', '00000000-0000-4000-8000-000000000543', 1,
+    '{"status":"paid","provider_user_id":"provider-unlinked-user","external_plan_id":"plan-monthly","product_type":"subscription","sku_ids":[],"purchase_months":1,"total_amount":"9.90","show_amount":"9.90","currency":"CNY"}'::jsonb
+  )), 'unlinked_order', 'paid order without custom binding is isolated for review');
+select is((select linkage_status from public.billing_orders where id = '00000000-0000-4000-8000-000000000543'), 'unlinked', 'unlinked payment keeps empty ownership');
+select is((select platform_id from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000543'), null::uuid, 'unlinked settlement has no platform scope');
+select is((select platform_account_id from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000543'), null::uuid, 'unlinked settlement has no account scope');
+select is((select state from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000543'), 'review_required', 'unlinked settlement is review required');
+select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000544'), 'manual_review', 'unlinked payment leaves the job in manual review');
+select is((select count(*)::integer from public.subscription_grants where billing_order_id = '00000000-0000-4000-8000-000000000543'), 0, 'unlinked payment never grants entitlement');
+
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000547', 'reconciliation',
+  '00000000-0000-4000-8000-000000000543', 'processing', 1, 'bill05-unlinked-requery', now() + interval '1 minute', 1
+);
+select is(
+  (select decision_code from private.billing_order_verify_and_settle(
+    row('00000000-0000-4000-8000-000000000548', 'bill05-unlinked-requery', 1, '00000000-0000-4000-8000-000000000549')::private.job_context,
+    '00000000-0000-4000-8000-000000000547', '00000000-0000-4000-8000-000000000543', 1,
+    '{"status":"paid","provider_user_id":"provider-unlinked-user"}'::jsonb
+  )), 'unlinked_order', 'repeated unlinked observation reuses the manual decision');
+select is((select count(*)::integer from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000543'), 1, 'repeated unlinked observation has one settlement');
+select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000547'), 'manual_review', 'repeated unlinked observation remains visible to operators');
+
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000550', 'reconciliation',
+  '00000000-0000-4000-8000-000000000543', 'processing', 1, 'bill05-unlinked-linker', now() + interval '1 minute', 1
+);
+select is(
+  (select linked from private.billing_order_link_checkout(
+    row('00000000-0000-4000-8000-000000000551', 'bill05-unlinked-linker', 1, '00000000-0000-4000-8000-000000000552')::private.job_context,
+    '00000000-0000-4000-8000-000000000550', '00000000-0000-4000-8000-000000000543', 1, 'bill05-custom-order'
+  )),
+  false, 'automatic linking cannot claim an order already in manual settlement'
+);
+select is((select linkage_status from public.billing_orders where id = '00000000-0000-4000-8000-000000000543'), 'unlinked', 'manual settlement keeps the order unlinked during a link race');
+
+insert into public.billing_checkout_intents (
+  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, product_code, term_kind_snapshot,
+  duration_value_snapshot, duration_unit_snapshot, price_amount, currency,
+  price_version, mapping_version, status, token_key_version, token_digest,
+  idempotency_key_hash, request_hash, expires_at, custom_order_id
+)
+select
+  '00000000-0000-4000-8000-000000000553', platform_id, platform_account_id,
+  subscription_product_id, entitlement_plan_id, provider_account_id,
+  provider_product_id, product_code, term_kind_snapshot, duration_value_snapshot,
+  duration_unit_snapshot, price_amount, currency, price_version, mapping_version,
+  'pending', token_key_version, decode(repeat('11', 32), 'hex'),
+  decode(repeat('22', 32), 'hex'), decode(repeat('33', 32), 'hex'), expires_at,
+  custom_order_id
+from public.billing_checkout_intents
+where id = '00000000-0000-4000-8000-000000000507';
+insert into public.billing_orders (
+  id, provider_account_id, provider_order_no, linkage_status
+) values (
+  '00000000-0000-4000-8000-000000000554', '00000000-0000-4000-8000-000000000505',
+  'provider-order-ambiguous-custom', 'unlinked'
+);
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000555', 'reconciliation',
+  '00000000-0000-4000-8000-000000000554', 'processing', 1, 'bill05-ambiguous-linker', now() + interval '1 minute', 1
+);
+select is(
+  (select linked from private.billing_order_link_checkout(
+    row('00000000-0000-4000-8000-000000000556', 'bill05-ambiguous-linker', 1, '00000000-0000-4000-8000-000000000557')::private.job_context,
+    '00000000-0000-4000-8000-000000000555', '00000000-0000-4000-8000-000000000554', 1, 'bill05-custom-order'
+  )),
+  false, 'ambiguous custom order cannot be auto-linked'
+);
+select is((select linkage_status from public.billing_orders where id = '00000000-0000-4000-8000-000000000554'), 'unlinked', 'ambiguous custom order remains isolated');
 
 insert into public.billing_processing_jobs (
   id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence

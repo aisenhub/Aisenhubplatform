@@ -58,6 +58,7 @@ export { API_ERROR_CODES } from './api.ts';
 export {
   BILLING_CONTRACT_VERSION,
   BILLING_CURRENCY,
+  BILLING_ADMIN_ORDER_STATUSES,
   BILLING_PRODUCT_CODES,
   BILLING_PRODUCT_SPECS,
   PROVIDER_ADAPTER_CONTRACT_VERSION,
@@ -70,6 +71,8 @@ export {
 } from './billing.ts';
 export type {
   BillingCheckoutSnapshotDto,
+  BillingAdminOrderStatus,
+  BillingOrderLinkageStatus,
   BillingDurationUnit,
   BillingOperationSource,
   BillingOperationVersionDto,

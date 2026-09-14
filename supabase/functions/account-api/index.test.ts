@@ -1432,6 +1432,14 @@ Deno.test('Account API exposes central Billing order and requery wrappers', asyn
   assertEquals(list.status, 200);
   assertEquals((await list.json()).data[0].decision_code, 'granted');
 
+  const invalidStatus = await handleRequest(
+    new Request(`${base}/orders?status=not-a-billing-status`, {
+      headers: auth,
+    }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(invalidStatus.status, 400);
+
   const metrics = await handleRequest(
     new Request(`${base}/metrics`, { headers: auth }),
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
