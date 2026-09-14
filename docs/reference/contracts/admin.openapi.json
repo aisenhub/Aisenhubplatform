@@ -492,7 +492,7 @@
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/BillingOrderId" }],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
+          "200": { "$ref": "#/components/responses/BillingOrder" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -765,6 +765,25 @@
           }
         }
       },
+      "BillingOrder": {
+        "description": "Billing order detail with an ordered, read-only evidence timeline.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+          "ETag": { "$ref": "#/components/headers/ETag" }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["data", "request_id"],
+              "properties": {
+                "data": { "$ref": "#/components/schemas/BillingOrderDetail" },
+                "request_id": { "type": "string", "format": "uuid" }
+              }
+            }
+          }
+        }
+      },
       "Object": {
         "description": "JSON response with data and request_id.",
         "headers": {
@@ -941,10 +960,71 @@
           },
           "settlement_state": {
             "type": ["string", "null"],
-            "enum": ["retryable", "blocked", "review_required", "finalized", null]
+            "enum": [
+              "retryable",
+              "blocked",
+              "review_required",
+              "finalized",
+              null
+            ]
           }
         },
         "additionalProperties": false
+      },
+      "BillingOrderTimelineEvent": {
+        "type": "object",
+        "required": [
+          "source",
+          "event_type",
+          "event_at",
+          "provider_event_at",
+          "received_at",
+          "entity_id",
+          "status",
+          "state",
+          "code",
+          "request_id",
+          "job_id",
+          "actor_type",
+          "actor_id",
+          "details"
+        ],
+        "properties": {
+          "source": { "type": "string" },
+          "event_type": { "type": "string" },
+          "event_at": { "type": "string", "format": "date-time" },
+          "provider_event_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "received_at": { "type": ["string", "null"], "format": "date-time" },
+          "entity_id": { "type": "string", "format": "uuid" },
+          "status": { "type": ["string", "null"] },
+          "state": { "type": ["string", "null"] },
+          "code": { "type": ["string", "null"] },
+          "request_id": { "type": ["string", "null"], "format": "uuid" },
+          "job_id": { "type": ["string", "null"], "format": "uuid" },
+          "actor_type": { "type": ["string", "null"] },
+          "actor_id": { "type": ["string", "null"], "format": "uuid" },
+          "details": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false
+      },
+      "BillingOrderDetail": {
+        "type": "object",
+        "required": ["order_id", "admin_version", "timeline"],
+        "properties": {
+          "order_id": { "type": "string", "format": "uuid" },
+          "admin_version": { "type": "integer", "minimum": 1 },
+          "provider_facts": { "type": "object", "additionalProperties": true },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingOrderTimelineEvent"
+            }
+          }
+        },
+        "additionalProperties": true
       },
       "ErrorEnvelope": {
         "type": "object",

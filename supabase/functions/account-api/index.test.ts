@@ -308,7 +308,9 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           if (
-            query.startsWith('select * from private.admin_billing_order_read')
+            query.startsWith(
+              'select * from private.admin_billing_order_read_v2',
+            )
           )
             return [
               {
@@ -317,6 +319,13 @@ function fakeDatabase(
                 admin_version: 1,
                 provider_facts: {},
                 open_job_count: 0,
+                timeline: [
+                  {
+                    source: 'billing_order',
+                    event_type: 'order.created',
+                    event_at: '2026-09-11T00:00:00.000Z',
+                  },
+                ],
               },
             ] as unknown as R[];
           if (
@@ -1484,6 +1493,13 @@ Deno.test('Account API exposes central Billing order and requery wrappers', asyn
   );
   assertEquals(metrics.status, 200);
   assertEquals((await metrics.json()).data.retryable_count, 1);
+
+  const detail = await handleRequest(
+    new Request(`${base}/orders/${keyId}`, { headers: auth }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(detail.status, 200);
+  assertEquals((await detail.json()).data.timeline[0].source, 'billing_order');
 
   const requery = await handleRequest(
     new Request(`${base}/orders/${keyId}/requery`, {

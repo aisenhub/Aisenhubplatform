@@ -44,6 +44,19 @@ type BillingOrderDetail = BillingOrder & {
   total_amount: string | null;
   show_amount: string | null;
   currency: string | null;
+  timeline: BillingTimelineEvent[];
+};
+
+type BillingTimelineEvent = {
+  source: string;
+  event_type: string;
+  event_at: string;
+  provider_event_at: string | null;
+  received_at: string | null;
+  status: string | null;
+  state: string | null;
+  code: string | null;
+  details: Record<string, unknown>;
 };
 
 type BillingMetrics = {
@@ -88,6 +101,29 @@ function tone(value: string | null): StatusTone {
 
 function formatDate(value: string | null | undefined) {
   return value ? new Date(value).toLocaleString('zh-CN') : '—';
+}
+
+function timelineSourceLabel(source: string) {
+  return (
+    {
+      billing_order: '订单',
+      checkout: 'Checkout',
+      provider_webhook: 'Provider Webhook',
+      processing_job: '后台任务',
+      provider_observation: 'Provider 观测',
+      settlement: '中央结算',
+      entitlement: '权益账本',
+      entitlement_correction: '权益修正',
+      admin_audit: '后台审计',
+    }[source] ?? source
+  );
+}
+
+function timelineSummary(event: BillingTimelineEvent) {
+  const summary = [event.status, event.state, event.code].filter(Boolean);
+  const reason = event.details.reason;
+  if (typeof reason === 'string' && reason) summary.push(`原因：${reason}`);
+  return summary.join(' · ') || '—';
 }
 
 export function CentralBillingPage() {
@@ -571,6 +607,55 @@ export function CentralBillingPage() {
                       <dd>{selected.open_job_count}</dd>
                     </div>
                   </dl>
+                  <section className="mt-6" aria-label="订单证据时间线">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold">证据时间线</h3>
+                      <span className="text-xs text-muted-foreground">
+                        {selected.timeline.length} 条
+                      </span>
+                    </div>
+                    {selected.timeline.length === 0 ? (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        暂无可用历史证据。
+                      </p>
+                    ) : (
+                      <ol className="mt-3 space-y-3 border-l border-border pl-4">
+                        {selected.timeline.map((event, index) => (
+                          <li
+                            className="relative"
+                            key={`${event.event_type}-${event.event_at}-${index}`}
+                          >
+                            <span className="absolute -left-[1.28rem] top-1.5 h-2 w-2 rounded-full bg-primary" />
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <span className="font-medium">
+                                {timelineSourceLabel(event.source)}
+                              </span>
+                              <code>{event.event_type}</code>
+                              <time className="text-muted-foreground">
+                                {formatDate(event.event_at)}
+                              </time>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {timelineSummary(event)}
+                            </p>
+                            {event.provider_event_at || event.received_at ? (
+                              <p className="mt-1 text-[11px] text-muted-foreground">
+                                {event.provider_event_at
+                                  ? `Provider 时间：${formatDate(event.provider_event_at)}`
+                                  : null}
+                                {event.provider_event_at && event.received_at
+                                  ? ' · '
+                                  : null}
+                                {event.received_at
+                                  ? `接收时间：${formatDate(event.received_at)}`
+                                  : null}
+                              </p>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </section>
                   <label
                     className="mt-5 block text-sm font-medium"
                     htmlFor="billing-reason"
