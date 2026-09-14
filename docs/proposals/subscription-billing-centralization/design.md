@@ -28,6 +28,6 @@ Consumer/Admin同源BFF、Supabase Auth/JWT/Session/MFA、受控executor与priva
 
 ## TASK-0102 已落地的局部边界
 
-2026-09-14 的 Local forward-fix 已将共享 `private.entitlement_apply` 的授予前置冻结为：幂等重放先返回既有结果；新授予先对 `platforms` 取 `FOR SHARE` 并要求 `status = active`，再对目标 `platform_accounts` 取 `FOR UPDATE`，随后校验账户和套餐。这样 Billing settlement、Admin Grant 与兑换码共用同一平台禁用闸门，平台状态更新与新授予按数据库锁串行化。
+2026-09-14 的 Local forward-fix 已将共享 `private.entitlement_apply` 的授予前置冻结为：幂等重放先返回既有结果；读取目标账户的身份后，确保 `identity_lifecycle` 有 `active` 行并取 `FOR SHARE`；新授予再对 `platforms` 取 `FOR SHARE` 并要求 `status = active`，再对目标 `platform_accounts` 取 `FOR UPDATE`，随后校验账户和套餐。Global Delete 的 start 过程对同一身份行执行 upsert/update，因此删除门闩与新授予按数据库锁获得线性化顺序；Billing settlement、Admin Grant 与兑换码共用同一平台和身份闸门。
 
-这只是 TASK-0102 的可独立安全修复，不宣称完整锁表已完成：`identity_lifecycle`、batch/code、checkout/order/job 及暂停/删除策略仍需 D3 和 Hosted/Staging 双连接证据后统一冻结。
+这只是 TASK-0102 的可独立安全修复，不宣称完整锁表已完成：batch/code、checkout/order/job 及暂停/删除完整策略仍需 D3 和 Hosted/Staging 双连接证据后统一冻结。

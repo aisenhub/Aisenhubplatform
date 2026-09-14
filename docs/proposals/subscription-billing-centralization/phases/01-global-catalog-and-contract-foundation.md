@@ -2,7 +2,7 @@
 
 ## 1. 阶段名称和状态
 
-状态：执行中；TASK-0101、TASK-0103 已完成本地实现与回归，TASK-0102 仍按依赖计划执行。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
+状态：执行中；TASK-0101、TASK-0103 已完成本地实现与回归，TASK-0102 已完成平台/身份门闩局部 forward-fix 与 Local 回归，完整锁表仍按依赖计划执行。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
 
 ## 2. 阶段目标
 
@@ -136,7 +136,7 @@ TASK-0001；涉及业务政策的部分等待TASK-0003。每个任务的前置�
     1. 追踪最新entitlement_apply/recompute、兑换与Admin correction、删除/保留过程。
     2. 列出identity/platform/account/plan/batch/code/checkout/order/job锁获取与反向路径，记录冲突。
     3. 冻结只在领域过程写权益/配额/兑换/结算，外部网络在事务外，暂停/关闭/删除回执为显式结果。
-- 必须保留或新增的失败测试：用例标识建议 `TASK-0102-NEG`；跨平台FK、任意executor DML、旧Session/旧fence及删除后复活负例。已新增禁用平台授予负例：旧实现 5/5 FAIL（写入 1 Grant/1 Event），forward-fix 后 PASS；已有正确防护保留为回归断言，不人为制造失败，不删除旧失败记录。
+- 必须保留或新增的失败测试：用例标识建议 `TASK-0102-NEG`；跨平台FK、任意executor DML、旧Session/旧fence及删除后复活负例。已新增禁用平台授予负例：旧实现 5/5 FAIL（写入 1 Grant/1 Event），forward-fix 后 PASS；新增 deleting identity 负例：旧实现 4/4 FAIL（写入 1 Grant/1 Event），forward-fix 后 PASS；已有正确防护保留为回归断言，不人为制造失败，不删除旧失败记录。
 - 并发/重试/恢复测试：用例标识建议 `TASK-0102-REC`；统一锁后时间点；Plan下架/批次禁用/暂停/删除与授予的串行解释。真并发使用至少两连接/两进程；mock不能替代租约接管或事务并发证明。
 - 用户体验验收：中央不可用时拒绝受保护动作。
 - 管理员操作验收：SQL可信上下文不能来自浏览器指定账户。
@@ -150,7 +150,7 @@ TASK-0001；涉及业务政策的部分等待TASK-0003。每个任务的前置�
 
 - 预期结果：提供每个写入口前置和锁表；无死锁靠重试掩盖或HTTP重复算法。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
 - 回滚方式：仅回退本任务兼容应用/文档变更；持久操作与审计不回滚，未知外部结果先查单再补偿，不靠创建新订单恢复。
-- 完成状态：局部完成（共享授予入口的平台禁用 fail-closed 与 Local 回归 PASS）；完整任务仍阻塞（D3 生命周期策略、全锁表/并发、Hosted/Staging/Admin E2E 未验证）。
+- 完成状态：局部完成（共享授予入口的平台禁用与 Global Delete identity barrier fail-closed，Local 回归 PASS）；完整任务仍阻塞（D3 其余生命周期策略、batch/code/checkout/order/job 全锁表、双连接并发、Hosted/Staging/Admin E2E 未验证）。
 
 <a id="task-0103"></a>
 ### TASK-0103：建立数据库到Registry的消费者兼容清单
