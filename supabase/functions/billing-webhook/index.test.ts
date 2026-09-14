@@ -39,7 +39,11 @@ function database(valuesSeen: unknown[][], duplicate = false) {
   };
 }
 
-function request(body: string, eventKey = 'provider-event-1') {
+function request(
+  body: string,
+  eventKey = 'provider-event-1',
+  orderNo = 'order-1',
+) {
   return new Request(
     'http://local/functions/v1/billing-webhook/webhooks/afdian',
     {
@@ -47,7 +51,7 @@ function request(body: string, eventKey = 'provider-event-1') {
       headers: {
         'content-type': 'application/json',
         'x-provider-event-id': eventKey,
-        'x-provider-order-no': 'order-1',
+        'x-provider-order-no': orderNo,
         'x-provider-signature': 'test-signature',
       },
       body,
@@ -74,7 +78,7 @@ Deno.test('billing webhook requires a provider signature before persistence', as
         'content-type': 'application/json',
         'x-provider-event-id': 'provider-event-1',
       },
-      body: '{}',
+      body: JSON.stringify({ order_no: 'order-1' }),
     }),
     {
       providerAccountId,
@@ -122,7 +126,7 @@ Deno.test('billing webhook persists only hash and enqueue result, with duplicate
   );
 
   const duplicate = await handleBillingWebhookRequest(
-    request('{}', 'provider-event-1'),
+    request(JSON.stringify({ order_no: 'order-1' }), 'provider-event-1'),
     {
       providerAccountId,
       database: database([], true),
@@ -131,6 +135,38 @@ Deno.test('billing webhook persists only hash and enqueue result, with duplicate
   );
   assertEquals(duplicate.status, 200);
   assertEquals((await duplicate.json()).data.duplicate, true);
+});
+
+Deno.test('generic webhook identity comes from signed body facts, not event-id headers', async () => {
+  const valuesSeen: unknown[][] = [];
+  const accepted = await handleBillingWebhookRequest(
+    request(
+      JSON.stringify({ order_no: 'order-from-body' }),
+      'unsigned-event',
+      'order-from-body',
+    ),
+    {
+      providerAccountId,
+      database: database(valuesSeen),
+      verifySignature: async () => true,
+    },
+  );
+  assertEquals(accepted.status, 200);
+  assertEquals(valuesSeen[0]![1], 'provider:order-from-body');
+
+  const rejected = await handleBillingWebhookRequest(
+    request(
+      JSON.stringify({ order_no: 'order-from-body' }),
+      'unsigned-event',
+      'different-order',
+    ),
+    {
+      providerAccountId,
+      database: database([]),
+      verifySignature: async () => true,
+    },
+  );
+  assertEquals(rejected.status, 401);
 });
 
 Deno.test('billing webhook intake can be stopped without touching persistence', async () => {
@@ -179,7 +215,7 @@ Deno.test('billing webhook accepts the documented Afdian order envelope and retu
   assertEquals(response.status, 200);
   assertEquals(await response.json(), { ec: 200, em: 'ok' });
   assertEquals(valuesSeen.length, 1);
-  assertEquals(valuesSeen[0]![1], 'afdian:afdian-order-1:2');
+  assertEquals(valuesSeen[0]![1], 'afdian:afdian-order-1');
   assertEquals(valuesSeen[0]![4], 'afdian-order-1');
 });
 

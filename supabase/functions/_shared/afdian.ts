@@ -192,7 +192,8 @@ export async function verifyAfdianWebhookSignature(
   const data = objectValue(root?.data);
   const order = objectValue(data?.order);
   const signature = text(data?.sign);
-  if (data?.type !== 'order' || !order || !signature) return false;
+  if (root?.ec !== 200 || data?.type !== 'order' || !order || !signature)
+    return false;
   const signedValues = [
     order.out_trade_no,
     order.user_id,
@@ -246,8 +247,10 @@ export function parseAfdianWebhook(
   const order = objectValue(data.order);
   const orderNo = stringOrderId(order?.out_trade_no ?? order?.order_no);
   if (!order || !orderNo || orderNo.length > 255) return null;
-  const status = String(order.status ?? '');
-  const eventKey = `afdian:${orderNo}:${status || 'unknown'}`;
+  // Afdian's signed canonical does not cover the status field. Do not use
+  // that mutable/unsigned value as the inbox identity: the database will
+  // retain a payload-hash conflict if the same order is delivered differently.
+  const eventKey = `afdian:${orderNo}`;
   return { order, orderNo, eventKey };
 }
 

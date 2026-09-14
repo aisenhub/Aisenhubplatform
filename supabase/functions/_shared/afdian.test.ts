@@ -7,6 +7,7 @@ import {
   afdianCanonicalSign,
   createAfdianProviderAdapter,
   normalizeAfdianOrder,
+  parseAfdianWebhook,
   toBillingOrderFacts,
   verifyAfdianWebhookSignature,
 } from './afdian.ts';
@@ -110,6 +111,27 @@ Deno.test('Afdian webhook signatures verify the documented order fields', async 
       publicKey,
     )),
   );
+  assert(
+    !(await verifyAfdianWebhookSignature({ ...payload, ec: 400 }, publicKey)),
+  );
+});
+
+Deno.test('Afdian webhook event identity excludes unsigned mutable status', () => {
+  const first = parseAfdianWebhook({
+    data: {
+      type: 'order',
+      order: { out_trade_no: 'order-stable-1', status: 2 },
+    },
+  });
+  const later = parseAfdianWebhook({
+    data: {
+      type: 'order',
+      order: { out_trade_no: 'order-stable-1', status: 3 },
+    },
+  });
+  assert(first !== null && later !== null);
+  assertEquals(first.eventKey, 'afdian:order-stable-1');
+  assertEquals(later.eventKey, first.eventKey);
 });
 
 Deno.test('Afdian adapter queries an order by out_trade_no without exposing credentials', async () => {

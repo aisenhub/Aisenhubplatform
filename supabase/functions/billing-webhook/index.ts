@@ -179,12 +179,16 @@ export async function handleBillingWebhookRequest(
       eventKey = afdian.eventKey;
       orderNo = afdian.orderNo;
     } else {
-      eventKey = value(request.headers.get('x-provider-event-id'));
-      if (!eventKey || eventKey.length > 255) throw new Error('INVALID_INPUT');
-      orderNo =
-        value(request.headers.get('x-provider-order-no')) ??
-        value(payload.provider_order_no) ??
-        value(payload.order_no);
+      const payloadOrderNo =
+        value(payload.provider_order_no) ?? value(payload.order_no);
+      const claimedOrderNo = value(request.headers.get('x-provider-order-no'));
+      if (!payloadOrderNo || payloadOrderNo.length > 255)
+        throw new Error('INVALID_INPUT');
+      if (claimedOrderNo !== null && claimedOrderNo !== payloadOrderNo)
+        throw new Error('SIGNATURE_INVALID');
+      orderNo = payloadOrderNo;
+      eventKey = `provider:${orderNo}`;
+      if (eventKey.length > 256) throw new Error('INVALID_INPUT');
       const signature = request.headers.get('x-provider-signature');
       if (!signature) throw new Error('SIGNATURE_REQUIRED');
       const verified = await (
@@ -202,6 +206,11 @@ export async function handleBillingWebhookRequest(
       );
     });
     if (!ingest) throw new Error('WEBHOOK_UNAVAILABLE');
+    if (
+      ingest.duplicate !== true &&
+      ingest.processing_status === 'manual_review'
+    )
+      throw new Error('WEBHOOK_PAYLOAD_CONFLICT');
     if (afdian) return response(200, { ec: 200, em: 'ok' }, id);
     return response(
       200,
@@ -227,7 +236,9 @@ export async function handleBillingWebhookRequest(
             ? 400
             : code === 'WEBHOOK_NOT_CONFIGURED'
               ? 503
-              : 503;
+              : code === 'WEBHOOK_PAYLOAD_CONFLICT'
+                ? 409
+                : 503;
     return response(status, { error: { code }, request_id: id }, id);
   }
 }
