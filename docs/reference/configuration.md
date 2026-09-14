@@ -78,6 +78,8 @@ Hosted Billing 调度只从 Vault 读取两个运行时 Secret：
 
 Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 个任务。`private.billing_cron_invocations` 分开记录 scheduler 调用、请求受理、HTTP 完成和 Worker 业务结果；该表不是 Data API 消费者入口，响应摘要只保留计数和非敏感错误码。
 
+维护入口的调用方、批量预算和环境证据见[Maintenance 调用方与环境差异矩阵](maintenance-callers.md)。
+
 ## Consumer 模板
 
 `apps/template-preview` 是 `aisentest` 的 Consumer BFF 模板。模板服务端需要配置：

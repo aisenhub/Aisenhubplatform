@@ -77,7 +77,7 @@
 | [TASK-0702](phases/05-reconciliation-observability-and-central-admin.md#task-0702) | RC-07 | TASK-0002,TASK-0302,TASK-0303 | F14 | 本地 forward-fix 与回归 PASS；Hosted HTTP/pg_net/恢复待验证 |
 | [TASK-0703](phases/05-reconciliation-observability-and-central-admin.md#task-0703) | RC-07 | TASK-0701,TASK-0702,TASK-0402 | F14,F06,F03 | 未开始 |
 | [TASK-0704](phases/05-reconciliation-observability-and-central-admin.md#task-0704) | RC-07 | TASK-0702,TASK-0404,TASK-0305 | F13,F14,F16,F17 | 未开始 |
-| [TASK-0705](phases/05-reconciliation-observability-and-central-admin.md#task-0705) | RC-07 | TASK-0002,TASK-0702 | F14,F17 | 未开始 |
+| [TASK-0705](phases/05-reconciliation-observability-and-central-admin.md#task-0705) | RC-07 | TASK-0002,TASK-0702 | F14,F17 | 静态调用方矩阵完成；Hosted角色/网关/调度安装待验证 |
 | [TASK-0706](phases/05-reconciliation-observability-and-central-admin.md#task-0706) | RC-07 | TASK-0401,TASK-0402,TASK-0705 | F17,F08,F03 | 未开始 |
 | [TASK-0801](phases/07-final-verification-cleanup-and-doc-sync.md#task-0801) | RC-08 | 各被测TASK实现完成 | F17 | 未开始 |
 | [TASK-0802](phases/07-final-verification-cleanup-and-doc-sync.md#task-0802) | RC-08 | TASK-0801,TASK-0706 | F17,F07,F08 | 未开始 |

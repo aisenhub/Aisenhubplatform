@@ -162,6 +162,16 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 结论 | TASK-0702 Local 实现及回归 PASS；G-OPS 和 Staging 门槛仍未完成，下一项可独立任务为 TASK-0703，但其告警实现需明确阈值、接收人和 Hosted 证据。 |
 | Commit与push | TASK-0702 提交 `c562f52` 已推送 `origin/codex/billing-architecture-review`；因 R3 的 Hosted/Staging 门槛未完成，本提交暂未合并 `main`。 |
 
+## 追加实施记录（2026-09-14，TASK-0705 静态调用方矩阵）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0705 的本地静态准备：登记 maintenance 路由、计划频率、批量预算、调用方、鉴权/角色和证据状态；不修改 Hosted 角色、Vault、schedule 安装或生产配置。 |
+| 实际变更 | 新增 `docs/reference/maintenance-callers.md`，并从配置参考链接；核对 `maintenance/index.ts`、`schedule.json`、BILL-16/TASK-0702 Cron 和 deletion-jobs Admin 合同。确认仅 Billing Cron 有仓库内数据库调度定义，其余 schedule 条目只是元数据。 |
+| Local验证 | `pnpm docs:check` PASS（64 documents）；`git diff --check` PASS。静态矩阵中的路由、频率和预算均来自当前源码，不把外部调度器存在性写成 PASS。 |
+| Hosted/Staging/Production | 函数部署、网关前缀、verify_jwt、executor 角色、Vault Secret、实际 Cron 安装、告警和恢复：NOT_RUN。 |
+| 结论 | TASK-0705 静态调用方准备完成；完整任务仍需环境证据，不能关闭 F14/F17。 |
+
 ## 外部门槛
 
 | 门槛 | 当前结果 | 所需证据 |

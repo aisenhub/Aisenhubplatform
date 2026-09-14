@@ -2,7 +2,7 @@
 
 ## 1. 阶段名称和状态
 
-状态：In Progress；TASK-0702 已完成本地 forward-fix 与 Local 回归，TASK-0701/0703～0706 仍未开始或受前置门槛影响。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
+状态：In Progress；TASK-0702 已完成本地 forward-fix 与 Local 回归，TASK-0705 已完成静态调用方矩阵，TASK-0701/0703/0704/0706 仍未开始或受前置门槛影响。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
 
 ## 2. 阶段目标
 
@@ -249,7 +249,7 @@ RC-03；退款差异依赖RC-04；无需等UI完成可先执行。每个任务�
 - 影响范围：F14,F17；cron/观测、环境/CI/备份/文档。
 - 前置依赖：TASK-0002,TASK-0702。每个前置交付必须核对源码和实际证据，不只检查任务状态文字。
 - 变更目录：`supabase/functions/maintenance`、`supabase`、`docs/architecture`、`docs/reference`、`docs/guides`；`supabase/migrations`（仅新增）。
-- 变更文件：`supabase/functions/maintenance/index.ts`、`supabase/functions/maintenance/schedule.json`、`supabase/config.toml`、`docs/architecture/deployment.md`、`docs/reference/configuration.md`、`docs/guides/operations.md`。历史迁移仅作只读定义来源，不可修改：`supabase/migrations/20260912143000_hosted_runtime_role_membership.sql`。
+- 变更文件：`docs/reference/maintenance-callers.md`、`docs/reference/configuration.md`、`docs/proposals/subscription-billing-centralization/phases/05-reconciliation-observability-and-central-admin.md`。本轮未修改运行代码、schedule.json、角色配置或历史迁移；历史迁移仅作只读定义来源，不可修改：`supabase/migrations/20260912143000_hosted_runtime_role_membership.sql`。
 - 是否涉及数据库迁移：是；候选 migration slug `repair_task_0705`，用固定CLI生成真实时间戳，列出最终函数及约束diff后方可执行。
 - 是否涉及公共合同：本任务不改运行接口；核对并消费前置已冻结合同，不增加第二定义。
 - 是否涉及 Consumer UI：不直接修改；通过后续对应任务验收。
@@ -264,7 +264,7 @@ RC-03；退款差异依赖RC-04；无需等UI完成可先执行。每个任务�
 - 并发/重试/恢复测试：用例标识建议 `TASK-0705-REC`；调度重复安装、角色回退、网关版本切换、并发维护与Billing。真并发使用至少两连接/两进程；mock不能替代租约接管或事务并发证明。
 - 用户体验验收：后端任务：以对应Consumer任务验证，不在本任务新增页面；用户不能看到虚假成功。
 - 管理员操作验收：后端任务：保留可追溯的错误/操作ID，由对应Admin任务呈现；不得任意写表。
-- 验收命令：下列为未来实施验收入口，本轮均未作为业务验证运行；先增加上述具名用例并核对runner覆盖，不能只运行旧套件计通过。环境守卫与类别见第13节。
+- 验收命令：本轮完成静态入口矩阵和文档链接检查；真实 Hosted 调度、网关、角色和恢复证据仍需环境验收。未把静态清单计为 Hosted PASS。
 
 - `pnpm test:db`
 - `pnpm run test:sql:bill-05-concurrency`
@@ -277,7 +277,7 @@ RC-03；退款差异依赖RC-04；无需等UI完成可先执行。每个任务�
 
 - 预期结果：每个入口有调用方/频率/预算/责任/证据，未知显式NOT_RUN；不把共享postgres回退当最小凭据。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
 - 回滚方式：采用expand-first；停止本任务新动作/必要时关闭新购买，继续保存已付款入站；回退到兼容且不含已知漏洞的应用版本，保留新增表/列/Order/Grant/幂等及审计，另发forward-fix。不得down删除账本或重写旧迁移。
-- 完成状态：未开始；实施测试状态NOT_RUN。
+- 完成状态：静态调用方矩阵完成；Local 文档/链接检查 PASS；Hosted/Staging 角色、网关、调度安装和恢复仍 NOT_RUN，运行配置变更未授权。
 
 <a id="task-0706"></a>
 ### TASK-0706：验证外部对象备份、恢复屏障与交易恢复
