@@ -234,6 +234,11 @@ try {
       sql`delete from public.subscription_grants where platform_id = ${platformId}`,
   );
   await cleanup(
+    'provider observations',
+    () =>
+      sql`delete from public.billing_order_observations where billing_order_id = any(${orderIds}::uuid[])`,
+  );
+  await cleanup(
     'processing jobs',
     () =>
       sql`delete from public.billing_processing_jobs where billing_order_id = any(${orderIds}::uuid[])`,
