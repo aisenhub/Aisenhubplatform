@@ -60,6 +60,8 @@ export {
   BILLING_CURRENCY,
   BILLING_ADMIN_ORDER_STATUSES,
   BILLING_CHECKOUT_STATUSES,
+  BILLING_CHECKOUT_NEXT_ACTIONS,
+  BILLING_CHECKOUT_PROGRESS_REASONS,
   BILLING_ENTITLEMENT_STATUSES,
   BILLING_ERROR_CODES,
   BILLING_JOB_STATES,
@@ -88,10 +90,14 @@ export {
   isFinalBillingSettlementState,
   isMoneyAmount,
   isProviderOrderSnapshot,
+  isProviderOrderStatus,
   toMoneyAmount,
 } from './billing.ts';
 export type {
   BillingCheckoutSnapshotDto,
+  BillingCheckoutNextAction,
+  BillingCheckoutProgressDto,
+  BillingCheckoutProgressReason,
   BillingJobErrorClass,
   BillingJobFailureClassification,
   BillingJobFailureState,

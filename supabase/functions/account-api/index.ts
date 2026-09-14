@@ -15,6 +15,16 @@ import {
 import type { SubscriptionCheckoutDto } from '../../../packages/domain/src/contracts/api.ts';
 import { BILLING_ADMIN_ORDER_STATUSES } from '../../../packages/domain/src/contracts/billing.ts';
 import {
+  isBillingCheckoutStatus,
+  isBillingEntitlementStatus,
+  isBillingJobState,
+  isBillingVerificationStatus,
+  isProviderOrderStatus,
+  type BillingCheckoutNextAction,
+  type BillingCheckoutProgressReason,
+  type BillingJobState,
+} from '../../../packages/domain/src/contracts/billing.ts';
+import {
   billingSwitchEnabled,
   deriveCheckoutToken,
 } from '../_shared/billing.ts';
@@ -907,10 +917,48 @@ function subscriptionCheckoutDto(
   row: Row,
   paymentUrl: string | null = null,
 ): SubscriptionCheckoutDto {
+  const status = isBillingCheckoutStatus(row.status) ? row.status : 'pending';
+  const providerStatus = isProviderOrderStatus(row.provider_status)
+    ? row.provider_status
+    : 'unknown';
+  const verificationStatus = isBillingVerificationStatus(
+    row.verification_status,
+  )
+    ? row.verification_status
+    : 'unverified';
+  const entitlementStatus = isBillingEntitlementStatus(row.entitlement_status)
+    ? row.entitlement_status
+    : 'not_started';
+  const jobState: BillingJobState | null = isBillingJobState(row.job_state)
+    ? row.job_state
+    : null;
+  const reason: BillingCheckoutProgressReason =
+    status === 'granted'
+      ? 'entitlement_granted'
+      : status === 'resolved'
+        ? 'resolved'
+        : status === 'review_required'
+          ? 'manual_review'
+          : status === 'expired'
+            ? 'expired'
+            : status === 'paid'
+              ? 'payment_observed'
+              : status === 'verified'
+                ? 'verification_pending'
+                : 'awaiting_payment';
+  const nextAction: BillingCheckoutNextAction =
+    status === 'granted' || status === 'resolved'
+      ? 'none'
+      : status === 'review_required'
+        ? 'contact_support'
+        : status === 'expired'
+          ? 'create_new_checkout'
+          : status === 'paid' || status === 'verified'
+            ? 'wait'
+            : 'pay_provider';
   return {
     checkout_id: uuidValue(row.checkout_id ?? row.id) ?? '',
-    status: (stringValue(row.status) ??
-      'pending') as SubscriptionCheckoutDto['status'],
+    status,
     product_code: (stringValue(row.product_code) ??
       'monthly') as SubscriptionCheckoutDto['product_code'],
     price: String(row.price_amount ?? '0.00'),
@@ -927,6 +975,15 @@ function subscriptionCheckoutDto(
     payment_url: paymentUrl,
     paid_at: isoDate(row.paid_at),
     granted_at: isoDate(row.granted_at),
+    progress: {
+      status,
+      provider_status: providerStatus,
+      verification_status: verificationStatus,
+      entitlement_status: entitlementStatus,
+      job_state: jobState,
+      reason,
+      next_action: nextAction,
+    },
   };
 }
 
@@ -1149,7 +1206,7 @@ async function dispatchAccount(
     const checkoutId = uuidValue(checkoutMatch[1]);
     if (!checkoutId) throw new ApiFault(400, 'INVALID_INPUT');
     const [checkout] = await transaction.unsafe<Row>(
-      'select * from private.subscription_checkout_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+      'select * from private.subscription_checkout_read_v2(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
       [...contextValues, checkoutId],
     );
     if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');

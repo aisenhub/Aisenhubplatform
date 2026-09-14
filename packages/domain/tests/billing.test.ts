@@ -13,6 +13,7 @@ import {
   isBillingVerificationStatus,
   isFinalBillingSettlementState,
   isMoneyAmount,
+  isProviderOrderStatus,
   isProviderOrderSnapshot,
   toMoneyAmount,
 } from '../src/index.ts';
@@ -53,6 +54,8 @@ describe('billing contract foundation', () => {
     expect(isBillingJobState('retryable')).toBe(true);
     expect(isBillingSettlementRecordState('granted')).toBe(false);
     expect(isBillingSettlementRecordState('finalized')).toBe(true);
+    expect(isProviderOrderStatus('paid')).toBe(true);
+    expect(isProviderOrderStatus('active')).toBe(false);
   });
 
   it('freezes the four product terms without embedding prices', () => {

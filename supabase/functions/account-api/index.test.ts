@@ -110,6 +110,7 @@ async function signedEcdsaJwt(): Promise<{
 function fakeDatabase(
   onQuery?: (query: string) => void,
   checkoutFacts: readonly Record<string, unknown>[] = [],
+  checkoutRow: Record<string, unknown> = {},
 ) {
   return {
     async begin<T>(
@@ -233,6 +234,7 @@ function fakeDatabase(
                 provider_display_name: null,
                 paid_at: null,
                 granted_at: null,
+                ...checkoutRow,
               },
             ] as unknown as R[];
           }
@@ -647,6 +649,8 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
   const createdPayload = await created.json();
   assertEquals(createdPayload.data.price, '19.90');
   assertEquals(createdPayload.data.payment_url, null);
+  assertEquals(createdPayload.data.progress.status, 'pending');
+  assertEquals(createdPayload.data.progress.next_action, 'pay_provider');
 
   const read = await handleRequest(
     new Request(
@@ -661,6 +665,39 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
   );
   assertEquals(read.status, 200);
   assertEquals((await read.json()).data.product_code, 'monthly');
+});
+
+Deno.test('Account API preserves paid progress even when the snapshot expiry is in the past', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout/00000000-0000-4000-8000-000000000011',
+      {
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(undefined, [], {
+        status: 'paid',
+        expires_at: '2020-01-01T00:00:00.000Z',
+        paid_at: '2020-01-01T00:01:00.000Z',
+        provider_status: 'paid',
+        verification_status: 'verified',
+        entitlement_status: 'not_started',
+        job_state: 'processing',
+      }),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 200);
+  const payload = await response.json();
+  assertEquals(payload.data.status, 'paid');
+  assertEquals(payload.data.progress.reason, 'payment_observed');
+  assertEquals(payload.data.progress.next_action, 'wait');
+  assertEquals(payload.data.progress.verification_status, 'verified');
 });
 
 Deno.test('Account API returns a server-built Afdian payment URL', async () => {

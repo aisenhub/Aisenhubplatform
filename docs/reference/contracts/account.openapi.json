@@ -55,7 +55,9 @@
           { "$ref": "#/components/parameters/PlatformKey" },
           { "$ref": "#/components/parameters/IdempotencyKey" }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/SubscriptionCheckout" },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/SubscriptionCheckout"
+        },
         "responses": {
           "201": { "$ref": "#/components/responses/SubscriptionCheckout" },
           "400": { "$ref": "#/components/responses/BadRequest" },
@@ -677,7 +679,10 @@
           "reason"
         ],
         "properties": {
-          "code": { "type": "string", "enum": ["free", "monthly", "yearly", "lifetime"] },
+          "code": {
+            "type": "string",
+            "enum": ["free", "monthly", "yearly", "lifetime"]
+          },
           "name": { "type": "string" },
           "description": { "type": ["string", "null"] },
           "price": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
@@ -688,7 +693,10 @@
             "properties": {
               "kind": { "type": "string", "enum": ["free", "finite"] },
               "duration_value": { "type": ["integer", "null"], "minimum": 1 },
-              "duration_unit": { "type": ["string", "null"], "enum": ["month", "year", null] }
+              "duration_unit": {
+                "type": ["string", "null"],
+                "enum": ["month", "year", null]
+              }
             },
             "additionalProperties": false
           },
@@ -746,12 +754,16 @@
           "provider_display_name",
           "payment_url",
           "paid_at",
-          "granted_at"
+          "granted_at",
+          "progress"
         ],
         "properties": {
           "checkout_id": { "type": "string", "format": "uuid" },
           "status": { "$ref": "#/components/schemas/BillingCheckoutStatus" },
-          "product_code": { "type": "string", "enum": ["monthly", "yearly", "lifetime"] },
+          "product_code": {
+            "type": "string",
+            "enum": ["monthly", "yearly", "lifetime"]
+          },
           "price": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
           "currency": { "type": "string", "const": "CNY" },
           "term": {
@@ -768,7 +780,71 @@
           "provider_display_name": { "type": ["string", "null"] },
           "payment_url": { "type": ["string", "null"], "format": "uri" },
           "paid_at": { "type": ["string", "null"], "format": "date-time" },
-          "granted_at": { "type": ["string", "null"], "format": "date-time" }
+          "granted_at": { "type": ["string", "null"], "format": "date-time" },
+          "progress": {
+            "$ref": "#/components/schemas/SubscriptionCheckoutProgress"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubscriptionCheckoutProgress": {
+        "type": "object",
+        "required": [
+          "status",
+          "provider_status",
+          "verification_status",
+          "entitlement_status",
+          "job_state",
+          "reason",
+          "next_action"
+        ],
+        "properties": {
+          "status": { "$ref": "#/components/schemas/BillingCheckoutStatus" },
+          "provider_status": {
+            "type": "string",
+            "enum": ["unknown", "pending", "paid", "failed"]
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": ["unverified", "verified", "rejected"]
+          },
+          "entitlement_status": {
+            "type": "string",
+            "enum": ["not_started", "blocked", "granted", "rejected"]
+          },
+          "job_state": {
+            "type": ["string", "null"],
+            "enum": [
+              "pending",
+              "processing",
+              "retryable",
+              "completed",
+              "manual_review",
+              null
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "awaiting_payment",
+              "payment_observed",
+              "verification_pending",
+              "entitlement_granted",
+              "manual_review",
+              "expired",
+              "resolved"
+            ]
+          },
+          "next_action": {
+            "type": "string",
+            "enum": [
+              "pay_provider",
+              "wait",
+              "contact_support",
+              "create_new_checkout",
+              "none"
+            ]
+          }
         },
         "additionalProperties": false
       },

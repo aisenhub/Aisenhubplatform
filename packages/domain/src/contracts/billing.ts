@@ -28,6 +28,30 @@ export const BILLING_CHECKOUT_STATUSES = [
 
 export type BillingCheckoutStatus = (typeof BILLING_CHECKOUT_STATUSES)[number];
 
+export const BILLING_CHECKOUT_PROGRESS_REASONS = [
+  'awaiting_payment',
+  'payment_observed',
+  'verification_pending',
+  'entitlement_granted',
+  'manual_review',
+  'expired',
+  'resolved',
+] as const;
+
+export type BillingCheckoutProgressReason =
+  (typeof BILLING_CHECKOUT_PROGRESS_REASONS)[number];
+
+export const BILLING_CHECKOUT_NEXT_ACTIONS = [
+  'pay_provider',
+  'wait',
+  'contact_support',
+  'create_new_checkout',
+  'none',
+] as const;
+
+export type BillingCheckoutNextAction =
+  (typeof BILLING_CHECKOUT_NEXT_ACTIONS)[number];
+
 export const BILLING_VERIFICATION_STATUSES = [
   'unverified',
   'verified',
@@ -210,6 +234,15 @@ export function toMoneyAmount(value: string): MoneyAmount | null {
 
 export type ProviderOrderStatus = 'unknown' | 'pending' | 'paid' | 'failed';
 
+export function isProviderOrderStatus(
+  value: unknown,
+): value is ProviderOrderStatus {
+  return (
+    typeof value === 'string' &&
+    PROVIDER_STATUS.has(value as ProviderOrderStatus)
+  );
+}
+
 const BILLING_CHECKOUT_STATUS_SET = new Set<string>(BILLING_CHECKOUT_STATUSES);
 const BILLING_VERIFICATION_STATUS_SET = new Set<string>(
   BILLING_VERIFICATION_STATUSES,
@@ -380,6 +413,16 @@ export interface BillingOrderStatusProjectionDto {
   readonly linkage_status: BillingLinkageStatus;
   readonly resolution_status: BillingResolutionStatus;
   readonly settlement_state: BillingSettlementRecordState | null;
+}
+
+export interface BillingCheckoutProgressDto {
+  readonly status: BillingCheckoutStatus;
+  readonly provider_status: ProviderOrderStatus;
+  readonly verification_status: BillingVerificationStatus;
+  readonly entitlement_status: BillingEntitlementStatus;
+  readonly job_state: BillingJobState | null;
+  readonly reason: BillingCheckoutProgressReason;
+  readonly next_action: BillingCheckoutNextAction;
 }
 
 export const BILLING_JOB_ERROR_CLASSES = [

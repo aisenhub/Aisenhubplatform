@@ -1,4 +1,7 @@
-import type { BillingCheckoutStatus } from './billing.ts';
+import type {
+  BillingCheckoutProgressDto,
+  BillingCheckoutStatus,
+} from './billing.ts';
 
 export type ApiErrorCode =
   | 'INVALID_INPUT'
@@ -149,6 +152,7 @@ export interface SubscriptionCheckoutDto {
   readonly payment_url: string | null;
   readonly paid_at: string | null;
   readonly granted_at: string | null;
+  readonly progress: BillingCheckoutProgressDto;
 }
 
 export interface EntitlementDto {
