@@ -253,7 +253,7 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 数据库验证 | `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：54 个 SQL 文件、992 个断言；TASK-0701 专项 28/28 PASS。 |
 | Edge/静态验证 | Afdian 与 maintenance Deno 测试 30/30 PASS；`pnpm typecheck` PASS。 |
 | 未完成/阻塞 | 真实 Afdian 分页、429/Retry-After 预算、Provider 事故止损、双连接游标提交前后崩溃恢复、Hosted/Staging/Production 迁移和真实 cron 观察仍 NOT_RUN；TASK-0703/0704/0706 仍未完成。 |
-| Commit与push | 本轮待 `docs:check`、`contracts:check`、`git diff --check` 和最终差异/敏感信息复核后形成独立小提交并推送当前任务分支；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
+| Commit与push | TASK-0701 已提交 `69232df` 并推送 `origin/codex/billing-architecture-review`；远端 commit 已核对。R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
 
 ## 追加实施记录（2026-09-14，TASK-0201 Checkout Provider 合同快照与 mapping 冻结）
 
