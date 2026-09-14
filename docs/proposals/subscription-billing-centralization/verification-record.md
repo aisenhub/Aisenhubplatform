@@ -160,7 +160,7 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | Worker/静态验证 | `pnpm test:maintenance` PASS：15/15；`pnpm contracts:check` PASS（account=21、admin=44；4 contracts/39 fields）；`pnpm docs:check` PASS（64 documents）；`pnpm typecheck` PASS（9/9）；`git diff --check` PASS。 |
 | 外部环境 | Hosted Vault、真实 pg_cron/pg_net HTTP、网关路径、401/404/503、超时、重叠批次、Secret 轮换、告警和恢复演练：NOT_RUN；不能以 Local 结果代替。 |
 | 结论 | TASK-0702 Local 实现及回归 PASS；G-OPS 和 Staging 门槛仍未完成，下一项可独立任务为 TASK-0703，但其告警实现需明确阈值、接收人和 Hosted 证据。 |
-| Commit与push | 本记录随 TASK-0702 代码变更待提交；未将未授权的 Hosted/生产状态写成完成。 |
+| Commit与push | TASK-0702 提交 `c562f52` 已推送 `origin/codex/billing-architecture-review`；因 R3 的 Hosted/Staging 门槛未完成，本提交暂未合并 `main`。 |
 
 ## 外部门槛
 
