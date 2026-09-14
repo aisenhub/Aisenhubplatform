@@ -1171,6 +1171,7 @@
           "paid_plan_code",
           "paid_plan_name",
           "paid_plan_status",
+          "purchases_paused",
           "monthly_enabled",
           "yearly_enabled",
           "lifetime_enabled",
@@ -1188,6 +1189,7 @@
             "type": ["string", "null"],
             "enum": ["active", "archived", null]
           },
+          "purchases_paused": { "type": "boolean" },
           "monthly_enabled": { "type": "boolean" },
           "yearly_enabled": { "type": "boolean" },
           "lifetime_enabled": { "type": "boolean" },

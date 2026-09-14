@@ -29,6 +29,7 @@ export type ApiErrorCode =
   | 'GLOBAL_DELETE_PENDING'
   | 'ACCOUNT_NOT_ACTIVATED'
   | 'ACTIVATION_DISABLED'
+  | 'PURCHASES_PAUSED'
   | 'PLAN_CONFLICT'
   | 'ENTITLEMENT_PERPETUAL'
   | 'ENTITLEMENT_SUSPENDED'
@@ -105,6 +106,7 @@ export type SubscriptionProductReason =
   | 'product_disabled'
   | 'provider_mapping_unavailable'
   | 'lifetime_already_purchased'
+  | 'purchases_paused'
   | 'platform_disabled';
 
 export const SUBSCRIPTION_PRODUCT_REASONS = [
@@ -116,6 +118,7 @@ export const SUBSCRIPTION_PRODUCT_REASONS = [
   'product_disabled',
   'provider_mapping_unavailable',
   'lifetime_already_purchased',
+  'purchases_paused',
   'platform_disabled',
 ] as const satisfies readonly SubscriptionProductReason[];
 
@@ -191,6 +194,7 @@ export interface SubscriptionConfigDto {
   readonly paid_plan_code: string | null;
   readonly paid_plan_name: string | null;
   readonly paid_plan_status: 'active' | 'archived' | null;
+  readonly purchases_paused: boolean;
   readonly monthly_enabled: boolean;
   readonly yearly_enabled: boolean;
   readonly lifetime_enabled: boolean;
@@ -334,6 +338,7 @@ export const API_ERROR_CODES: readonly ApiErrorCode[] = [
   'GLOBAL_DELETE_PENDING',
   'ACCOUNT_NOT_ACTIVATED',
   'ACTIVATION_DISABLED',
+  'PURCHASES_PAUSED',
   'PLAN_CONFLICT',
   'ENTITLEMENT_PERPETUAL',
   'ENTITLEMENT_SUSPENDED',

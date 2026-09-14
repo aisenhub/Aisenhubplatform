@@ -437,10 +437,10 @@ function fakeDatabase(
           }
           if (
             query.startsWith(
-              'select * from private.admin_subscription_config_read',
+              'select * from private.admin_subscription_config_read_v2',
             ) ||
             query.startsWith(
-              'select * from private.admin_subscription_config_patch',
+              'select * from private.admin_subscription_config_patch_v2',
             )
           ) {
             return [
@@ -450,6 +450,7 @@ function fakeDatabase(
                 paid_plan_code: 'pro',
                 paid_plan_name: 'Pro',
                 paid_plan_status: 'active',
+                purchases_paused: false,
                 monthly_enabled: true,
                 yearly_enabled: false,
                 lifetime_enabled: true,
@@ -835,6 +836,40 @@ Deno.test('Account API can stop new checkout issuance independently', async () =
   );
   assertEquals(response.status, 503);
   assertEquals((await response.json()).error.code, 'CHECKOUT_UNAVAILABLE');
+});
+
+Deno.test('Account API maps a purchase pause to the stable checkout error', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'checkout-paused-1',
+        },
+        body: JSON.stringify({ product_code: 'monthly' }),
+      },
+    ),
+    {
+      database: fakeDatabase((query) => {
+        if (
+          query.startsWith('select * from private.subscription_checkout_create')
+        )
+          throw { code: 'P0001', message: 'purchases_paused' };
+      }),
+      platformKeySecret: 'm3-test-platform-secret',
+      checkoutEnabled: true,
+      checkoutSecret: 'checkout-test-secret',
+      checkoutKeyVersion: 1,
+      checkoutProviderAccountId: '00000000-0000-4000-8000-000000000401',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 409);
+  assertEquals((await response.json()).error.code, 'PURCHASES_PAUSED');
 });
 
 Deno.test('Account API keeps checkout closed by default', async () => {
@@ -1660,6 +1695,7 @@ Deno.test('Account API exposes subscription config ETags and step-up mutation bo
       },
       body: JSON.stringify({
         paid_plan_id: keyId,
+        purchases_paused: false,
         monthly_enabled: true,
         yearly_enabled: false,
         lifetime_enabled: true,

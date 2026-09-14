@@ -546,6 +546,8 @@ function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(409, 'ACCOUNT_NOT_ACTIVATED');
   if (message.includes('activation_disabled'))
     return new ApiFault(409, 'ACTIVATION_DISABLED');
+  if (message.includes('purchases_paused'))
+    return new ApiFault(409, 'PURCHASES_PAUSED');
   if (
     message.includes('provider_mapping_unavailable') ||
     message.includes('checkout_key_unavailable') ||
@@ -2216,7 +2218,7 @@ async function dispatchAdmin(
     const platformId = subscriptionConfigMatch[1]!;
     if (request.method === 'GET') {
       const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_subscription_config_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        'select * from private.admin_subscription_config_read_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
         [...context, platformId],
       );
       if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
@@ -2234,6 +2236,7 @@ async function dispatchAdmin(
       const reason = stringValue(input.reason);
       if (
         (input.paid_plan_id !== null && !paidPlanId) ||
+        typeof input.purchases_paused !== 'boolean' ||
         typeof input.monthly_enabled !== 'boolean' ||
         typeof input.yearly_enabled !== 'boolean' ||
         typeof input.lifetime_enabled !== 'boolean' ||
@@ -2242,12 +2245,13 @@ async function dispatchAdmin(
       )
         throw new ApiFault(400, 'INVALID_INPUT');
       const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_subscription_config_patch(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::bigint, $6::uuid, $7::boolean, $8::boolean, $9::boolean, $10::text, $11::text)',
+        'select * from private.admin_subscription_config_patch_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::bigint, $6::uuid, $7::boolean, $8::boolean, $9::boolean, $10::boolean, $11::text, $12::text)',
         [
           ...context,
           platformId,
           expectedVersion(request),
           paidPlanId,
+          input.purchases_paused,
           input.monthly_enabled,
           input.yearly_enabled,
           input.lifetime_enabled,

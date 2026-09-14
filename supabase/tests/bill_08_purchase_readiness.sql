@@ -1,6 +1,6 @@
 begin;
 
-select plan(6);
+select plan(10);
 
 insert into public.platforms (id, code, name, status, allow_activation)
 values ('00000000-0000-4000-8000-000000000801', 'bill08-readiness', 'BILL-08 readiness', 'active', true);
@@ -100,7 +100,7 @@ select is(
 );
 
 update public.platform_subscription_config
-set monthly_enabled = false
+set monthly_enabled = false, purchases_paused = false
 where platform_id = '00000000-0000-4000-8000-000000000801';
 select is(
   (select reason from private.subscription_products_list(
@@ -109,6 +109,48 @@ select is(
   ) where product_code = 'monthly'),
   'product_disabled',
   'platform product switch still takes precedence over mapping readiness'
+);
+
+update public.platform_subscription_config
+set monthly_enabled = true, purchases_paused = true
+where platform_id = '00000000-0000-4000-8000-000000000801';
+select is(
+  (select purchasable from private.subscription_products_list(
+    '00000000-0000-4000-8000-000000000801',
+    '00000000-0000-4000-8000-000000000804'
+  ) where product_code = 'monthly'),
+  false,
+  'purchase pause immediately blocks new paid checkout readiness'
+);
+select is(
+  (select reason from private.subscription_products_list(
+    '00000000-0000-4000-8000-000000000801',
+    '00000000-0000-4000-8000-000000000804'
+  ) where product_code = 'monthly'),
+  'purchases_paused',
+  'purchase pause has a stable product reason'
+);
+update public.platform_subscription_config
+set purchases_paused = false
+where platform_id = '00000000-0000-4000-8000-000000000801';
+update public.plans
+set status = 'archived'
+where id = '00000000-0000-4000-8000-000000000803';
+select is(
+  (select purchasable from private.subscription_products_list(
+    '00000000-0000-4000-8000-000000000801',
+    '00000000-0000-4000-8000-000000000804'
+  ) where product_code = 'monthly'),
+  false,
+  'archived paid Plan blocks new checkout readiness'
+);
+select is(
+  (select reason from private.subscription_products_list(
+    '00000000-0000-4000-8000-000000000801',
+    '00000000-0000-4000-8000-000000000804'
+  ) where product_code = 'monthly'),
+  'paid_plan_unavailable',
+  'archived paid Plan has a stable unavailable reason'
 );
 
 select * from finish();

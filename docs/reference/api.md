@@ -10,7 +10,7 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 |---|---|---|---|
 | GET /v1/plans | 不需要用户；不建立账户 | 必需、平台active | 仅公开active套餐字段 |
 | GET /v1/subscription/products | 不需要用户；不建立账户 | 必需、平台active | 固定四商品、平台启用状态和明确的purchasable reason；无Provider映射时不可购买 |
-| POST /v1/subscription/checkout | active账户 | 必需、平台active | 仅提交固定product_code和Idempotency-Key；服务端锁定价格/期限快照；无verified Provider mapping时返回CHECKOUT_UNAVAILABLE |
+| POST /v1/subscription/checkout | active账户 | 必需、平台active、未暂停购买 | 仅提交固定product_code和Idempotency-Key；服务端锁定价格/期限快照；无verified Provider mapping时返回CHECKOUT_UNAVAILABLE；购买暂停时返回PURCHASES_PAUSED |
 | GET /v1/subscription/checkout/:id | active账户 | 必需、平台active | 只读自身结账状态；不返回Provider ID、token或Secret，始终no-store |
 | GET /v1/account/principal | 有效用户/会话 | 必需 | 可返回not_activated/suspended/closed/disabled状态供界面提示 |
 | POST /v1/account/activate | 有效用户、非Admin、非deleting | 必需、平台active | 仅首次需要allow_activation |
@@ -80,7 +80,7 @@ Profile PATCH仅允许display_name/avatar_url/bio/locale/timezone/metadata，拒
 | 400/413 | INVALID_INPUT、UPLOAD_SIZE_MISMATCH、PAYLOAD_TOO_LARGE |
 | 401 | UNAUTHORIZED、PLATFORM_CREDENTIAL_INVALID、SESSION_REVOKED |
 | 403 | PLATFORM_DISABLED、ACCOUNT_SUSPENDED、ACCOUNT_CLOSED、ADMIN_REQUIRED、MFA_REQUIRED、RECENT_MFA_REQUIRED、GLOBAL_DELETE_PENDING |
-| 409 | ACCOUNT_NOT_ACTIVATED、ACTIVATION_DISABLED、PLAN_CONFLICT、ENTITLEMENT_PERPETUAL、ENTITLEMENT_SUSPENDED、IDEMPOTENCY_CONFLICT、OPERATION_IN_PROGRESS、FILE_BUSY、FILE_CONTENT_CONFLICT、REPLACEMENT_CAPACITY_REQUIRED、QUOTA_EXCEEDED |
+| 409 | ACCOUNT_NOT_ACTIVATED、ACTIVATION_DISABLED、PURCHASES_PAUSED、PLAN_CONFLICT、ENTITLEMENT_PERPETUAL、ENTITLEMENT_SUSPENDED、IDEMPOTENCY_CONFLICT、OPERATION_IN_PROGRESS、FILE_BUSY、FILE_CONTENT_CONFLICT、REPLACEMENT_CAPACITY_REQUIRED、QUOTA_EXCEEDED |
 | 404 | RESOURCE_NOT_FOUND、INVALID_CODE |
 | 410 | CODE_EXPIRED、UPLOAD_INTENT_EXPIRED |
 | 409 | CODE_DISABLED、CODE_ALREADY_REDEEMED |

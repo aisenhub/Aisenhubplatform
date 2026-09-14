@@ -32,6 +32,7 @@ type SubscriptionConfig = {
   paid_plan_code: string | null;
   paid_plan_name: string | null;
   paid_plan_status: 'active' | 'archived' | null;
+  purchases_paused: boolean;
   monthly_enabled: boolean;
   yearly_enabled: boolean;
   lifetime_enabled: boolean;
@@ -120,6 +121,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
           },
           body: JSON.stringify({
             paid_plan_id: config.paid_plan_id,
+            purchases_paused: config.purchases_paused,
             monthly_enabled: config.monthly_enabled,
             yearly_enabled: config.yearly_enabled,
             lifetime_enabled: config.lifetime_enabled,
@@ -225,6 +227,14 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
               </AlertDescription>
             </Alert>
           ) : null}
+          {config.purchases_paused ? (
+            <Alert>
+              <AlertTitle>新购买已暂停</AlertTitle>
+              <AlertDescription>
+                新的付费 Checkout 会立即被拒绝；已经成功购买的有限期权益仍按原结束时间继续生效。
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2 md:col-span-2">
               <Label htmlFor="paid-plan">标准付费 Plan</Label>
@@ -275,6 +285,15 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
                 只能选择当前平台的 active paid Plan；切换会执行权益和旧批次前置检查。
               </p>
             </div>
+            <Toggle
+              label="暂停新购买"
+              checked={config.purchases_paused}
+              onChange={(checked) =>
+                setConfig((current) =>
+                  current ? { ...current, purchases_paused: checked } : current,
+                )
+              }
+            />
             <Toggle
               label="Monthly"
               checked={config.monthly_enabled}

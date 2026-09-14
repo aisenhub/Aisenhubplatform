@@ -47,7 +47,7 @@ select ok(exists (select 1 from pg_constraint where conrelid = 'public.platform_
 select ok(exists (select 1 from pg_constraint where conrelid = 'public.subscription_grants'::regclass and contype = 'f' and lower(pg_get_constraintdef(oid)) like '%references plans%'), 'historical grants retain Plan foreign key');
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.platforms'::regclass and tgname = 'platforms_subscription_config_init'), 'new platforms initialize subscription config');
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.plans'::regclass and tgname = 'plans_subscription_config_backfill'), 'plans backfill an unconfigured singleton paid Plan');
-select ok(exists (select 1 from pg_trigger where tgrelid = 'public.plans'::regclass and tgname = 'plans_prevent_enabled_subscription_archive'), 'enabled paid Plan archive guard exists');
+select ok(exists (select 1 from pg_trigger where tgrelid = 'public.plans'::regclass and tgname = 'plans_archived_immutable'), 'archived Plan immutability guard exists');
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.subscription_products'::regclass and tgname = 'subscription_products_guard'), 'catalog immutable-field guard exists');
 select ok(pg_get_functiondef('private.subscription_plan_switch_preflight(uuid, uuid)'::regprocedure) like '%redeemable_old_plan_batch%', 'preflight checks redeemable old Plan batches');
 select ok(pg_get_functiondef('private.subscription_plan_switch_preflight(uuid, uuid)'::regprocedure) like '%active_or_future_grant%', 'preflight checks active or future grants');

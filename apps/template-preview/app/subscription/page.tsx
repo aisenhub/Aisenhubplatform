@@ -144,9 +144,11 @@ function productFacts(product: Product): string[] {
       ? '该账户已购买此方案'
       : product.reason === 'provider_mapping_unavailable'
         ? '付款入口暂未配置'
-        : product.enabled
-          ? '当前不可购买'
-          : '当前未开放';
+        : product.reason === 'purchases_paused'
+          ? '新购买暂时暂停，已有权益继续按原期限生效'
+          : product.enabled
+            ? '当前不可购买'
+            : '当前未开放';
   return [termLabel(product.term), availability];
 }
 

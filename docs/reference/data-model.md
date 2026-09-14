@@ -125,7 +125,7 @@ alter table public.platforms add constraint platform_default_free_plan_fk
   references public.plans(platform_id, id, kind) on delete restrict;
 ~~~
 
-默认 Plan 可为 NULL，表示无默认权益；非空必须引用同平台 Free Plan，数据库直接保证。归档默认 Free 前，必须同事务清空或更换默认 Plan；归档套餐停止新 Grant，不撤销已有有效 Grant。kind、platform_id 在 Plan 被引用后不可改变。
+默认 Plan 可为 NULL，表示无默认权益；非空必须引用同平台 Free Plan，数据库直接保证。归档默认 Free 前，必须同事务清空或更换默认 Plan；归档套餐停止新 Grant，不撤销已有有效 Grant。Plan 进入 `archived` 后是不可变终态；kind、platform_id 在 Plan 被引用后不可改变。
 
 features 是当前实时配置；更新立即影响后续权益读取，不承诺 grandfathering。只验证 JSON 对象、大小和字段基础类型，不提前构建通用 feature engine；业务平台自行理解业务键，统一后端不执行配置中的代码。
 
@@ -140,6 +140,7 @@ features 是当前实时配置；更新立即影响后续权益读取，不承�
 | public.audit_logs | id PK、request_id、actor_type、actor_user_id nullable Auth FK SET NULL、platform_id nullable、platform_account_id nullable、event_type、target_type/id、ip、user_agent、metadata、created_at |
 | private.deletion_jobs | id PK、user_id nullable Auth FK SET NULL、scope、state、checkpoint、retry_count、next_attempt_at、last_error_code、created_at、completed_at；用户活跃删除任务唯一 |
 | private.job_leases | job_kind、resource_id、lease_owner、lease_until、fencing_token、retry_count、next_attempt_at、last_error_code；unique(job_kind,resource_id) |
+| private.account_retention_policy | singleton、personal_data_retention_days、policy_source、policy_reference、updated_at；无配置行时个人信息匿名化失败关闭 |
 
 Audit的平台账户引用使用(platform_id,platform_account_id) → platform_accounts(platform_id,id)，并CHECK(platform_account_id IS NULL OR platform_id IS NOT NULL)。全局事件可没有平台；不能用伪平台占位。metadata不含Token、兑换码、签名、文件内容或直接身份资料。
 

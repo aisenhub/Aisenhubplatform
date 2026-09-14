@@ -302,3 +302,13 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 文档/合同 | `pnpm docs:check` PASS（67 documents）；OpenAPI PASS（Account 22、Admin 44 operations）；Consumer compatibility PASS（4 contracts、39 fields）。变更文件范围内格式检查 PASS；仓库全量格式基线仍有 58 个未修改历史文件问题，未将其伪报为本轮通过。 |
 | Hosted/Staging | 已按用户授权完成 Staging 迁移清单核对并应用新增迁移，部署 `maintenance` 与 `account-api`；未认证 smoke endpoint 按预期返回 401。带真实测试身份、平台密钥、maintenance token 和 Provider sandbox 的正向支付/告警/浏览器 E2E 因安全 fixture 尚未提供，保持 `NOT_RUN`。Production 未执行。 |
 | 未完成/阻塞 | D3 的暂停生效、删除/匿名化保留周期、Plan 归档规则仍需业务/合规确认；Hosted/Staging 正向认证 E2E 需要安全注入测试 fixture；前端部署需要确认目标托管项目。 |
+
+## 追加实施记录（2026-09-15，D3 生命周期 forward-fix）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 业务决策 | D3 已确认：暂停立即阻止新的付费 Checkout，已有有限期权益继续到期；删除保留最小账务/审计事实，个人信息按法定或财务期限匿名化；Plan 归档后禁止新 Checkout，保留历史订单、快照和已有权益，旧 Plan 不再修改。 |
+| 数据库实际变更 | 新增 `supabase/migrations/20260914223608_repair_task_d3_lifecycle.sql`：`purchases_paused` 独立购买闸门；Checkout 插入前锁序校验；归档 Plan 不可变终态；`account_retention_policy` 显式配置保留天数/来源/依据，未配置时匿名化失败关闭；清理只匿名化个人与可识别审计字段，保留订单、结算、Grant、快照等长期事实。 |
+| 消费者与合同 | Admin 订阅配置新增“暂停新购买”开关和行为提示；Account API 使用 v2 配置 wrapper；新增 `PURCHASES_PAUSED` 稳定错误码；商品目录暴露 `purchases_paused` reason；同步 Domain、Account/Admin OpenAPI、模板预览和 API 参考文档。 |
+| 回归覆盖 | 更新商品就绪、保留清理测试；新增 `supabase/tests/repair_task_d3_lifecycle.sql`，覆盖暂停闸门、归档终态、政策 fail-closed、账户匿名化、审计事实保留和保留天数记录。测试结果以本记录后续门禁执行结果为准。 |
+| 未完成/阻塞 | 法务/财务尚未提供实际保留天数、政策来源和依据，生产配置不能凭代码默认值生成；Hosted/Staging 正向认证支付、并发、Provider 和浏览器 E2E 仍需安全 fixture；Production 未执行。 |
