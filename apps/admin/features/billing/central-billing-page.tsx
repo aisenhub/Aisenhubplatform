@@ -111,6 +111,14 @@ export function CentralBillingPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const cursorRef = useRef<string | null>(null);
+  const requeryOperationRef = useRef<{
+    orderId: string;
+    operationId: string;
+  } | null>(null);
+  const resolveOperationRef = useRef<{
+    orderId: string;
+    operationId: string;
+  } | null>(null);
 
   const load = useCallback(
     async ({ append = false }: { append?: boolean } = {}) => {
@@ -223,26 +231,37 @@ export function CentralBillingPage() {
     if (!selected) return;
     setBusy(true);
     setActionError(null);
+    const operationId =
+      requeryOperationRef.current?.orderId === selected.order_id
+        ? requeryOperationRef.current.operationId
+        : crypto.randomUUID();
+    requeryOperationRef.current = {
+      orderId: selected.order_id,
+      operationId,
+    };
     try {
       const response = await adminAuthSession.request(
         `/api/v1/admin/api/v1/billing/orders/${selected.order_id}/requery`,
         {
           method: 'POST',
           headers: { 'If-Match': `W/"${selected.admin_version}"` },
-          body: JSON.stringify({ operation_id: crypto.randomUUID(), reason }),
+          body: JSON.stringify({ operation_id: operationId, reason }),
         },
       );
       const payload = await readApiPayload(response);
       if (!response.ok) {
         if (response.status === 403) setNeedsMfa(true);
+        if ([400, 409, 412].includes(response.status))
+          requeryOperationRef.current = null;
         setActionError(resourceError(response, payload, '订单重查'));
         return;
       }
+      requeryOperationRef.current = null;
       await Promise.all([load(), inspect(selected.order_id)]);
     } catch (caught) {
       setActionError({
-        title: '订单重查失败',
-        description: sessionErrorMessage(caught),
+        title: '订单重查结果未知',
+        description: `${sessionErrorMessage(caught)} 再次点击将沿用同一个操作标识查询结果，不会自动创建新任务。`,
         requestId: null,
         technicalDetail: null,
       });
@@ -255,6 +274,14 @@ export function CentralBillingPage() {
     if (!selected) return;
     setBusy(true);
     setActionError(null);
+    const operationId =
+      resolveOperationRef.current?.orderId === selected.order_id
+        ? resolveOperationRef.current.operationId
+        : crypto.randomUUID();
+    resolveOperationRef.current = {
+      orderId: selected.order_id,
+      operationId,
+    };
     try {
       const response = await adminAuthSession.request(
         `/api/v1/admin/api/v1/billing/orders/${selected.order_id}/resolve`,
@@ -262,7 +289,7 @@ export function CentralBillingPage() {
           method: 'POST',
           headers: { 'If-Match': `W/"${selected.admin_version}"` },
           body: JSON.stringify({
-            operation_id: crypto.randomUUID(),
+            operation_id: operationId,
             decision,
             reason,
           }),
@@ -271,14 +298,17 @@ export function CentralBillingPage() {
       const payload = await readApiPayload(response);
       if (!response.ok) {
         if (response.status === 403) setNeedsMfa(true);
+        if ([400, 409, 412].includes(response.status))
+          resolveOperationRef.current = null;
         setActionError(resourceError(response, payload, '订单结案'));
         return;
       }
+      resolveOperationRef.current = null;
       await Promise.all([load(), inspect(selected.order_id)]);
     } catch (caught) {
       setActionError({
-        title: '订单结案失败',
-        description: sessionErrorMessage(caught),
+        title: '订单结案结果未知',
+        description: `${sessionErrorMessage(caught)} 再次点击将沿用同一个操作标识查询结果，不会重复结案。`,
         requestId: null,
         technicalDetail: null,
       });
