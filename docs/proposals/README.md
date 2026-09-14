@@ -32,7 +32,9 @@ proposals/
 
 ## 优化索引
 
-当前没有待执行的活跃 proposal。已完成方案见[归档资料](../archive/README.md)。
+- [订阅支付审查修复计划](subscription-billing-centralization/README.md)：[总计划](subscription-billing-centralization/plan.md)，覆盖 F01–F17；TASK-0001 已完成基线冻结，TASK-0002 完成本地静态门槛审查，TASK-0101/0103 及已列 billing repair tasks 已完成本地回归，外部环境仍按记录标注。原订阅集中化方案保留在归档，本活跃目录仅承载本次修复计划。
+
+已完成方案见[归档资料](../archive/README.md)。
 
 ## 给计划 Agent 的执行要求
 
