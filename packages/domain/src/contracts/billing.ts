@@ -183,6 +183,118 @@ export const BILLING_ADMIN_ORDER_STATUSES = [
 export type BillingAdminOrderStatus =
   (typeof BILLING_ADMIN_ORDER_STATUSES)[number];
 
+export const BILLING_JOB_ERROR_CLASSES = [
+  'provider',
+  'provider_contract',
+  'billing_verification',
+  'worker',
+  'dead_letter',
+] as const;
+
+export type BillingJobErrorClass = (typeof BILLING_JOB_ERROR_CLASSES)[number];
+
+export type BillingJobFailureState = 'retryable' | 'manual_review';
+
+export interface BillingJobFailureClassification {
+  readonly state: BillingJobFailureState;
+  readonly error_class: BillingJobErrorClass;
+  readonly error_code: string;
+}
+
+export const BILLING_REQUEUEABLE_ERROR_CODES = [
+  'PROVIDER_UNAVAILABLE',
+  'PROVIDER_ORDER_NOT_FOUND',
+  'PROVIDER_TIMEOUT',
+  'PROVIDER_RATE_LIMITED',
+  'PROVIDER_RESPONSE_INVALID',
+  'RETRY_BUDGET_EXHAUSTED',
+  'RATE_LIMITED',
+] as const;
+
+/**
+ * Classify worker failures before they reach the fenced SQL write boundary.
+ * Business conflicts and invalid provider contracts must be visible to an
+ * operator; transient provider/worker faults may retry until SQL exhausts the
+ * bounded retry cycle.
+ */
+export function classifyBillingJobFailure(
+  value: unknown,
+): BillingJobFailureClassification {
+  const raw =
+    typeof value === 'string'
+      ? value
+      : value instanceof Error
+        ? value.message
+        : 'WORKER_FAILURE';
+  const errorCode = /^[A-Z0-9_.-]{1,128}$/u.test(raw) ? raw : 'WORKER_FAILURE';
+  const normalized = errorCode.toUpperCase();
+
+  if (
+    normalized === 'PROVIDER_RESPONSE_INVALID' ||
+    normalized === 'INVALID_PROVIDER_CONTRACT' ||
+    normalized.includes('PROVIDER_CONTRACT')
+  ) {
+    return {
+      state: 'manual_review',
+      error_class: 'provider_contract',
+      error_code: 'PROVIDER_RESPONSE_INVALID',
+    };
+  }
+  if (
+    normalized === 'DUPLICATE_PAYMENT' ||
+    normalized === 'CONTRACT_CONFLICT' ||
+    normalized === 'UNLINKED_ORDER' ||
+    normalized === 'PLAN_CONFLICT' ||
+    normalized === 'ACCOUNT_NOT_ACTIVE' ||
+    normalized === 'PLAN_UNAVAILABLE' ||
+    normalized === 'ALREADY_PERPETUAL' ||
+    normalized === 'RESOURCE_NOT_FOUND'
+  ) {
+    return {
+      state: 'manual_review',
+      error_class: 'billing_verification',
+      error_code: normalized,
+    };
+  }
+  if (normalized.includes('FENCE_CONFLICT')) {
+    return {
+      state: 'retryable',
+      error_class: 'worker',
+      error_code: 'FENCE_CONFLICT',
+    };
+  }
+  if (
+    normalized === 'PROVIDER_RATE_LIMITED' ||
+    normalized === 'RATE_LIMITED' ||
+    normalized === 'HTTP_429'
+  ) {
+    return {
+      state: 'retryable',
+      error_class: 'provider',
+      error_code: 'PROVIDER_RATE_LIMITED',
+    };
+  }
+  if (
+    normalized === 'PROVIDER_TIMEOUT' ||
+    normalized === 'PROVIDER_UNAVAILABLE' ||
+    normalized === 'PROVIDER_ORDER_NOT_FOUND'
+  ) {
+    return {
+      state: 'retryable',
+      error_class: 'provider',
+      error_code: normalized as
+        | 'PROVIDER_TIMEOUT'
+        | 'PROVIDER_UNAVAILABLE'
+        | 'PROVIDER_ORDER_NOT_FOUND',
+    };
+  }
+  return {
+    state: 'retryable',
+    error_class: 'worker',
+    error_code: normalized,
+  };
+}
+
 export function isFinalBillingSettlementState(
   value: BillingSettlementState,
 ): value is 'granted' | 'rejected' {

@@ -59,26 +59,30 @@ function database(): TestDatabase {
                                 : query.includes('billing_processing_job_claim')
                                   ? 'billing-claim'
                                   : query.includes(
-                                        'billing_processing_job_requeue_contract',
+                                        'billing_processing_job_requeue(',
                                       )
-                                    ? 'billing-requeue'
+                                    ? 'billing-requeue-generic'
                                     : query.includes(
-                                          'billing_processing_job_finish',
+                                          'billing_processing_job_requeue_contract',
                                         )
-                                      ? 'billing-finish'
+                                      ? 'billing-requeue'
                                       : query.includes(
-                                            'billing_order_query_target',
+                                            'billing_processing_job_finish',
                                           )
-                                        ? 'billing-target'
+                                        ? 'billing-finish'
                                         : query.includes(
-                                              'billing_order_verify_and_settle',
+                                              'billing_order_query_target',
                                             )
-                                          ? 'billing-verify'
+                                          ? 'billing-target'
                                           : query.includes(
-                                                'deletion_job_backup_barrier_guard',
+                                                'billing_order_verify_and_settle',
                                               )
-                                            ? 'barrier-guard'
-                                            : 'finish',
+                                            ? 'billing-verify'
+                                            : query.includes(
+                                                  'deletion_job_backup_barrier_guard',
+                                                )
+                                              ? 'barrier-guard'
+                                              : 'finish',
           );
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
@@ -131,6 +135,17 @@ function database(): TestDatabase {
           if (query.includes('billing_processing_job_requeue_contract'))
             return [
               { job_id: jobId, state: 'pending', fence: 3 },
+            ] as unknown as T[];
+          if (query.includes('billing_processing_job_requeue('))
+            return [
+              {
+                job_id: jobId,
+                state: 'pending',
+                fence: 4,
+                attempts: 8,
+                requeue_count: 1,
+                replayed: false,
+              },
             ] as unknown as T[];
           if (query.includes('billing_order_query_target'))
             return [
@@ -569,6 +584,40 @@ Deno.test('maintenance can requeue only provider-contract discovery failures', a
   assertEquals(response.status, 200);
   assertEquals((await response.json()).data.result.state, 'pending');
   assertEquals(events, ['begin', 'role', 'billing-requeue']);
+});
+
+Deno.test('maintenance exposes an idempotent, reasoned dead-letter requeue', async () => {
+  events.length = 0;
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/requeue', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        job_id: jobId,
+        operation_id: '00000000-0000-4000-8000-000000000012',
+        reason:
+          'Provider contract parser was repaired; replay the bounded cycle',
+      }),
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: database(),
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data.result, {
+    job_id: jobId,
+    state: 'pending',
+    fence: 4,
+    attempts: 8,
+    requeue_count: 1,
+    replayed: false,
+  });
+  assertEquals(events, ['begin', 'role', 'billing-requeue-generic']);
 });
 
 Deno.test('maintenance performs provider I/O outside the settlement transaction', async () => {

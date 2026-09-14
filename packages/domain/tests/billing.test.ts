@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BILLING_PRODUCT_SPECS,
+  classifyBillingJobFailure,
   getBillingProductSpec,
   isFinalBillingSettlementState,
   isMoneyAmount,
@@ -93,6 +94,29 @@ describe('billing contract foundation', () => {
         external_order_id: 'fictional-order-0001',
       }),
     ).resolves.toEqual({ status: 'found', order: FICTIONAL_PROVIDER_ORDER });
+  });
+
+  it('classifies transient, contract, and business job failures separately', () => {
+    expect(classifyBillingJobFailure('PROVIDER_TIMEOUT')).toEqual({
+      state: 'retryable',
+      error_class: 'provider',
+      error_code: 'PROVIDER_TIMEOUT',
+    });
+    expect(classifyBillingJobFailure('HTTP_429')).toEqual({
+      state: 'retryable',
+      error_class: 'provider',
+      error_code: 'PROVIDER_RATE_LIMITED',
+    });
+    expect(classifyBillingJobFailure('PROVIDER_RESPONSE_INVALID')).toEqual({
+      state: 'manual_review',
+      error_class: 'provider_contract',
+      error_code: 'PROVIDER_RESPONSE_INVALID',
+    });
+    expect(classifyBillingJobFailure('CONTRACT_CONFLICT')).toEqual({
+      state: 'manual_review',
+      error_class: 'billing_verification',
+      error_code: 'CONTRACT_CONFLICT',
+    });
   });
 
   it('normalizes and formats V2 codes without changing their HMAC material', () => {

@@ -59,10 +59,13 @@ export {
   BILLING_CONTRACT_VERSION,
   BILLING_CURRENCY,
   BILLING_ADMIN_ORDER_STATUSES,
+  BILLING_JOB_ERROR_CLASSES,
+  BILLING_REQUEUEABLE_ERROR_CODES,
   BILLING_PRODUCT_CODES,
   BILLING_PRODUCT_SPECS,
   PROVIDER_ADAPTER_CONTRACT_VERSION,
   getBillingProductSpec,
+  classifyBillingJobFailure,
   isBillingProductCode,
   isFinalBillingSettlementState,
   isMoneyAmount,
@@ -71,6 +74,9 @@ export {
 } from './billing.ts';
 export type {
   BillingCheckoutSnapshotDto,
+  BillingJobErrorClass,
+  BillingJobFailureClassification,
+  BillingJobFailureState,
   BillingAdminOrderStatus,
   BillingOrderLinkageStatus,
   BillingDurationUnit,

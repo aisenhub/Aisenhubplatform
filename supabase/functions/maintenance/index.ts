@@ -13,6 +13,7 @@ import {
   toBillingOrderFacts,
 } from '../_shared/afdian.ts';
 import { billingSwitchEnabled } from '../_shared/billing.ts';
+import { classifyBillingJobFailure } from '../../../packages/domain/src/contracts/billing.ts';
 
 type Row = Record<string, unknown>;
 
@@ -643,6 +644,41 @@ async function billingJobRequeueContract(
   return response(200, { result: result ?? null, request_id: id });
 }
 
+async function billingJobRequeue(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const jobId = uuid(input.job_id);
+  const operationId = uuid(input.operation_id);
+  const reason = typeof input.reason === 'string' ? input.reason : null;
+  if (
+    !jobId ||
+    !operationId ||
+    !reason ||
+    reason.length < 1 ||
+    reason.length > 1024 ||
+    Object.keys(input).some(
+      (key) => !['job_id', 'operation_id', 'reason'].includes(key),
+    )
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id);
+  const [result] = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.billing_processing_job_requeue(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::uuid, $7::text)',
+      [...jobContext, jobId, operationId, reason],
+    ),
+  );
+  return response(200, { result: result ?? null, request_id: id });
+}
+
 async function billingJobProcess(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -699,18 +735,41 @@ async function billingJobProcess(
 
     // Provider network I/O is deliberately outside the database transaction.
     const observed = await adapter.queryOrder(String(target.provider_order_no));
-    let facts: Record<string, unknown>;
     if (observed.status !== 'found') {
-      facts = { status: 'pending' };
-    } else if (observed.facts) {
+      const failure = classifyBillingJobFailure(
+        observed.status === 'not_found'
+          ? 'PROVIDER_ORDER_NOT_FOUND'
+          : 'PROVIDER_UNAVAILABLE',
+      );
+      const result = await finishBillingJob(
+        db,
+        jobContext,
+        jobId,
+        fence,
+        failure.state,
+        failure.error_class,
+        failure.error_code,
+      );
+      return response(200, { result, request_id: id });
+    }
+    let facts: Record<string, unknown>;
+    if (observed.facts) {
       facts = observed.facts;
     } else {
       const normalized = normalizeAfdianOrder(observed.order);
-      if (!normalized)
-        return response(503, {
-          error: { code: 'PROVIDER_RESPONSE_INVALID' },
-          request_id: id,
-        });
+      if (!normalized) {
+        const failure = classifyBillingJobFailure('PROVIDER_RESPONSE_INVALID');
+        const result = await finishBillingJob(
+          db,
+          jobContext,
+          jobId,
+          fence,
+          failure.state,
+          failure.error_class,
+          failure.error_code,
+        );
+        return response(200, { result, request_id: id });
+      }
       facts = toBillingOrderFacts(normalized);
     }
     const [result] = await withJobRole(db, (transaction) =>
@@ -721,16 +780,21 @@ async function billingJobProcess(
     );
     return response(200, { result: result ?? null, request_id: id });
   } catch (error) {
-    const failureCode = errorCode(error);
+    const failure = classifyBillingJobFailure(errorCode(error));
+    if (failure.error_code === 'FENCE_CONFLICT')
+      return response(503, {
+        error: { code: 'JOB_UNAVAILABLE' },
+        request_id: id,
+      });
     try {
       const result = await finishBillingJob(
         db,
         jobContext,
         jobId,
         fence,
-        'retryable',
-        'worker',
-        failureCode,
+        failure.state,
+        failure.error_class,
+        failure.error_code,
       );
       return response(200, { result, request_id: id });
     } catch {
@@ -813,16 +877,19 @@ async function billingJobDiscover(
     // Provider network I/O is deliberately outside the database transaction.
     const observed = await adapter.queryOrder(String(target.provider_order_no));
     if (observed.status !== 'found') {
+      const failure = classifyBillingJobFailure(
+        observed.status === 'not_found'
+          ? 'PROVIDER_ORDER_NOT_FOUND'
+          : 'PROVIDER_UNAVAILABLE',
+      );
       const result = await finishBillingJob(
         db,
         jobContext,
         jobId,
         fence,
-        'retryable',
-        'provider',
-        observed.status === 'not_found'
-          ? 'PROVIDER_ORDER_NOT_FOUND'
-          : 'PROVIDER_UNAVAILABLE',
+        failure.state,
+        failure.error_class,
+        failure.error_code,
       );
       return response(200, { result, request_id: id });
     }
@@ -877,16 +944,21 @@ async function billingJobDiscover(
     }
     return response(200, { result: result ?? null, request_id: id });
   } catch (error) {
-    const failureCode = errorCode(error);
+    const failure = classifyBillingJobFailure(errorCode(error));
+    if (failure.error_code === 'FENCE_CONFLICT')
+      return response(503, {
+        error: { code: 'JOB_UNAVAILABLE' },
+        request_id: id,
+      });
     try {
       const result = await finishBillingJob(
         db,
         jobContext,
         jobId,
         fence,
-        'retryable',
-        'worker',
-        failureCode,
+        failure.state,
+        failure.error_class,
+        failure.error_code,
       );
       return response(200, { result, request_id: id });
     } catch {
@@ -1054,6 +1126,8 @@ export async function handleMaintenanceRequest(
       return await billingJobRun(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/requeue-contract')
       return await billingJobRequeueContract(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/jobs/requeue')
+      return await billingJobRequeue(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/finish')
       return await billingJobFinish(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/process')

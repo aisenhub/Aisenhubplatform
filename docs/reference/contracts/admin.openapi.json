@@ -496,6 +496,7 @@
     "/admin/api/v1/billing/orders/{orderId}/requery": {
       "post": {
         "operationId": "adminRequeryBillingOrder",
+        "description": "Queues a provider requery. The resulting job keeps its bounded retry budget and may enter manual_review with a classified failure for operator action.",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
@@ -858,6 +859,30 @@
           },
           "next_cursor": { "type": ["string", "null"] },
           "request_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "BillingJobFailure": {
+        "type": "object",
+        "required": ["state", "error_class", "error_code"],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": ["retryable", "manual_review"]
+          },
+          "error_class": {
+            "type": "string",
+            "enum": [
+              "provider",
+              "provider_contract",
+              "billing_verification",
+              "worker",
+              "dead_letter"
+            ]
+          },
+          "error_code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.-]{1,128}$"
+          }
         }
       },
       "ErrorEnvelope": {
