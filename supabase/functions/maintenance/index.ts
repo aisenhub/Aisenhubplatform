@@ -47,6 +47,11 @@ interface BillingProviderAdapter {
     readonly order?: unknown;
     readonly facts?: Record<string, unknown>;
   }>;
+  listOrders?(page: number): Promise<{
+    readonly status: 'found' | 'temporarily_unavailable';
+    readonly orders?: readonly unknown[];
+    readonly totalPage?: number;
+  }>;
 }
 
 const UUID =
@@ -970,6 +975,150 @@ async function billingJobDiscover(
   }
 }
 
+async function billingReconciliationPage(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const providerAccountId =
+    input.provider_account_id === undefined
+      ? null
+      : uuid(input.provider_account_id);
+  if (
+    (input.provider_account_id !== undefined && !providerAccountId) ||
+    Object.keys(input).some((key) => key !== 'provider_account_id')
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  if (
+    !(
+      dependencies.automaticSettlementEnabled ??
+      billingSwitchEnabled('BILLING_AUTO_SETTLEMENT_ENABLED')
+    )
+  )
+    return response(503, {
+      error: { code: 'BILLING_SETTLEMENT_DISABLED' },
+      request_id: id,
+    });
+  const adapter =
+    dependencies.billingProviderAdapter ?? createAfdianProviderAdapterFromEnv();
+  if (!adapter?.listOrders)
+    return response(503, {
+      error: { code: 'PROVIDER_NOT_CONFIGURED' },
+      request_id: id,
+    });
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const db = dependencies.database ?? database();
+  const jobContext = context(workerId, id);
+  let target: Row | undefined;
+  try {
+    [target] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.billing_reconciliation_page_target(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid)',
+        [...jobContext, providerAccountId],
+      ),
+    );
+  } catch (error) {
+    return response(503, {
+      error: { code: errorCode(error) },
+      request_id: id,
+    });
+  }
+  if (!target)
+    return response(200, {
+      result: null,
+      status: 'NO_ACTIVE_PROVIDER',
+      request_id: id,
+    });
+  const providerId = uuid(target.provider_account_id);
+  const page = Number(target.page_number);
+  const expectedVersion = Number(target.expected_version);
+  if (
+    !providerId ||
+    !Number.isSafeInteger(page) ||
+    page < 1 ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 0
+  )
+    return response(503, {
+      error: { code: 'RECONCILIATION_CURSOR_INVALID' },
+      request_id: id,
+    });
+
+  let observed: Awaited<ReturnType<NonNullable<BillingProviderAdapter['listOrders']>>>;
+  try {
+    observed = await adapter.listOrders(page);
+  } catch {
+    observed = { status: 'temporarily_unavailable' };
+  }
+  const recordFailure = async (code: string): Promise<Row | null> => {
+    try {
+      const [result] = await withJobRole(db, (transaction) =>
+        transaction.unsafe<Row>(
+          'select * from private.billing_reconciliation_page_failure(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::integer, $7::bigint, $8::text)',
+          [...jobContext, providerId, page, expectedVersion, code],
+        ),
+      );
+      return result ?? null;
+    } catch (error) {
+      if (errorCode(error) === 'cursor_conflict') return null;
+      throw error;
+    }
+  };
+  if (
+    observed.status !== 'found' ||
+    !observed.orders ||
+    !Number.isSafeInteger(observed.totalPage) ||
+    (observed.totalPage as number) < page
+  ) {
+    const failure = await recordFailure(
+      observed.status === 'found' ? 'PROVIDER_RESPONSE_INVALID' : 'PROVIDER_UNAVAILABLE',
+    );
+    if (!failure)
+      return response(409, {
+        error: { code: 'CURSOR_CONFLICT' },
+        request_id: id,
+      });
+    return response(503, {
+      error: {
+        code:
+          observed.status === 'found'
+            ? 'PROVIDER_RESPONSE_INVALID'
+            : 'PROVIDER_UNAVAILABLE',
+      },
+      result: failure,
+      request_id: id,
+    });
+  }
+  const totalPage = observed.totalPage as number;
+  const nextPage = page < totalPage ? page + 1 : null;
+  try {
+    const [result] = await withJobRole(db, (transaction) =>
+      transaction.unsafe<Row>(
+        'select * from private.billing_reconciliation_page_ingest(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::integer, $7::bigint, $8::integer, $9::jsonb)',
+        [
+          ...jobContext,
+          providerId,
+          page,
+          expectedVersion,
+          nextPage,
+          transaction.json(observed.orders),
+        ],
+      ),
+    );
+    return response(200, { result: result ?? null, request_id: id });
+  } catch (error) {
+    const code = errorCode(error);
+    return response(code === 'cursor_conflict' ? 409 : 503, {
+      error: { code: code === 'cursor_conflict' ? 'CURSOR_CONFLICT' : code },
+      request_id: id,
+    });
+  }
+}
+
 async function billingJobRun(
   request: Request,
   dependencies: MaintenanceDependencies,
@@ -999,13 +1148,33 @@ async function billingJobRun(
     Deno.env.get('MAINTENANCE_WORKER_ID') ??
     `maintenance-${crypto.randomUUID()}`;
   const db = dependencies.database ?? database();
+  const results: Array<Record<string, unknown>> = [];
+  const automaticSettlementEnabled =
+    dependencies.automaticSettlementEnabled ??
+    billingSwitchEnabled('BILLING_AUTO_SETTLEMENT_ENABLED');
+  const discoveryAdapter =
+    dependencies.billingProviderAdapter ?? createAfdianProviderAdapterFromEnv();
+  if (automaticSettlementEnabled && discoveryAdapter?.listOrders) {
+    const discoveryResponse = await billingReconciliationPage(
+      new Request('http://local/maintenance/v1/billing/reconciliation/page', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      }),
+      { ...dependencies, workerId, billingProviderAdapter: discoveryAdapter },
+      requestId(),
+    );
+    results.push({
+      job_kind: 'provider_reconciliation_page',
+      status: discoveryResponse.status,
+    });
+  }
   const claimed = await withJobRole(db, (transaction) =>
     transaction.unsafe<Row>(
       'select * from private.billing_processing_job_claim(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::integer)',
       [...context(workerId, id), limit],
     ),
   );
-  const results: Array<Record<string, unknown>> = [];
   for (const job of claimed) {
     const jobId = uuid(job.job_id);
     const fence = Number(job.fence);
@@ -1134,6 +1303,8 @@ export async function handleMaintenanceRequest(
       return await billingJobProcess(request, dependencies, id);
     if (path === '/maintenance/v1/billing/jobs/discover')
       return await billingJobDiscover(request, dependencies, id);
+    if (path === '/maintenance/v1/billing/reconciliation/page')
+      return await billingReconciliationPage(request, dependencies, id);
     if (path === '/maintenance/v1/accounts/retention')
       return await retentionRun(request, dependencies, id);
     return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });

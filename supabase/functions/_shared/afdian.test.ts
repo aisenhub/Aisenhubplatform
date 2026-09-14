@@ -196,6 +196,52 @@ Deno.test('Afdian adapter treats missing orders as not found and API failures as
   );
 });
 
+Deno.test('Afdian adapter discovers a bounded order page with signed page params', async () => {
+  const requests: Request[] = [];
+  const adapter = createAfdianProviderAdapter({
+    userId: 'creator-user',
+    apiToken: 'fixture-token',
+    baseUrl: 'https://afdian.test/api/open',
+    fetchImpl: async (input, init) => {
+      requests.push(new Request(input, init));
+      return new Response(
+        JSON.stringify({
+          ec: 200,
+          data: {
+            list: [{ out_trade_no: 'order-page-1' }],
+            total_page: 3,
+          },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    },
+  });
+  const result = await adapter.listOrders(2);
+  assertEquals(result.status, 'found');
+  assertEquals(result.totalPage, 3);
+  assertEquals(result.orders, [{ out_trade_no: 'order-page-1' }]);
+  if (requests.length === 0)
+    throw new Error('fixture page request was not captured');
+  const body = (await requests[0]!.json()) as Record<string, unknown>;
+  assertEquals(body.params, '{"page":2}');
+  assert(typeof body.sign === 'string');
+  assert(!JSON.stringify(body).includes('fixture-token'));
+});
+
+Deno.test('Afdian adapter refuses malformed page envelopes and invalid page numbers', async () => {
+  const malformed = createAfdianProviderAdapter({
+    userId: 'creator-user',
+    apiToken: 'fixture-token',
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({ ec: 200, data: { list: [{ out_trade_no: 'x' }] } }),
+        { status: 200 },
+      ),
+  });
+  assertEquals((await malformed.listOrders(1)).status, 'temporarily_unavailable');
+  assertEquals((await malformed.listOrders(0)).status, 'temporarily_unavailable');
+});
+
 Deno.test('Afdian normalizer keeps only provider-neutral billing facts', () => {
   const snapshot = normalizeAfdianOrder(
     {

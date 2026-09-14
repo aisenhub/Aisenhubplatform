@@ -47,3 +47,9 @@ Consumer/Admin同源BFF、Supabase Auth/JWT/Session/MFA、受控executor与priva
 ## TASK-0501 已落地的 Consumer 展示边界
 
 订阅页面现在直接消费目录返回的 `currency`、`price`、`term`、`enabled`、`purchasable` 与 `reason`，不再写死货币符号或通用权益承诺；finite lifetime 明确显示为 99 年有限期。创建 Checkout 后，待支付摘要保存并展示 API 返回的价格、币种和期限快照；状态轮询再次读取 Checkout 时会覆盖恢复中的摘要，旧 Session Storage 数据缺少快照时先显示读取中，不用当前目录价格冒充订单价格。浏览器级目录展示回归已加入 T16 探针，并已随独立 Consumer 安装链路在 Local 双来源 E2E 中通过；Hosted 双平台仍未运行。
+
+## TASK-0701 已落地的独立分页发现边界
+
+主动发现与订单处理保持双进度：Afdian `query-order` 分页只负责读取页、校验 `list`/`total_page` 并把 `out_trade_no` 作为本地订单线索写入；每个线索按 Provider account/order 唯一去重后进入 `reconciliation` 队列，后续仍由既有权威单订单查询、合同核验和结算入口完成事实判断。发现页游标独立存储在 `billing_reconciliation_cursors(stream = 'discovery')`，成功页才写入下一页或完成本轮，Provider 不可用、响应不完整、页版本冲突均保留当前页并记录错误。
+
+维护端通过 `/maintenance/v1/billing/reconciliation/page` 执行一次页扫描，批次运行在存在分页 Provider adapter 时先执行扫描再领取处理队列；没有分页适配时保持旧的订单处理行为。数据库过程限定为 `job_executor` 的 security-definer 入口，直接表写权限仍不授予 executor。Local 已验证首扫、续页、重复扫描、坏响应、失败重试页和 optimistic cursor conflict；真实 Provider 429/Retry-After、并发崩溃恢复、Hosted/Staging/Production 仍不由 Local 证据替代。

@@ -861,6 +861,179 @@ Deno.test('maintenance run dispatches a claimed discovery job', async () => {
   ]);
 });
 
+Deno.test('maintenance discovers provider pages before order verification', async () => {
+  events.length = 0;
+  const pageDatabase: TestDatabase = {
+    async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
+      events.push('begin');
+      return callback({
+        json(value: unknown) {
+          return value;
+        },
+        async unsafe<T extends TestRow = TestRow>(query: string) {
+          if (query.startsWith('set local role')) {
+            events.push('role');
+            return [] as T[];
+          }
+          if (query.includes('billing_reconciliation_page_target')) {
+            events.push('page-target');
+            return [
+              {
+                provider_account_id: accountId,
+                page_number: 2,
+                expected_version: 7,
+                page_cursor: '2',
+              },
+            ] as unknown as T[];
+          }
+          if (query.includes('billing_reconciliation_page_ingest')) {
+            events.push('page-ingest');
+            return [
+              {
+                provider_account_id: accountId,
+                page_number: 2,
+                next_page: 3,
+                cursor_version: 8,
+                discovered_count: 2,
+                queued_count: 2,
+              },
+            ] as unknown as T[];
+          }
+          return [] as T[];
+        },
+      });
+    },
+  };
+  const pages: number[] = [];
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/reconciliation/page', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: pageDatabase,
+      automaticSettlementEnabled: true,
+      billingProviderAdapter: {
+        async queryOrder() {
+          throw new Error('page discovery must not query individual orders');
+        },
+        async listOrders(page) {
+          pages.push(page);
+          return {
+            status: 'found',
+            orders: [{ out_trade_no: 'page-order-1' }, { out_trade_no: 'page-order-2' }],
+            totalPage: 3,
+          };
+        },
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(pages, [2]);
+  assertEquals((await response.json()).data.result, {
+    provider_account_id: accountId,
+    page_number: 2,
+    next_page: 3,
+    cursor_version: 8,
+    discovered_count: 2,
+    queued_count: 2,
+  });
+  assertEquals(events, [
+    'begin',
+    'role',
+    'page-target',
+    'begin',
+    'role',
+    'page-ingest',
+  ]);
+});
+
+Deno.test('maintenance records provider page failures without advancing discovery', async () => {
+  events.length = 0;
+  const failureDatabase: TestDatabase = {
+    async begin<T>(callback: (transaction: TestTransaction) => Promise<T>) {
+      events.push('begin');
+      return callback({
+        json(value: unknown) {
+          return value;
+        },
+        async unsafe<T extends TestRow = TestRow>(query: string) {
+          if (query.startsWith('set local role')) {
+            events.push('role');
+            return [] as T[];
+          }
+          if (query.includes('billing_reconciliation_page_target')) {
+            events.push('page-target');
+            return [
+              {
+                provider_account_id: accountId,
+                page_number: 1,
+                expected_version: 0,
+                page_cursor: null,
+              },
+            ] as unknown as T[];
+          }
+          if (query.includes('billing_reconciliation_page_failure')) {
+            events.push('page-failure');
+            return [
+              {
+                provider_account_id: accountId,
+                page_number: 1,
+                cursor_version: 1,
+                page_cursor: '1',
+                last_error_code: 'PROVIDER_UNAVAILABLE',
+              },
+            ] as unknown as T[];
+          }
+          return [] as T[];
+        },
+      });
+    },
+  };
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/reconciliation/page', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    }),
+    {
+      jobToken: 'test-job',
+      workerId: 'test-worker',
+      database: failureDatabase,
+      automaticSettlementEnabled: true,
+      billingProviderAdapter: {
+        async queryOrder() {
+          throw new Error('page failure must not query individual orders');
+        },
+        async listOrders() {
+          return { status: 'temporarily_unavailable' };
+        },
+      },
+    },
+  );
+  assertEquals(response.status, 503);
+  assertEquals((await response.json()).data.error, {
+    code: 'PROVIDER_UNAVAILABLE',
+  });
+  assertEquals(events, [
+    'begin',
+    'role',
+    'page-target',
+    'begin',
+    'role',
+    'page-failure',
+  ]);
+});
+
 Deno.test('maintenance gates Auth deletion on provider success before checkpoint advance', async () => {
   events.length = 0;
   const response = await handleMaintenanceRequest(

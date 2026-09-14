@@ -2,7 +2,7 @@
 
 ## 1. 阶段名称和状态
 
-状态：In Progress；TASK-0702 已完成本地 forward-fix 与 Local 回归，TASK-0705 已完成静态调用方矩阵，TASK-0701/0703/0704/0706 仍未开始或受前置门槛影响。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
+状态：In Progress；TASK-0701 已完成 Local 独立分页发现与双进度游标实现及回归，TASK-0702 已完成本地 forward-fix 与 Local 回归，TASK-0705 已完成静态调用方矩阵，TASK-0703/0704/0706 仍未开始或受前置门槛影响。当前派发以 TASK ID 为准，文件名为历史兼容路径。旧BILL记录只通过末尾归档链接引用，不是当前验收状态或执行授权。
 
 ## 2. 阶段目标
 
@@ -127,7 +127,14 @@ RC-03；退款差异依赖RC-04；无需等UI完成可先执行。每个任务�
 
 - 预期结果：漏通知可在明确SLA补回；单个订单已知不代表整页完成；旧失败不因游标前进消失。成功路径和上述负向/恢复断言均需实际证据；上游门槛未过则记BLOCKED。
 - 回滚方式：采用expand-first；停止本任务新动作/必要时关闭新购买，继续保存已付款入站；回退到兼容且不含已知漏洞的应用版本，保留新增表/列/Order/Grant/幂等及审计，另发forward-fix。不得down删除账本或重写旧迁移。
-- 完成状态：未开始；实施测试状态NOT_RUN。
+- 完成状态：Local 实现完成；实施测试状态 PASS（Local），Hosted/Provider/Staging/Production 仍 NOT_RUN。
+
+#### TASK-0701 本轮实施记录
+
+- 新增 `supabase/migrations/20260914103618_repair_task_0701_provider_reconciliation.sql`：独立 discovery page target/ingest/failure 过程，按 Provider account/order 唯一去重，先持久化订单线索和 `reconciliation` 队列，再提交页游标；Provider 失败、坏响应和旧版本均不推进游标。
+- `supabase/functions/_shared/afdian.ts` 新增 Afdian `query-order` 分页适配，严格校验 `list` 与 `total_page`；`maintenance` 新增 `/maintenance/v1/billing/reconciliation/page`，并在具备分页适配时接入批次运行，订单权威核验仍复用既有入口。
+- 新增 `supabase/tests/repair_task_0701_provider_reconciliation.sql` 与 Afdian/maintenance 测试，覆盖首扫、续页、重复页、Provider 不可用、坏响应和 cursor conflict。
+- 本地已验证：`pnpm db:reset -- --yes`、`pnpm test:db`（54 个 SQL 文件、992 个断言）和 Deno Provider/maintenance 测试 30/30 PASS。Hosted/真实 Provider 分页、429/Retry-After、双连接崩溃恢复、Staging/Production 仍 NOT_RUN。
 
 <a id="task-0702"></a>
 ### TASK-0702：用forward-fix修正cron契约与批次运行结果

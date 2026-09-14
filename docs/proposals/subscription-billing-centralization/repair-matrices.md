@@ -73,7 +73,7 @@
 | [TASK-0612](phases/08-admin-billing-repair.md#task-0612) | RC-06 | TASK-0601,TASK-0609,TASK-0611 | F11,F10 | 未开始 |
 | [TASK-0613](phases/08-admin-billing-repair.md#task-0613) | RC-06 | TASK-0404,TASK-0405,TASK-0610 | F16 | 未开始 |
 | [TASK-0614](phases/08-admin-billing-repair.md#task-0614) | RC-06 | TASK-0701,TASK-0703,TASK-0605,TASK-0606 | F06,F11,F14 | 未开始 |
-| [TASK-0701](phases/05-reconciliation-observability-and-central-admin.md#task-0701) | RC-07 | TASK-0301,TASK-0302,TASK-0304,TASK-0201 | F06,F12 | 未开始 |
+| [TASK-0701](phases/05-reconciliation-observability-and-central-admin.md#task-0701) | RC-07 | TASK-0301,TASK-0302,TASK-0304,TASK-0201 | F06,F12 | Local实现及回归PASS；Hosted/Provider/Staging/Production待验证 |
 | [TASK-0702](phases/05-reconciliation-observability-and-central-admin.md#task-0702) | RC-07 | TASK-0002,TASK-0302,TASK-0303 | F14 | 本地 forward-fix 与回归 PASS；Hosted HTTP/pg_net/恢复待验证 |
 | [TASK-0703](phases/05-reconciliation-observability-and-central-admin.md#task-0703) | RC-07 | TASK-0701,TASK-0702,TASK-0402 | F14,F06,F03 | 未开始 |
 | [TASK-0704](phases/05-reconciliation-observability-and-central-admin.md#task-0704) | RC-07 | TASK-0702,TASK-0404,TASK-0305 | F13,F14,F16,F17 | 未开始 |
@@ -134,15 +134,15 @@
 | `registry/manifest.json` | TASK-0103 | 本轮不修改；实施任务获派发后按清单修改 |
 | `registry/templates.json` | TASK-0103 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/config.toml` | TASK-0702、TASK-0705 | 本轮不修改；实施任务获派发后按清单修改 |
-| `supabase/functions/_shared/afdian.test.ts` | TASK-0301、TASK-0305、TASK-0701 | 本轮不修改；实施任务获派发后按清单修改 |
-| `supabase/functions/_shared/afdian.ts` | TASK-0301、TASK-0305、TASK-0402、TASK-0701、TASK-0704 | 本轮不修改；实施任务获派发后按清单修改 |
+| `supabase/functions/_shared/afdian.test.ts` | TASK-0301、TASK-0305、TASK-0701 | TASK-0701 已新增分页签名/响应边界回归 |
+| `supabase/functions/_shared/afdian.ts` | TASK-0301、TASK-0305、TASK-0402、TASK-0701、TASK-0704 | TASK-0701 已新增独立分页适配；后续TASK继续复用 |
 | `supabase/functions/_shared/billing.ts` | TASK-0704 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/functions/account-api/index.test.ts` | TASK-0306、TASK-0405 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/functions/account-api/index.ts` | TASK-0101、TASK-0103、TASK-0201、TASK-0202、TASK-0203、TASK-0301、TASK-0304、TASK-0306、TASK-0403、TASK-0404、TASK-0405、TASK-0512、TASK-0601、TASK-0602、TASK-0603、TASK-0604、TASK-0605、TASK-0606、TASK-0607、TASK-0608、TASK-0609、TASK-0610、TASK-0613、TASK-0614、TASK-0703 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/functions/billing-webhook/index.test.ts` | TASK-0305 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/functions/billing-webhook/index.ts` | TASK-0305、TASK-0405 | 本轮不修改；实施任务获派发后按清单修改 |
-| `supabase/functions/maintenance/index.test.ts` | TASK-0302、TASK-0303、TASK-0701、TASK-0702、TASK-0703、TASK-0704 | 本轮不修改；实施任务获派发后按清单修改 |
-| `supabase/functions/maintenance/index.ts` | TASK-0301、TASK-0302、TASK-0303、TASK-0402、TASK-0604、TASK-0701、TASK-0702、TASK-0703、TASK-0704、TASK-0705 | 本轮不修改；实施任务获派发后按清单修改 |
+| `supabase/functions/maintenance/index.test.ts` | TASK-0302、TASK-0303、TASK-0701、TASK-0702、TASK-0703、TASK-0704 | TASK-0701 已新增分页发现/失败停留回归 |
+| `supabase/functions/maintenance/index.ts` | TASK-0301、TASK-0302、TASK-0303、TASK-0402、TASK-0604、TASK-0701、TASK-0702、TASK-0703、TASK-0704、TASK-0705 | TASK-0701 已新增分页发现入口并接入批次运行 |
 | `supabase/functions/maintenance/schedule.json` | TASK-0702、TASK-0705 | 本轮不修改；实施任务获派发后按清单修改 |
 | `supabase/migrations/20260907103848_security_helpers.sql` | TASK-0405 | 只读历史证据；通过新迁移forward-fix |
 | `supabase/migrations/20260908103340_m3_dual_secret_redeem.sql` | TASK-0401 | 只读历史证据；通过新迁移forward-fix |

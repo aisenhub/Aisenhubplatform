@@ -243,6 +243,18 @@ TASK-0001 基线冻结完成；TASK-0002 完成本地静态门槛审查但被 Ho
 | 既有文件保护核对 | PASS | 8个原未跟踪图表文件及18个归档文件的SHA-256与本轮写计划前一致 |
 | Provider、Staging、生产验证 | NOT_RUN | 本轮未连接真实 Provider、Staging 或生产 |
 
+## 追加实施记录（2026-09-14，TASK-0701 独立分页发现与双进度游标）
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 授权范围 | TASK-0701 的 Local Provider 分页发现、订单线索持久化、独立 discovery 游标、处理队列去重和 maintenance 调度接线；不新增 Provider、不改消费者页面、不宣称远程环境通过。 |
+| 实际变更 | 使用固定 Supabase CLI 2.111.0 生成 `supabase/migrations/20260914103618_repair_task_0701_provider_reconciliation.sql`；新增 `billing_reconciliation_page_target`、`billing_reconciliation_page_ingest`、`billing_reconciliation_page_failure` 三个 security-definer 过程；Afdian adapter 支持 `query-order` 的 `{page}` 分页和 `total_page` 校验；maintenance 新增 `/maintenance/v1/billing/reconciliation/page`，批次运行在具备分页 adapter 时先发现再处理。 |
+| 失败证据与修复 | 首次 Local SQL 回归发现返回列名遮蔽 `ON CONFLICT` 目标，修复为现有唯一约束名；随后补充 cursor page/version 一致性校验。Provider 失败、坏响应、重复页和旧版本冲突均保留为正式回归断言。 |
+| 数据库验证 | `pnpm db:reset -- --yes` PASS；`pnpm test:db` PASS：54 个 SQL 文件、992 个断言；TASK-0701 专项 28/28 PASS。 |
+| Edge/静态验证 | Afdian 与 maintenance Deno 测试 30/30 PASS；`pnpm typecheck` PASS。 |
+| 未完成/阻塞 | 真实 Afdian 分页、429/Retry-After 预算、Provider 事故止损、双连接游标提交前后崩溃恢复、Hosted/Staging/Production 迁移和真实 cron 观察仍 NOT_RUN；TASK-0703/0704/0706 仍未完成。 |
+| Commit与push | 本轮待 `docs:check`、`contracts:check`、`git diff --check` 和最终差异/敏感信息复核后形成独立小提交并推送当前任务分支；R3 Hosted/Staging 门槛未满足，不合并 `main`。 |
+
 ## 追加实施记录（2026-09-14，TASK-0201 Checkout Provider 合同快照与 mapping 冻结）
 
 | 项目 | 实际结果 |

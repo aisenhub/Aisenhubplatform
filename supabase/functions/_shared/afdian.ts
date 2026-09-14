@@ -16,6 +16,11 @@ export interface AfdianProviderAdapter {
     readonly order?: unknown;
     readonly facts?: Record<string, unknown>;
   }>;
+  listOrders(page: number): Promise<{
+    readonly status: 'found' | 'temporarily_unavailable';
+    readonly orders?: readonly unknown[];
+    readonly totalPage?: number;
+  }>;
 }
 
 export interface AfdianApiConfig {
@@ -229,9 +234,10 @@ function apiResponseOrders(value: unknown): readonly ObjectValue[] | null {
   const data = objectValue(root?.data);
   const list = data?.list;
   if (!Array.isArray(list)) return null;
-  return list
-    .map((item) => objectValue(item))
-    .filter((item): item is ObjectValue => item !== null);
+  const orders = list.map((item) => objectValue(item));
+  return orders.every((item): item is ObjectValue => item !== null)
+    ? orders
+    : null;
 }
 
 function stringOrderId(value: unknown): string | null {
@@ -311,6 +317,66 @@ async function fetchAfdianOrder(
   }
 }
 
+async function fetchAfdianOrderPage(
+  config: AfdianApiConfig,
+  page: number,
+): Promise<{
+  readonly status: 'found' | 'temporarily_unavailable';
+  readonly orders?: readonly unknown[];
+  readonly totalPage?: number;
+}> {
+  if (!Number.isSafeInteger(page) || page < 1) {
+    return { status: 'temporarily_unavailable' };
+  }
+  const timestamp = Math.floor(Date.now() / 1000);
+  const params = JSON.stringify({ page });
+  const body = JSON.stringify({
+    user_id: config.userId,
+    params,
+    ts: timestamp,
+    sign: afdianCanonicalSign({
+      token: config.apiToken,
+      params,
+      timestamp,
+      userId: config.userId,
+    }),
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+  try {
+    const response = await (config.fetchImpl ?? fetch)(
+      `${(config.baseUrl ?? DEFAULT_API_BASE_URL).replace(/\/$/u, '')}/query-order`,
+      {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body,
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) return { status: 'temporarily_unavailable' };
+    const payload = (await response.json().catch(() => null)) as unknown;
+    const root = objectValue(payload);
+    const data = objectValue(root?.data);
+    if (root?.ec !== 200) return { status: 'temporarily_unavailable' };
+    const orders = apiResponseOrders(payload);
+    const totalPage = number(data?.total_page);
+    if (!orders || totalPage === null || totalPage < 1) {
+      return { status: 'temporarily_unavailable' };
+    }
+    return { status: 'found', orders, totalPage };
+  } catch {
+    return { status: 'temporarily_unavailable' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function createAfdianProviderAdapter(
   config: AfdianApiConfig,
 ): AfdianProviderAdapter {
@@ -322,6 +388,9 @@ export function createAfdianProviderAdapter(
       if (!normalized || normalized.length > 255)
         return Promise.resolve({ status: 'temporarily_unavailable' });
       return fetchAfdianOrder(config, normalized);
+    },
+    listOrders(page) {
+      return fetchAfdianOrderPage(config, page);
     },
   };
 }
