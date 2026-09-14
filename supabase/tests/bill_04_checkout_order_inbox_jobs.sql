@@ -1,6 +1,6 @@
 begin;
 
-select plan(66);
+select plan(69);
 
 select has_table('public', 'billing_provider_accounts', 'provider account table exists');
 select has_table('public', 'billing_provider_products', 'provider product mapping table exists');
@@ -91,20 +91,41 @@ select is((select lease_owner from public.billing_processing_jobs), 'bill04-test
 select is(
   (select state from private.billing_processing_job_finish(
     row('00000000-0000-4000-8000-000000000406', 'bill04-test-worker', 1, '00000000-0000-4000-8000-000000000407')::private.job_context,
-    (select id from public.billing_processing_jobs), 1, 'completed', null, null
+    (select id from public.billing_processing_jobs where job_kind = 'webhook_order_discovery'), 1, 'completed', null, null
   )), 'completed', 'finish releases a completed job'
+);
+insert into public.billing_processing_jobs (
+  id, job_kind, webhook_event_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000408', 'order_verification',
+  (select id from public.billing_webhook_events where provider_event_key = 'bill04-event'),
+  'processing', 2, 'stale-worker', now() - interval '1 second', 7
+);
+select is(
+  (select fence from private.billing_processing_job_claim(
+    row('00000000-0000-4000-8000-000000000409', 'bill04-reclaimer', 1, '00000000-0000-4000-8000-000000000410')::private.job_context, 20
+  ) where job_id = '00000000-0000-4000-8000-000000000408'),
+  8::bigint, 'expired processing job is reclaimed with a new fence'
+);
+select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000408'), 'processing', 'reclaimed job is processing again');
+select throws_ok(
+  $$select * from private.billing_processing_job_finish(
+    row('00000000-0000-4000-8000-000000000411', 'stale-worker', 7, '00000000-0000-4000-8000-000000000412')::private.job_context,
+    '00000000-0000-4000-8000-000000000408', 7, 'completed', null, null
+  )$$,
+  '40001', 'fence_conflict', 'old worker cannot finish a reclaimed job'
 );
 select throws_ok(
   $$select * from private.billing_processing_job_finish(
     row('00000000-0000-4000-8000-000000000406', 'bill04-test-worker', 2, '00000000-0000-4000-8000-000000000407')::private.job_context,
-    (select id from public.billing_processing_jobs), 1, 'completed', null, null
+    (select id from public.billing_processing_jobs where job_kind = 'webhook_order_discovery'), 1, 'completed', null, null
   )$$,
   '22023', 'invalid_input', 'finish requires context fence to match submitted fence'
 );
 select throws_ok(
   $$select * from private.billing_processing_job_finish(
     row('00000000-0000-4000-8000-000000000406', 'bill04-test-worker', 1, '00000000-0000-4000-8000-000000000407')::private.job_context,
-    (select id from public.billing_processing_jobs), 1, 'completed', null, null
+    (select id from public.billing_processing_jobs where job_kind = 'webhook_order_discovery'), 1, 'completed', null, null
   )$$,
   '40001', 'fence_conflict', 'a completed job cannot be finished twice'
 );

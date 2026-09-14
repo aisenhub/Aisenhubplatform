@@ -1,6 +1,6 @@
 begin;
 
-select plan(44);
+select plan(51);
 
 select has_column('public', 'billing_checkout_intents', 'custom_order_id', 'checkout has custom order binding');
 select has_column('public', 'billing_orders', 'custom_order_id', 'order stores custom order observation');
@@ -58,6 +58,21 @@ insert into public.billing_checkout_intents (
   2, 1, 'bill05-custom-order', 1, decode(repeat('ab', 32), 'hex'),
   decode(repeat('cd', 32), 'hex'), decode(repeat('ef', 32), 'hex'), now() + interval '30 minutes'
 );
+insert into public.billing_checkout_intents (
+  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, product_code, term_kind_snapshot,
+  duration_value_snapshot, duration_unit_snapshot, price_amount, price_version,
+  mapping_version, custom_order_id, token_key_version, token_digest,
+  idempotency_key_hash, request_hash, expires_at
+) values (
+  '00000000-0000-4000-8000-000000000527', '00000000-0000-4000-8000-000000000502',
+  '00000000-0000-4000-8000-000000000504',
+  (select id from public.subscription_products where code = 'monthly'),
+  '00000000-0000-4000-8000-000000000503', '00000000-0000-4000-8000-000000000505',
+  '00000000-0000-4000-8000-000000000506', 'monthly', 'finite', 1, 'month', 9.90,
+  2, 1, 'bill05-missing-plan', 1, decode(repeat('78', 32), 'hex'),
+  decode(repeat('9a', 32), 'hex'), decode(repeat('bc', 32), 'hex'), now() + interval '30 minutes'
+);
 insert into public.billing_orders (
   id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
   platform_account_id, subscription_product_id, linkage_status
@@ -73,6 +88,7 @@ insert into public.billing_processing_jobs (
   '00000000-0000-4000-8000-000000000509', 'order_verification',
   '00000000-0000-4000-8000-000000000508', 'processing', 1, 'bill05-worker', now() + interval '1 minute', 1
 );
+
 
 select is(
   (select entitlement_status from private.billing_order_verify_and_settle(
@@ -192,6 +208,67 @@ select is((select settlement_kind from public.billing_settlements where billing_
 select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000525'), 'completed', 'sale product job completes after settlement');
 select is((select count(*)::integer from public.subscription_grants where billing_order_id = '00000000-0000-4000-8000-000000000524'), 1, 'sale product creates one grant');
 
+insert into public.billing_orders (
+  id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
+  platform_account_id, subscription_product_id, linkage_status
+) values (
+  '00000000-0000-4000-8000-000000000528', '00000000-0000-4000-8000-000000000505',
+  'provider-missing-plan', '00000000-0000-4000-8000-000000000527',
+  '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
+  (select id from public.subscription_products where code = 'monthly'), 'linked'
+);
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000529', 'order_verification',
+  '00000000-0000-4000-8000-000000000528', 'processing', 1, 'bill05-worker', now() + interval '1 minute', 1
+);
+select is(
+  (select decision_code from private.billing_order_verify_and_settle(
+    row('00000000-0000-4000-8000-000000000530', 'bill05-worker', 1, '00000000-0000-4000-8000-000000000531')::private.job_context,
+    '00000000-0000-4000-8000-000000000529', '00000000-0000-4000-8000-000000000528', 1,
+    '{"status":"paid","provider_user_id":"provider-user-1","product_type":"subscription","sku_ids":[],"sku_items":[{"external_sku_id":"sku-invalid","quantity":"two"}],"purchase_months":1,"total_amount":"9.90","show_amount":"9.90","currency":"CNY","custom_order_id":"bill05-missing-plan"}'::jsonb
+  )), 'contract_conflict', 'missing provider plan is rejected fail closed'
+);
+select is((select count(*)::integer from public.subscription_grants where billing_order_id = '00000000-0000-4000-8000-000000000528'), 0, 'missing provider plan creates no grant');
+select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000529'), 'manual_review', 'incomplete provider facts enter manual review');
+
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000536', 'order_verification',
+  '00000000-0000-4000-8000-000000000508', 'processing', 1, 'stale-worker', now() - interval '1 second', 1
+);
+select throws_ok(
+  $$select * from private.billing_order_query_target(
+    row('00000000-0000-4000-8000-000000000536', 'stale-worker', 1, '00000000-0000-4000-8000-000000000537')::private.job_context,
+    '00000000-0000-4000-8000-000000000536', '00000000-0000-4000-8000-000000000508', 1
+  )$$,
+  '40001', 'fence_conflict', 'expired lease cannot query provider target'
+);
+select throws_ok(
+  $$select * from private.billing_order_link_checkout(
+    row('00000000-0000-4000-8000-000000000536', 'stale-worker', 1, '00000000-0000-4000-8000-000000000538')::private.job_context,
+    '00000000-0000-4000-8000-000000000536', '00000000-0000-4000-8000-000000000508', 1, 'bill05-custom-order'
+  )$$,
+  '40001', 'fence_conflict', 'expired lease cannot link checkout'
+);
+select throws_ok(
+  $$select * from private.billing_order_verify_and_settle(
+    row('00000000-0000-4000-8000-000000000536', 'stale-worker', 1, '00000000-0000-4000-8000-000000000539')::private.job_context,
+    '00000000-0000-4000-8000-000000000536', '00000000-0000-4000-8000-000000000508', 1,
+    '{"status":"paid"}'::jsonb
+  )$$,
+  '40001', 'fence_conflict', 'expired lease cannot verify or settle'
+);
+
+insert into public.billing_processing_jobs (
+  id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
+) values (
+  '00000000-0000-4000-8000-000000000512', 'reconciliation',
+  '00000000-0000-4000-8000-000000000508', 'processing', 1, 'bill05-worker', now() + interval '1 minute', 1
+);
+
 select is(
   (select version from private.billing_reconciliation_cursor_update(
     row('00000000-0000-4000-8000-000000000512', 'bill05-worker', 1, '00000000-0000-4000-8000-000000000513')::private.job_context,
@@ -206,6 +283,16 @@ select throws_ok(
     '00000000-0000-4000-8000-000000000505', 'discovery', 0, now(), 'provider-order-2', 'cursor-2', true, null
   )$$,
   '40001', 'cursor_conflict', 'stale cursor version is rejected'
+);
+update public.billing_processing_jobs
+set lease_until = now() - interval '1 second'
+where id = '00000000-0000-4000-8000-000000000512';
+select throws_ok(
+  $$select * from private.billing_reconciliation_cursor_update(
+    row('00000000-0000-4000-8000-000000000512', 'bill05-worker', 1, '00000000-0000-4000-8000-000000000540')::private.job_context,
+    '00000000-0000-4000-8000-000000000505', 'discovery', 1, now(), 'provider-order-3', 'cursor-3', true, null
+  )$$,
+  '40001', 'fence_conflict', 'expired lease cannot advance reconciliation cursor'
 );
 
 select * from finish();

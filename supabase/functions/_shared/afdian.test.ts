@@ -216,6 +216,31 @@ Deno.test('Afdian normalizer accepts the documented query-order shape', () => {
   assertEquals(snapshot.currency, 'CNY');
   assertEquals(snapshot.product_type, '0');
   assertEquals(snapshot.status, 'paid');
+  assertEquals(toBillingOrderFacts(snapshot).quantity, 0);
+});
+
+Deno.test('Afdian normalizer preserves SKU quantities and unknown statuses', () => {
+  const snapshot = normalizeAfdianOrder({
+    out_trade_no: 'order-quantity-1',
+    total_amount: '19.90',
+    show_amount: '19.90',
+    status: 'provider-in-review',
+    sku_detail: JSON.stringify([{ sku_id: 'sku-1', count: 2 }]),
+  });
+  assert(snapshot !== null);
+  assertEquals(snapshot.status, 'unknown');
+  assertEquals(snapshot.sku_items, [{ external_sku_id: 'sku-1', quantity: 2 }]);
+  assertEquals(toBillingOrderFacts(snapshot).quantity, 2);
+  assertEquals(toBillingOrderFacts(snapshot).sku_items, snapshot.sku_items);
+  assertEquals(
+    normalizeAfdianOrder({
+      out_trade_no: 'order-invalid-quantity',
+      total_amount: '19.90',
+      show_amount: '19.90',
+      sku_detail: [{ sku_id: 'sku-1', count: 'two' }],
+    }),
+    null,
+  );
 });
 
 Deno.test('Afdian normalizer rejects incomplete or malformed observations', () => {

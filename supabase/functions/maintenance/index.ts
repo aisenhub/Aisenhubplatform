@@ -140,6 +140,15 @@ function context(workerId: string, id: string, fencingToken = 1) {
   return [crypto.randomUUID(), workerId, fencingToken, id];
 }
 
+function billingContext(
+  workerId: string,
+  requestId: string,
+  jobId: string,
+  fencingToken: number,
+) {
+  return [jobId, workerId, fencingToken, requestId];
+}
+
 async function withJobRole<T>(
   db: Database,
   callback: (transaction: Transaction) => Promise<T>,
@@ -600,7 +609,7 @@ async function billingJobFinish(
     Deno.env.get('MAINTENANCE_WORKER_ID') ??
     `maintenance-${crypto.randomUUID()}`;
   const db = dependencies.database ?? database();
-  const jobContext = context(workerId, id, fence);
+  const jobContext = billingContext(workerId, id, jobId, fence);
   const [result] = await withJobRole(db, (transaction) =>
     transaction.unsafe<Row>(
       'select * from private.billing_processing_job_finish(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
@@ -674,7 +683,7 @@ async function billingJobProcess(
     Deno.env.get('MAINTENANCE_WORKER_ID') ??
     `maintenance-${crypto.randomUUID()}`;
   const db = dependencies.database ?? database();
-  const jobContext = context(workerId, id, fence);
+  const jobContext = billingContext(workerId, id, jobId, fence);
   try {
     const [target] = await withJobRole(db, (transaction) =>
       transaction.unsafe<Row>(
@@ -787,7 +796,7 @@ async function billingJobDiscover(
     Deno.env.get('MAINTENANCE_WORKER_ID') ??
     `maintenance-${crypto.randomUUID()}`;
   const db = dependencies.database ?? database();
-  const jobContext = context(workerId, id, fence);
+  const jobContext = billingContext(workerId, id, jobId, fence);
   try {
     const [target] = await withJobRole(db, (transaction) =>
       transaction.unsafe<Row>(
@@ -949,7 +958,7 @@ async function billingJobRun(
     if (!orderId) {
       const result = await finishBillingJob(
         db,
-        context(workerId, id, fence),
+        billingContext(workerId, id, jobId, fence),
         jobId,
         fence,
         'manual_review',

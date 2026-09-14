@@ -3,6 +3,7 @@
 import {
   PROVIDER_ADAPTER_CONTRACT_VERSION,
   type ProviderOrderSnapshotDto,
+  type ProviderSkuItemDto,
   type ProviderOrderStatus,
   toMoneyAmount,
 } from '../../../packages/domain/src/contracts/billing.ts';
@@ -372,10 +373,10 @@ function status(value: unknown): ProviderOrderStatus {
     normalized === 'created'
   )
     return 'pending';
-  return 'failed';
+  return 'unknown';
 }
 
-function skuIds(value: unknown): readonly string[] | null {
+function parseSkuItems(value: unknown): readonly ProviderSkuItemDto[] | null {
   let parsed = value;
   if (typeof parsed === 'string') {
     try {
@@ -385,14 +386,17 @@ function skuIds(value: unknown): readonly string[] | null {
     }
   }
   if (!Array.isArray(parsed)) return [];
-  const ids: string[] = [];
+  const items: ProviderSkuItemDto[] = [];
   for (const item of parsed) {
     const object = objectValue(item);
     const id = text(object?.sku_id ?? object?.id ?? item);
     if (!id) return null;
-    ids.push(id);
+    const rawQuantity = object?.count ?? object?.quantity;
+    const quantity = rawQuantity === undefined ? 1 : number(rawQuantity);
+    if (quantity === null || quantity < 1) return null;
+    items.push({ external_sku_id: id, quantity });
   }
-  return ids;
+  return items;
 }
 
 /**
@@ -416,12 +420,12 @@ export function normalizeAfdianOrder(
     input.product_type === 0 || input.product_type === 1
       ? String(input.product_type)
       : text(input.product_type);
-  const skuItems = skuIds(input.sku_detail ?? input.sku_items);
+  const parsedSkuItems = parseSkuItems(input.sku_detail ?? input.sku_items);
   if (
     !externalOrderId ||
     !totalAmount ||
     !displayAmount ||
-    !skuItems ||
+    !parsedSkuItems ||
     !Number.isFinite(observedAt.getTime())
   )
     return null;
@@ -438,10 +442,7 @@ export function normalizeAfdianOrder(
     term_quantity: termQuantity,
     term_unit: termUnit,
     product_type: productType,
-    sku_items: skuItems.map((externalSkuId) => ({
-      external_sku_id: externalSkuId,
-      quantity: 1,
-    })),
+    sku_items: parsedSkuItems,
     total_amount: totalAmount,
     display_amount: displayAmount,
     currency,
@@ -458,6 +459,11 @@ export function toBillingOrderFacts(
     external_plan_id: snapshot.external_plan_id,
     product_type: snapshot.product_type,
     sku_ids: snapshot.sku_items.map((item) => item.external_sku_id),
+    sku_items: snapshot.sku_items,
+    quantity: snapshot.sku_items.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    ),
     purchase_months: snapshot.term_quantity,
     total_amount: snapshot.total_amount,
     show_amount: snapshot.display_amount,

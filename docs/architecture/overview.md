@@ -44,6 +44,6 @@ flowchart TD
 
 Admin API 与 Account API 在同一 Edge 源文件中分派，分别切换数据库 executor 角色。管理端资源请求由 Next.js 转发到该服务，管理端本身不直接连接 SQL。
 
-权益和配额写入通过共享数据库过程完成；业务 DTO 与密钥材料工具不承担第二套权益计算。BILL-04 建立了服务端定价 Checkout snapshot、Provider Order/Settlement 关系、hash-only Webhook Inbox 和可接管的 processing job 基础；BILL-05 增加 Provider-neutral 事实归一化、权威验证/结算、双游标对账与 `entitlement_apply` 统一写入；BILL-06 增加中央 Billing Admin wrapper、If-Match/operation_id 结案边界、Consumer 同源 BFF 与服务端权益授权辅助。没有 verified Provider mapping 时购买仍关闭，真实 Provider 与生产观察保持独立门槛。系统没有组织／团队服务、微服务消息总线或跨域自动登录服务。
+权益和配额写入通过共享数据库过程完成；业务 DTO 与密钥材料工具不承担第二套权益计算。BILL-04 建立了服务端定价 Checkout snapshot、Provider Order/Settlement 关系、hash-only Webhook Inbox 和可接管的 processing job 基础；BILL-05 增加 Provider-neutral 事实归一化、权威验证/结算、双游标对账与 `entitlement_apply` 统一写入；TASK-0301 的 forward-fix 对 Provider 事实执行显式 fail-closed 校验并保留 unknown 可恢复状态，TASK-0302 让过期 processing 可带新 fence 接管且 query/link/verify/finish/cursor 拒绝失效 lease；BILL-06 增加中央 Billing Admin wrapper、If-Match/operation_id 结案边界、Consumer 同源 BFF 与服务端权益授权辅助。没有 verified Provider mapping 时购买仍关闭，真实 Provider 与生产观察保持独立门槛。系统没有组织／团队服务、微服务消息总线或跨域自动登录服务。
 
 详见[身份与安全](modules/identity-security.md)、[权益](modules/entitlements.md)、[文件任务](modules/files-jobs.md)及[运行拓扑](deployment.md)。
