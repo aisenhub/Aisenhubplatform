@@ -33,7 +33,7 @@
 | [TASK-0101](phases/01-global-catalog-and-contract-foundation.md#task-0101) | RC-01 | TASK-0001 | F01,F03,F04,F05,F10,F11,F12 | 本地实现及回归PASS；外部门槛待验证 |
 | [TASK-0102](phases/01-global-catalog-and-contract-foundation.md#task-0102) | RC-01 | TASK-0001；具体政策依赖TASK-0003 | F03,F07,F08,F16 | 共享授予入口平台禁用与 Global Delete identity barrier PASS；完整锁表/策略/并发/Hosted 待验证 |
 | [TASK-0103](phases/01-global-catalog-and-contract-foundation.md#task-0103) | RC-01 | TASK-0101 | F05,F10,F11,F12,F15,F16,F17 | 本地实现及回归PASS；版本混跑及外部环境待验证 |
-| [TASK-0201](phases/02-redemption-v2-and-term-semantics.md#task-0201) | RC-02 | TASK-0101,TASK-0102 | F07 | 未开始 |
+| [TASK-0201](phases/02-redemption-v2-and-term-semantics.md#task-0201) | RC-02 | TASK-0101,TASK-0102 | F07 | Local forward-fix 与 5/5 专项断言 PASS；真实 Provider、并发恢复、Hosted/Staging/生产待验证 |
 | [TASK-0202](phases/02-redemption-v2-and-term-semantics.md#task-0202) | RC-02 | TASK-0201,TASK-0101 | F09,F05 | 未开始 |
 | [TASK-0203](phases/02-redemption-v2-and-term-semantics.md#task-0203) | RC-02 | TASK-0201,TASK-0003(D1) | F09,F15 | 阻塞（独立准备可做） |
 | [TASK-0301](phases/04-webhook-order-processing-and-billing-entitlement.md#task-0301) | RC-03 | TASK-0001,TASK-0101；完整snapshot集成依赖TASK-0201 | F01,F12 | 本地实现及回归PASS；外部门槛待验证 |

@@ -31,3 +31,9 @@ Consumer/Admin同源BFF、Supabase Auth/JWT/Session/MFA、受控executor与priva
 2026-09-14 的 Local forward-fix 已将共享 `private.entitlement_apply` 的授予前置冻结为：幂等重放先返回既有结果；读取目标账户的身份后，确保 `identity_lifecycle` 有 `active` 行并取 `FOR SHARE`；新授予再对 `platforms` 取 `FOR SHARE` 并要求 `status = active`，再对目标 `platform_accounts` 取 `FOR UPDATE`，随后校验账户和套餐。Global Delete 的 start 过程对同一身份行执行 upsert/update，因此删除门闩与新授予按数据库锁获得线性化顺序；Billing settlement、Admin Grant 与兑换码共用同一平台和身份闸门。
 
 这只是 TASK-0102 的可独立安全修复，不宣称完整锁表已完成：batch/code、checkout/order/job 及暂停/删除完整策略仍需 D3 和 Hosted/Staging 双连接证据后统一冻结。
+
+## TASK-0201 已落地的 Local forward-fix
+
+`supabase/migrations/20260914093019_repair_task_0201_checkout_snapshot.sql` 采用 expand-first forward-fix：不修改历史迁移，新增 Checkout Provider 合同快照字段，并由触发器在创建时从当前 mapping 填充或逐字段校验。快照覆盖 external plan/type、SKU 全集与数量、Provider 期限、展示价、实付价和 price version；Checkout 自身的商品、期限、价格、币种、price version 与 mapping version 也必须和当前发布商品/mapping 一致。已发布或已被 Checkout 引用的 mapping 合同字段不得原地修改；需要调价时应发布新的 mapping 版本。
+
+结算过程只读取 Checkout 快照。旧 Checkout 若缺少这些证据不会从当前 mapping 猜测，而是进入 `contract_conflict`/人工复核。Local 专项同时证明快照落库、客户端金额注入被拒绝和 mapping 原地改价被拒绝；真实 Provider、旧付款链接迟到、并发发布/调价及 Hosted/Staging 仍不在本地证据范围内。
