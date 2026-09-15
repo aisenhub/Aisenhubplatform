@@ -74,29 +74,9 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | 正式 npm scope、Registry 地址和发布权限 | SDK/Registry 发布验证 | 本地 tarball、manifest 和消费项目构建 |
 | 生产区域、预算、平台数量和负载 | 容量、性能和运营阈值 | 默认负载下的 Local 压力探针 |
 
-## 决策更新记录模板
+## 开发与发布边界
 
-每次改变本 ADR 的安全、数据或跨模块边界时，至少记录：
-
-```md
-### YYYY-MM-DD：变更标题
-
-- 变更原因：
-- 代码/迁移证据：
-- 新旧行为：
-- 受影响文档、接口和消费者：
-- 验证命令及结果：
-- 未解决的风险或外部输入：
-```
-
-### 2026-09-11：取消 Staging 环境
-
-- 变更原因：项目开发流程统一采用本地 Supabase 验证，发布时直接迁移到 Production，不再维护独立 Staging 环境。
-- 代码/迁移证据：本次只同步运维、测试、架构、Agent 规则和 Admin Origins 提示；已有迁移中的 `staging` 值未改动，避免未经数据盘点的数据库契约变更。
-- 新旧行为：旧流程包含 Local、Staging、Production；新流程为 Local → Production。Preview 仅作为 Local 的开发预览，不作为独立 Supabase 环境。
-- 受影响文档、接口和消费者：`docs/guides/operations.md`、`docs/guides/testing.md`、文件任务架构说明、项目 Agent 规则和 Admin Origins 页面提示。
-- 验证命令及结果：`pnpm docs:check` 通过；`pnpm --filter admin typecheck` 通过。
-- 未解决的风险或外部输入：数据库仍接受历史 `staging` origin。若要从数据库层禁止该值，需要另行盘点数据并提交向前迁移，不能通过本次文档同步直接移除。
+环境、任务分支、自动合并授权与生产门槛见[ADR-0002](0002-development-release-environments.md)和[Agent开发与发布流程](../guides/development-release-workflow.md)。本文件维护当前安全与数据决策，不追加过程变更记录；实际验证证据独立记录，不把规则声明当作验收结果。
 
 ## Rejected alternatives
 

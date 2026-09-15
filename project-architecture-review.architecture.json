@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Aisenhubplatform — 当前架构审查",
+    "locale": "zh-CN",
+    "output": "project-architecture-review.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aisenhub/Aisenhubplatform.git",
+      "revision": "11cddbab4519860ced3811b09446608c304bd39d"
+    },
+    "views": [
+      {
+        "id": "request-path",
+        "label": "请求与授权路径",
+        "focus": ["admin-browser", "consumer-browser", "next-bff", "account-api", "auth", "pg-domain"],
+        "note": "从浏览器经同源 BFF、中央 API 到身份与私有领域函数。"
+      },
+      {
+        "id": "data-and-jobs",
+        "label": "文件与后台任务",
+        "focus": ["account-api", "pg-domain", "storage", "maintenance"],
+        "note": "查看私有 Storage 代理、租约 fencing 与清理/对账路径。"
+      },
+      {
+        "id": "billing-control",
+        "label": "计费事实链",
+        "focus": ["provider", "billing-webhook", "pg-domain", "maintenance"],
+        "note": "查看 webhook Inbox、权威验证/结算与可接管处理任务。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "admin-browser",
+      "type": "frontend",
+      "label": "Admin 浏览器",
+      "sublabel": "apps/admin",
+      "tag": "同源控制台",
+      "sources": [{ "path": "apps/admin/app/layout.tsx" }],
+      "pos": [40, 150],
+      "size": [150, 64]
+    },
+    {
+      "id": "consumer-browser",
+      "type": "frontend",
+      "label": "Consumer 浏览器",
+      "sublabel": "template-preview",
+      "tag": "参考页面",
+      "sources": [{ "path": "apps/template-preview/app/layout.tsx" }],
+      "pos": [40, 350],
+      "size": [150, 64]
+    },
+    {
+      "id": "next-bff",
+      "type": "backend",
+      "label": "Next.js 同源 BFF",
+      "sublabel": "认证适配 / 资源代理",
+      "sources": [
+        { "path": "apps/admin/app/api/v1/[...path]/route.ts" },
+        { "path": "apps/template-preview/app/api/v1/[...path]/route.ts" },
+        { "path": "packages/account-auth-nextjs/src/index.ts" }
+      ],
+      "pos": [280, 250],
+      "size": [170, 72]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Supabase Auth",
+      "sublabel": "共享身份 / 会话",
+      "tag": "JWT + PKCE + MFA",
+      "sources": [
+        { "path": "packages/account-auth/src/index.ts" },
+        { "path": "packages/account-auth-nextjs/src/index.ts" }
+      ],
+      "pos": [530, 100],
+      "size": [170, 72]
+    },
+    {
+      "id": "account-api",
+      "type": "backend",
+      "label": "Account / Admin API",
+      "sublabel": "Deno Edge Function",
+      "tag": "显式权限矩阵",
+      "sources": [{ "path": "supabase/functions/account-api/index.ts" }],
+      "pos": [530, 275],
+      "size": [180, 72]
+    },
+    {
+      "id": "pg-domain",
+      "type": "database",
+      "label": "PostgreSQL private 领域层",
+      "sublabel": "RLS / 领域函数 / 审计",
+      "tag": "单一业务写入口",
+      "sources": [
+        { "path": "supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql" },
+        { "path": "supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql" },
+        { "path": "docs/reference/contracts.md" }
+      ],
+      "pos": [800, 275],
+      "size": [210, 78]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "私有 Storage",
+      "sublabel": "platform-config-files",
+      "tag": "服务端代理",
+      "sources": [{ "path": "docs/architecture/modules/files-jobs.md" }],
+      "pos": [800, 430],
+      "size": [180, 72]
+    },
+    {
+      "id": "maintenance",
+      "type": "backend",
+      "label": "Maintenance Worker",
+      "sublabel": "清理 / 对账 / 恢复",
+      "tag": "lease + fence",
+      "sources": [{ "path": "supabase/functions/maintenance/index.ts" }],
+      "pos": [1080, 420],
+      "size": [190, 72]
+    },
+    {
+      "id": "billing-webhook",
+      "type": "backend",
+      "label": "Billing Webhook",
+      "sublabel": "验签 / Inbox / 入队",
+      "tag": "hash-only",
+      "sources": [{ "path": "supabase/functions/billing-webhook/index.ts" }],
+      "pos": [1080, 170],
+      "size": [190, 72]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "Payment Provider",
+      "sublabel": "Provider-neutral 适配",
+      "tag": "外部事实源",
+      "sources": [{ "path": "docs/proposals/subscription-billing-centralization/design.md" }],
+      "pos": [1190, 80],
+      "size": [160, 72]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "服务端信任边界：浏览器不持有 SQL / Storage 写凭据",
+      "wraps": ["next-bff", "account-api", "maintenance", "billing-webhook"]
+    },
+    {
+      "kind": "region",
+      "label": "Supabase 托管边界",
+      "wraps": ["auth", "account-api", "pg-domain", "storage", "maintenance", "billing-webhook"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "admin-to-bff",
+      "from": "admin-browser",
+      "to": "next-bff",
+      "label": "同源管理请求",
+      "variant": "emphasis"
+    },
+    {
+      "id": "consumer-to-bff",
+      "from": "consumer-browser",
+      "to": "next-bff",
+      "label": "同源 Consumer BFF",
+      "variant": "emphasis"
+    },
+    {
+      "id": "bff-to-auth",
+      "from": "next-bff",
+      "to": "auth",
+      "label": "登录 / 刷新 / 回调",
+      "variant": "security"
+    },
+    {
+      "id": "bff-to-api",
+      "from": "next-bff",
+      "to": "account-api",
+      "label": "服务端 SDK / 代理",
+      "labelAt": [490, 360]
+    },
+    {
+      "id": "api-to-auth",
+      "from": "account-api",
+      "to": "auth",
+      "label": "验证 JWT / Principal",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "api-to-domain",
+      "from": "account-api",
+      "to": "pg-domain",
+      "label": "短事务：private 领域函数",
+      "variant": "emphasis",
+      "labelDy": 60
+    },
+    {
+      "id": "api-to-storage",
+      "from": "account-api",
+      "to": "storage",
+      "label": "上传 / 下载 / 删除代理",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "webhook-to-domain",
+      "from": "billing-webhook",
+      "to": "pg-domain",
+      "label": "hash-only Inbox / processing job",
+      "variant": "emphasis",
+      "fromSide": "left",
+      "toSide": "right",
+      "labelAt": [1150, 260]
+    },
+    {
+      "id": "provider-to-webhook",
+      "from": "provider",
+      "to": "billing-webhook",
+      "label": "签名 webhook",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [1228, 76]
+    },
+    {
+      "id": "maintenance-to-domain",
+      "from": "maintenance",
+      "to": "pg-domain",
+      "label": "lease / fence / 对账",
+      "variant": "emphasis",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "maintenance-to-storage",
+      "from": "maintenance",
+      "to": "storage",
+      "label": "清理 / 对象核对",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "right",
+      "labelDy": 24
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "当前边界",
+      "items": [
+        "身份全局共享，业务账户按 platform_id 隔离",
+        "浏览器通过同源 BFF 访问中央 API，不直连 SQL 或私有 Storage",
+        "Platform Key 证明平台调用方，不是跨平台用户令牌"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "领域一致性",
+      "items": [
+        "权益、配额、兑换与文件状态由 PostgreSQL private 函数统一写入",
+        "Account、Admin、Maintenance 使用分离 executor 与短事务",
+        "文件写入把数据库状态与 Storage 事实拆成可恢复状态机"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "计费事实链",
+      "items": [
+        "Checkout snapshot、Provider Order/Settlement 与 hash-only Inbox 保留事实边界",
+        "Provider webhook 进入可接管 processing job，再由领域入口落权益",
+        "没有 verified Provider mapping 时购买保持关闭"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "审查关注",
+      "items": [
+        "schedule.json 只是任务元数据，不证明生产调度器已运行",
+        "仓库 CI 没有生产部署步骤，备份/恢复自动化存在明确门槛",
+        "Supabase Secret Key 仍是高影响运行时凭据，需要独立环境与日志脱敏"
+      ]
+    }
+  ]
+}

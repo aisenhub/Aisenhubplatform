@@ -4,7 +4,9 @@
 
 ## 环境约定
 
-本项目不设置 Staging 环境。开发、联调和数据库验证统一使用本地 Supabase；本地验证通过并取得上线授权后，才迁移和部署到 Production。Production 只做发布后的 smoke check、日志和指标观察，不把生产数据复制回 Local。
+Staging默认保留数据，不随部署重置；测试按独立批次隔离并受控清理，旧数据升级和空库安装分别验证。全库重建必须单独明确授权，数据分类及清理检查见[开发流程第5.2节](development-release-workflow.md#52-staging数据保留批次清理与重建)。
+
+项目采用Local本机Supabase Docker、独立Hosted Staging、独立Hosted Production。按[Agent 开发与发布流程](development-release-workflow.md)分级：R0无需应用部署，R1可记录理由后跳过Staging，R2/R3必须Hosted验收；所有实际生产部署均有对应生产前门槛。生产数据不得作为Local或日常Staging fixture，环境是否已配置以实际证据为准。
 
 | 命令 | 范围与条件 |
 | --- | --- |
@@ -31,6 +33,6 @@
 
 ## 结果解释
 
-CI 运行格式、lint、typecheck、build、单元测试、运行时导入和文档合同检查，不运行整个 SQL/API/浏览器/Production 验证矩阵；需要 Supabase 的验证在 Local 执行，Production 只在获得上线授权后做发布观察。
+CI 运行格式、lint、typecheck、build、单元测试、运行时导入和文档合同检查，不运行整个 SQL/API/浏览器/Hosted 验证矩阵。Local完成逻辑、SQL和定向验证；R2/R3还须在Hosted Staging验证实际部署链路，不能将本地reset/清理脚本直接改URL指向远程。Production在获授权后做受控部署与观察，不承担破坏性回归。
 
-测试结果在任务回复或测试平台报告中说明执行环境、命令、成功／失败／未运行及限制。隔离 mock 测试不代表真实 Auth、Storage 或生产恢复成功。
+测试结果在任务回复或测试平台报告中说明环境、版本、命令、断言与限制，仅使用PASS/FAIL/NOT_RUN/PARTIAL/BLOCKED；不适用另写范围和理由。Local、CI、Hosted Staging、Provider与生产观察分别记录。隔离mock不代表真实Auth、Storage或生产恢复成功，历史PASS不能代替当前版本验收。

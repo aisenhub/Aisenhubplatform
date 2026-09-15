@@ -24,6 +24,8 @@ Storage bucket 为私有的 platform-config-files。上传和下载由服务端�
 
 ## 调度与发布边界
 
+环境与发布规则已采用[ADR-0002](../decisions/0002-development-release-environments.md)：Local本机Supabase Docker → 独立Hosted Staging与测试前端 → 生产前门槛 → 独立Hosted Production与生产前端。变更分级、低风险例外与验收见[Agent开发与发布流程](../guides/development-release-workflow.md)。这是工作规则，不能据此推断云项目或部署流水线已经建立。
+
 [schedule.json](../../supabase/functions/maintenance/schedule.json)是任务调用元数据；它不安装定时器，也不证明外部调度器已运行。仓库 CI 执行质量检查、构建、单元测试及合同检查，没有生产部署步骤。
 
 备份屏障和墓碑协议在数据库中实现，联合备份脚本位于本地测试目录。仓库没有完整的生产备份调度、独立加密目标配置或自动恢复部署工具。[运维操作](../guides/operations.md)说明已有入口。

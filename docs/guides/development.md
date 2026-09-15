@@ -1,5 +1,7 @@
 # 本地开发
 
+开始任务先读[Agent 开发与发布流程](development-release-workflow.md)，明确变更分级、消费者和验收路线。此页仅说明本地启动；本地通过不自动允许生产部署，R2/R3还需Hosted Staging验收。
+
 先核对[工具链](../reference/toolchain.md)。在仓库根目录安装锁定依赖：
 
 ```powershell
