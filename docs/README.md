@@ -17,6 +17,7 @@
 - [API](reference/api.md)
 - [跨模块合同](reference/contracts.md)
 - [SDK 与 Registry](reference/sdk.md)
+- [新平台用户系统接入手册（Agent与维护者）](guides/platform-onboarding.md)
 - [数据模型](reference/data-model.md)
 - [配置](reference/configuration.md)
 - [工具链](reference/toolchain.md)

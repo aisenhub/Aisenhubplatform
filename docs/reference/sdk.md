@@ -1,5 +1,7 @@
 # SDK 与 Registry
 
+新平台按[接入手册](../guides/platform-onboarding.md)安装、配置、接线与验收；本页维护包职责及精确入口。相关实现变化时同时检查手册示例和用户配置步骤。
+
 | 包 | 当前职责 |
 | --- | --- |
 | @kit/account-auth | Auth 合同、认证意图与校验 |
