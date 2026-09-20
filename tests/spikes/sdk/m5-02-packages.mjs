@@ -182,7 +182,7 @@ writeFileSync(
         '@kit/account-server': dependency(
           packageFiles.get('@kit/account-server'),
         ),
-        '@supabase/ssr': '^0.12.4',
+        '@supabase/ssr': '0.12.6',
         '@supabase/supabase-js': '2.111.0',
         typescript: '7.0.2',
       },
