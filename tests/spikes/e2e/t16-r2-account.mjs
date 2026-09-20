@@ -203,6 +203,7 @@ function startProcess(command, args, env, label) {
     {
       cwd: repositoryRoot,
       env: { ...process.env, ...env },
+      detached: process.platform !== 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
     },
   );
@@ -2791,14 +2792,29 @@ async function cleanup() {
   await sql`delete from public.platforms where id = ${platformAId} or id = ${platformBId}`.catch(
     () => undefined,
   );
-  for (const child of processes)
-    if (child.pid)
+  for (const child of processes) {
+    if (!child.pid) continue;
+    if (process.platform === 'win32') {
       await execFileAsync('taskkill', [
         '/pid',
         String(child.pid),
         '/t',
         '/f',
       ]).catch(() => undefined);
+      continue;
+    }
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      // The process may already have exited.
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 250));
+    try {
+      process.kill(-child.pid, 'SIGKILL');
+    } catch {
+      // The process group may already have exited.
+    }
+  }
   if (browser) await browser.close().catch(() => undefined);
   await sql.end({ timeout: 5 }).catch(() => undefined);
 }
