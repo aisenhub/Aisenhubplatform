@@ -239,24 +239,6 @@ function stopChildren() {
   for (const child of children) terminateChild(child);
 }
 
-const formatTargets = [
-  'package.json',
-  'tooling/scripts/src/task-0801.mjs',
-  'tests/spikes/e2e/t16-r2-account.mjs',
-  'tests/spikes/sql/bill-05-settlement-concurrency.mjs',
-  'apps/template-preview/app/subscription/page.tsx',
-  'apps/admin/features/billing/central-billing-page.tsx',
-  'apps/admin/components/platform-context/platform-header.tsx',
-  'apps/admin/components/platform-context/platform-switcher.tsx',
-  'apps/admin/features/platform-settings/platform-settings-page.tsx',
-  'apps/admin/app/globals.css',
-  'supabase/functions/maintenance/index.ts',
-  'supabase/functions/maintenance/index.test.ts',
-  'supabase/functions/account-api/index.ts',
-  'supabase/functions/account-api/index.test.ts',
-  'docs/reference/contracts/admin.openapi.json',
-];
-
 async function main() {
   verifyLocalEnvironment();
   assertNoPlaceholderApiTest();
@@ -275,12 +257,7 @@ async function main() {
     DENO_BIN: deno,
   };
 
-  runPnpm('task changed-file format check', [
-    'exec',
-    'oxfmt',
-    '--check',
-    ...formatTargets,
-  ]);
+  runPnpm('repository format check', ['format:check']);
   runPnpm('lint', ['lint']);
   runPnpm('typecheck', ['typecheck']);
   runPnpm('build', ['build'], localEnv);
@@ -290,22 +267,7 @@ async function main() {
     '@kit/account-server',
     'test:unit',
   ]);
-  run(
-    'Edge function tests',
-    deno,
-    [
-      'test',
-      '--allow-env',
-      '--allow-net',
-      '--allow-read',
-      '--allow-import',
-      'supabase/functions/_shared/afdian.test.ts',
-      'supabase/functions/billing-webhook/index.test.ts',
-      'supabase/functions/maintenance/index.test.ts',
-      'supabase/functions/account-api/index.test.ts',
-    ],
-    localEnv,
-  );
+  runPnpm('Edge/API tests', ['test:api'], localEnv);
   runPnpm('database tests', ['test:db'], localEnv);
   runPnpm(
     'settlement concurrency',

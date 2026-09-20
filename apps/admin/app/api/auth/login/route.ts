@@ -8,7 +8,13 @@ import {
   writeAuthSessionCookies,
   type AuthCookieWriter,
 } from '@kit/account-auth-nextjs';
-import { config, errorBody, hasValidOrigin, requestId, responseBody } from '../_lib';
+import {
+  config,
+  errorBody,
+  hasValidOrigin,
+  requestId,
+  responseBody,
+} from '../_lib';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,8 +42,21 @@ export async function POST(request: NextRequest): Promise<Response> {
       password: body.password,
     });
     if (error || !data.session) {
-      const status = error?.status === 429 ? 429 : error?.status && error.status >= 500 ? 503 : 401;
-      return errorBody(status === 429 ? 'RATE_LIMITED' : status === 503 ? 'AUTHORIZATION_UNAVAILABLE' : 'UNAUTHORIZED', status, id);
+      const status =
+        error?.status === 429
+          ? 429
+          : error?.status && error.status >= 500
+            ? 503
+            : 401;
+      return errorBody(
+        status === 429
+          ? 'RATE_LIMITED'
+          : status === 503
+            ? 'AUTHORIZATION_UNAVAILABLE'
+            : 'UNAUTHORIZED',
+        status,
+        id,
+      );
     }
     const sessionId = sessionIdFromAccessToken(data.session.access_token);
     if (!sessionId) return errorBody('AUTHORIZATION_UNAVAILABLE', 503, id);

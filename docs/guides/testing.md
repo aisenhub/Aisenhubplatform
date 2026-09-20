@@ -19,7 +19,7 @@ Staging默认保留数据，不随部署重置；测试按独立批次隔离并�
 | pnpm runtime:probe | Node 与 Deno 共享导入边界 |
 | pnpm test:db | 本地 Supabase pgTAP，需要数据库服务 |
 | pnpm test:maintenance | Deno worker 测试；命令含 Windows 固定 Deno 路径 |
-| pnpm test:api | 占位入口，报告 NOT_RUN，不能当作 API 验证 |
+| pnpm test:api | 聚合运行 Account API、Maintenance、Billing Webhook 与 Provider 适配层的隔离 Deno 测试 |
 | pnpm test:e2e | 调用 tests/spikes/e2e/t16-r2-account.mjs，需要本地服务和浏览器条件 |
 | pnpm test:ops:m6-02-local | 本地备份模拟，操作本地夹具与临时产物 |
 
@@ -33,6 +33,6 @@ Staging默认保留数据，不随部署重置；测试按独立批次隔离并�
 
 ## 结果解释
 
-CI 运行格式、lint、typecheck、build、单元测试、运行时导入和文档合同检查，不运行整个 SQL/API/浏览器/Hosted 验证矩阵。Local完成逻辑、SQL和定向验证；R2/R3还须在Hosted Staging验证实际部署链路，不能将本地reset/清理脚本直接改URL指向远程。Production在获授权后做受控部署与观察，不承担破坏性回归。
+CI 运行全仓格式、lint、typecheck、build、单元测试、中央 Edge/API 隔离测试、运行时导入和文档合同检查，不运行整个 SQL/API/浏览器/Hosted 验证矩阵。Local完成逻辑、SQL和定向验证；R2/R3还须在Hosted Staging验证实际部署链路，不能将本地reset/清理脚本直接改URL指向远程。Production在获授权后做受控部署与观察，不承担破坏性回归。
 
 测试结果在任务回复或测试平台报告中说明环境、版本、命令、断言与限制，仅使用PASS/FAIL/NOT_RUN/PARTIAL/BLOCKED；不适用另写范围和理由。Local、CI、Hosted Staging、Provider与生产观察分别记录。隔离mock不代表真实Auth、Storage或生产恢复成功，历史PASS不能代替当前版本验收。

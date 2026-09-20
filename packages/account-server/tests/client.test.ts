@@ -73,7 +73,11 @@ describe('account API server client', () => {
               product_code: 'yearly',
               price: '199.00',
               currency: 'CNY',
-              term: { kind: 'finite', duration_value: 1, duration_unit: 'year' },
+              term: {
+                kind: 'finite',
+                duration_value: 1,
+                duration_unit: 'year',
+              },
               expires_at: '2026-09-11T12:30:00.000Z',
               provider_display_name: null,
               payment_url: null,

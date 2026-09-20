@@ -238,8 +238,14 @@ Deno.test('Afdian adapter refuses malformed page envelopes and invalid page numb
         { status: 200 },
       ),
   });
-  assertEquals((await malformed.listOrders(1)).status, 'temporarily_unavailable');
-  assertEquals((await malformed.listOrders(0)).status, 'temporarily_unavailable');
+  assertEquals(
+    (await malformed.listOrders(1)).status,
+    'temporarily_unavailable',
+  );
+  assertEquals(
+    (await malformed.listOrders(0)).status,
+    'temporarily_unavailable',
+  );
 });
 
 Deno.test('Afdian normalizer keeps only provider-neutral billing facts', () => {

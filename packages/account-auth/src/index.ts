@@ -111,7 +111,8 @@ export function safeReturnTo(value: string | null | undefined): string {
 function containsSensitiveReturnTo(value: string): boolean {
   try {
     const url = new URL(value, 'https://return-to.invalid');
-    const sensitive = /(?:access|refresh)?_?token|csrf|proof|otp|secret|password|mutation|body|code_verifier|state/iu;
+    const sensitive =
+      /(?:access|refresh)?_?token|csrf|proof|otp|secret|password|mutation|body|code_verifier|state/iu;
     return [...url.searchParams.keys()].some((key) => sensitive.test(key));
   } catch {
     return true;

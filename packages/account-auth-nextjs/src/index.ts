@@ -257,17 +257,13 @@ export function writeLogoutFence(input: {
   readonly prefix?: 'consumer' | 'admin';
 }): string {
   const fence = crypto.randomUUID();
-  input.writer.set(
-    authCookieNames(input.prefix).logoutFence,
-    fence,
-    {
-      ...baseCookieOptions({
-        secure: input.secure,
-        maxAge: AUTH_COOKIE_MAX_AGE.logoutFence,
-      }),
-      httpOnly: true,
-    },
-  );
+  input.writer.set(authCookieNames(input.prefix).logoutFence, fence, {
+    ...baseCookieOptions({
+      secure: input.secure,
+      maxAge: AUTH_COOKIE_MAX_AGE.logoutFence,
+    }),
+    httpOnly: true,
+  });
   return fence;
 }
 
@@ -305,17 +301,13 @@ export function writeAuthFlowFence(input: {
 }): void {
   if (input.fence !== NO_LOGOUT_FENCE && !isUuid(input.fence))
     throw new Error('AUTH_LOGOUT_FENCE_INVALID');
-  input.writer.set(
-    authCookieNames(input.prefix).authFlow,
-    input.fence,
-    {
-      ...baseCookieOptions({
-        secure: input.secure,
-        maxAge: AUTH_COOKIE_MAX_AGE.authFlow,
-      }),
-      httpOnly: true,
-    },
-  );
+  input.writer.set(authCookieNames(input.prefix).authFlow, input.fence, {
+    ...baseCookieOptions({
+      secure: input.secure,
+      maxAge: AUTH_COOKIE_MAX_AGE.authFlow,
+    }),
+    httpOnly: true,
+  });
 }
 
 export interface AuthCookieWriter {

@@ -56,48 +56,48 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
   const [unknownOutcome, setUnknownOutcome] = useState(false);
   const [message, setMessage] = useState<ResourceError | null>(null);
 
-  const load = useCallback(async (preserveMessage = false) => {
-    setLoading(true);
-    if (!preserveMessage) setMessage(null);
-    setUnknownOutcome(false);
-    try {
-      const [configResponse, plansResponse] = await Promise.all([
-        adminAuthSession.request(
-          resourcePath(platformId, '/subscription-config'),
-          { cache: 'no-store' },
-        ),
-        adminAuthSession.request(resourcePath(platformId, '/plans'), {
-          cache: 'no-store',
-        }),
-      ]);
-      const configPayload = await readApiPayload<SubscriptionConfig>(
-        configResponse,
-      );
-      const plansPayload = await readApiPayload<Plan[]>(plansResponse);
-      if (!configResponse.ok) {
-        setConfig(null);
-        setMessage(
-          resourceError(configResponse, configPayload, '订阅配置'),
-        );
-        return;
-      }
-      if (!plansResponse.ok) {
+  const load = useCallback(
+    async (preserveMessage = false) => {
+      setLoading(true);
+      if (!preserveMessage) setMessage(null);
+      setUnknownOutcome(false);
+      try {
+        const [configResponse, plansResponse] = await Promise.all([
+          adminAuthSession.request(
+            resourcePath(platformId, '/subscription-config'),
+            { cache: 'no-store' },
+          ),
+          adminAuthSession.request(resourcePath(platformId, '/plans'), {
+            cache: 'no-store',
+          }),
+        ]);
+        const configPayload =
+          await readApiPayload<SubscriptionConfig>(configResponse);
+        const plansPayload = await readApiPayload<Plan[]>(plansResponse);
+        if (!configResponse.ok) {
+          setConfig(null);
+          setMessage(resourceError(configResponse, configPayload, '订阅配置'));
+          return;
+        }
+        if (!plansResponse.ok) {
+          setConfig(configPayload?.data ?? null);
+          setMessage(resourceError(plansResponse, plansPayload, 'Plan 列表'));
+          return;
+        }
         setConfig(configPayload?.data ?? null);
-        setMessage(resourceError(plansResponse, plansPayload, 'Plan 列表'));
-        return;
+        setPlans(Array.isArray(plansPayload?.data) ? plansPayload.data : []);
+        if (!configPayload?.data) {
+          setMessage(caughtResourceError('订阅配置', '服务端返回了空配置。'));
+        }
+      } catch {
+        setConfig(null);
+        setMessage(caughtResourceError('订阅配置'));
+      } finally {
+        setLoading(false);
       }
-      setConfig(configPayload?.data ?? null);
-      setPlans(Array.isArray(plansPayload?.data) ? plansPayload.data : []);
-      if (!configPayload?.data) {
-        setMessage(caughtResourceError('订阅配置', '服务端返回了空配置。'));
-      }
-    } catch {
-      setConfig(null);
-      setMessage(caughtResourceError('订阅配置'));
-    } finally {
-      setLoading(false);
-    }
-  }, [platformId]);
+    },
+    [platformId],
+  );
 
   useEffect(() => {
     void load();
@@ -141,9 +141,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
         ) {
           setNeedsMfa(true);
         }
-        setMessage(
-          resourceError(response, payload, '订阅配置更新'),
-        );
+        setMessage(resourceError(response, payload, '订阅配置更新'));
         return;
       }
       if (payload?.data) setConfig(payload.data);
@@ -186,7 +184,8 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
           </p>
           <h2 className="mt-2">订阅商品配置</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            商品目录固定为 Free、Monthly、Yearly、Lifetime。Lifetime 是有限的 99 年权益；当前没有渠道映射时，商品仍会明确显示不可购买。
+            商品目录固定为 Free、Monthly、Yearly、Lifetime。Lifetime 是有限的 99
+            年权益；当前没有渠道映射时，商品仍会明确显示不可购买。
           </p>
         </div>
         {config ? (
@@ -231,7 +230,8 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
             <Alert>
               <AlertTitle>新购买已暂停</AlertTitle>
               <AlertDescription>
-                新的付费 Checkout 会立即被拒绝；已经成功购买的有限期权益仍按原结束时间继续生效。
+                新的付费 Checkout
+                会立即被拒绝；已经成功购买的有限期权益仍按原结束时间继续生效。
               </AlertDescription>
             </Alert>
           ) : null}
@@ -277,12 +277,14 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
                       value={plan.plan_id}
                       disabled={plan.status !== 'active'}
                     >
-                      {plan.name}（{plan.code}）{plan.status === 'archived' ? '（已归档）' : ''}
+                      {plan.name}（{plan.code}）
+                      {plan.status === 'archived' ? '（已归档）' : ''}
                     </option>
                   ))}
               </select>
               <p className="text-xs text-muted-foreground">
-                只能选择当前平台的 active paid Plan；切换会执行权益和旧批次前置检查。
+                只能选择当前平台的 active paid
+                Plan；切换会执行权益和旧批次前置检查。
               </p>
             </div>
             <Toggle
@@ -332,7 +334,8 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
                     current
                       ? {
                           ...current,
-                          subscription_copy_override: event.target.value || null,
+                          subscription_copy_override:
+                            event.target.value || null,
                         }
                       : current,
                   )
@@ -363,7 +366,11 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
             <Button onClick={() => void save()} disabled={saving || needsMfa}>
               {saving ? '保存中…' : '保存订阅配置'}
             </Button>
-            <Button variant="outline" onClick={() => void load()} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={() => void load()}
+              disabled={saving}
+            >
               重新读取
             </Button>
             <span className="text-xs text-muted-foreground">

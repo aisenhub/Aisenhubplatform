@@ -548,9 +548,7 @@ export function PlatformRedemptionBatchesPage() {
                   id="batch-product"
                   value={productCode}
                   onChange={(event) =>
-                    setProductCode(
-                      event.target.value as typeof productCode,
-                    )
+                    setProductCode(event.target.value as typeof productCode)
                   }
                   data-test="batch-product"
                 >

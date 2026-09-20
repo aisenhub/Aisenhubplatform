@@ -21,7 +21,7 @@
     "test:billing:crypto": "node tests/spikes/billing/crypto-vectors.mjs",
     "test:billing:crypto:deno": "D:\\APP\\Codex\\Deno\\bin\\deno.exe run tests/spikes/billing/crypto-vectors.mjs",
     "test:db": "pnpm run --filter scripts supabase db --local",
-    "test:api": "node tooling/scripts/src/not-enabled.mjs 'API tests' T04-T16",
+    "test:api": "node tooling/scripts/src/api-tests.mjs",
     "test:e2e:t12-r2": "node tests/spikes/e2e/t12-r2-admin.mjs",
     "test:e2e:t16-r2": "node tests/spikes/e2e/t16-r2-account.mjs",
     "test:api:t12-ordinary-proof": "node tests/spikes/api/t12-ordinary-proof.mjs",

@@ -27,7 +27,14 @@ function config(): { url: string; publishableKey: string; origin: string } {
 function result(data: unknown, status = 200): NextResponse {
   if (data && typeof data === 'object' && 'code' in data) {
     const code = (data as { code: string }).code;
-    const mapped = code === 'RATE_LIMITED' ? 'RATE_LIMITED' : code === 'MFA_REQUIRED' ? 'MFA_REQUIRED' : code === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : 'AUTHORIZATION_UNAVAILABLE';
+    const mapped =
+      code === 'RATE_LIMITED'
+        ? 'RATE_LIMITED'
+        : code === 'MFA_REQUIRED'
+          ? 'MFA_REQUIRED'
+          : code === 'UNAUTHORIZED'
+            ? 'UNAUTHORIZED'
+            : 'AUTHORIZATION_UNAVAILABLE';
     return errorBody(mapped, status);
   }
   return responseBody(data, status);

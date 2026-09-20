@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@kit/account-server": "workspace:*",
     "@kit/account-auth-nextjs": "workspace:*",
+    "@kit/account-server": "workspace:*",
     "@kit/domain": "workspace:*",
     "@kit/ui": "workspace:*",
     "next": "catalog:",

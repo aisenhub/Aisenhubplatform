@@ -14,7 +14,14 @@
       {
         "id": "request-path",
         "label": "请求与授权路径",
-        "focus": ["admin-browser", "consumer-browser", "next-bff", "account-api", "auth", "pg-domain"],
+        "focus": [
+          "admin-browser",
+          "consumer-browser",
+          "next-bff",
+          "account-api",
+          "auth",
+          "pg-domain"
+        ],
         "note": "从浏览器经同源 BFF、中央 API 到身份与私有领域函数。"
       },
       {
@@ -95,8 +102,12 @@
       "sublabel": "RLS / 领域函数 / 审计",
       "tag": "单一业务写入口",
       "sources": [
-        { "path": "supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql" },
-        { "path": "supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql" },
+        {
+          "path": "supabase/migrations/20260911141438_bill_06_admin_billing_and_consumer_authorization.sql"
+        },
+        {
+          "path": "supabase/tests/bill_06_admin_billing_and_consumer_authorization.sql"
+        },
         { "path": "docs/reference/contracts.md" }
       ],
       "pos": [800, 275],
@@ -138,7 +149,11 @@
       "label": "Payment Provider",
       "sublabel": "Provider-neutral 适配",
       "tag": "外部事实源",
-      "sources": [{ "path": "docs/proposals/subscription-billing-centralization/design.md" }],
+      "sources": [
+        {
+          "path": "docs/proposals/subscription-billing-centralization/design.md"
+        }
+      ],
       "pos": [1190, 80],
       "size": [160, 72]
     }
@@ -152,7 +167,14 @@
     {
       "kind": "region",
       "label": "Supabase 托管边界",
-      "wraps": ["auth", "account-api", "pg-domain", "storage", "maintenance", "billing-webhook"]
+      "wraps": [
+        "auth",
+        "account-api",
+        "pg-domain",
+        "storage",
+        "maintenance",
+        "billing-webhook"
+      ]
     }
   ],
   "connections": [

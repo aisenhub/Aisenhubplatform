@@ -32,7 +32,10 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Repository format check
+        run: pnpm run format:check
 
       - uses: denoland/setup-deno@v2
         with:
