@@ -3,10 +3,12 @@ import { spawn, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 
+import { denoCommand, pnpmCliPath } from './toolchain.mjs';
+
 const root = process.cwd();
 const isWindows = process.platform === 'win32';
-const pnpm = isWindows ? 'pnpm.cmd' : 'pnpm';
-const deno = process.env.DENO_BIN?.trim() || (isWindows ? 'deno.exe' : 'deno');
+const pnpmCli = pnpmCliPath();
+const deno = denoCommand();
 const evidence = [];
 const children = new Set();
 
@@ -63,7 +65,7 @@ function run(label, command, args = [], extra = {}) {
     cwd: root,
     env: childEnvironment(extra),
     stdio: 'inherit',
-    shell: isWindows && command === pnpm,
+    shell: false,
   });
   const code = result.status ?? 1;
   evidence.push({ label, command: [command, ...args].join(' '), code });
@@ -71,16 +73,20 @@ function run(label, command, args = [], extra = {}) {
 }
 
 function runPnpm(label, args, extra = {}) {
-  run(label, pnpm, args, extra);
+  run(label, process.execPath, [pnpmCli, ...args], extra);
 }
 
 function localSupabaseStatus() {
-  const result = spawnSync(pnpm, ['exec', 'supabase', 'status', '-o', 'env'], {
-    cwd: root,
-    env: childEnvironment(),
-    encoding: 'utf8',
-    shell: isWindows,
-  });
+  const result = spawnSync(
+    process.execPath,
+    [pnpmCli, 'exec', 'supabase', 'status', '-o', 'env'],
+    {
+      cwd: root,
+      env: childEnvironment(),
+      encoding: 'utf8',
+      shell: false,
+    },
+  );
   if (result.status !== 0)
     throw new Error('TASK-0801 could not read Local Supabase status');
   const values = {};
@@ -220,16 +226,20 @@ async function startAdminForT12(env) {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: env.SUPABASE_LOCAL_ANON_KEY,
     ACCOUNT_API_URL: 'http://127.0.0.1:8789',
   };
-  const child = spawn(pnpm, ['--filter', 'admin', 'start'], {
-    cwd: root,
-    env: childEnvironment({
-      ...adminEnv,
-      PORT: '3001',
-      ADMIN_ORIGIN: 'http://127.0.0.1:3001',
-    }),
-    stdio: 'ignore',
-    shell: isWindows,
-  });
+  const child = spawn(
+    process.execPath,
+    [pnpmCli, '--filter', 'admin', 'start'],
+    {
+      cwd: root,
+      env: childEnvironment({
+        ...adminEnv,
+        PORT: '3001',
+        ADMIN_ORIGIN: 'http://127.0.0.1:3001',
+      }),
+      stdio: 'ignore',
+      shell: false,
+    },
+  );
   children.add(child);
   await waitForHttp('http://127.0.0.1:3001/admin/login', child, 'Admin app');
   return child;
@@ -242,6 +252,7 @@ function stopChildren() {
 async function main() {
   verifyLocalEnvironment();
   assertNoPlaceholderApiTest();
+  runPnpm('toolchain versions', ['toolchain:check']);
 
   runPnpm('start Local Supabase', ['db:start']);
   runPnpm('reset Local database', ['db:reset', '--', '--yes']);

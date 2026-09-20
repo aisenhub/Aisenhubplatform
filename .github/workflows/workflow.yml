@@ -41,5 +41,8 @@ jobs:
         with:
           deno-version: v2.9.6
 
+      - name: Verify pinned toolchain
+        run: pnpm run toolchain:check
+
       - name: TASK-0801 full local verification
         run: pnpm run verify:task:0801

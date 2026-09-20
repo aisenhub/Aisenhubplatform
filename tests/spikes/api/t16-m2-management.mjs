@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { createHmac, randomBytes } from 'node:crypto';
 import postgres from 'postgres';
+import { denoCommand } from '../../../tooling/scripts/src/toolchain.mjs';
 
 const execFileAsync = promisify(execFile);
 const root = process.cwd();
@@ -148,7 +149,7 @@ async function apiRequest(path, options = {}) {
 
 async function startApi() {
   apiProcess = spawn(
-    'D:\\APP\\Codex\\Deno\\bin\\deno.exe',
+    denoCommand(),
     [
       'run',
       '--allow-env',

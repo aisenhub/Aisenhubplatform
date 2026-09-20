@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { denoCommand } from './toolchain.mjs';
+
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../../../',
@@ -21,12 +23,7 @@ if (nodeResult.status !== 0) {
   process.exit(nodeResult.status ?? 1);
 }
 
-const denoCommand =
-  process.env.DENO_BIN ??
-  (process.platform === 'win32'
-    ? 'D:\\APP\\Codex\\Deno\\bin\\deno.exe'
-    : 'deno');
-const denoResult = spawnSync(denoCommand, ['task', 'runtime:probe'], {
+const denoResult = spawnSync(denoCommand(), ['task', 'runtime:probe'], {
   cwd: root,
   env: process.env,
   stdio: 'inherit',

@@ -23,6 +23,6 @@ ReferenceApiCard 展示接口调用示例，不执行示例代码。账户、文
 
 ## 共享 UI 与安装元数据
 
-packages/ui 提供 shadcn、Makerkit 和业务展示组件；Admin 与参考页面分别维护样式和页面结构。
+packages/ui 提供 shadcn、经审查的上游适配组件和业务展示组件；Admin 与参考页面分别维护样式和页面结构。`src/makerkit/` 仅保留为上游来源追踪目录名，不代表当前产品品牌或业务模型。
 
 registry/templates.json 只登记当前参考应用真实存在的页面和同源 Auth callback；注册表不虚构 Signup、Forgot Password 等尚未提供的页面。安装校验脚本会对这些路径和 Secret 边界做一致性检查。相关源码与使用限制见[SDK 与 Registry](../../reference/sdk.md)。

@@ -5,7 +5,7 @@
 ## 1. 基线和已有工作区改动
 
 - 计划研究起点：`1372fa72de08440d08f944b075c2c02868710814`。编写期间外部工作新增 `d701d331d3774c80986a124b0d1916ac457f09c5`，将旧proposal归档；该提交不是本任务产生。业务源码未因此变化。
-- 原有未跟踪文件8个：`project-architecture-review.architecture.json`、`project-architecture-review.html`、四张1440x900/2048x1320明暗截图、`project-architecture-review.visual-check.html`、`project-architecture-review.visual-check.json`。均标记**已有工作区改动**，本轮不修改、不纳入计划提交。
+- 计划编写时曾有8个根目录架构审查生成物；后续工程结构整理已将同组 architecture JSON、review/visual-check HTML/JSON 与四张截图统一迁入 `artifacts/architecture-review/`。该位置更新不改变当时的计划边界与证据含义。
 - 研究起点和归档后均未发现未提交的迁移/配置；`20260913112306_bill_16_billing_worker_cron.sql`是已跟踪历史迁移，最后相关提交`639dd6a`，禁止将其当待提交草稿重写。
 - 不读取/复制.env或真实Secret值，不修改新归档；旧阶段状态只引用[历史验证](../../archive/subscription-billing-centralization/verification-record.md)。
 
