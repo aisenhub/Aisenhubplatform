@@ -3,24 +3,59 @@ begin;
 select plan(5);
 
 select ok(
-  pg_has_role('postgres', 'account_executor', 'set'),
-  'hosted postgres can enter account_executor'
+  exists (
+    select 1
+    from pg_auth_members membership
+    join pg_roles granted_role on granted_role.oid = membership.roleid
+    join pg_roles member_role on member_role.oid = membership.member
+    where member_role.rolname = 'postgres'
+      and granted_role.rolname = 'account_executor'
+  ),
+  'hosted postgres is an explicit member of account_executor'
 );
 select ok(
-  pg_has_role('postgres', 'admin_executor', 'set'),
-  'hosted postgres can enter admin_executor'
+  exists (
+    select 1
+    from pg_auth_members membership
+    join pg_roles granted_role on granted_role.oid = membership.roleid
+    join pg_roles member_role on member_role.oid = membership.member
+    where member_role.rolname = 'postgres'
+      and granted_role.rolname = 'admin_executor'
+  ),
+  'hosted postgres is an explicit member of admin_executor'
 );
 select ok(
-  pg_has_role('postgres', 'job_executor', 'set'),
-  'hosted postgres can enter job_executor'
+  exists (
+    select 1
+    from pg_auth_members membership
+    join pg_roles granted_role on granted_role.oid = membership.roleid
+    join pg_roles member_role on member_role.oid = membership.member
+    where member_role.rolname = 'postgres'
+      and granted_role.rolname = 'job_executor'
+  ),
+  'hosted postgres is an explicit member of job_executor'
 );
 select ok(
-  pg_has_role('postgres', 'recovery_executor', 'set'),
-  'hosted postgres can enter recovery_executor'
+  exists (
+    select 1
+    from pg_auth_members membership
+    join pg_roles granted_role on granted_role.oid = membership.roleid
+    join pg_roles member_role on member_role.oid = membership.member
+    where member_role.rolname = 'postgres'
+      and granted_role.rolname = 'recovery_executor'
+  ),
+  'hosted postgres is an explicit member of recovery_executor'
 );
 select ok(
-  pg_has_role('postgres', 'billing_ingress', 'set'),
-  'hosted postgres can enter billing_ingress'
+  exists (
+    select 1
+    from pg_auth_members membership
+    join pg_roles granted_role on granted_role.oid = membership.roleid
+    join pg_roles member_role on member_role.oid = membership.member
+    where member_role.rolname = 'postgres'
+      and granted_role.rolname = 'billing_ingress'
+  ),
+  'hosted postgres is an explicit member of billing_ingress'
 );
 
 select * from finish();
