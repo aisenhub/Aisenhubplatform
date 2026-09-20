@@ -71,7 +71,12 @@ function sha256(path) {
 function packageJsonFromTarball(path, destination) {
   rmSync(destination, { recursive: true, force: true });
   mkdirSync(destination, { recursive: true });
-  runDirect('tar.exe', ['-xf', path, '-C', destination]);
+  runDirect(process.platform === 'win32' ? 'tar.exe' : 'tar', [
+    '-xf',
+    path,
+    '-C',
+    destination,
+  ]);
   return JSON.parse(
     readFileSync(join(destination, 'package', 'package.json'), 'utf8'),
   );
