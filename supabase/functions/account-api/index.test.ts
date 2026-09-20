@@ -1174,13 +1174,16 @@ Deno.test('Account API verifies ES256 JWTs from cached Supabase JWKS', async () 
   const previousSecret = Deno.env.get('ACCOUNT_API_JWT_SECRET');
   const originalFetch = globalThis.fetch;
   let authCalls = 0;
+  let jwksHadSignal = false;
   const { token, jwk } = await signedEcdsaJwt();
   Deno.env.set('SUPABASE_URL', 'http://local-jwks');
   Deno.env.set('SUPABASE_ANON_KEY', 'local-publishable-key');
   Deno.env.delete('ACCOUNT_API_JWT_SECRET');
   globalThis.fetch = async (input, init) => {
-    if (String(input) === 'http://local-jwks/auth/v1/.well-known/jwks.json')
+    if (String(input) === 'http://local-jwks/auth/v1/.well-known/jwks.json') {
+      jwksHadSignal = init?.signal instanceof AbortSignal;
       return new Response(JSON.stringify({ keys: [jwk] }), { status: 200 });
+    }
     if (String(input) === 'http://local-jwks/auth/v1/user') {
       authCalls += 1;
       return new Response(JSON.stringify({ user: { id: userId } }), {
@@ -1209,6 +1212,7 @@ Deno.test('Account API verifies ES256 JWTs from cached Supabase JWKS', async () 
     const valid = await request(token);
     assertEquals(valid.status, 200);
     assertEquals(authCalls, 0);
+    assertEquals(jwksHadSignal, true);
     const tokenParts = token.split('.');
     tokenParts[2] = `${tokenParts[2]!.startsWith('A') ? 'B' : 'A'}${tokenParts[2]!.slice(1)}`;
     const tampered = tokenParts.join('.');
@@ -1224,6 +1228,64 @@ Deno.test('Account API verifies ES256 JWTs from cached Supabase JWKS', async () 
     else Deno.env.set('SUPABASE_ANON_KEY', previousKey);
     if (previousSecret === undefined) Deno.env.delete('ACCOUNT_API_JWT_SECRET');
     else Deno.env.set('ACCOUNT_API_JWT_SECRET', previousSecret);
+  }
+});
+
+Deno.test('Account API aborts stalled Auth verification at the configured deadline', async () => {
+  const previousUrl = Deno.env.get('SUPABASE_URL');
+  const previousKey = Deno.env.get('SUPABASE_ANON_KEY');
+  const previousTimeout = Deno.env.get('ACCOUNT_API_AUTH_TIMEOUT_MS');
+  const originalFetch = globalThis.fetch;
+  Deno.env.set('SUPABASE_URL', 'http://timeout-auth');
+  Deno.env.set('SUPABASE_ANON_KEY', 'local-publishable-key');
+  Deno.env.set('ACCOUNT_API_AUTH_TIMEOUT_MS', '5');
+  globalThis.fetch = (_input, init) =>
+    new Promise<Response>((_resolve, reject) => {
+      const signal = init?.signal;
+      if (!signal) {
+        reject(new Error('missing auth timeout signal'));
+        return;
+      }
+      if (signal.aborted) {
+        reject(signal.reason ?? new Error('aborted'));
+        return;
+      }
+      signal.addEventListener(
+        'abort',
+        () => reject(signal.reason ?? new Error('aborted')),
+        { once: true },
+      );
+    });
+  try {
+    const response = await handleRequest(
+      new Request(
+        'http://local/functions/v1/account-api/v1/account/principal',
+        {
+          headers: {
+            Authorization: `Bearer ${fakeJwt()}`,
+            'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          },
+        },
+      ),
+      {
+        database: fakeDatabase(),
+        platformKeySecret: 'm3-test-platform-secret',
+      },
+    );
+    assertEquals(response.status, 503);
+    assertEquals(
+      (await response.json()).error.code,
+      'AUTHORIZATION_UNAVAILABLE',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousUrl === undefined) Deno.env.delete('SUPABASE_URL');
+    else Deno.env.set('SUPABASE_URL', previousUrl);
+    if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY');
+    else Deno.env.set('SUPABASE_ANON_KEY', previousKey);
+    if (previousTimeout === undefined)
+      Deno.env.delete('ACCOUNT_API_AUTH_TIMEOUT_MS');
+    else Deno.env.set('ACCOUNT_API_AUTH_TIMEOUT_MS', previousTimeout);
   }
 });
 

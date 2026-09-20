@@ -32,7 +32,10 @@ import {
   billingSwitchEnabled,
   deriveCheckoutToken,
 } from '../_shared/billing.ts';
-import { buildAfdianCheckoutUrl } from '../_shared/afdian.ts';
+import {
+  buildAfdianCheckoutUrl,
+  providerUrlsRequireHttps,
+} from '../_shared/afdian.ts';
 
 type Row = Record<string, unknown>;
 
@@ -101,6 +104,31 @@ class ApiFault extends Error {
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const DEFAULT_AUTH_FETCH_TIMEOUT_MS = 5_000;
+const MAX_AUTH_FETCH_TIMEOUT_MS = 30_000;
+
+function authFetchTimeoutMs(): number {
+  const configured = Number.parseInt(
+    Deno.env.get('ACCOUNT_API_AUTH_TIMEOUT_MS') ?? '',
+    10,
+  );
+  return Number.isSafeInteger(configured) && configured > 0
+    ? Math.min(configured, MAX_AUTH_FETCH_TIMEOUT_MS)
+    : DEFAULT_AUTH_FETCH_TIMEOUT_MS;
+}
+
+async function authFetch(
+  input: string | URL | Request,
+  init: RequestInit = {},
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), authFetchTimeoutMs());
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 const stringValue = (value: unknown): string | null =>
   typeof value === 'string' ? value : null;
 
@@ -235,7 +263,7 @@ async function loadJwks(): Promise<Map<string, JsonWebKey> | null> {
       const publishableKey =
         Deno.env.get('SUPABASE_ANON_KEY') ??
         Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
-      const response = await fetch(`${url}/auth/v1/.well-known/jwks.json`, {
+      const response = await authFetch(`${url}/auth/v1/.well-known/jwks.json`, {
         headers: publishableKey ? { apikey: publishableKey } : undefined,
         cache: 'no-store',
       });
@@ -360,7 +388,7 @@ async function verifyAccessTokenWithAuthRemote(
 
   let response: Response;
   try {
-    response = await fetch(`${url}/auth/v1/user`, {
+    response = await authFetch(`${url}/auth/v1/user`, {
       headers: {
         apikey: publishableKey,
         Authorization: `Bearer ${accessToken}`,
@@ -1049,6 +1077,7 @@ async function checkoutPaymentUrl(
       baseUrl:
         dependencies.afdianCheckoutBaseUrl ??
         Deno.env.get('AFDIAN_CHECKOUT_BASE_URL'),
+      requireHttps: providerUrlsRequireHttps(),
       productType: stringValue(facts.product_type) ?? '',
       externalPlanId: stringValue(facts.external_plan_id) ?? '',
       externalSkuIds: stringArrayValue(facts.external_sku_ids),

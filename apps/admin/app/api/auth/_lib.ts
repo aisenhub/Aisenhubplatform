@@ -14,6 +14,8 @@ import {
   type AuthCookieWriter,
 } from '@kit/account-auth-nextjs';
 
+import { accountApiSignal } from '../_lib/account-api';
+
 export const dynamic = 'force-dynamic';
 
 export function config(): {
@@ -56,6 +58,7 @@ export async function issueAdminRecentProof(input: {
           'X-Mfa-Factor-Id': input.factorId,
         },
         cache: 'no-store',
+        signal: accountApiSignal(),
       },
     );
     const payload = (await response.json().catch(() => null)) as {

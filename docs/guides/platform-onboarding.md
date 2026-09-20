@@ -120,6 +120,7 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 # 中央account-api直接Deno运行默认8000，必须与实际启动端口一致
 ACCOUNT_API_URL=http://127.0.0.1:8000
+ACCOUNT_API_TIMEOUT_MS=5000
 ACCOUNT_PLATFORM_KEY=
 ```
 
@@ -129,6 +130,7 @@ TEMPLATE_ORIGIN=https://platform-staging.example.invalid
 NEXT_PUBLIC_SUPABASE_URL=https://auth-staging.example.invalid
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ACCOUNT_API_URL=https://api-staging.example.invalid/functions/v1/account-api
+ACCOUNT_API_TIMEOUT_MS=5000
 ACCOUNT_PLATFORM_KEY=
 ```
 
@@ -136,6 +138,7 @@ ACCOUNT_PLATFORM_KEY=
 | --- | --- | --- |
 | `TEMPLATE_ORIGIN` | 新平台部署方；服务端配置 | 与浏览器Origin精确一致；域名含路径不合法，不混localhost/127.0.0.1 |
 | `ACCOUNT_API_URL` | 中央部署方；新平台服务端 | 直接Deno用实际端口；Hosted包含`/functions/v1/account-api`，不再加业务`/v1`；BFF/SDK会追加它 |
+| `ACCOUNT_API_TIMEOUT_MS` | 新平台服务端配置 | BFF/SDK 到中央 Account API 的 deadline，当前参考实现默认 5000ms、最大 30000ms；超时按上游不可用 fail closed |
 | `ACCOUNT_PLATFORM_KEY` | 中央Admin签发；新平台服务端Secret | 选择平台依据；不得放NEXT_PUBLIC、URL、客户端存储或聊天 |
 | `NEXT_PUBLIC_SUPABASE_URL` | 中央Auth项目配置；允许公开 | 必须与API及Key同环境 |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 对应Auth项目公开Key | 允许公开不是业务平台Key；不能替换为secret/service_role |
@@ -228,7 +231,7 @@ app/
 | 刷新 | [refresh路由](../../apps/template-preview/app/api/auth/refresh/route.ts) | definitive invalid与暂时不可用区分、session对应、Cookie fence |
 | 退出 | [logout路由](../../apps/template-preview/app/api/auth/logout/route.ts) | 远程撤销状态与本地退出区分，防止迟到刷新复活 |
 | 回调 | [callback路由](../../apps/template-preview/app/api/auth/callback/route.ts) | 安全returnTo、code交换、flow fence；完整发起流程另验收 |
-| BFF | [白名单代理](../../apps/template-preview/app/api/v1/%5B...path%5D/route.ts) | 路径/方法白名单、Cookie会话、Origin/CSRF、服务端Key、no-store |
+| BFF | [白名单代理](../../apps/template-preview/app/api/v1/%5B...path%5D/route.ts) | 路径/方法白名单、Cookie会话、Origin/CSRF、服务端Key、no-store、Account API deadline；不得改成通用路径代理 |
 | 服务端业务授权 | [advanced-config](../../apps/template-preview/app/api/protected/advanced-config/route.ts) | 中央权益判定，不凭浏览器plan或本地到期时间放行 |
 | 近期认证（可选） | [start](../../apps/template-preview/app/api/auth/reauth/start/route.ts)、[verify](../../apps/template-preview/app/api/auth/reauth/verify/route.ts) | 独立事件证明、同用户/原业务session绑定、敏感动作不可自动重放 |
 

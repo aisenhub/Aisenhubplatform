@@ -28,6 +28,7 @@ export interface AfdianApiConfig {
   readonly apiToken: string;
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
+  readonly requireHttps?: boolean;
   readonly fetchImpl?: typeof fetch;
 }
 
@@ -44,15 +45,31 @@ const DEFAULT_WEBHOOK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwwdaCg1Bt+UKZKs0R54ylYnuANma49IpgoOwNmk3a0rhg/PQuhUJ0EOZSowIC44l0K3+fqGns3Ygi4AfmEfS4EKbdk1ahSxu7Zkp2rHMt+R9GarQFQkwSS/5x1dYiHNVMiR8oIXDgjmvxuNes2Cr8fw9dEF0xNBKdkKgG2qAawcN1nZrdyaKWtPVT9m2Hl0ddOO9thZmVLFOb9NVzgYfjEgI+KWX6aY19Ka/ghv/L4t1IXmz9pctablN5S0CRWpJW3Cn0k6zSXgjVdKm4uN7jRlgSRaf/Ind46vMCm3N2sgwxu/g3bnooW+db0iLo13zzuvyn727Q3UDQ0MmZcEWMQIDAQAB
 -----END PUBLIC KEY-----`;
 
+export function providerUrlsRequireHttps(): boolean {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  if (!supabaseUrl) return true;
+  try {
+    const url = new URL(supabaseUrl);
+    if (url.protocol !== 'http:') return true;
+    return !['localhost', '127.0.0.1', '::1', '[::1]'].includes(url.hostname);
+  } catch {
+    return true;
+  }
+}
+
 export function buildAfdianCheckoutUrl(input: {
   readonly baseUrl?: string;
   readonly productType: string;
+  readonly requireHttps?: boolean;
   readonly externalPlanId: string;
   readonly externalSkuIds?: readonly string[];
   readonly customOrderId: string;
 }): string {
   const url = new URL(input.baseUrl ?? DEFAULT_CHECKOUT_BASE_URL);
-  if (url.protocol !== 'https:' && url.protocol !== 'http:')
+  if (
+    (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+    (input.requireHttps && url.protocol !== 'https:')
+  )
     throw new Error('AFDIAN_CHECKOUT_URL_INVALID');
   if (!input.productType || !input.externalPlanId || !input.customOrderId)
     throw new Error('AFDIAN_CHECKOUT_FACTS_INCOMPLETE');
@@ -382,6 +399,12 @@ export function createAfdianProviderAdapter(
 ): AfdianProviderAdapter {
   if (!config.userId || !config.apiToken)
     throw new Error('PROVIDER_NOT_CONFIGURED');
+  const baseUrl = new URL(config.baseUrl ?? DEFAULT_API_BASE_URL);
+  if (
+    (baseUrl.protocol !== 'https:' && baseUrl.protocol !== 'http:') ||
+    (config.requireHttps && baseUrl.protocol !== 'https:')
+  )
+    throw new Error('AFDIAN_API_URL_INVALID');
   return {
     queryOrder(providerOrderNo) {
       const normalized = providerOrderNo.trim();
@@ -403,6 +426,7 @@ export function createAfdianProviderAdapterFromEnv(): AfdianProviderAdapter | nu
     userId,
     apiToken,
     baseUrl: Deno.env.get('AFDIAN_API_BASE_URL') ?? undefined,
+    requireHttps: providerUrlsRequireHttps(),
     timeoutMs: Number.parseInt(
       Deno.env.get('AFDIAN_API_TIMEOUT_MS') ?? String(DEFAULT_TIMEOUT_MS),
       10,

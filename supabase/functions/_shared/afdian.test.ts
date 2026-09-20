@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 
-import { assertEquals, assert } from 'jsr:@std/assert@1';
+import { assertEquals, assert, assertThrows } from 'jsr:@std/assert@1';
 
 import {
   buildAfdianCheckoutUrl,
@@ -10,6 +10,7 @@ import {
   parseAfdianWebhook,
   toBillingOrderFacts,
   verifyAfdianWebhookSignature,
+  providerUrlsRequireHttps,
 } from './afdian.ts';
 
 function base64(bytes: ArrayBuffer): string {
@@ -53,6 +54,51 @@ Deno.test('Afdian regular plan URLs omit sale-product SKU parameters', () => {
   assertEquals(url.searchParams.get('plan_id'), 'plan-yearly');
   assertEquals(url.searchParams.get('custom_order_id'), 'checkout-002');
   assertEquals(url.searchParams.get('sku'), null);
+});
+
+Deno.test('Afdian hosted provider URLs require HTTPS', () => {
+  assertThrows(
+    () =>
+      buildAfdianCheckoutUrl({
+        baseUrl: 'http://provider.test/order/create',
+        requireHttps: true,
+        productType: '0',
+        externalPlanId: 'plan-yearly',
+        customOrderId: 'checkout-https',
+      }),
+    Error,
+    'AFDIAN_CHECKOUT_URL_INVALID',
+  );
+  assertThrows(
+    () =>
+      createAfdianProviderAdapter({
+        userId: 'creator-user',
+        apiToken: 'fixture-token',
+        baseUrl: 'http://provider.test/api/open',
+        requireHttps: true,
+      }),
+    Error,
+    'AFDIAN_API_URL_INVALID',
+  );
+});
+
+Deno.test('Afdian provider URL policy follows the central Supabase transport', () => {
+  const previous = Deno.env.get('SUPABASE_URL');
+  try {
+    Deno.env.set('SUPABASE_URL', 'https://project.supabase.co');
+    assertEquals(providerUrlsRequireHttps(), true);
+    Deno.env.set('SUPABASE_URL', 'http://127.0.0.1:54321');
+    assertEquals(providerUrlsRequireHttps(), false);
+    Deno.env.set('SUPABASE_URL', 'http://staging.internal');
+    assertEquals(providerUrlsRequireHttps(), true);
+    Deno.env.set('SUPABASE_URL', 'not-a-url');
+    assertEquals(providerUrlsRequireHttps(), true);
+    Deno.env.delete('SUPABASE_URL');
+    assertEquals(providerUrlsRequireHttps(), true);
+  } finally {
+    if (previous === undefined) Deno.env.delete('SUPABASE_URL');
+    else Deno.env.set('SUPABASE_URL', previous);
+  }
 });
 
 Deno.test('Afdian API signing follows the documented canonical vector', () => {
