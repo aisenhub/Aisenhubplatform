@@ -58,6 +58,7 @@ const consumerAUrl = 'http://127.0.0.1:3110';
 const consumerBUrl = 'http://127.0.0.1:3111';
 const adminUrl = 'http://127.0.0.1:3112';
 const denoPath = process.env.DENO_BIN?.trim() || 'deno';
+const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const consumerDirectory = process.env.T16_CONSUMER_DIR?.trim() ?? '';
 
 if (!authUrl || !anonKey || !publishableKey || !databaseUrl)
@@ -260,7 +261,7 @@ async function startLocalServices() {
     ? ['--dir', consumerDirectory, 'start']
     : ['--dir', join(repositoryRoot, 'apps', 'template-preview'), 'start'];
   startProcess(
-    'pnpm.cmd',
+    pnpmCommand,
     consumerStartArgs,
     {
       ...appEnv,
@@ -271,7 +272,7 @@ async function startLocalServices() {
     'Consumer A',
   );
   startProcess(
-    'pnpm.cmd',
+    pnpmCommand,
     consumerStartArgs,
     {
       ...appEnv,
@@ -282,7 +283,7 @@ async function startLocalServices() {
     'Consumer B',
   );
   startProcess(
-    'pnpm.cmd',
+    pnpmCommand,
     ['--filter', 'admin', 'start'],
     { ...appEnv, PORT: '3112', ADMIN_ORIGIN: adminUrl },
     'Admin',
