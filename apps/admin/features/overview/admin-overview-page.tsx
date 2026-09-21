@@ -285,7 +285,7 @@ export function AdminOverviewPage() {
   return (
     <main className="shell wide-shell" data-test="admin-overview">
       <AdminPageHeader
-        title="管理员总览"
+        title="概览"
         description="只聚合当前真实 API 能有界返回的数据；任何数据源失败都会保留为失败，不会显示成绿色健康或假指标。"
         actions={
           <Button

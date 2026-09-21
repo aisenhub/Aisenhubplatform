@@ -600,7 +600,7 @@ export function PlatformFilesPage() {
     return (
       <section className="grid gap-5" data-test="platform-files-loading">
         <AdminPageHeader
-          title="配置文件"
+          title="文件"
           description="平台范围内的文件状态、策略和受控下载。"
         />
         <AsyncState state="loading" />
@@ -611,7 +611,7 @@ export function PlatformFilesPage() {
   return (
     <section className="grid gap-5" data-test="platform-files-page">
       <AdminPageHeader
-        title="配置文件"
+        title="文件"
         description="文件通过 Admin API 读取；浏览器不直连 Storage，不把列表消失当作物理删除或预算释放。"
         actions={
           <Button

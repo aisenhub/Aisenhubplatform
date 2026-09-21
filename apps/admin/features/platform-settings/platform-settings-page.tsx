@@ -155,7 +155,7 @@ export function PlatformSettingsPage() {
   return (
     <section className="grid gap-5" data-test="platform-settings-page">
       <AdminPageHeader
-        title="平台设置"
+        title="基本设置"
         description="General 只保留平台自身的可更新状态；name 和 code 是服务端标识，本页只读展示。"
       />
 

@@ -422,7 +422,7 @@ export function CentralBillingPage() {
       data-test="central-billing-page"
     >
       <AdminPageHeader
-        title="中央 Billing"
+        title="Billing"
         description="查看 Provider 订单、结算状态、积压指标与人工处理原因。所有重查都经过近期 MFA、If-Match 和服务端幂等入口。"
         actions={<Button onClick={() => void load()}>刷新</Button>}
       />

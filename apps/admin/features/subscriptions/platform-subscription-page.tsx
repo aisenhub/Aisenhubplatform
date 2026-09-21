@@ -381,7 +381,7 @@ export function PlatformSubscriptionPage() {
   return (
     <section className="grid gap-5" data-test="platform-subscription-page">
       <AdminPageHeader
-        title="订阅投影"
+        title="订阅"
         description="当前 Admin API 没有订阅列表端点，本页只读取指定平台账户的真实投影；账户由平台范围搜索选择，不手输 Platform ID。"
         actions={
           <Button

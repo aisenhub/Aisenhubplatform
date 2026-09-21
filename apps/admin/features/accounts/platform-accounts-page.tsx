@@ -69,15 +69,13 @@ export function PlatformAccountsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const query = searchParams.get('q') ?? '';
+  const selectedAccountId = searchParams.get('selected');
   const [draftQuery, setDraftQuery] = useState(query);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [state, setState] = useState<ResourceLoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<ResourceError | null>(null);
   const [refreshError, setRefreshError] = useState<ResourceError | null>(null);
-  const [inspectorAccountId, setInspectorAccountId] = useState<string | null>(
-    null,
-  );
   const [inspectorState, setInspectorState] = useState<DetailState>('idle');
   const [inspectorError, setInspectorError] = useState<ResourceError | null>(
     null,
@@ -93,6 +91,7 @@ export function PlatformAccountsPage() {
   );
   const loadGeneration = useRef(0);
   const detailGeneration = useRef(0);
+  const lastInspectorTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => setDraftQuery(query), [query]);
 
@@ -171,47 +170,80 @@ export function PlatformAccountsPage() {
     void load(false);
   }, [load]);
 
-  async function openInspector(accountId: string) {
-    const generation = ++detailGeneration.current;
-    setInspectorAccountId(accountId);
-    setInspectorState('loading');
-    setInspectorError(null);
-    setInspectedAccount(null);
-    try {
-      const response = await adminAuthSession.request(
-        resourcePath(
-          platform.platform_id,
-          `/accounts/${encodeURIComponent(accountId)}`,
-        ),
-        { cache: 'no-store' },
-      );
-      const payload = await readApiPayload<Account>(response);
-      if (generation !== detailGeneration.current) return;
-      if (!response.ok || !payload?.data) {
-        setInspectorError(resourceError(response, payload, '账户详情'));
+  const loadInspector = useCallback(
+    async (accountId: string) => {
+      const generation = ++detailGeneration.current;
+      setInspectorState('loading');
+      setInspectorError(null);
+      setInspectedAccount(null);
+      try {
+        const response = await adminAuthSession.request(
+          resourcePath(
+            platform.platform_id,
+            `/accounts/${encodeURIComponent(accountId)}`,
+          ),
+          { cache: 'no-store' },
+        );
+        const payload = await readApiPayload<Account>(response);
+        if (generation !== detailGeneration.current) return;
+        if (!response.ok || !payload?.data) {
+          setInspectorError(resourceError(response, payload, '账户详情'));
+          setInspectorState('error');
+          return;
+        }
+        setInspectedAccount(payload.data);
+        setInspectorState('success');
+      } catch (caught) {
+        if (generation !== detailGeneration.current) return;
+        setInspectorError({
+          title: '账户详情读取失败',
+          description: sessionErrorMessage(caught),
+          requestId: null,
+          technicalDetail: null,
+        });
         setInspectorState('error');
-        return;
       }
-      setInspectedAccount(payload.data);
-      setInspectorState('success');
-    } catch (caught) {
-      if (generation !== detailGeneration.current) return;
-      setInspectorError({
-        title: '账户详情读取失败',
-        description: sessionErrorMessage(caught),
-        requestId: null,
-        technicalDetail: null,
-      });
-      setInspectorState('error');
+    },
+    [platform.platform_id],
+  );
+
+  useEffect(() => {
+    if (!selectedAccountId) {
+      detailGeneration.current += 1;
+      setInspectorState('idle');
+      setInspectorError(null);
+      setInspectedAccount(null);
+      return;
     }
-  }
+    void loadInspector(selectedAccountId);
+  }, [loadInspector, selectedAccountId]);
 
   function applyQuery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const params = new URLSearchParams(searchParams.toString());
     if (draftQuery.trim()) params.set('q', draftQuery.trim());
     else params.delete('q');
+    params.delete('selected');
     router.replace(`${pathname}${params.toString() ? `?${params}` : ''}`);
+  }
+
+  function selectAccount(
+    accountId: string,
+    trigger: HTMLButtonElement | null = null,
+  ) {
+    lastInspectorTriggerRef.current = trigger;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('selected', accountId);
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  function closeInspector() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('selected');
+    router.replace(`${pathname}${params.toString() ? `?${params}` : ''}`);
+    window.requestAnimationFrame(() =>
+      lastInspectorTriggerRef.current?.focus(),
+    );
   }
 
   function openAction(account: Account, action: AccountIntent['action']) {
@@ -273,8 +305,8 @@ export function PlatformAccountsPage() {
         technicalDetail: null,
       });
       await load(true);
-      if (inspectorAccountId === intent.accountId)
-        await openInspector(intent.accountId);
+      if (selectedAccountId === intent.accountId)
+        await loadInspector(intent.accountId);
       setIntent(null);
     } catch (caught) {
       if (caught instanceof SessionRetryRequiredError) {
@@ -310,14 +342,14 @@ export function PlatformAccountsPage() {
   }
 
   const activeAccount = accounts.find(
-    (account) => account.platform_account_id === inspectorAccountId,
+    (account) => account.platform_account_id === selectedAccountId,
   );
 
   return (
     <section className="grid gap-5" data-test="platform-accounts-page">
       <AdminPageHeader
-        title="平台账户"
-        description="在当前平台范围内搜索账户、查看权威状态，并从账户详情进入订阅投影。列表不额外发起逐行摘要请求。"
+        title="账户"
+        description="搜索当前平台账户、查看权威状态，并执行受控的账户操作。"
         actions={
           <Button
             variant="outline"
@@ -331,10 +363,14 @@ export function PlatformAccountsPage() {
         }
       />
 
-      <form className="panel gap-3" onSubmit={applyQuery}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="grid min-w-0 flex-1 gap-2" htmlFor="account-query">
-            <span className="text-sm font-medium">搜索账户</span>
+      <form
+        className="admin-resource-toolbar"
+        onSubmit={applyQuery}
+        role="search"
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="min-w-0 flex-1" htmlFor="account-query">
+            <span className="sr-only">搜索账户</span>
             <input
               id="account-query"
               type="search"
@@ -353,7 +389,12 @@ export function PlatformAccountsPage() {
               variant="ghost"
               onClick={() => {
                 setDraftQuery('');
-                router.replace(pathname);
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete('q');
+                params.delete('selected');
+                router.replace(
+                  `${pathname}${params.toString() ? `?${params}` : ''}`,
+                );
               }}
               data-test="accounts-query-reset"
             >
@@ -361,10 +402,9 @@ export function PlatformAccountsPage() {
             </Button>
           ) : null}
         </div>
-        <p className="text-xs text-muted-foreground">
-          当前查询由 Account API 在平台授权边界内执行；URL 保留
-          q，便于复制和返回。
-        </p>
+        <div className="admin-resource-toolbar-meta">
+          {query ? <span>筛选：{query}</span> : <span>最多显示 100 条</span>}
+        </div>
       </form>
 
       {refreshError ? (
@@ -400,19 +440,17 @@ export function PlatformAccountsPage() {
         </section>
       ) : null}
       {state === 'success' && accounts.length > 0 ? (
-        <section className="panel gap-4" data-test="accounts-table-section">
+        <section
+          className="admin-resource-surface grid gap-3"
+          data-test="accounts-table-section"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2>账户目录</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                显示 API 当前返回的 {accounts.length} 条账户记录。
+                当前结果 {accounts.length} 条
               </p>
             </div>
-            {query ? (
-              <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                q：{query}
-              </span>
-            ) : null}
           </div>
           <div
             className="data-table"
@@ -422,10 +460,10 @@ export function PlatformAccountsPage() {
             <Table className="min-w-[52rem]">
               <TableHeader>
                 <TableRow>
-                  <TableHead scope="col">账户 ID</TableHead>
-                  <TableHead scope="col">用户 ID</TableHead>
+                  <TableHead scope="col">账户</TableHead>
                   <TableHead scope="col">状态</TableHead>
                   <TableHead scope="col">创建时间</TableHead>
+                  <TableHead scope="col">更新时间</TableHead>
                   <TableHead scope="col" className="text-right">
                     操作
                   </TableHead>
@@ -442,14 +480,15 @@ export function PlatformAccountsPage() {
                       key={account.platform_account_id}
                       data-test={`account-row-${account.platform_account_id}`}
                     >
-                      <TableCell>
-                        <ResourceId value={account.platform_account_id} />
-                      </TableCell>
-                      <TableCell>
-                        <ResourceId
-                          value={account.user_id ?? '匿名账户'}
-                          label={account.user_id ? undefined : '匿名账户'}
-                        />
+                      <TableCell className="min-w-[20rem]">
+                        <div className="admin-resource-primary">
+                          <ResourceId value={account.platform_account_id} />
+                          <span className="admin-resource-secondary">
+                            {account.user_id
+                              ? `User · ${account.user_id}`
+                              : '匿名账户'}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <StatusBadge
@@ -461,17 +500,23 @@ export function PlatformAccountsPage() {
                       <TableCell className="text-left text-sm text-muted-foreground">
                         {formatUtc(account.created_at)}
                       </TableCell>
+                      <TableCell className="text-left text-sm text-muted-foreground">
+                        {formatUtc(account.updated_at)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <span className="flex flex-wrap justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              void openInspector(account.platform_account_id)
+                            onClick={(event) =>
+                              selectAccount(
+                                account.platform_account_id,
+                                event.currentTarget,
+                              )
                             }
                             data-test={`account-inspect-${account.platform_account_id}`}
                           >
-                            查看详情
+                            查看
                           </Button>
                           <Button
                             variant="outline"
@@ -508,9 +553,9 @@ export function PlatformAccountsPage() {
       ) : null}
 
       <ResourceInspector
-        open={Boolean(inspectorAccountId)}
+        open={Boolean(selectedAccountId)}
         onOpenChange={(open) => {
-          if (!open) setInspectorAccountId(null);
+          if (!open) closeInspector();
         }}
         title="账户详情"
         description="详情来自当前平台范围的单条 Account API；未返回的订阅、文件和活动信息不会被页面补造。"
@@ -540,7 +585,7 @@ export function PlatformAccountsPage() {
             requestId={inspectorError.requestId}
             technicalDetail={inspectorError.technicalDetail}
             onRetry={() => {
-              if (inspectorAccountId) void openInspector(inspectorAccountId);
+              if (selectedAccountId) void loadInspector(selectedAccountId);
             }}
           />
         ) : null}

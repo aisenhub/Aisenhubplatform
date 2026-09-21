@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ExternalLinkIcon, KeyboardIcon } from 'lucide-react';
+import { KeyboardIcon } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -18,12 +18,23 @@ import {
 } from '@kit/ui/command';
 import { Kbd } from '@kit/ui/kbd';
 
-import { adminNavigation } from './admin-navigation';
+import {
+  adminNavigation,
+  isAdminNavigationItemActive,
+  parseAdminPlatformPath,
+  platformNavigationGroups,
+} from './admin-navigation';
 
 export function AdminCommandMenu({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const platformRoute = parseAdminPlatformPath(pathname);
+  const platformItems = platformRoute
+    ? platformNavigationGroups(platformRoute.platformId).flatMap(
+        (group) => group.items,
+      )
+    : [];
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -69,42 +80,57 @@ export function AdminCommandMenu({ compact = false }: { compact?: boolean }) {
         open={open}
         onOpenChange={setOpen}
         title="快速跳转"
-        description="导航到管理员控制台中的页面或安全操作。"
+        description="导航到全局管理或当前平台的工作区。"
         className="sm:max-w-lg"
       >
         <Command>
-          <CommandInput placeholder="搜索页面或动作…" />
+          <CommandInput placeholder="搜索页面…" />
           <CommandList>
-            <CommandEmpty>没有匹配的页面或动作。</CommandEmpty>
-            <CommandGroup heading="导航">
+            <CommandEmpty>没有匹配的页面。</CommandEmpty>
+            {platformItems.length ? (
+              <>
+                <CommandGroup heading="当前平台">
+                  {platformItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = isAdminNavigationItemActive(pathname, item);
+                    return (
+                      <CommandItem
+                        key={item.key}
+                        value={`${item.label} ${item.description}`}
+                        data-test={`command-platform-${item.key}`}
+                        onSelect={() => navigate(item.href)}
+                      >
+                        <Icon />
+                        <span>{item.label}</span>
+                        {active ? (
+                          <CommandShortcut>当前页面</CommandShortcut>
+                        ) : null}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            ) : null}
+            <CommandGroup heading="全局导航">
               {adminNavigation.map((item) => {
                 const Icon = item.icon;
+                const active = isAdminNavigationItemActive(pathname, item);
                 return (
                   <CommandItem
-                    key={item.href}
+                    key={item.key}
                     value={`${item.label} ${item.description}`}
-                    data-test={`command-${item.href.split('/').pop()}`}
+                    data-test={`command-${item.key}`}
                     onSelect={() => navigate(item.href)}
                   >
                     <Icon />
                     <span>{item.label}</span>
-                    {pathname === item.href ? (
+                    {active ? (
                       <CommandShortcut>当前页面</CommandShortcut>
                     ) : null}
                   </CommandItem>
                 );
               })}
-            </CommandGroup>
-            <CommandSeparator />
-            <CommandGroup heading="安全操作">
-              <CommandItem
-                value="安全设置 MFA 身份验证"
-                data-test="command-security"
-                onSelect={() => navigate('/admin/mfa')}
-              >
-                <ExternalLinkIcon />
-                <span>打开安全设置</span>
-              </CommandItem>
             </CommandGroup>
           </CommandList>
         </Command>

@@ -40,7 +40,7 @@ export default function PlatformOverviewPage() {
   return (
     <section className="grid gap-5" data-test="platform-overview">
       <AdminPageHeader
-        title="平台概览"
+        title="概览"
         description="这里展示当前平台上下文的真实状态和下一步入口，不生成没有 API 来源的指标。"
         actions={
           <Button
