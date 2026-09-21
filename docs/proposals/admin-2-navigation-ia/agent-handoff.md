@@ -1,6 +1,6 @@
-# Admin 2.0 收尾交接
+# Admin 2.0 收尾记录
 
-> 用途：把当前未提交的 Admin 2.0 修改交给另一个 AI 完成最终审查、可选浏览器验收、commit 与 push。  
+> 用途：记录 Admin 2.0 修改的最终审查、验证、commit 与 push 结果。  
 > 本文是本任务当前唯一可信的收尾入口；设计与验证细节分别见 [design.md](design.md)、[plan.md](plan.md) 和 [verification-record.md](verification-record.md)。
 
 ## 1. 当前状态
@@ -9,10 +9,11 @@
 - 任务：Admin 2.0 Navigation IA
 - 风险分级：用户已明确指定本任务前端改动统一按 **R1**
 - 工作分支：`codex/admin-2-navigation-ia`
-- 当前 HEAD：`447e7bebf10a57c8dc65d3e3f029937858abeb56`
+- 当前 HEAD：`600af066c0f62db358a38c832305c4dd4e6c9db8`
 - 远程：`https://github.com/aisenhub/Aisenhubplatform.git`
-- upstream：当前任务分支尚未建立 upstream
-- 工作区：dirty，**尚未 stage、尚未 commit、尚未 push**
+- upstream：`origin/codex/admin-2-navigation-ia`
+- 工作区：仅保留 4 个并发规则文档改动；Admin 2.0 白名单已审查、commit、push
+- 最终 commit：`600af066c0f62db358a38c832305c4dd4e6c9db8`
 - 后端/API/Auth/SQL/支付/权限协议：本任务未有意修改
 - 浏览器人工验收：`NOT_RUN`，当前执行环境没有浏览器工具
 
