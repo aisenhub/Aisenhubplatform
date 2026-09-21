@@ -529,6 +529,7 @@ async function runResponsiveA11yMatrix() {
     'platform create dialog must move focus inside the dialog',
   );
   await dialog.getByRole('button', { name: '取消' }).click();
+  await dialog.waitFor({ state: 'hidden' });
   assert.equal(
     await page.evaluate(() => document.activeElement?.dataset.test),
     'platform-create-open',

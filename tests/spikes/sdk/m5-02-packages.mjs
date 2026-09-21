@@ -8,8 +8,13 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { delimiter, dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import {
+  denoCommand,
+  pnpmCliPath,
+} from '../../../tooling/scripts/src/toolchain.mjs';
 
 const repositoryRoot = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -35,22 +40,13 @@ const packageFiles = new Map([
   ['@kit/account-server', 'kit-account-server-0.1.0.tgz'],
 ]);
 
-function packageManager() {
-  if (process.platform !== 'win32') return 'pnpm';
-  const pathValue = process.env.Path ?? process.env.PATH ?? '';
-  for (const entry of pathValue.split(delimiter)) {
-    const candidate = join(entry, 'pnpm.cmd');
-    if (existsSync(candidate)) return candidate;
-  }
-  return 'pnpm.cmd';
-}
+const pnpmCli = pnpmCliPath();
 
-function run(command, args, cwd = repositoryRoot, env = {}) {
-  return execFileSync(command, args, {
+function runPnpm(args, cwd = repositoryRoot, env = {}) {
+  return execFileSync(process.execPath, [pnpmCli, ...args], {
     cwd,
     env: { ...process.env, ...env, COREPACK_ENABLE_DOWNLOAD_PROMPT: '0' },
     encoding: 'utf8',
-    shell: process.platform === 'win32',
     stdio: ['ignore', 'pipe', 'inherit'],
   });
 }
@@ -71,7 +67,12 @@ function sha256(path) {
 function packageJsonFromTarball(path, destination) {
   rmSync(destination, { recursive: true, force: true });
   mkdirSync(destination, { recursive: true });
-  runDirect('tar.exe', ['-xf', path, '-C', destination]);
+  runDirect(process.platform === 'win32' ? 'tar.exe' : 'tar', [
+    '-xf',
+    path,
+    '-C',
+    destination,
+  ]);
   return JSON.parse(
     readFileSync(join(destination, 'package', 'package.json'), 'utf8'),
   );
@@ -94,10 +95,10 @@ function assert(condition, message) {
 rmSync(artifactsRoot, { recursive: true, force: true });
 rmSync(consumerDirectory, { recursive: true, force: true });
 mkdirSync(artifactsRoot, { recursive: true });
-run(packageManager(), ['run', 'sdk:pack'], repositoryRoot, {
+runPnpm(['run', 'sdk:pack'], repositoryRoot, {
   M5_SDK_PACK_DESTINATION: firstDestination,
 });
-run(packageManager(), ['run', 'sdk:pack'], repositoryRoot, {
+runPnpm(['run', 'sdk:pack'], repositoryRoot, {
   M5_SDK_PACK_DESTINATION: secondDestination,
 });
 
@@ -181,7 +182,7 @@ writeFileSync(
         '@kit/account-server': dependency(
           packageFiles.get('@kit/account-server'),
         ),
-        '@supabase/ssr': '^0.12.4',
+        '@supabase/ssr': '0.12.6',
         '@supabase/supabase-js': '2.111.0',
         typescript: '7.0.2',
       },
@@ -224,12 +225,11 @@ writeFileSync(
     2,
   )}\n`,
 );
-run(
-  packageManager(),
+runPnpm(
   ['install', '--offline', '--ignore-scripts', '--no-frozen-lockfile'],
   consumerDirectory,
 );
-run(packageManager(), ['exec', 'tsc', '--noEmit'], consumerDirectory);
+runPnpm(['exec', 'tsc', '--noEmit'], consumerDirectory);
 runDirect(
   process.execPath,
   [
@@ -249,7 +249,7 @@ runDirect(
   consumerDirectory,
 );
 runDirect(
-  'D:\\APP\\Codex\\Deno\\bin\\deno.exe',
+  denoCommand(),
   ['run', '--no-check', 'src/edge.ts'],
   consumerDirectory,
 );

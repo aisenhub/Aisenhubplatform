@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
 
+import { accountApiSignal } from '../../_lib/account-api';
+
 export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
@@ -119,6 +121,7 @@ async function dispatch(request: NextRequest, context: RouteContext) {
             : {}),
         },
         body: request.method === 'GET' ? undefined : await request.text(),
+        signal: accountApiSignal(),
       },
     );
     return new Response(upstream.body, {

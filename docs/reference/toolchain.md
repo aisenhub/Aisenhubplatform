@@ -1,6 +1,17 @@
 # 工具链、上游来源与许可证
 
-当前依赖版本和上游来源以根 `package.json`、`pnpm-workspace.yaml`、`pnpm-lock.yaml`、[THIRD_PARTY_NOTICES](../../THIRD_PARTY_NOTICES) 和 [LICENSE](../../LICENSE) 为准。
+当前运行工具版本以 `tooling/toolchain.json` 为固定基线；`package.json`、`.nvmrc`、CI 与 Registry 的重复声明由 `pnpm toolchain:check` 自动核对。Node/pnpm 依赖解析以 `pnpm-lock.yaml` 为准，Deno/JSR 解析以 `deno.lock` 为准；上游来源与许可证见 [THIRD_PARTY_NOTICES](../../THIRD_PARTY_NOTICES) 和 [LICENSE](../../LICENSE)。
+
+## 固定运行工具
+
+| 工具 | 固定版本 | 约束方式 |
+|---|---:|---|
+| Node | 24.19.0 | `tooling/toolchain.json`、`.nvmrc`、`package.json#engines`、CI |
+| pnpm | 11.18.0 | `tooling/toolchain.json`、`packageManager`、`engines.pnpm`、CI |
+| Deno | 2.9.6 | `tooling/toolchain.json`、CI；运行脚本优先 `DENO_BIN`，否则从 PATH 解析 |
+| Supabase CLI | 2.111.0 | `tooling/toolchain.json`、根 devDependency；通过项目内 CLI 调用 |
+
+`pnpm toolchain:check` 同时检查声明和实际 CLI 版本。Deno 使用仓库根 `deno.lock` 且配置 `frozen: true`；需要有意更新 Deno 依赖时先显式以非 frozen 模式刷新 lock，再恢复 frozen 并执行 Edge/runtime 回归。
 
 ## 官方依据
 

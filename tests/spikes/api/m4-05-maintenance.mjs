@@ -3,6 +3,7 @@ import { execFile, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import postgres from 'postgres';
+import { denoCommand } from '../../../tooling/scripts/src/toolchain.mjs';
 
 const execFileAsync = promisify(execFile);
 const root = process.cwd();
@@ -54,7 +55,7 @@ async function storageRequest(path, init = {}) {
 
 async function startWorker() {
   worker = spawn(
-    'D:\\APP\\Codex\\Deno\\bin\\deno.exe',
+    denoCommand(),
     [
       'run',
       '--allow-env',
@@ -70,7 +71,7 @@ async function startWorker() {
         SUPABASE_URL: status.API_URL,
         SUPABASE_SECRET_KEY: status.SERVICE_ROLE_KEY,
         MAINTENANCE_DB_URL: status.DB_URL,
-        MAINTENANCE_JOB_TOKEN: jobToken,
+        MAINTENANCE_FILES_TOKEN: jobToken,
         MAINTENANCE_PORT: '8791',
       },
       stdio: ['ignore', 'ignore', 'pipe'],

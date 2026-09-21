@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process';
 
-const deno =
-  process.env.DENO_BIN?.trim() ||
-  (process.platform === 'win32' ? 'deno.exe' : 'deno');
+import { denoCommand } from './toolchain.mjs';
+
+const deno = denoCommand();
 
 const testFiles = [
   'supabase/functions/_shared/afdian.test.ts',

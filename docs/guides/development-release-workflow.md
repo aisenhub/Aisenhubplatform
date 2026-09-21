@@ -35,7 +35,7 @@ Local 前端连接 Hosted staging 属于明确标记的远程联调，不计纯 
 3. 核对 `git status --short`、分支和 HEAD；记录已有修改、未跟踪迁移/配置及所有权。不打印 Secret，不 reset/checkout/覆盖其他工作；同文件正在被其他工作修改时先协调或报告阻塞。
 4. 追踪数据写入口、调用链和消费者，按第 3 节给出 R0/R1/R2/R3 及理由。分类针对候选发布相对于当前生产版本的全部差异，不只看本任务最后一次提交。
 5. 列本地测试、staging 用例、生产门槛、回退方式和环境缺口。前置未过可继续独立准备，但不能绕过必需门槛。
-6. 复用固定工具链；Supabase CLI 版本从根 package.json 核对，当前固定 2.111.0。系统软件安装与缓存按 AGENTS；不因缺工具安装到 C 盘默认位置。
+6. 复用固定工具链；Node、pnpm、Deno、Supabase CLI 的统一基线见 `tooling/toolchain.json`，执行 `pnpm toolchain:check` 核对重复声明与实际 CLI。系统软件安装与缓存按 AGENTS；不因缺工具安装到 C 盘默认位置。
 
 启动说明最少包含：`任务 / 起始HEAD / 已有改动 / 分级及依据 / 受影响消费者 / 本地验证 / 是否需staging / 生产门槛 / 当前授权边界`。
 

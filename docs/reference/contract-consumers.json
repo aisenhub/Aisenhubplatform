@@ -10,7 +10,7 @@
         "contains": "private.subscription_products_list"
       },
       "edge": {
-        "path": "supabase/functions/account-api/index.ts",
+        "path": "supabase/functions/account-api/account.ts",
         "contains": "subscriptionProductDto"
       },
       "openapi": {
@@ -144,7 +144,7 @@
         "contains": "private.subscription_checkout_create"
       },
       "edge": {
-        "path": "supabase/functions/account-api/index.ts",
+        "path": "supabase/functions/account-api/account.ts",
         "contains": "subscriptionCheckoutDto"
       },
       "openapi": {
@@ -245,7 +245,7 @@
         "contains": "private.entitlement_read"
       },
       "edge": {
-        "path": "supabase/functions/account-api/index.ts",
+        "path": "supabase/functions/account-api/account.ts",
         "contains": "entitlementDto"
       },
       "openapi": {
@@ -336,7 +336,7 @@
         "contains": "private.admin_billing_order_read_v2"
       },
       "edge": {
-        "path": "supabase/functions/account-api/index.ts",
+        "path": "supabase/functions/account-api/admin.ts",
         "contains": "admin_billing_order_read_v3"
       },
       "openapi": {

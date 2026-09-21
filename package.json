@@ -1,10 +1,9 @@
 {
-  "name": "next-supabase-saas-kit-turbo-lite",
+  "name": "aisenhubplatform",
   "version": "1.0.0",
   "private": true,
   "author": {
-    "name": "MakerKit",
-    "url": "https://makerkit.dev"
+    "name": "Aisenhub"
   },
   "type": "module",
   "sideEffects": false,
@@ -19,7 +18,7 @@
     "test:unit": "turbo test:unit --cache-dir=.turbo",
     "test:upload": "node tests/spikes/upload/controlled-receiver.mjs",
     "test:billing:crypto": "node tests/spikes/billing/crypto-vectors.mjs",
-    "test:billing:crypto:deno": "D:\\APP\\Codex\\Deno\\bin\\deno.exe run tests/spikes/billing/crypto-vectors.mjs",
+    "test:billing:crypto:deno": "node tooling/scripts/src/deno-run.mjs run tests/spikes/billing/crypto-vectors.mjs",
     "test:db": "pnpm run --filter scripts supabase db --local",
     "test:api": "node tooling/scripts/src/api-tests.mjs",
     "test:e2e:t12-r2": "node tests/spikes/e2e/t12-r2-admin.mjs",
@@ -41,10 +40,11 @@
     "test:registry:m5-04": "node tests/spikes/registry/m5-04-template.mjs",
     "test:consumer:m5-05": "node tests/spikes/consumer/m5-05-install.mjs",
     "test:consumer:fe-r1-ui": "node tests/spikes/consumer/fe-r1-ui-ui-install.mjs",
-    "test:maintenance": "D:\\APP\\Codex\\Deno\\bin\\deno.exe test --allow-env --allow-net --allow-read --allow-import supabase/functions/maintenance/index.test.ts",
+    "test:maintenance": "node tooling/scripts/src/deno-run.mjs test --allow-env --allow-net --allow-read --allow-import supabase/functions/maintenance/index.test.ts",
     "verify:task:0801": "node tooling/scripts/src/task-0801.mjs",
     "test:e2e": "node tests/spikes/e2e/t16-r2-account.mjs",
     "runtime:probe": "pnpm run --filter scripts runtime:probe",
+    "toolchain:check": "node tooling/scripts/src/toolchain-check.mjs",
     "docs:check": "pnpm run --filter scripts docs:check",
     "contracts:check": "node tooling/scripts/src/openapi-check.mjs && node tooling/scripts/src/contract-consumer-check.mjs",
     "db:start": "pnpm run --filter scripts supabase start",
@@ -69,7 +69,8 @@
     "vitest": "catalog:"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": "24.19.0",
+    "pnpm": "11.18.0"
   },
   "packageManager": "pnpm@11.18.0"
 }

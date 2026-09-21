@@ -7,7 +7,7 @@
 ## 本轮基线冻结（2026-09-14）
 
 - 当前执行分支：`codex/billing-architecture-review`；代码基线提交：`e470d64c4fad86abe0696064239e993e53cee362`；`origin/main` 与该分支均已核对为同一提交。
-- 工作区已有未提交/未跟踪内容归属用户：`AGENTS.md`、基础文档与架构决策文档、`docs/proposals/subscription-billing-centralization/` 及 `project-architecture-review.*`；本轮代码提交未暂存或覆盖这些路径。
+- 当时工作区已有未提交/未跟踪内容归属用户：`AGENTS.md`、基础文档与架构决策文档、`docs/proposals/subscription-billing-centralization/` 及架构审查生成物；后续工程结构整理已将该组生成物统一迁入 `artifacts/architecture-review/`。本条仍记录当时的文件归属边界。
 - 本轮代码任务实际入口已核对：`pnpm typecheck`、`pnpm docs:check`、`pnpm contracts:check`、Domain/Account Server 单测、Account API Deno runner；不存在的 Consumer UI 单测不计 PASS。
 - 本任务不读取或记录 Secret，不执行写 DB、Provider、Staging、Production、真实支付或既有浏览器会话操作；远程配置、备份目标、真实运行网关和生产恢复证据仍为 NOT_RUN。
 

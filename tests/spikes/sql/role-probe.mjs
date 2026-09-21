@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import postgres from 'postgres';
+import { denoCommand as resolveDenoCommand } from '../../../tooling/scripts/src/toolchain.mjs';
 
 const directUrl = process.env.SUPABASE_DB_URL;
 const poolerHost = process.env.SUPABASE_POOLER_HOST ?? '127.0.0.1';
@@ -8,11 +9,7 @@ const poolerPort = process.env.SUPABASE_POOLER_PORT ?? '54329';
 const poolerTenant = process.env.SUPABASE_POOLER_TENANT ?? 'pooler-dev';
 const apiUrl = process.env.SUPABASE_LOCAL_URL;
 const anonKey = process.env.SUPABASE_LOCAL_ANON_KEY;
-const denoCommand =
-  process.env.DENO_BIN ??
-  (process.platform === 'win32'
-    ? 'D:\\APP\\Codex\\Deno\\bin\\deno.exe'
-    : 'deno');
+const denoCommand = resolveDenoCommand();
 const denoCache =
   process.env.DENO_DIR ??
   (process.platform === 'win32' ? 'E:\\AppData\\deno\\cache' : undefined);

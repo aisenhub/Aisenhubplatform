@@ -7,8 +7,10 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { pnpmCliPath } from '../../../tooling/scripts/src/toolchain.mjs';
 
 const repositoryRoot = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -21,15 +23,7 @@ const consumerDirectory =
     ? 'E:\\AppData\\m5-template-consumer'
     : join('/tmp', 'm5-template-consumer');
 
-function packageManager() {
-  if (process.platform !== 'win32') return 'pnpm';
-  const pathValue = process.env.Path ?? process.env.PATH ?? '';
-  for (const entry of pathValue.split(delimiter)) {
-    const candidate = join(entry, 'pnpm.cmd');
-    if (existsSync(candidate)) return candidate;
-  }
-  return 'pnpm.cmd';
-}
+const pnpmCli = pnpmCliPath();
 
 function run(command, args, cwd = repositoryRoot, env = {}) {
   return execFileSync(command, args, {
@@ -42,9 +36,12 @@ function run(command, args, cwd = repositoryRoot, env = {}) {
       pnpm_config_store_dir: 'E:\\AppData\\pnpm',
     },
     encoding: 'utf8',
-    shell: process.platform === 'win32',
     stdio: ['ignore', 'pipe', 'inherit'],
   });
+}
+
+function runPnpm(args, cwd = repositoryRoot, env = {}) {
+  return run(process.execPath, [pnpmCli, ...args], cwd, env);
 }
 
 function assert(condition, message) {
@@ -54,11 +51,11 @@ function assert(condition, message) {
 rmSync(consumerDirectory, { recursive: true, force: true });
 rmSync(artifactsDirectory, { recursive: true, force: true });
 mkdirSync(consumerDirectory, { recursive: true });
-run(packageManager(), ['run', 'sdk:pack'], repositoryRoot, {
+runPnpm(['run', 'sdk:pack'], repositoryRoot, {
   M5_SDK_PACK_DESTINATION: artifactsDirectory,
 });
 for (const packageName of ['@kit/shared', '@kit/ui']) {
-  run(packageManager(), [
+  runPnpm([
     '--filter',
     packageName,
     'pack',
@@ -157,12 +154,11 @@ writeFileSync(
   `packages: []\noverrides:\n  "@kit/shared": "file:${localTarballPath('@kit/shared')}"\n  "@kit/domain": "file:${localTarballPath('@kit/domain')}"\n  "@kit/account-auth": "file:${localTarballPath('@kit/account-auth')}"\n  "@kit/account-auth-nextjs": "file:${localTarballPath('@kit/account-auth-nextjs')}"\n  "@kit/account-server": "file:${localTarballPath('@kit/account-server')}"\n`,
 );
 
-run(
-  packageManager(),
+runPnpm(
   ['install', '--prefer-offline', '--no-frozen-lockfile'],
   consumerDirectory,
 );
-run(packageManager(), ['run', 'typecheck'], consumerDirectory);
+runPnpm(['run', 'typecheck'], consumerDirectory);
 // Invoke Next directly so Windows does not leave a nested pnpm.cmd shell
 // holding the build process open after Next's worker pool has exited.
 run(

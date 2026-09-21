@@ -10,6 +10,11 @@ const accountId = '00000000-0000-4000-8000-000000000006';
 const userId = '00000000-0000-4000-8000-000000000003';
 const fence = 4;
 const events: string[] = [];
+const ALL_TEST_CAPABILITY_TOKENS = {
+  files: 'test-job',
+  identity: 'test-job',
+  billing: 'test-job',
+} as const;
 
 type TestRow = Record<string, unknown>;
 type TestTransaction = {
@@ -189,7 +194,7 @@ Deno.test('maintenance worker authenticates and deletes outside the DB transacti
       body: JSON.stringify({ file_id: fileId }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
       storageAdapter: {
@@ -232,7 +237,7 @@ Deno.test('maintenance scheduler uses the fixed candidate batch', async () => {
       body: '{}',
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
       storageAdapter: {
@@ -260,7 +265,7 @@ Deno.test('maintenance worker rejects user-style requests and arbitrary routes',
     new Request('http://local/maintenance/v1/files/reconcile', {
       method: 'POST',
     }),
-    { jobToken: 'test-job', database: database() },
+    { capabilityTokens: ALL_TEST_CAPABILITY_TOKENS, database: database() },
   );
   assertEquals(unauthorized.status, 401);
   const notFound = await handleMaintenanceRequest(
@@ -272,9 +277,84 @@ Deno.test('maintenance worker rejects user-style requests and arbitrary routes',
       },
       body: '{}',
     }),
-    { jobToken: 'test-job', database: database() },
+    { capabilityTokens: ALL_TEST_CAPABILITY_TOKENS, database: database() },
   );
   assertEquals(notFound.status, 404);
+});
+
+Deno.test('maintenance capability tokens cannot cross runtime boundaries', async () => {
+  const capabilityTokens = {
+    files: 'files-token',
+    identity: 'identity-token',
+    billing: 'billing-token',
+  } as const;
+  const filesWithIdentityToken = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/files/reconcile', {
+      method: 'POST',
+      headers: { authorization: 'Bearer identity-token' },
+    }),
+    { capabilityTokens, database: database() },
+  );
+  assertEquals(filesWithIdentityToken.status, 401);
+
+  const identityWithBillingToken = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/accounts/retention', {
+      method: 'POST',
+      headers: { authorization: 'Bearer billing-token' },
+    }),
+    { capabilityTokens, database: database() },
+  );
+  assertEquals(identityWithBillingToken.status, 401);
+
+  const billingWithFilesToken = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/billing/jobs/run', {
+      method: 'POST',
+      headers: { authorization: 'Bearer files-token' },
+    }),
+    { capabilityTokens, database: database() },
+  );
+  assertEquals(billingWithFilesToken.status, 401);
+});
+
+Deno.test('maintenance ignores the legacy runtime token and requires the capability env token', async () => {
+  const previousLegacy = Deno.env.get('MAINTENANCE_JOB_TOKEN');
+  const previousIdentity = Deno.env.get('MAINTENANCE_IDENTITY_TOKEN');
+  try {
+    Deno.env.set('MAINTENANCE_JOB_TOKEN', 'legacy-token');
+    Deno.env.delete('MAINTENANCE_IDENTITY_TOKEN');
+    const legacy = await handleMaintenanceRequest(
+      new Request('http://local/maintenance/v1/idempotency/cleanup', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer legacy-token',
+          'content-type': 'application/json',
+        },
+        body: '{}',
+      }),
+      { database: database() },
+    );
+    assertEquals(legacy.status, 401);
+
+    Deno.env.set('MAINTENANCE_IDENTITY_TOKEN', 'identity-token');
+    const capability = await handleMaintenanceRequest(
+      new Request('http://local/maintenance/v1/idempotency/cleanup', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer identity-token',
+          'content-type': 'application/json',
+        },
+        body: '{}',
+      }),
+      { database: database() },
+    );
+    assertEquals(capability.status, 200);
+  } finally {
+    if (previousLegacy === undefined) Deno.env.delete('MAINTENANCE_JOB_TOKEN');
+    else Deno.env.set('MAINTENANCE_JOB_TOKEN', previousLegacy);
+    if (previousIdentity === undefined)
+      Deno.env.delete('MAINTENANCE_IDENTITY_TOKEN');
+    else Deno.env.set('MAINTENANCE_IDENTITY_TOKEN', previousIdentity);
+  }
 });
 
 Deno.test('maintenance exposes fenced Global Delete claim and step boundaries', async () => {
@@ -288,7 +368,11 @@ Deno.test('maintenance exposes fenced Global Delete claim and step boundaries', 
       },
       body: JSON.stringify({ job_id: jobId }),
     }),
-    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+    },
   );
   assertEquals(claim.status, 200);
   const step = await handleMaintenanceRequest(
@@ -307,7 +391,11 @@ Deno.test('maintenance exposes fenced Global Delete claim and step boundaries', 
         error_code: 'provider_timeout',
       }),
     }),
-    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+    },
   );
   assertEquals(step.status, 200);
   assertEquals(events, [
@@ -331,7 +419,11 @@ Deno.test('maintenance runs closed-account retention through the job role', asyn
       },
       body: '{}',
     }),
-    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+    },
   );
   assertEquals(response.status, 200);
   assertEquals((await response.json()).data.processed, 1);
@@ -356,7 +448,11 @@ Deno.test('maintenance claims and finishes billing jobs with a worker lease', as
       },
       body: JSON.stringify({ limit: 10 }),
     }),
-    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+    },
   );
   assertEquals(claim.status, 200);
   assertEquals((await claim.json()).data.jobs[0].fence, 3);
@@ -369,7 +465,11 @@ Deno.test('maintenance claims and finishes billing jobs with a worker lease', as
       },
       body: JSON.stringify({ job_id: jobId, fence: 3, state: 'completed' }),
     }),
-    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+    },
   );
   assertEquals(finish.status, 200);
   assertEquals(events, [
@@ -393,7 +493,11 @@ Deno.test('maintenance cleans only expired seven-day idempotency caches', async 
       },
       body: '{}',
     }),
-    { jobToken: 'test-job', workerId: 'test-worker', database: database() },
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+    },
   );
   assertEquals(response.status, 200);
   assertEquals((await response.json()).data.deleted, {
@@ -415,7 +519,7 @@ Deno.test('maintenance stop switches leave leases and provider state untouched',
       body: JSON.stringify({ limit: 10 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
       backgroundProcessingEnabled: false,
@@ -439,7 +543,7 @@ Deno.test('maintenance stop switches leave leases and provider state untouched',
       body: JSON.stringify({ job_id: jobId, order_id: jobId, fence: 3 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
       automaticSettlementEnabled: false,
@@ -509,7 +613,7 @@ Deno.test('maintenance backlog remains claimable after the worker switch restart
       body: JSON.stringify({ limit: 10 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: recoveryDatabase,
       backgroundProcessingEnabled: false,
@@ -528,7 +632,7 @@ Deno.test('maintenance backlog remains claimable after the worker switch restart
       body: JSON.stringify({ limit: 10 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: recoveryDatabase,
       backgroundProcessingEnabled: true,
@@ -548,7 +652,7 @@ Deno.test('maintenance backlog remains claimable after the worker switch restart
       body: JSON.stringify({ job_id: jobId, fence: 4, state: 'completed' }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: recoveryDatabase,
     },
@@ -576,7 +680,7 @@ Deno.test('maintenance can requeue only provider-contract discovery failures', a
       body: JSON.stringify({ job_id: jobId }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
     },
@@ -603,7 +707,7 @@ Deno.test('maintenance exposes an idempotent, reasoned dead-letter requeue', asy
       }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
     },
@@ -632,7 +736,7 @@ Deno.test('maintenance performs provider I/O outside the settlement transaction'
       body: JSON.stringify({ job_id: jobId, order_id: jobId, fence: 3 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
       billingProviderAdapter: {
@@ -723,7 +827,7 @@ Deno.test('maintenance discovers a webhook order before verification', async () 
       body: JSON.stringify({ job_id: jobId, fence: 3 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: discoveryDatabase,
       automaticSettlementEnabled: true,
@@ -819,7 +923,7 @@ Deno.test('maintenance run dispatches a claimed discovery job', async () => {
       body: JSON.stringify({ limit: 1 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: runDatabase,
       automaticSettlementEnabled: true,
@@ -917,7 +1021,7 @@ Deno.test('maintenance discovers provider pages before order verification', asyn
       body: '{}',
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: pageDatabase,
       automaticSettlementEnabled: true,
@@ -1011,7 +1115,7 @@ Deno.test('maintenance records provider page failures without advancing discover
       body: '{}',
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: failureDatabase,
       automaticSettlementEnabled: true,
@@ -1051,7 +1155,7 @@ Deno.test('maintenance gates Auth deletion on provider success before checkpoint
       body: JSON.stringify({ job_id: jobId, fence: 2, lease_fence: 1 }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: database(),
       authAdapter: {
@@ -1123,7 +1227,7 @@ Deno.test('maintenance evaluates and delivers billing observability alerts', asy
       body: JSON.stringify({ thresholds: { expired_lease_count: 2 } }),
     }),
     {
-      jobToken: 'test-job',
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
       workerId: 'test-worker',
       database: alertDatabase,
       billingAlertReceiver: {

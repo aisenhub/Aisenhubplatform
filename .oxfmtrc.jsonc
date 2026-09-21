@@ -14,8 +14,7 @@
     "dist",
     "build",
     ".next",
-    "project-architecture-review.html",
-    "project-architecture-review.visual-check.html",
+    "artifacts",
     "next-env.d.ts",
   ],
 }

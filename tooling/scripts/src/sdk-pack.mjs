@@ -8,8 +8,10 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { delimiter, dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { pnpmCliPath } from './toolchain.mjs';
 
 const repositoryRoot = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -26,21 +28,12 @@ const destination = resolve(
   process.env.M5_SDK_PACK_DESTINATION ?? 'artifacts/sdk',
 );
 
-function packageManager() {
-  if (process.platform !== 'win32') return 'pnpm';
-  const pathValue = process.env.Path ?? process.env.PATH ?? '';
-  for (const entry of pathValue.split(delimiter)) {
-    const candidate = join(entry, 'pnpm.cmd');
-    if (existsSync(candidate)) return candidate;
-  }
-  return 'pnpm.cmd';
-}
+const pnpmCli = pnpmCliPath();
 
-function run(command, args, cwd) {
-  execFileSync(command, args, {
+function runPnpm(args, cwd) {
+  execFileSync(process.execPath, [pnpmCli, ...args], {
     cwd,
     env: { ...process.env, COREPACK_ENABLE_DOWNLOAD_PROMPT: '0' },
-    shell: process.platform === 'win32',
     stdio: 'inherit',
   });
 }
@@ -99,8 +92,7 @@ for (const packageName of packageNames) {
   const dist = join(packageDirectory, 'dist');
   rmSync(dist, { recursive: true, force: true });
 
-  run(
-    packageManager(),
+  runPnpm(
     [
       'exec',
       'tsc',
@@ -137,8 +129,7 @@ for (const packageName of packageNames) {
   mkdirSync(rawPackageDestination, { recursive: true });
   mkdirSync(stagingDirectory, { recursive: true });
 
-  run(
-    packageManager(),
+  runPnpm(
     ['pack', '--pack-destination', rawPackageDestination],
     packageDirectory,
   );
@@ -165,11 +156,7 @@ for (const packageName of packageNames) {
     `${JSON.stringify(stableJson(stagedPackageJson), null, 2)}\n`,
   );
 
-  run(
-    packageManager(),
-    ['pack', '--pack-destination', destination],
-    stagingPackageDirectory,
-  );
+  runPnpm(['pack', '--pack-destination', destination], stagingPackageDirectory);
 
   const tarball = join(
     destination,
