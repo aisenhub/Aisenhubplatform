@@ -18,11 +18,17 @@ export interface Database {
   begin<T>(callback: (transaction: Transaction) => Promise<T>): Promise<T>;
 }
 
+export type MaintenanceCapability = 'files' | 'identity' | 'billing';
+
+export type MaintenanceCapabilityTokens = Readonly<
+  Partial<Record<MaintenanceCapability, string>>
+>;
+
 export interface MaintenanceDependencies {
   readonly database?: Database;
   readonly storageAdapter?: StorageAdapter;
   readonly authAdapter?: AuthAdminAdapter;
-  readonly jobToken?: string;
+  readonly capabilityTokens?: MaintenanceCapabilityTokens;
   readonly workerId?: string;
   readonly billingProviderAdapter?: BillingProviderAdapter;
   readonly backgroundProcessingEnabled?: boolean;

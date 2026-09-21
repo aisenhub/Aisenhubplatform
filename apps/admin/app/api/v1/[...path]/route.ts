@@ -1,9 +1,74 @@
 import { NextRequest } from 'next/server';
 import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
 
+import { accountApiSignal } from '../../_lib/account-api';
+
 export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
+
+const resourceId =
+  '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
+
+export function isAllowedAdminPath(method: string, path: string): boolean {
+  const id = resourceId;
+  const exact = (value: string) => path === `admin/api/v1/${value}`;
+  const matches = (value: string) =>
+    new RegExp(`^admin/api/v1/${value}$`, 'u').test(path);
+
+  if (method === 'GET') {
+    return (
+      exact('platforms') ||
+      matches(`platforms/${id}`) ||
+      matches(`platforms/${id}/origins`) ||
+      matches(`platforms/${id}/accounts`) ||
+      matches(`platforms/${id}/accounts/${id}`) ||
+      matches(`platforms/${id}/keys`) ||
+      matches(`platforms/${id}/plans`) ||
+      matches(`platforms/${id}/subscription-config`) ||
+      exact('redemption-batches') ||
+      matches(`subscriptions/${id}`) ||
+      exact('config-files') ||
+      matches(`config-files/${id}`) ||
+      matches(`platforms/${id}/file-policy`) ||
+      matches(`config-files/${id}/content`) ||
+      exact('audit') ||
+      exact('billing/orders') ||
+      matches(`billing/orders/${id}`) ||
+      exact('billing/metrics') ||
+      exact('billing/provider-products') ||
+      exact('deletion-jobs') ||
+      matches(`deletion-jobs/${id}`)
+    );
+  }
+  if (method === 'POST') {
+    return (
+      exact('auth/recent-proof') ||
+      exact('platforms') ||
+      matches(`platforms/${id}/origins`) ||
+      matches(`platforms/${id}/accounts/${id}/(?:suspend|restore|close)`) ||
+      matches(`platforms/${id}/keys`) ||
+      matches(`platforms/${id}/keys/${id}/(?:revoke|confirm-deployment)`) ||
+      matches(`platforms/${id}/plans`) ||
+      exact('redemption-batches') ||
+      matches(`redemption-batches/${id}/(?:confirm-delivery|disable)`) ||
+      matches(`subscriptions/${id}/commands`) ||
+      matches(`billing/orders/${id}/(?:requery|resolve)`) ||
+      exact('deletion-jobs') ||
+      matches(`deletion-jobs/${id}/retry`)
+    );
+  }
+  if (method === 'PATCH') {
+    return (
+      matches(`platforms/${id}`) ||
+      matches(`platforms/${id}/accounts/${id}`) ||
+      matches(`platforms/${id}/subscription-config`) ||
+      matches(`platforms/${id}/file-policy`)
+    );
+  }
+  if (method === 'DELETE') return matches(`config-files/${id}`);
+  return false;
+}
 
 function cookie(request: NextRequest, name: string): string | undefined {
   return request.cookies.get(name)?.value;
@@ -34,7 +99,10 @@ async function dispatch(
     if (!baseUrl || !origin)
       return errorResponse(503, 'AUTHORIZATION_UNAVAILABLE', id);
     const { path } = await context.params;
-    const target = `${baseUrl}/${path.join('/')}${request.nextUrl.search}`;
+    const pathValue = path.join('/');
+    if (!isAllowedAdminPath(request.method, pathValue))
+      return errorResponse(404, 'NOT_FOUND', id);
+    const target = `${baseUrl}/${pathValue}${request.nextUrl.search}`;
     const mutation = request.method !== 'GET';
     if (mutation) {
       if (request.headers.get('origin') !== origin)
@@ -45,7 +113,7 @@ async function dispatch(
     }
     const binaryDownload =
       request.method === 'GET' &&
-      /^admin\/api\/v1\/config-files\/[^/]+\/content$/u.test(path.join('/'));
+      /^admin\/api\/v1\/config-files\/[^/]+\/content$/u.test(pathValue);
     const headers: Record<string, string> = {
       Accept: binaryDownload ? 'application/octet-stream' : 'application/json',
       'Cache-Control': 'no-store',
@@ -73,6 +141,7 @@ async function dispatch(
       method: request.method,
       headers,
       body: mutation ? await request.text() : undefined,
+      signal: accountApiSignal(),
     });
     if (binaryDownload) {
       return new Response(upstream.body, {

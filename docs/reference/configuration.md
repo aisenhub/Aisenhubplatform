@@ -12,6 +12,7 @@
 | SUPABASE_PUBLISHABLE_KEY | 优先，其次 SUPABASE_ANON_KEY、NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY、NEXT_PUBLIC_SUPABASE_ANON_KEY |
 | ADMIN_ORIGIN | 同源校验的精确 origin |
 | ACCOUNT_API_URL | 中央 API base URL；代理在其后追加资源路径 |
+| ACCOUNT_API_TIMEOUT_MS | Admin BFF 到中央 Account API 的请求超时，默认 5000ms，最大 30000ms |
 | NODE_ENV | production 时写 Secure Cookie |
 
 ## 平台参考页
@@ -40,11 +41,12 @@
 | REDEMPTION_HMAC_PREVIOUS_KEY_VERSION | 上一兑换 Secret 的版本 |
 | SUPABASE_SECRET_KEY | Storage 服务端凭据 |
 | ACCOUNT_API_PORT | 直接 Deno 运行端口，默认 8000 |
+| ACCOUNT_API_AUTH_TIMEOUT_MS | JWKS 与 Supabase Auth `/auth/v1/user` 上游超时，默认 5000ms，最大 30000ms |
 | BILLING_CHECKOUT_SECRET | 服务端 Checkout 绑定令牌的 HMAC Secret；只用于生成 hash，不得进入浏览器、日志或 Git；未配置时 Checkout 拒绝签发 |
 | BILLING_CHECKOUT_KEY_VERSION | Checkout HMAC Secret 版本，必须是正整数，并与 Secret 轮换记录一致 |
 | BILLING_PROVIDER_ACCOUNT_ID | Checkout 与 Webhook 共用的 active `billing_provider_accounts.id`；必须与当前 Provider mapping 一致，禁止写入前端 |
 | BILLING_CHECKOUT_ENABLED | `false` 时仅停止新 Checkout 签发；已有订单和 webhook 不受此开关影响，默认关闭，须在 G-PROVIDER/G-OPS 通过后显式开启 |
-| AFDIAN_CHECKOUT_BASE_URL | 可选；服务端生成 Afdian Checkout URL 的 base，默认 `https://afdian.com/order/create`；不能由浏览器传入 |
+| AFDIAN_CHECKOUT_BASE_URL | 可选；服务端生成 Afdian Checkout URL 的 base，默认 `https://afdian.com/order/create`；不能由浏览器传入；仅明确的 Local loopback 可使用 HTTP 测试地址，其余情况 fail closed 并要求 HTTPS |
 
 ## Maintenance
 
@@ -52,7 +54,9 @@
 
 | 变量 | 行为 |
 | --- | --- |
-| MAINTENANCE_JOB_TOKEN | 必需，匹配请求 Bearer token |
+| MAINTENANCE_FILES_TOKEN | 文件 cleanup/run/reconcile 专用 Bearer token |
+| MAINTENANCE_IDENTITY_TOKEN | deletion-jobs、account retention、idempotency cleanup 专用 Bearer token |
+| MAINTENANCE_BILLING_TOKEN | Billing job/alert/reconciliation 专用 Bearer token；Hosted Billing Cron 的 `billing_maintenance_job_token` 必须只映射到该 capability |
 | MAINTENANCE_DB_URL | 优先连接；回退 SUPABASE_DB_URL，再 ACCOUNT_API_DB_URL |
 | MAINTENANCE_WORKER_ID | 受控 Worker 身份；staging/生产调度必须固定且每个并发 Worker 唯一，未配置时每次请求生成临时 maintenance-UUID，仅适合单次本地调用 |
 | MAINTENANCE_PORT | 直接运行默认 8001 |
@@ -66,7 +70,7 @@
 | BILLING_AUTO_SETTLEMENT_ENABLED | `false` 时停止 Provider 查询与自动结算，已入队任务保留并可恢复，默认开启 |
 | AFDIAN_USER_ID | 爱发电开发者账号 `user_id`；仅供 maintenance 服务端 API 调用，禁止进入浏览器 |
 | AFDIAN_API_TOKEN | 爱发电开发者 API Token；仅供 maintenance 服务端签名 API 请求，必须通过 Secret 注入 |
-| AFDIAN_API_BASE_URL | 可选；默认 `https://afdian.com/api/open`，staging 可指向测试代理 |
+| AFDIAN_API_BASE_URL | 可选；默认 `https://afdian.com/api/open`；仅明确的 Local loopback 可指向 HTTP 测试代理，其余情况 fail closed 并强制 HTTPS |
 | AFDIAN_API_TIMEOUT_MS | 可选；Provider API 超时毫秒数，默认 5000 |
 
 Hosted Billing 调度只从 Vault 读取两个运行时 Secret：
@@ -74,7 +78,7 @@ Hosted Billing 调度只从 Vault 读取两个运行时 Secret：
 | Vault name | 约束 |
 | --- | --- |
 | `billing_maintenance_function_url` | 必须是 HTTPS maintenance 函数基址，路径以 `/maintenance` 结尾；系统规范化后只调用 `/maintenance/v1/billing/jobs/run`，拒绝缺少 maintenance 路径、query 或 fragment 的值 |
-| `billing_maintenance_job_token` | 仅用于 maintenance Bearer 鉴权；缺失或空值时 Cron 记录 `MISSING_RUNTIME_CONFIG` 并安全跳过，不把 Secret 写入日志或调度记录 |
+| `billing_maintenance_job_token` | 仅作为 Billing capability Bearer，必须与函数 `MAINTENANCE_BILLING_TOKEN` 对应；不能复用于 files/identity capability；缺失或空值时 Cron 记录 `MISSING_RUNTIME_CONFIG` 并安全跳过 |
 
 Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 个任务。`private.billing_cron_invocations` 分开记录 scheduler 调用、请求受理、HTTP 完成和 Worker 业务结果；该表不是 Data API 消费者入口，响应摘要只保留计数和非敏感错误码。
 
@@ -87,6 +91,7 @@ Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 �
 | 变量 | 行为 |
 | --- | --- |
 | `ACCOUNT_API_URL` | 中央 Account API 地址；staging 使用 Supabase Edge Function 的 `/functions/v1/account-api` 地址 |
+| `ACCOUNT_API_TIMEOUT_MS` | Consumer BFF/服务端 SDK 到中央 Account API 的请求超时，默认 5000ms，最大 30000ms |
 | `ACCOUNT_PLATFORM_KEY` | `aisentest` 对应的服务端 Platform Key；只读服务端环境变量，不能使用 `NEXT_PUBLIC_` 前缀、不能进入浏览器、日志或 Git |
 | `TEMPLATE_ORIGIN` | 模板页面的精确 origin，用于 BFF 的 Origin/CSRF 校验 |
 

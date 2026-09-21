@@ -6,11 +6,11 @@
 
 | 入口 | 源码预算 | 计划调用方/频率 | 当前可证明的实际调用方 | 鉴权与执行角色 | Local证据 | Hosted/Staging证据 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/maintenance/v1/billing/jobs/run` | 每批最多 5 个 Billing job；Cron HTTP timeout 5000ms | `private.billing_maintenance_cron()` 每分钟 | BILL-16 + TASK-0702 数据库 Cron；Vault 基址规范化后由 pg_net 投递 | Bearer `billing_maintenance_job_token`；函数内 `job_executor`；lease/fence | `pnpm test:db`、TASK-0702 SQL、`pnpm test:maintenance` PASS | pg_cron/pg_net 真实 HTTP、网关路径、Vault 和恢复 NOT_RUN |
-| `/maintenance/v1/files/run` | 每批最多 20 个候选文件；单文件 Storage timeout 5000ms | `schedule.json` 每分钟 | 只有计划元数据；未在当前仓库发现独立安装的 Cron/外部 scheduler | Bearer maintenance token；文件领域过程经 `job_executor` | handler 与原有 SQL/Worker 测试 PASS | 实际调度、Storage 交错失败和恢复 NOT_RUN |
-| `/maintenance/v1/files/reconcile` | 每批最多 20 个文件 | `schedule.json` 每小时 | 只有计划元数据；实际调度器未知 | Bearer maintenance token；`job_executor` | handler 可静态核对 | Hosted 调度、告警和积压恢复 NOT_RUN |
-| `/maintenance/v1/accounts/retention` | 每批最多 20 个账户 | `schedule.json` 每日 | 只有计划元数据；实际调度器未知 | Bearer maintenance token；`job_executor` + Auth/Storage 服务端凭据 | handler 可静态核对 | Hosted 调度、删除保留和恢复 NOT_RUN |
-| `/maintenance/v1/idempotency/cleanup` | 每批最多 100 个过期幂等缓存 | `schedule.json` 每日 | 只有计划元数据；实际调度器未知 | Bearer maintenance token；`job_executor` | handler 与 SQL 权限测试 PASS | Hosted 调度和清理告警 NOT_RUN |
+| `/maintenance/v1/billing/jobs/run` | 每批最多 5 个 Billing job；Cron HTTP timeout 5000ms | `private.billing_maintenance_cron()` 每分钟 | BILL-16 + TASK-0702 数据库 Cron；Vault 基址规范化后由 pg_net 投递 | Billing capability Bearer：Vault `billing_maintenance_job_token` → `MAINTENANCE_BILLING_TOKEN`；函数内 `job_executor`；lease/fence | `pnpm test:db`、TASK-0702 SQL、`pnpm test:maintenance` PASS | pg_cron/pg_net 真实 HTTP、网关路径、Vault 和恢复 NOT_RUN |
+| `/maintenance/v1/files/run` | 每批最多 20 个候选文件；单文件 Storage timeout 5000ms | `schedule.json` 每分钟 | 只有计划元数据；未在当前仓库发现独立安装的 Cron/外部 scheduler | `MAINTENANCE_FILES_TOKEN`；文件领域过程经 `job_executor` | handler 与原有 SQL/Worker 测试 PASS | 实际调度、Storage 交错失败和恢复 NOT_RUN |
+| `/maintenance/v1/files/reconcile` | 每批最多 20 个文件 | `schedule.json` 每小时 | 只有计划元数据；实际调度器未知 | `MAINTENANCE_FILES_TOKEN`；`job_executor` | handler 可静态核对 | Hosted 调度、告警和积压恢复 NOT_RUN |
+| `/maintenance/v1/accounts/retention` | 每批最多 20 个账户 | `schedule.json` 每日 | 只有计划元数据；实际调度器未知 | `MAINTENANCE_IDENTITY_TOKEN`；`job_executor` + Auth/Storage 服务端凭据 | handler 可静态核对 | Hosted 调度、删除保留和恢复 NOT_RUN |
+| `/maintenance/v1/idempotency/cleanup` | 每批最多 100 个过期幂等缓存 | `schedule.json` 每日 | 只有计划元数据；实际调度器未知 | `MAINTENANCE_IDENTITY_TOKEN`；`job_executor` | handler 与 SQL 权限测试 PASS | Hosted 调度和清理告警 NOT_RUN |
 
 Billing 的 `/discover`、`/process`、`/finish`、`/requeue`、`/claim` 不是独立 scheduler；它们由 `/billing/jobs/run` 在固定 Worker 身份下内部 dispatch，不能在调度矩阵中重复计为独立 Cron。`files/cleanup` 是单文件受控步骤，由文件删除流程调用；不是 `schedule.json` 的批量入口。
 
@@ -23,7 +23,7 @@ Billing 的 `/discover`、`/process`、`/finish`、`/requeue`、`/claim` 不是�
 | `/maintenance/v1/deletion-jobs/files` | 删除流程文件步骤 | 当前 Job 文件列表；逐文件 Storage 结果 | Local handler/SQL 测试 PASS；对象备份/恢复 NOT_RUN |
 | `/maintenance/v1/deletion-jobs/auth` | 删除流程 Auth 步骤 | 只有已确认外部文件结果才推进 | Local handler/SQL 测试 PASS；真实 Auth 删除和恢复 NOT_RUN |
 
-这些入口都要求 maintenance Bearer token，不能由浏览器直接调用；Admin 页面只能通过 Account API 的受控 deletion-jobs 合同发起操作。
+这些删除入口都要求 `MAINTENANCE_IDENTITY_TOKEN`，不能使用 files/billing capability token，也不能由浏览器直接调用；Admin 页面只能通过 Account API 的受控 deletion-jobs 合同发起操作。
 
 ## 环境与发布结论
 

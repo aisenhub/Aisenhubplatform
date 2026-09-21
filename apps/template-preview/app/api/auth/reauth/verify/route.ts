@@ -15,6 +15,7 @@ import {
   requestId,
   responseBody,
 } from '../../_lib';
+import { accountApiTimeoutMs } from '../../../_lib/account-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const accountApi = createAccountApiClient({
       baseUrl: runtime.accountApiUrl,
       platformKey: runtime.platformKey,
+      timeoutMs: accountApiTimeoutMs(),
     });
     const proof = await accountApi.issueRecentAuthProof(
       accessToken,

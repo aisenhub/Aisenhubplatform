@@ -111,6 +111,24 @@ describe('template-preview Consumer BFF', () => {
     expect(headers.get('authorization')).toBeNull();
   });
 
+  it('aborts a stalled Account API request at the configured deadline', async () => {
+    vi.stubEnv('ACCOUNT_API_TIMEOUT_MS', '5');
+    fetchMock.mockImplementation(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = (init as RequestInit | undefined)?.signal;
+          expect(signal).toBeInstanceOf(AbortSignal);
+          if (signal?.aborted) reject(signal.reason);
+          else
+            signal?.addEventListener('abort', () => reject(signal.reason), {
+              once: true,
+            });
+        }),
+    );
+    const response = await GET(request('GET', 'plans'), context(['plans']));
+    expect(response.status).toBe(503);
+  });
+
   it('requires an acknowledged session for protected reads', async () => {
     const response = await GET(request('GET', 'profile'), context(['profile']));
 

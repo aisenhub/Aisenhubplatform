@@ -3,6 +3,7 @@
 import { UploadFault } from '../_shared/upload.ts';
 import {
   type MaintenanceDependencies,
+  type MaintenanceCapability,
   requestId,
   bearer,
   errorCode,
@@ -33,13 +34,68 @@ import {
 } from './billing.ts';
 import { retentionRun } from './retention.ts';
 
+const MAINTENANCE_PATHS: Readonly<
+  Record<MaintenanceCapability, ReadonlySet<string>>
+> = {
+  files: new Set([
+    '/maintenance/v1/files/cleanup',
+    '/maintenance/v1/files/run',
+    '/maintenance/v1/files/reconcile',
+  ]),
+  identity: new Set([
+    '/maintenance/v1/idempotency/cleanup',
+    '/maintenance/v1/deletion-jobs/claim',
+    '/maintenance/v1/deletion-jobs/step',
+    '/maintenance/v1/deletion-jobs/files',
+    '/maintenance/v1/deletion-jobs/auth',
+    '/maintenance/v1/accounts/retention',
+  ]),
+  billing: new Set([
+    '/maintenance/v1/billing/jobs/claim',
+    '/maintenance/v1/billing/jobs/run',
+    '/maintenance/v1/billing/alerts/evaluate',
+    '/maintenance/v1/billing/jobs/requeue-contract',
+    '/maintenance/v1/billing/jobs/requeue',
+    '/maintenance/v1/billing/jobs/finish',
+    '/maintenance/v1/billing/jobs/process',
+    '/maintenance/v1/billing/jobs/discover',
+    '/maintenance/v1/billing/reconciliation/page',
+  ]),
+};
+
+const MAINTENANCE_TOKEN_ENV: Readonly<Record<MaintenanceCapability, string>> = {
+  files: 'MAINTENANCE_FILES_TOKEN',
+  identity: 'MAINTENANCE_IDENTITY_TOKEN',
+  billing: 'MAINTENANCE_BILLING_TOKEN',
+};
+
+function maintenanceCapability(path: string): MaintenanceCapability | null {
+  for (const capability of ['files', 'identity', 'billing'] as const) {
+    if (MAINTENANCE_PATHS[capability].has(path)) return capability;
+  }
+  return null;
+}
+
+function maintenanceToken(
+  capability: MaintenanceCapability,
+  dependencies: MaintenanceDependencies,
+): string | undefined {
+  return (
+    dependencies.capabilityTokens?.[capability] ??
+    Deno.env.get(MAINTENANCE_TOKEN_ENV[capability])
+  );
+}
+
 export async function handleMaintenanceRequest(
   request: Request,
   dependencies: MaintenanceDependencies = {},
 ): Promise<Response> {
   const id = requestId();
-  const expected =
-    dependencies.jobToken ?? Deno.env.get('MAINTENANCE_JOB_TOKEN');
+  const path = new URL(request.url).pathname;
+  const capability = maintenanceCapability(path);
+  if (!capability)
+    return response(404, { error: { code: 'NOT_FOUND' }, request_id: id });
+  const expected = maintenanceToken(capability, dependencies);
   if (!expected || bearer(request) !== expected)
     return response(401, { error: { code: 'UNAUTHORIZED' }, request_id: id });
   if (request.method !== 'POST')
@@ -48,7 +104,6 @@ export async function handleMaintenanceRequest(
       request_id: id,
     });
   try {
-    const path = new URL(request.url).pathname;
     if (path === '/maintenance/v1/files/cleanup')
       return await cleanupFile(request, dependencies, id);
     if (path === '/maintenance/v1/files/run')

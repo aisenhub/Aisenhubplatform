@@ -71,7 +71,7 @@ async function startWorker() {
         SUPABASE_URL: status.API_URL,
         SUPABASE_SECRET_KEY: status.SERVICE_ROLE_KEY,
         MAINTENANCE_DB_URL: status.DB_URL,
-        MAINTENANCE_JOB_TOKEN: jobToken,
+        MAINTENANCE_FILES_TOKEN: jobToken,
         MAINTENANCE_PORT: '8791',
       },
       stdio: ['ignore', 'ignore', 'pipe'],

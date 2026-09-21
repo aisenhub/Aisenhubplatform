@@ -5,6 +5,8 @@ import {
 } from '@kit/account-server';
 import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
 
+import { accountApiTimeoutMs } from '../../_lib/account-api';
+
 export const dynamic = 'force-dynamic';
 
 function json(
@@ -44,7 +46,11 @@ export async function GET(request: NextRequest): Promise<Response> {
     );
 
   const authorization = await authorizeProtectedFeature({
-    client: createAccountApiClient({ baseUrl, platformKey }),
+    client: createAccountApiClient({
+      baseUrl,
+      platformKey,
+      timeoutMs: accountApiTimeoutMs(),
+    }),
     accessToken,
     feature: 'advanced_config',
   });
