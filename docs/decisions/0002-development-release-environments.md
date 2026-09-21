@@ -1,6 +1,6 @@
 # ADR-0002：开发环境、任务分支与按风险发布
 
-状态：Accepted。项目采用单人单机、Agent执行开发的方式。环境、分支和发布的详细规则统一维护在[Agent开发与发布流程](../guides/development-release-workflow.md)，所有Agent开始任务必须阅读。
+状态：Superseded by [ADR-0003](0003-local-verification-release-gates.md)。项目采用单人单机、Agent执行开发的方式。历史环境、分支和发布决策保留用于追溯；当前规则统一维护在[Agent开发与发布流程](../guides/development-release-workflow.md)，所有Agent开始任务必须阅读。
 
 ## 背景
 
