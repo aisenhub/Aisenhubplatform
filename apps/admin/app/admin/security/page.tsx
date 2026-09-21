@@ -95,7 +95,7 @@ export default function AdminSecurityPage() {
   return (
     <main className="shell wide-shell" data-test="admin-security-page">
       <AdminPageHeader
-        title="安全设置"
+        title="安全与账户"
         description="查看当前 Admin session 与已验证认证器摘要。近期 MFA 有效性由服务端判断，页面不显示伪造倒计时。"
         actions={
           <Button

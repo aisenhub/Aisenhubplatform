@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { SidebarProvider } from '@kit/ui/sidebar';
 
 import { AdminSidebar } from './admin-sidebar';
+import { AdminShellContextProvider } from './admin-shell-context';
 import { AdminTopbar } from './admin-topbar';
 
 type AdminShellProps = {
@@ -21,16 +22,18 @@ export function AdminShell({ children }: AdminShellProps) {
   }
 
   return (
-    <SidebarProvider
-      defaultOpen
-      data-test="admin-shell"
-      className="admin-shell-root min-h-svh"
-    >
-      <AdminSidebar />
-      <div className="admin-shell-inset">
-        <AdminTopbar />
-        <div className="admin-shell-content">{children}</div>
-      </div>
-    </SidebarProvider>
+    <AdminShellContextProvider>
+      <SidebarProvider
+        defaultOpen
+        data-test="admin-shell"
+        className="admin-shell-root min-h-svh"
+      >
+        <AdminSidebar />
+        <div className="admin-shell-inset">
+          <AdminTopbar />
+          <div className="admin-shell-content">{children}</div>
+        </div>
+      </SidebarProvider>
+    </AdminShellContextProvider>
   );
 }

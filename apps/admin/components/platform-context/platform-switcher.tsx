@@ -16,9 +16,13 @@ import type { Platform, PlatformListResponse } from './platform-types';
 
 type PlatformSwitcherProps = {
   current: Platform;
+  variant?: 'default' | 'sidebar';
 };
 
-export function PlatformSwitcher({ current }: PlatformSwitcherProps) {
+export function PlatformSwitcher({
+  current,
+  variant = 'default',
+}: PlatformSwitcherProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -76,7 +80,7 @@ export function PlatformSwitcher({ current }: PlatformSwitcherProps) {
 
   function changePlatform(nextId: string) {
     if (!nextId || nextId === current.platform_id) return;
-    const prefix = `/admin/platforms/${current.platform_id}`;
+    const prefix = `/admin/platforms/${encodeURIComponent(current.platform_id)}`;
     const suffix = pathname.startsWith(prefix)
       ? pathname.slice(prefix.length)
       : '';
@@ -84,15 +88,25 @@ export function PlatformSwitcher({ current }: PlatformSwitcherProps) {
   }
 
   return (
-    <div className="platform-switcher grid min-w-44 gap-1.5 sm:min-w-56">
+    <div
+      className={
+        variant === 'sidebar'
+          ? 'platform-switcher admin-sidebar-platform-switcher grid min-w-0 gap-1.5'
+          : 'platform-switcher grid min-w-44 gap-1.5 sm:min-w-56'
+      }
+    >
       <Label
         htmlFor="platform-switcher"
-        className="text-xs text-muted-foreground"
+        className={
+          variant === 'sidebar' ? 'sr-only' : 'text-xs text-muted-foreground'
+        }
       >
         当前平台
       </Label>
       {state === 'loading' ? (
-        <Skeleton className="h-8 w-full" />
+        <Skeleton
+          className={variant === 'sidebar' ? 'h-9 w-full' : 'h-8 w-full'}
+        />
       ) : (
         <select
           id="platform-switcher"

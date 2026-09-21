@@ -33,6 +33,7 @@ proposals/
 ## 优化索引
 
 - [订阅支付审查修复计划](subscription-billing-centralization/README.md)：[总计划](subscription-billing-centralization/plan.md)，覆盖 F01–F17；TASK-0001 已完成基线冻结，TASK-0002 完成本地静态门槛审查，TASK-0101/0103 及已列 billing repair tasks 已完成本地回归，外部环境仍按记录标注。原订阅集中化方案保留在归档，本活跃目录仅承载本次修复计划。
+- [Admin 2.0 导航与桌面工作区](admin-2-navigation-ia/design.md)：[总计划](admin-2-navigation-ia/plan.md)，按 Global / Platform 双上下文、桌面工作区与 Inspector 分四阶段实施。
 
 已完成方案见[归档资料](../archive/README.md)。
 

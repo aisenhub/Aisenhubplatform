@@ -468,7 +468,7 @@ export function PlatformRedemptionBatchesPage() {
       data-test="platform-redemption-batches-page"
     >
       <AdminPageHeader
-        title="兑换批次"
+        title="兑换码"
         description="创建 pending_delivery 批次、一次性安全交付明文码，并在 receipt 校验后激活；页面不重新导出已生成的兑换码。"
         actions={
           <Button

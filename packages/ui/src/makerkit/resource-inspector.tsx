@@ -1,17 +1,18 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { XIcon } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@kit/ui/dialog';
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@kit/ui/sheet';
 
 type ResourceInspectorProps = {
   open: boolean;
@@ -31,29 +32,46 @@ export function ResourceInspector({
   footer,
 }: ResourceInspectorProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-h-[min(42rem,calc(100svh-2rem))] max-w-2xl overflow-y-auto"
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md lg:max-w-[28rem]"
         data-test="resource-inspector"
       >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+        <SheetHeader className="border-b border-border/70 p-5 pr-14">
+          <SheetTitle className="text-lg">{title}</SheetTitle>
           {description ? (
-            <DialogDescription>{description}</DialogDescription>
+            <SheetDescription>{description}</SheetDescription>
           ) : null}
-        </DialogHeader>
-        <div className="grid gap-4">{children}</div>
-        <DialogFooter>
+        </SheetHeader>
+        <SheetClose
+          aria-label="关闭详情"
+          data-test="resource-inspector-close-icon"
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="absolute top-4 right-4"
+            />
+          }
+        >
+          <XIcon />
+          <span className="sr-only">关闭详情</span>
+        </SheetClose>
+        <div className="grid flex-1 gap-4 p-5">{children}</div>
+        <SheetFooter className="border-t border-border/70 p-4">
           {footer}
-          <DialogClose
+          <SheetClose
             render={
               <Button variant="outline" data-test="resource-inspector-close" />
             }
           >
             关闭
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

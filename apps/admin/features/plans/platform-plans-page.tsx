@@ -385,7 +385,7 @@ export function PlatformPlansPage() {
   return (
     <section className="grid gap-5" data-test="platform-plans-page">
       <AdminPageHeader
-        title="平台计划"
+        title="套餐"
         description="管理当前平台的 Free/paid Plan、默认 Free 回退和归档状态；features 只按服务端真实字段显示摘要。"
         actions={
           <div className="flex flex-wrap gap-2">

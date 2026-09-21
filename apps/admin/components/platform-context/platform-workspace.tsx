@@ -16,6 +16,7 @@ import { AsyncState } from '@kit/ui/async-state';
 import { Button } from '@kit/ui/button';
 
 import { AdminPageHeader } from '../shell/admin-page-header';
+import { useAdminShellContext } from '../shell/admin-shell-context';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -59,6 +60,7 @@ export function PlatformWorkspace({
   platformId,
   children,
 }: PlatformWorkspaceProps) {
+  const { setPlatform: setShellPlatform } = useAdminShellContext();
   const sessionSnapshot = useAdminSessionSnapshot();
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [state, setState] = useState<WorkspaceState>('loading');
@@ -82,6 +84,7 @@ export function PlatformWorkspace({
       setError(null);
       if (!keepCurrentContext) {
         setPlatform(null);
+        setShellPlatform(null);
         setState('loading');
       }
 
@@ -154,6 +157,7 @@ export function PlatformWorkspace({
         }
 
         setPlatform(payload.data);
+        setShellPlatform(payload.data);
         setState('success');
       } catch (caught) {
         if (controller.signal.aborted) return;
@@ -171,7 +175,7 @@ export function PlatformWorkspace({
         if (!keepCurrentContext) setState('error');
       }
     },
-    [platformId],
+    [platformId, setShellPlatform],
   );
 
   useEffect(() => {
@@ -179,6 +183,7 @@ export function PlatformWorkspace({
     controllerRef.current?.abort();
     generationRef.current += 1;
     setPlatform(null);
+    setShellPlatform(null);
     setError({
       title: '会话已结束',
       description: '请重新登录后再打开平台工作区。',
@@ -186,7 +191,7 @@ export function PlatformWorkspace({
       technicalDetail: null,
     });
     setState('access');
-  }, [sessionIsTerminal]);
+  }, [sessionIsTerminal, setShellPlatform]);
 
   useEffect(() => {
     if (sessionIsTerminal) return;
@@ -194,8 +199,9 @@ export function PlatformWorkspace({
     return () => {
       controllerRef.current?.abort();
       generationRef.current += 1;
+      setShellPlatform(null);
     };
-  }, [load, sessionIsTerminal]);
+  }, [load, sessionIsTerminal, setShellPlatform]);
 
   const contextValue = useMemo(
     () => (platform ? { platform, reload: () => void load(true) } : null),

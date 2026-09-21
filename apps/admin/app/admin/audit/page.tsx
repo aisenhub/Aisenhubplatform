@@ -499,7 +499,7 @@ function AdminAuditPageContent() {
   return (
     <main className="shell wide-shell" data-test="audit-page">
       <AdminPageHeader
-        title="审计记录"
+        title="Audit"
         description="只读查看脱敏审计事件。查询、游标和浏览器历史保持在 URL 中，读取失败不会被误显示为空数据。"
         actions={
           <Button

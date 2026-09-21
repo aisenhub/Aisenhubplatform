@@ -11,11 +11,11 @@ export function AdminPageHeader({
 }: AdminPageHeaderProps) {
   return (
     <header
-      className="admin-page-header flex flex-col border-b sm:flex-row sm:items-end sm:justify-between"
+      className="admin-page-header flex flex-col border-b sm:flex-row sm:items-center sm:justify-between"
       data-test="admin-page-header"
     >
       <div className="admin-page-header-copy min-w-0 max-w-3xl">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
           {title}
         </h1>
         <p className="max-w-2xl">{description}</p>
