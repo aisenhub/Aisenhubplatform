@@ -422,6 +422,7 @@ export class AuthSessionManager {
     if (firstErrorCode === 'MFA_REQUIRED') this.markStepUpRequired('admin_mfa');
     if (firstErrorCode === 'RECENT_MFA_REQUIRED')
       this.markStepUpRequired('admin_recent_mfa');
+    if (first.ok) this.transition('authenticated', true, this.snapshot.stepUp);
     if (first.status !== 401 || isAuthPath(url.pathname)) return first;
     if (!this.isCurrentEpoch(generation)) throw new SessionExpiredError();
     await this.refresh();

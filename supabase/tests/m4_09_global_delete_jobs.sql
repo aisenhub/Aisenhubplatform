@@ -1,6 +1,6 @@
 begin;
 
-select plan(23);
+select plan(25);
 
 select has_function('private', 'admin_deletion_job_start', array['private.admin_context', 'uuid', 'uuid', 'text'], 'admin delete start exists');
 select has_function('private', 'admin_deletion_job_list', array['private.admin_context', 'integer'], 'admin delete list exists');
@@ -26,6 +26,8 @@ select ok(not has_table_privilege('job_executor', 'private.deletion_jobs', 'upda
 select ok(pg_get_functiondef('private.deletion_job_step(private.job_context, uuid, bigint, text, text, text)'::regprocedure) like '%stale_job_fence%', 'step rejects stale lease fence');
 select ok(pg_get_functiondef('private.deletion_job_step(private.job_context, uuid, bigint, text, text, text)'::regprocedure) like '%invalid_delete_checkpoint%', 'step enforces ordered checkpoints');
 select ok(pg_get_functiondef('private.admin_deletion_job_retry(private.admin_context, uuid, uuid, text)'::regprocedure) like '%recent_mfa_required%', 'retry requires recent MFA');
+select ok(pg_get_functiondef('private.admin_deletion_job_list(private.admin_context, integer)'::regprocedure) like '%from private.system_admin sa%' and pg_get_functiondef('private.admin_deletion_job_list(private.admin_context, integer)'::regprocedure) like '%sa.user_id%', 'delete list qualifies admin user lookup');
+select ok(pg_get_functiondef('private.admin_deletion_job_read(private.admin_context, uuid)'::regprocedure) like '%from private.system_admin sa%' and pg_get_functiondef('private.admin_deletion_job_read(private.admin_context, uuid)'::regprocedure) like '%sa.user_id%', 'delete read qualifies admin user lookup');
 select ok(pg_get_functiondef('private.admin_deletion_job_start(private.admin_context, uuid, uuid, text)'::regprocedure) like '%identity_lifecycle%', 'start engages identity deletion barrier');
 
 select * from finish();
