@@ -120,7 +120,12 @@ async function dispatch(request: NextRequest, context: RouteContext) {
               }
             : {}),
         },
-        body: request.method === 'GET' ? undefined : await request.text(),
+        body:
+          request.method === 'GET'
+            ? undefined
+            : request.method === 'PUT'
+              ? await request.arrayBuffer()
+              : await request.text(),
         signal: accountApiSignal(),
       },
     );

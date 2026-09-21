@@ -6,7 +6,7 @@ import {
   encodeAuthSessionAcknowledgement,
 } from '@kit/account-auth-nextjs';
 
-import { GET, POST } from './route';
+import { GET, POST, PUT } from './route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const ACCESS_TOKEN = `e30.${Buffer.from(
@@ -23,12 +23,12 @@ type RequestOptions = {
   readonly authenticated?: boolean;
   readonly csrf?: boolean;
   readonly recentProof?: string;
-  readonly body?: string;
+  readonly body?: BodyInit;
   readonly query?: string;
 };
 
 function request(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT',
   path: string,
   options: RequestOptions = {},
 ): NextRequest {
@@ -159,6 +159,38 @@ describe('template-preview Consumer BFF', () => {
     );
     expect(missingCsrf.status).toBe(403);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves non-UTF-8 upload bytes when proxying file content', async () => {
+    const fileId = '11111111-1111-4111-8111-111111111111';
+    const bytes = Uint8Array.from([0x00, 0xff, 0x01, 0x80, 0x41]);
+    const body = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    );
+
+    const response = await PUT(
+      request('PUT', `config-files/${fileId}/content`, {
+        authenticated: true,
+        csrf: true,
+        body,
+        headers: {
+          origin: 'https://template.example',
+          'x-csrf-token': 'csrf-token',
+          'content-type': 'application/octet-stream',
+          'idempotency-key': 'upload-1',
+        },
+      }),
+      context(['config-files', fileId, 'content']),
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBeInstanceOf(ArrayBuffer);
+    expect(Array.from(new Uint8Array(init.body as ArrayBuffer))).toEqual(
+      Array.from(bytes),
+    );
   });
 
   it('forwards only the approved credential headers and prefers trusted cookie credentials', async () => {
