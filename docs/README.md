@@ -1,7 +1,7 @@
 # 项目文档
 
 - [系统概览](architecture/overview.md)
-- [Agent 必读：开发、分支合并、Staging 验收与生产发布流程](guides/development-release-workflow.md)
+- [Agent 必读：开发、分支合并、本地验证与生产发布流程](guides/development-release-workflow.md)
 - [优化设计与实施计划](proposals/README.md)
 - [平台账户与安全边界决策](decisions/0001-platform-account-boundaries.md)
 - [决策记录索引](decisions/README.md)

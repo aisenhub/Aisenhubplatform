@@ -5,6 +5,7 @@
 | 文档 | 范围 | 状态 |
 | --- | --- | --- |
 | [ADR-0001：自营平台统一账户与安全边界](0001-platform-account-boundaries.md) | 平台、身份、权限、权益、文件、恢复和依赖边界 | Accepted |
-| [ADR-0002：开发环境、任务分支与按风险发布](0002-development-release-environments.md) | Local / Staging / Production、自动合并授权、Agent必读流程与发布门槛 | Accepted |
+| [ADR-0002：开发环境、任务分支与按风险发布](0002-development-release-environments.md) | 历史 Local / Staging / Production、自动合并授权与发布门槛 | Superseded |
+| [ADR-0003：本地验证与生产门槛](0003-local-verification-release-gates.md) | R0–R3 分级、本地 Supabase 验证、生产门槛与远程环境边界 | Accepted |
 
 新增或修改跨模块规则时，在这里新增编号文档或更新现有决策，并同步受影响的 architecture/reference 文档。验证尚未完成的环境事实写入相应验证记录，不把计划或旧执行记录当作决策证据。
