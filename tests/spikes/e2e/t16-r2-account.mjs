@@ -993,7 +993,10 @@ async function exerciseAdmin(page, adminTotp) {
       waitUntil: 'domcontentloaded',
     },
   );
-  await page.getByRole('heading', { name: '兑换批次' }).waitFor();
+  await page
+    .locator('[data-test="admin-page-header"]')
+    .getByRole('heading', { name: '兑换码', exact: true })
+    .waitFor();
   await page.locator('#batch-product').waitFor();
   await exerciseBatchReplayUi(page);
   await page.locator('#batch-product').selectOption('monthly');
