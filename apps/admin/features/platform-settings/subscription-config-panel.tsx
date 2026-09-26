@@ -14,6 +14,7 @@ import {
   caughtResourceError,
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   resourcePath,
   type ResourceError,
 } from '../resources/admin-resource-utils';
@@ -134,11 +135,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
       const payload = await readApiPayload<SubscriptionConfig>(response);
       if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       if (!response.ok) {
-        if (
-          response.status === 403 &&
-          (payload?.error?.code === 'MFA_REQUIRED' ||
-            payload?.error?.code === 'RECENT_MFA_REQUIRED')
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setNeedsMfa(true);
         }
         setMessage(resourceError(response, payload, '订阅配置更新'));
@@ -240,7 +237,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
               <Label htmlFor="paid-plan">标准付费 Plan</Label>
               <select
                 id="paid-plan"
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
                 value={config.paid_plan_id ?? ''}
                 onChange={(event) =>
                   setConfig((current) =>

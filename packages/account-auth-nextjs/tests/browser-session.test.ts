@@ -61,6 +61,23 @@ describe('AuthSessionManager', () => {
     });
   });
 
+  it('hydrates authentication state from a successful protected request', async () => {
+    installBrowser();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })),
+    );
+    const manager = new AuthSessionManager(config);
+
+    await manager.request('/api/v1/account');
+
+    expect(manager.getSessionState()).toEqual({
+      state: 'authenticated',
+      resolved: true,
+      stepUp: null,
+    });
+  });
+
   it('coalesces concurrent refreshes and safely replays reads once', async () => {
     installBrowser();
     const fetcher = vi

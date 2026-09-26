@@ -34,6 +34,7 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   statusLabel,
   statusTone,
   type ResourceError,
@@ -305,10 +306,7 @@ export function PlatformRedemptionBatchesPage() {
           delivery_receipt?: string;
         }>(response);
         if (!response.ok) {
-          if (
-            payload?.error?.code === 'MFA_REQUIRED' ||
-            payload?.error?.code === 'RECENT_MFA_REQUIRED'
-          ) {
+          if (isRecentMfaRequired(response, payload)) {
             setMutationState('step_up_required');
             return;
           }
@@ -384,10 +382,7 @@ export function PlatformRedemptionBatchesPage() {
       );
       const payload = await readApiPayload<Batch>(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'MFA_REQUIRED' ||
-          payload?.error?.code === 'RECENT_MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setMutationState('step_up_required');
           return;
         }

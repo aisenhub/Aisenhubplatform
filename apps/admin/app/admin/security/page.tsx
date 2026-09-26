@@ -15,6 +15,7 @@ import {
   sessionErrorMessage,
   useAdminSessionSnapshot,
 } from '../../_lib/auth-session';
+import { resourceError } from '../../../features/resources/admin-resource-utils';
 
 type Factor = {
   id: string;
@@ -48,11 +49,7 @@ export default function AdminSecurityPage() {
             : 'error',
         );
         setErrorMessage(
-          response.status === 401
-            ? '管理员会话已结束，请重新登录。'
-            : response.status === 403
-              ? '当前管理员账号没有读取 MFA 状态的权限。'
-              : 'MFA 因子暂时不可用，请稍后重试。',
+          resourceError(response, payload, 'MFA 状态').description,
         );
         return;
       }

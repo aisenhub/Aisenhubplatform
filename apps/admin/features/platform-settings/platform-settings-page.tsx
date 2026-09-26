@@ -18,7 +18,7 @@ import { usePlatformContext } from '../../components/platform-context/platform-w
 import { adminAuthSession } from '../../app/_lib/auth-session';
 import { SubscriptionConfigPanel } from './subscription-config-panel';
 import {
-  apiErrorDescription,
+  resourceError,
   resourcePath,
   type ResourceError,
 } from '../resources/admin-resource-utils';
@@ -95,18 +95,7 @@ export function PlatformSettingsPage() {
       } | null;
       if (!response.ok) {
         setState('failure');
-        setError({
-          title:
-            response.status === 403 ? '没有平台设置权限' : '平台状态更新失败',
-          description: apiErrorDescription(
-            response,
-            payload,
-            '服务端拒绝了状态更新；当前平台数据保持不变。',
-          ),
-          requestId:
-            response.headers.get('x-request-id') ?? payload?.request_id ?? null,
-          technicalDetail: payload?.error?.code ?? `HTTP_${response.status}`,
-        });
+        setError(resourceError(response, payload, '平台状态更新'));
         return;
       }
       setState('success');

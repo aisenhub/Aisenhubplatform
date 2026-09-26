@@ -41,6 +41,7 @@ import {
 import {
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   resourcePath,
   statusLabel,
   statusTone,
@@ -255,10 +256,7 @@ export function PlatformPlansPage() {
       );
       const responsePayload = await readApiPayload<Plan>(response);
       if (!response.ok) {
-        if (
-          responsePayload?.error?.code === 'MFA_REQUIRED' ||
-          responsePayload?.error?.code === 'RECENT_MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, responsePayload)) {
           setEditorNeedsStepUp(true);
           setEditorVerified(false);
           return;
@@ -339,10 +337,7 @@ export function PlatformPlansPage() {
       );
       const payload = await readApiPayload<Plan>(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'MFA_REQUIRED' ||
-          payload?.error?.code === 'RECENT_MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setActionState('step_up_required');
           return;
         }

@@ -29,6 +29,7 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   resourcePath,
   statusLabel,
   statusTone,
@@ -226,10 +227,7 @@ export function PlatformKeysPage() {
         PlatformKey & { presented_key?: string }
       >(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'RECENT_MFA_REQUIRED' ||
-          payload?.error?.code === 'MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setMutationState('step_up_required');
           return;
         }

@@ -35,6 +35,7 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   resourcePath,
   statusLabel,
   statusTone,
@@ -282,10 +283,7 @@ export function PlatformAccountsPage() {
       );
       const payload = await readApiPayload<Account>(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'MFA_REQUIRED' ||
-          payload?.error?.code === 'RECENT_MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setMutationState('step_up_required');
           return;
         }

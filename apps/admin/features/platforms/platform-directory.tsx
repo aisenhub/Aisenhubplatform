@@ -29,7 +29,7 @@ import { Label } from '@kit/ui/label';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
-import { apiErrorDescription } from '../resources/admin-resource-utils';
+import { resourceError } from '../resources/admin-resource-utils';
 import {
   Table,
   TableBody,
@@ -69,34 +69,7 @@ function responseError(
   response: Response,
   payload: PlatformListResponse | null,
 ): LoadError {
-  const requestId =
-    response.headers.get('x-request-id') ?? payload?.request_id ?? null;
-  if (response.status === 401) {
-    return {
-      title: '会话已结束',
-      description: '请重新登录后再查看平台目录。',
-      requestId,
-      technicalDetail: payload?.error?.code ?? 'UNAUTHENTICATED',
-    };
-  }
-  if (response.status === 403) {
-    return {
-      title: '没有平台目录访问权限',
-      description: '请确认当前管理员账号具备平台读取权限。',
-      requestId,
-      technicalDetail: payload?.error?.code ?? 'FORBIDDEN',
-    };
-  }
-  return {
-    title: '暂时无法读取平台目录',
-    description: apiErrorDescription(
-      response,
-      payload,
-      '请检查网络或服务状态后重试；本次读取失败不会显示成暂无平台。',
-    ),
-    requestId,
-    technicalDetail: payload?.error?.code ?? `HTTP_${response.status}`,
-  };
+  return resourceError(response, payload, '平台目录');
 }
 
 function CreatePlatformDialog({

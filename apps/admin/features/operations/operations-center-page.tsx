@@ -28,6 +28,7 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
@@ -311,10 +312,7 @@ export function OperationsCenterPage() {
       );
       const payload = await readApiPayload<DeletionJob>(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'RECENT_MFA_REQUIRED' ||
-          payload?.error?.code === 'MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setMutationState('step_up_required');
           return;
         }

@@ -950,7 +950,10 @@ async function exerciseAdmin(page, adminTotp) {
   await page.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.getByRole('heading', { name: '平台账户' }).waitFor();
+  await page
+    .locator('[data-test="admin-page-header"]')
+    .getByRole('heading', { name: '账户' })
+    .waitFor();
   const adminAccounts = await browserRequest(
     page,
     `/api/v1/admin/api/v1/platforms/${platformAId}/accounts?limit=100`,
@@ -990,7 +993,10 @@ async function exerciseAdmin(page, adminTotp) {
       waitUntil: 'domcontentloaded',
     },
   );
-  await page.getByRole('heading', { name: '兑换批次' }).waitFor();
+  await page
+    .locator('[data-test="admin-page-header"]')
+    .getByRole('heading', { name: '兑换码', exact: true })
+    .waitFor();
   await page.locator('#batch-product').waitFor();
   await exerciseBatchReplayUi(page);
   await page.locator('#batch-product').selectOption('monthly');
@@ -1095,17 +1101,17 @@ async function exerciseAdminErrorCopyMatrix(page) {
     {
       status: 400,
       code: 'INVALID_INPUT',
-      copy: '请检查网络或服务状态后重试',
+      copy: '读取平台目录失败，请稍后重试',
     },
     {
       status: 403,
       code: 'FORBIDDEN',
-      copy: '请确认当前管理员账号具备平台读取权限',
+      copy: '请确认操作范围',
     },
     {
       status: 404,
       code: 'NOT_FOUND',
-      copy: '请检查网络或服务状态后重试',
+      copy: '服务端没有找到当前平台范围内的平台目录',
     },
     {
       status: 409,
@@ -1226,7 +1232,7 @@ async function exerciseAdminErrorCopyMatrix(page) {
   await page.goto(`${adminUrl}/admin/platforms/${platformAId}/settings`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.getByRole('heading', { name: '平台设置' }).waitFor();
+  await page.getByRole('heading', { name: '基本设置' }).waitFor();
   let settingsPatchMode = 'conflict';
   let settingsPatchCount = 0;
   await page.route(workspaceRoute, async (route) => {
@@ -1470,8 +1476,8 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       },
       body: JSON.stringify({
         error: {
-          code: isMfa ? 'MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
-          message: isMfa ? 'MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
+          code: isMfa ? 'RECENT_MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
+          message: isMfa ? 'RECENT_MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
         },
         request_id: crypto.randomUUID(),
       }),
@@ -1536,7 +1542,7 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/files`, {
       waitUntil: 'domcontentloaded',
     });
-    await page.getByRole('heading', { name: '配置文件' }).waitFor();
+    await page.getByRole('heading', { name: '文件', exact: true }).waitFor();
     await page.getByText('Usage / Policy', { exact: true }).waitFor();
     await page.getByText('当前使用量高于策略', { exact: true }).waitFor();
     assert.equal(
@@ -2293,9 +2299,7 @@ async function exerciseAdminResourceFailureMatrix(page) {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/plans`, {
       waitUntil: 'domcontentloaded',
     });
-    await page
-      .getByRole('heading', { name: '平台计划', exact: true })
-      .waitFor();
+    await page.getByRole('heading', { name: '套餐', exact: true }).waitFor();
     const plansError = page.locator('[data-test="recoverable-error"]');
     await plansError
       .getByText('请求过于频繁，请稍后重试。', { exact: false })
@@ -2411,9 +2415,7 @@ async function exerciseAdminResourceFailureMatrix(page) {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
       waitUntil: 'domcontentloaded',
     });
-    await page
-      .getByRole('heading', { name: '平台账户', exact: true })
-      .waitFor();
+    await page.getByRole('heading', { name: '账户', exact: true }).waitFor();
     const accountRow = page.locator(`[data-test="account-row-${accountId}"]`);
     await accountRow.waitFor();
     accountListMode = 'unavailable';
@@ -2636,9 +2638,7 @@ async function exerciseAdminResourceFailureMatrix(page) {
       `${adminUrl}/admin/platforms/${platformAId}/subscriptions?account=${subscriptionAccountId}`,
       { waitUntil: 'domcontentloaded' },
     );
-    await page
-      .getByRole('heading', { name: '订阅投影', exact: true })
-      .waitFor();
+    await page.getByRole('heading', { name: '订阅', exact: true }).waitFor();
     const subscriptionError = page.locator('[data-test="recoverable-error"]');
     await subscriptionError
       .getByText('当前数据已发生变化，请刷新后再提交。', { exact: false })
@@ -2921,7 +2921,10 @@ try {
   await adminPage.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
-  await adminPage.getByRole('heading', { name: '平台账户' }).waitFor();
+  await adminPage
+    .locator('[data-test="admin-page-header"]')
+    .getByRole('heading', { name: '账户', exact: true })
+    .waitFor();
   const suspendedAccountRow = adminPage.locator(
     `[data-test="account-row-${platformAccountId}"]`,
   );

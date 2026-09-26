@@ -45,15 +45,7 @@ export function PlatformSwitcher({
       if (!response.ok) {
         setState('error');
         setErrorMessage(
-          response.status === 401
-            ? '会话已结束，请重新登录后再切换平台。'
-            : response.status === 403
-              ? '当前账号没有平台目录访问权限。'
-              : apiErrorDescription(
-                  response,
-                  payload,
-                  '平台切换列表暂时不可用。',
-                ),
+          apiErrorDescription(response, payload, '平台切换列表暂时不可用。'),
         );
         return;
       }

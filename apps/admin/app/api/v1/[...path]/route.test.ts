@@ -107,7 +107,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(44);
+    expect(operationCount).toBe(45);
   });
 
   it('rejects paths outside the explicit Admin allowlist', async () => {

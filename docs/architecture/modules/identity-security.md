@@ -46,7 +46,9 @@ Principal 从验证后的 user + Platform Key 得到 userId、platformId、platf
 
 ## 5. 单一管理员和近期 MFA
 
-system_admin singleton 保证最多一名管理员；每个 Admin Route/Server Action 验证 token、会话、user状态、实时 membership、AAL2。AAL2本身不证明近期完成MFA，也不使用JWT iat作为MFA时间。
+system_admin singleton 保证最多一名管理员；每个普通 Admin Route/Server Action 验证 token、会话、user状态、实时 membership、AAL2。唯一的 AAL2 前置读取入口是 `GET /admin/api/v1/security/status`：它仍验证已签名身份、活动 session 和实时管理员 membership，但允许 AAL1 管理员读取当前 AAL 与当前 session 有效近期证明的过期时间。`private.admin_security_status` 执行该数据库校验；匿名为 401、非管理员为 403 `ADMIN_REQUIRED`、无效 session 为 401。AAL2本身不证明近期完成MFA，也不使用JWT iat作为MFA时间。
+
+Admin Shell 在渲染普通管理页面前先读取该状态：未登录转登录，AAL1 管理员只进入 `/admin/mfa`，AAL2 管理员进入普通管理页面，非管理员和授权服务故障均保持在无业务内容的阻断界面。`/admin/login` 是唯一不读取 status 的登录入口；BFF 仅代理状态请求，不复制管理员或 AAL 判断。
 
 生成/轮换/撤销Key、生成及确认兑换码交付、Manual Grant/revoke/pause/resume、管理员下载/删除配置文件、Global Delete、替换管理员等高风险动作，要求最近5分钟完成一次服务端验证的MFA challenge。
 

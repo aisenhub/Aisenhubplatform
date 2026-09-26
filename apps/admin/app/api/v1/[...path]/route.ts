@@ -18,6 +18,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
 
   if (method === 'GET') {
     return (
+      exact('security/status') ||
       exact('platforms') ||
       matches(`platforms/${id}`) ||
       matches(`platforms/${id}/origins`) ||

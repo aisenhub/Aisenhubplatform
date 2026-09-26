@@ -14,6 +14,7 @@ import {
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
 import {
+  isRecentMfaRequired,
   readApiPayload,
   resourceError,
   type ResourceError,
@@ -349,7 +350,7 @@ export function CentralBillingPage() {
       );
       const payload = await readApiPayload(response);
       if (!response.ok) {
-        if (response.status === 403) setNeedsMfa(true);
+        if (isRecentMfaRequired(response, payload)) setNeedsMfa(true);
         if ([400, 409, 412].includes(response.status))
           requeryOperationRef.current = null;
         setActionError(resourceError(response, payload, '订单重查'));
@@ -396,7 +397,7 @@ export function CentralBillingPage() {
       );
       const payload = await readApiPayload(response);
       if (!response.ok) {
-        if (response.status === 403) setNeedsMfa(true);
+        if (isRecentMfaRequired(response, payload)) setNeedsMfa(true);
         if ([400, 409, 412].includes(response.status))
           resolveOperationRef.current = null;
         setActionError(resourceError(response, payload, '订单结案'));

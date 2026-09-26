@@ -112,6 +112,7 @@ function fakeDatabase(
   checkoutFacts: readonly Record<string, unknown>[] = [],
   checkoutRow: Record<string, unknown> = {},
   productRow: Record<string, unknown> = {},
+  securityStatusRows: readonly Record<string, unknown>[] = [],
 ) {
   return {
     async begin<T>(
@@ -252,6 +253,8 @@ function fakeDatabase(
           if (query.startsWith('select private.admin_step_up_valid')) {
             return [{ valid: true }] as unknown as R[];
           }
+          if (query.startsWith('select * from private.admin_security_status'))
+            return securityStatusRows as R[];
           if (query.startsWith('select * from private.admin_platform_list')) {
             return [
               {
@@ -1364,6 +1367,102 @@ Deno.test('Account API refuses recent-proof issuance at AAL1', async () => {
   );
   assertEquals(response.status, 403);
   assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
+});
+
+Deno.test('Admin security status is available to an active AAL1 administrator', async () => {
+  let statusArguments: readonly unknown[] | undefined;
+  let statusQuery = '';
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/security/status',
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal1')}` },
+      },
+    ),
+    {
+      database: fakeDatabase(
+        (query, values) => {
+          if (query.startsWith('select * from private.admin_security_status')) {
+            statusQuery = query;
+            statusArguments = values;
+          }
+        },
+        undefined,
+        undefined,
+        undefined,
+        [{ current_aal: 'aal1', recent_mfa_expires_at: null }],
+      ),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 200);
+  assertMatch(statusQuery, /row\(\$1::uuid, \$2::uuid, \$3::uuid\)/u);
+  assertEquals(statusArguments?.[0], userId);
+  assertEquals(statusArguments?.[1], sessionId);
+  assertEquals(statusArguments?.[3], 'aal1');
+  assertEquals((await response.json()).data, {
+    current_aal: 'aal1',
+    recent_mfa_expires_at: null,
+  });
+});
+
+Deno.test('Admin security status reports non-admin before the AAL2 gate', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/security/status',
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal1')}` },
+      },
+    ),
+    {
+      database: fakeDatabase((query) => {
+        if (query.startsWith('select * from private.admin_security_status'))
+          throw Object.assign(new Error('admin_required'), { code: '42501' });
+      }),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 403);
+  assertEquals((await response.json()).error.code, 'ADMIN_REQUIRED');
+});
+
+Deno.test('Admin security status rejects a revoked session', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/security/status',
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+      },
+    ),
+    {
+      database: fakeDatabase((query) => {
+        if (query.startsWith('select * from private.admin_security_status'))
+          throw Object.assign(new Error('session_not_active'), {
+            code: '42501',
+          });
+      }),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 401);
+  assertEquals((await response.json()).error.code, 'UNAUTHORIZED');
+});
+
+Deno.test('Admin security status fails closed when its SQL result is malformed', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/security/status',
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 503);
+  assertEquals((await response.json()).error.code, 'AUTHORIZATION_UNAVAILABLE');
 });
 
 Deno.test('Account API binds ordinary recent proof to a separate verified session', async () => {
