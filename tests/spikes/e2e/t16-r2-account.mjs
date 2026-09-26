@@ -2632,9 +2632,7 @@ async function exerciseAdminResourceFailureMatrix(page) {
       `${adminUrl}/admin/platforms/${platformAId}/subscriptions?account=${subscriptionAccountId}`,
       { waitUntil: 'domcontentloaded' },
     );
-    await page
-      .getByRole('heading', { name: '订阅投影', exact: true })
-      .waitFor();
+    await page.getByRole('heading', { name: '订阅', exact: true }).waitFor();
     const subscriptionError = page.locator('[data-test="recoverable-error"]');
     await subscriptionError
       .getByText('当前数据已发生变化，请刷新后再提交。', { exact: false })
