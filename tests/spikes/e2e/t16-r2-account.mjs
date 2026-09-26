@@ -1100,7 +1100,7 @@ async function exerciseAdminErrorCopyMatrix(page) {
     {
       status: 403,
       code: 'FORBIDDEN',
-      copy: '请确认当前管理员账号具备平台读取权限',
+      copy: '请确认操作范围',
     },
     {
       status: 404,
@@ -1226,7 +1226,7 @@ async function exerciseAdminErrorCopyMatrix(page) {
   await page.goto(`${adminUrl}/admin/platforms/${platformAId}/settings`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.getByRole('heading', { name: '平台设置' }).waitFor();
+  await page.getByRole('heading', { name: '基本设置' }).waitFor();
   let settingsPatchMode = 'conflict';
   let settingsPatchCount = 0;
   await page.route(workspaceRoute, async (route) => {

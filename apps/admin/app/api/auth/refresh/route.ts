@@ -76,18 +76,18 @@ export async function POST(request: NextRequest): Promise<Response> {
   const secure = process.env.NODE_ENV === 'production';
   try {
     const runtimeConfig = config();
+    const names = authCookieNames('admin');
+    const accessToken = request.cookies.get(names.access)?.value;
+    const refreshToken = request.cookies.get(names.refresh)?.value;
+    if (!refreshToken) return errorBody('UNAUTHORIZED', 401, id);
     if (
       !hasValidOrigin(request, runtimeConfig.origin) ||
       !hasValidCsrf(request)
     )
       return errorBody('INVALID_INPUT', 403, id);
-    const names = authCookieNames('admin');
-    const accessToken = request.cookies.get(names.access)?.value;
-    const refreshToken = request.cookies.get(names.refresh)?.value;
     const gate = sessionGate(request);
     if ((accessToken || refreshToken) && !gate.ok)
       return errorBody('UNAUTHORIZED', 401, id);
-    if (!refreshToken) return failureResponse(id, 401, true, secure);
     const client = createRequestAuthClient(runtimeConfig);
     const { data, error } = await refreshAuthSession(client, refreshToken);
     if (error || !data.session) {

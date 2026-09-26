@@ -14,6 +14,7 @@ import {
   caughtResourceError,
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   resourcePath,
   type ResourceError,
 } from '../resources/admin-resource-utils';
@@ -134,11 +135,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
       const payload = await readApiPayload<SubscriptionConfig>(response);
       if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       if (!response.ok) {
-        if (
-          response.status === 403 &&
-          (payload?.error?.code === 'MFA_REQUIRED' ||
-            payload?.error?.code === 'RECENT_MFA_REQUIRED')
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setNeedsMfa(true);
         }
         setMessage(resourceError(response, payload, '订阅配置更新'));

@@ -24,7 +24,7 @@ import {
 } from '../../app/_lib/auth-session';
 import { PlatformHeader } from './platform-header';
 import type { Platform, PlatformResponse } from './platform-types';
-import { apiErrorDescription } from '../../features/resources/admin-resource-utils';
+import { resourceError } from '../../features/resources/admin-resource-utils';
 
 type WorkspaceState = 'loading' | 'success' | 'access' | 'not-found' | 'error';
 
@@ -107,41 +107,15 @@ export function PlatformWorkspace({
 
         if (!response.ok || !payload?.data) {
           const nextError: WorkspaceError =
-            response.status === 401
+            response.status === 404
               ? {
-                  title: '会话已结束',
-                  description: '请重新登录后再打开平台工作区。',
+                  title: '平台不存在',
+                  description:
+                    'URL 中的平台 ID 未找到。页面不会回退到其他平台或继续显示旧数据。',
                   requestId,
-                  technicalDetail:
-                    payload?.error?.code ?? `HTTP_${response.status}`,
+                  technicalDetail: payload?.error?.code ?? 'PLATFORM_NOT_FOUND',
                 }
-              : response.status === 403
-                ? {
-                    title: '没有平台访问权限',
-                    description: '当前管理员账号不能访问这个平台上下文。',
-                    requestId,
-                    technicalDetail: payload?.error?.code ?? 'FORBIDDEN',
-                  }
-                : response.status === 404
-                  ? {
-                      title: '平台不存在',
-                      description:
-                        'URL 中的平台 ID 未找到。页面不会回退到其他平台或继续显示旧数据。',
-                      requestId,
-                      technicalDetail:
-                        payload?.error?.code ?? 'PLATFORM_NOT_FOUND',
-                    }
-                  : {
-                      title: '平台上下文暂时不可用',
-                      description: apiErrorDescription(
-                        response,
-                        payload,
-                        '请检查网络或服务状态后重试；当前页面不会显示不属于此平台的数据。',
-                      ),
-                      requestId,
-                      technicalDetail:
-                        payload?.error?.code ?? `HTTP_${response.status}`,
-                    };
+              : resourceError(response, payload, '平台上下文');
 
           setError(nextError);
           if (!keepCurrentContext) {

@@ -13,6 +13,7 @@ import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
+import { resourceError } from '../resources/admin-resource-utils';
 
 type Factor = {
   id: string;
@@ -48,11 +49,7 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
       if (!response.ok) {
         setState('error');
         setErrorMessage(
-          response.status === 401
-            ? '管理员会话已结束，请重新登录。'
-            : response.status === 403
-              ? '当前管理员账号没有读取认证器的权限。'
-              : '认证器列表暂时不可用，请稍后重试。',
+          resourceError(response, payload, '认证器列表').description,
         );
         return;
       }

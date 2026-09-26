@@ -29,8 +29,10 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
+  isRecentMfaRequired,
   resourcePath,
   statusLabel,
+  type ApiErrorPayload,
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
@@ -128,10 +130,7 @@ function fileStateNote(file: ConfigFile): string | null {
 
 function apiError(
   response: Response,
-  payload: {
-    error?: { code?: string; message?: string };
-    request_id?: string;
-  } | null,
+  payload: ApiErrorPayload | null,
   title: string,
 ): ResourceError {
   return resourceError(response, payload, title);
@@ -352,10 +351,7 @@ export function PlatformFilesPage() {
       );
       const payload = await readApiPayload<Policy>(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'RECENT_MFA_REQUIRED' ||
-          payload?.error?.code === 'MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setPolicyNeedsStepUp(true);
           setPolicyErrorMessage(null);
         } else {
@@ -449,10 +445,7 @@ export function PlatformFilesPage() {
       );
       const payload = await readApiPayload<ConfigFile>(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'RECENT_MFA_REQUIRED' ||
-          payload?.error?.code === 'MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setDeleteState('step_up_required');
           return;
         }
@@ -548,10 +541,7 @@ export function PlatformFilesPage() {
       );
       const payload = await readApiPayload<unknown>(response);
       if (!response.ok) {
-        if (
-          payload?.error?.code === 'RECENT_MFA_REQUIRED' ||
-          payload?.error?.code === 'MFA_REQUIRED'
-        ) {
+        if (isRecentMfaRequired(response, payload)) {
           setDownloadTarget(target);
           setDownloadNeedsStepUp(true);
           return;

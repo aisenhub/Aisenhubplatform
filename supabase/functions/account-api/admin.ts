@@ -99,6 +99,24 @@ export async function dispatchAdmin(
   const url = new URL(request.url);
   const path = requestPath(request);
   const context = adminContextValues(session);
+  if (path === 'admin/api/v1/security/status' && request.method === 'GET') {
+    const [status] = await transaction.unsafe<Row>(
+      'select * from private.admin_security_status(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::text)',
+      [...context, session.aal],
+    );
+    if (
+      !status ||
+      (status.current_aal !== 'aal1' && status.current_aal !== 'aal2')
+    )
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return {
+      status: 200,
+      data: {
+        current_aal: status.current_aal,
+        recent_mfa_expires_at: status.recent_mfa_expires_at ?? null,
+      },
+    };
+  }
   if (path === 'admin/api/v1/auth/recent-proof' && request.method === 'POST') {
     if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
     const factorId = uuidValue(request.headers.get('x-mfa-factor-id'));

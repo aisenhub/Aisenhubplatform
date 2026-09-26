@@ -23,6 +23,7 @@
 - [工具链](reference/toolchain.md)
 - [文档维护规则](agents.md)
 - [项目审查报告（2026-09-20）](reviews/project-review-2026-09-20.md)
+- [Admin 安全管理与 MFA 专项审查报告（2026-09-21）](reviews/admin-security-mfa-review-2026-09-21.md)
 
 ## 详细文档迁移映射
 

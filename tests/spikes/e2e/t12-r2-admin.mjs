@@ -236,6 +236,11 @@ async function runBrowserFlow(secret) {
   const context = await browser.newContext();
   page = await context.newPage();
   page.setDefaultTimeout(10_000);
+  const securityStatusResponses = [];
+  page.on('response', (response) => {
+    if (response.url().includes('/api/v1/admin/api/v1/security/status'))
+      securityStatusResponses.push(response.status());
+  });
   await page.goto(`${appUrl}/admin/login`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
   await page.waitForTimeout(250);
@@ -252,13 +257,24 @@ async function runBrowserFlow(secret) {
 
   await page
     .getByText('请输入认证器中的 6 位验证码。', { exact: true })
-    .waitFor({ state: 'visible' });
+    .waitFor({ state: 'visible' })
+    .catch(async () => {
+      const bodyText = (await page.locator('body').innerText()).slice(0, 500);
+      throw new Error(
+        `MFA enrollment screen was not reached: url=${page.url()}, status=${securityStatusResponses.join(',') || 'none'}, body=${bodyText}`,
+      );
+    });
 
   const aal1 = await browserRequest(
     `/api/v1/admin/api/v1/platforms/${platformId}/plans`,
   );
   assertStatus(aal1.status, 403, 'AAL1 Admin API rejection');
   assert.equal(aal1.payload?.error?.code, 'MFA_REQUIRED');
+  const aal1Status = await browserRequest(
+    '/api/v1/admin/api/v1/security/status',
+  );
+  assertStatus(aal1Status.status, 200, 'AAL1 Admin security status');
+  assert.equal(aal1Status.payload?.data?.current_aal, 'aal1');
 
   await page.getByLabel('验证码').fill(totp(secret));
   const [mfaResponse] = await Promise.all([
@@ -269,7 +285,9 @@ async function runBrowserFlow(secret) {
   ]);
   assertStatus(mfaResponse.status(), 200, 'browser admin MFA verification');
   await page.waitForURL(/\/admin$/u);
-  await assertPageText('管理员总览');
+  await page.getByRole('heading', { name: '概览' }).waitFor({
+    state: 'visible',
+  });
 
   const cookiesBeforeLogout = await context.cookies();
   const proofCookie = cookiesBeforeLogout.find(
@@ -288,6 +306,11 @@ async function runBrowserFlow(secret) {
   );
   assertStatus(aal2.status, 200, 'AAL2 Admin API access');
   assert.equal(aal2.payload?.data?.[0]?.code, 'free');
+  const aal2Status = await browserRequest(
+    '/api/v1/admin/api/v1/security/status',
+  );
+  assertStatus(aal2Status.status, 200, 'AAL2 Admin security status');
+  assert.equal(aal2Status.payload?.data?.current_aal, 'aal2');
 
   const loadPlansResponsePromise = page.waitForResponse((response) =>
     response
@@ -331,6 +354,212 @@ async function runBrowserFlow(secret) {
     status: 'active',
   });
 
+  await sql`
+    update private.admin_step_up
+    set expires_at = verified_at + interval '1 second'
+    where user_id = ${userId}
+  `;
+  await new Promise((resolve) => setTimeout(resolve, 1_200));
+  await page.locator('[data-test="plan-create-open"]').click();
+  await page.locator('[data-test="plan-editor-code"]').fill('browser-proof');
+  await page.locator('[data-test="plan-editor-name"]').fill('Browser Proof');
+  const [expiredProofResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`) &&
+        response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="plan-editor-submit"]').click(),
+  ]);
+  assertStatus(expiredProofResponse.status(), 403, 'expired recent proof');
+  assert.equal(
+    (await expiredProofResponse.json()).error?.code,
+    'RECENT_MFA_REQUIRED',
+  );
+  await page.locator('[data-test="plan-editor-step-up"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
+  const [recentMfaResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/auth/mfa/verify'),
+    ),
+    page.locator('[data-test="recent-mfa-submit"]').click(),
+  ]);
+  assertStatus(recentMfaResponse.status(), 200, 'recent MFA verification');
+  await page.getByText('MFA 已验证', { exact: true }).waitFor({
+    state: 'visible',
+  });
+  const [notAutoSubmitted] = await sql`
+    select count(*)::integer as count
+    from public.plans
+    where platform_id = ${platformId} and code = 'browser-proof'
+  `;
+  assert.equal(notAutoSubmitted.count, 0, 'step-up must not replay the write');
+  const [proofPlanResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`) &&
+        response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="plan-editor-submit"]').click(),
+  ]);
+  assertStatus(proofPlanResponse.status(), 201, 'explicit post-step-up submit');
+
+  if (previousSystemAdmin) {
+    await sql`
+      update private.system_admin set user_id = ${previousSystemAdmin}
+      where singleton_id = 1
+    `;
+  } else {
+    await sql`delete from private.system_admin where singleton_id = 1`;
+  }
+  try {
+    const nonAdminStatus = await browserRequest(
+      '/api/v1/admin/api/v1/security/status',
+    );
+    assertStatus(nonAdminStatus.status, 403, 'AAL2 non-admin status');
+    assert.equal(nonAdminStatus.payload?.error?.code, 'ADMIN_REQUIRED');
+    const nonAdmin = await browserRequest(
+      '/api/v1/admin/api/v1/platforms?limit=100',
+    );
+    assertStatus(nonAdmin.status, 403, 'AAL2 non-admin API rejection');
+    assert.equal(nonAdmin.payload?.error?.code, 'ADMIN_REQUIRED');
+    await page.goto(`${appUrl}/admin`, { waitUntil: 'domcontentloaded' });
+    await page
+      .locator('[data-test="admin-security-not-admin"]')
+      .waitFor({ state: 'visible' });
+    assert.equal(
+      await page.locator('[data-test="admin-shell"]').count(),
+      0,
+      'non-admin must not render the Admin shell or its child pages',
+    );
+  } finally {
+    await sql`
+      insert into private.system_admin (user_id)
+      values (${userId})
+      on conflict (singleton_id) do update set user_id = excluded.user_id
+    `;
+  }
+
+  let failSecurityStatus = true;
+  const securityStatusRoute = '**/api/v1/admin/api/v1/security/status';
+  await page.route(securityStatusRoute, async (route) => {
+    if (failSecurityStatus) {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: { code: 'AUTHORIZATION_UNAVAILABLE' },
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  const [securityUnavailable] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/v1/admin/api/v1/security/status'),
+    ),
+    page.goto(`${appUrl}/admin`, { waitUntil: 'domcontentloaded' }),
+  ]);
+  assertStatus(
+    securityUnavailable.status(),
+    503,
+    'security status unavailable',
+  );
+  await page
+    .locator('[data-test="admin-security-unavailable"]')
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await page.locator('[data-test="admin-shell"]').count(),
+    0,
+    'Admin children must stay unrendered when status is unavailable',
+  );
+  assert.ok(
+    (await context.cookies()).some(
+      (cookie) => cookie.name === 'aisenhub-admin-session',
+    ),
+    'status failure must preserve the admin session for retry',
+  );
+  const [securityRecovered] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/v1/admin/api/v1/security/status'),
+    ),
+    (async () => {
+      failSecurityStatus = false;
+      await page.locator('[data-test="admin-security-retry"]').click();
+    })(),
+  ]);
+  assertStatus(securityRecovered.status(), 200, 'security status retry');
+  await page.getByRole('heading', { name: '概览' }).waitFor({
+    state: 'visible',
+  });
+  await page.unroute(securityStatusRoute);
+
+  let failPlansRead = true;
+  const plansRoute = `**/api/v1/admin/api/v1/platforms/${platformId}/plans`;
+  await page.route(plansRoute, async (route) => {
+    if (route.request().method() === 'GET' && failPlansRead) {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: { code: 'AUTHORIZATION_UNAVAILABLE' },
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  const plansPageUrl = `${appUrl}/admin/platforms/${platformId}/plans`;
+  const [unavailableResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`) &&
+        response.request().method() === 'GET',
+    ),
+    page.goto(plansPageUrl, { waitUntil: 'domcontentloaded' }),
+  ]);
+  assertStatus(unavailableResponse.status(), 503, 'upstream unavailable');
+  const recoverableError = page.locator('[data-test="recoverable-error"]');
+  await recoverableError.waitFor({ state: 'visible' });
+  assert.match(await recoverableError.innerText(), /计划列表暂时不可用/u);
+  assert.equal(
+    new URL(page.url()).pathname,
+    `/admin/platforms/${platformId}/plans`,
+  );
+  assert.ok(
+    (await context.cookies()).some(
+      (cookie) => cookie.name === 'aisenhub-admin-session',
+    ),
+    'upstream failure must preserve the admin session',
+  );
+  const [recoveredPlansResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`) &&
+        response.request().method() === 'GET',
+    ),
+    (async () => {
+      failPlansRead = false;
+      await page.locator('[data-test="async-retry"]').click();
+    })(),
+  ]);
+  assertStatus(recoveredPlansResponse.status(), 200, 'retry after 503');
+  await page.locator('[data-test="plans-table-section"]').waitFor({
+    state: 'visible',
+  });
+  await page.unroute(plansRoute);
+
   const responsiveA11y = await runResponsiveA11yMatrix();
 
   await page.getByRole('button', { name: '退出登录' }).click();
@@ -360,20 +589,34 @@ async function runBrowserFlow(secret) {
     `/api/v1/admin/api/v1/platforms/${platformId}/plans`,
   );
   assertStatus(afterLogout.status, 401, 'BFF rejection after logout');
+  await page.goto(`${appUrl}/admin`, { waitUntil: 'domcontentloaded' });
+  await page
+    .waitForFunction(() => window.location.pathname === '/admin/login')
+    .catch(async () => {
+      const bodyText = (await page.locator('body').innerText()).slice(0, 500);
+      throw new Error(
+        `Anonymous Admin shell was not redirected: url=${page.url()}, status=${securityStatusResponses.at(-1) ?? 'none'}, body=${bodyText}`,
+      );
+    });
 
   return {
     login: 'PASS',
     aal1Rejected: 'PASS',
+    aal1Status: 'PASS',
     browserMfa: 'PASS',
+    aal2Status: 'PASS',
+    expiredProofStepUp: 'PASS',
+    stepUpExplicitResubmit: 'PASS',
+    aal2NonAdminRejected: 'PASS',
+    nonAdminShellBlocked: 'PASS',
+    statusUnavailableRetry: 'PASS',
+    upstreamFailureRetry: 'PASS',
     httpOnlyProof: 'PASS',
     sensitiveWrite: 'PASS',
     responsiveA11y,
     logoutOldJwtRejected: 'PASS',
+    anonymousShellRedirect: 'PASS',
   };
-}
-
-async function assertPageText(text) {
-  await page.getByText(text, { exact: true }).waitFor({ state: 'visible' });
 }
 
 async function runResponsiveA11yMatrix() {

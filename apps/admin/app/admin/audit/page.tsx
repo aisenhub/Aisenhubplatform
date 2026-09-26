@@ -48,6 +48,7 @@ import {
   sessionErrorMessage,
   useAdminSessionSnapshot,
 } from '../../_lib/auth-session';
+import { resourceError } from '../../../features/resources/admin-resource-utils';
 
 const PAGE_SIZE = 50;
 
@@ -362,9 +363,6 @@ function AdminAuditPageContent() {
         const payload = (await response
           .json()
           .catch(() => null)) as AuditPayload | null;
-        const requestId =
-          response.headers.get('x-request-id') ?? payload?.request_id ?? null;
-
         if (
           generation !== generationRef.current ||
           !adminAuthSession.isCurrentEpoch(epoch)
@@ -372,31 +370,11 @@ function AdminAuditPageContent() {
           return;
 
         if (!response.ok) {
-          const technicalDetail =
-            payload?.error?.code ?? `HTTP_${response.status}`;
-          const nextError: LoadError =
-            response.status === 401
-              ? {
-                  title: '会话已结束',
-                  description:
-                    '请重新登录后再查看审计记录。当前页面不会保留已退出会话的数据。',
-                  requestId,
-                  technicalDetail,
-                }
-              : response.status === 403
-                ? {
-                    title: '没有审计访问权限',
-                    description: '请确认当前管理员账号具备审计读取权限。',
-                    requestId,
-                    technicalDetail,
-                  }
-                : {
-                    title: '暂时无法读取审计记录',
-                    description:
-                      '请检查网络或服务状态后重试；本次读取失败不会被显示成暂无数据。',
-                    requestId,
-                    technicalDetail,
-                  };
+          const nextError: LoadError = resourceError(
+            response,
+            payload,
+            '审计记录',
+          );
 
           if (mode === 'initial') {
             setLoadError(nextError);
