@@ -950,7 +950,10 @@ async function exerciseAdmin(page, adminTotp) {
   await page.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.getByRole('heading', { name: '账户' }).waitFor();
+  await page
+    .locator('[data-test="admin-page-header"]')
+    .getByRole('heading', { name: '账户' })
+    .waitFor();
   const adminAccounts = await browserRequest(
     page,
     `/api/v1/admin/api/v1/platforms/${platformAId}/accounts?limit=100`,
