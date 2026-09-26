@@ -1470,8 +1470,8 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       },
       body: JSON.stringify({
         error: {
-          code: isMfa ? 'MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
-          message: isMfa ? 'MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
+          code: isMfa ? 'RECENT_MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
+          message: isMfa ? 'RECENT_MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
         },
         request_id: crypto.randomUUID(),
       }),
