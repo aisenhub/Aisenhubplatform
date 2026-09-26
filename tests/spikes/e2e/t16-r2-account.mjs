@@ -2293,9 +2293,7 @@ async function exerciseAdminResourceFailureMatrix(page) {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/plans`, {
       waitUntil: 'domcontentloaded',
     });
-    await page
-      .getByRole('heading', { name: '套餐', exact: true })
-      .waitFor();
+    await page.getByRole('heading', { name: '套餐', exact: true }).waitFor();
     const plansError = page.locator('[data-test="recoverable-error"]');
     await plansError
       .getByText('请求过于频繁，请稍后重试。', { exact: false })
