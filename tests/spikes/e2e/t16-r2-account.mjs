@@ -1095,7 +1095,7 @@ async function exerciseAdminErrorCopyMatrix(page) {
     {
       status: 400,
       code: 'INVALID_INPUT',
-      copy: '请检查网络或服务状态后重试',
+      copy: '读取平台目录失败，请稍后重试',
     },
     {
       status: 403,
@@ -1105,7 +1105,7 @@ async function exerciseAdminErrorCopyMatrix(page) {
     {
       status: 404,
       code: 'NOT_FOUND',
-      copy: '请检查网络或服务状态后重试',
+      copy: '服务端没有找到当前平台范围内的平台目录',
     },
     {
       status: 409,
