@@ -1536,7 +1536,7 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/files`, {
       waitUntil: 'domcontentloaded',
     });
-    await page.getByRole('heading', { name: '文件' }).waitFor();
+    await page.getByRole('heading', { name: '文件', exact: true }).waitFor();
     await page.getByText('Usage / Policy', { exact: true }).waitFor();
     await page.getByText('当前使用量高于策略', { exact: true }).waitFor();
     assert.equal(
