@@ -2921,7 +2921,10 @@ try {
   await adminPage.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
-  await adminPage.getByRole('heading', { name: '账户' }).waitFor();
+  await adminPage
+    .locator('[data-test="admin-page-header"]')
+    .getByRole('heading', { name: '账户', exact: true })
+    .waitFor();
   const suspendedAccountRow = adminPage.locator(
     `[data-test="account-row-${platformAccountId}"]`,
   );
