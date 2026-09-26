@@ -950,7 +950,7 @@ async function exerciseAdmin(page, adminTotp) {
   await page.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.getByRole('heading', { name: '平台账户' }).waitFor();
+  await page.getByRole('heading', { name: '账户' }).waitFor();
   const adminAccounts = await browserRequest(
     page,
     `/api/v1/admin/api/v1/platforms/${platformAId}/accounts?limit=100`,
@@ -2409,9 +2409,7 @@ async function exerciseAdminResourceFailureMatrix(page) {
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
       waitUntil: 'domcontentloaded',
     });
-    await page
-      .getByRole('heading', { name: '平台账户', exact: true })
-      .waitFor();
+    await page.getByRole('heading', { name: '账户', exact: true }).waitFor();
     const accountRow = page.locator(`[data-test="account-row-${accountId}"]`);
     await accountRow.waitFor();
     accountListMode = 'unavailable';
@@ -2919,7 +2917,7 @@ try {
   await adminPage.goto(`${adminUrl}/admin/platforms/${platformAId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
-  await adminPage.getByRole('heading', { name: '平台账户' }).waitFor();
+  await adminPage.getByRole('heading', { name: '账户' }).waitFor();
   const suspendedAccountRow = adminPage.locator(
     `[data-test="account-row-${platformAccountId}"]`,
   );
