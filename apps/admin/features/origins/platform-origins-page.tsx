@@ -226,7 +226,7 @@ export function PlatformOriginsPage() {
     return (
       <section className="grid gap-5" data-test="platform-origins-loading">
         <AdminPageHeader
-          title="Origins"
+          title="接入地址"
           description="平台的 Origin 与回调 URL 配置事实。"
         />
         <AsyncState state="loading" />
@@ -237,8 +237,8 @@ export function PlatformOriginsPage() {
   return (
     <section className="grid gap-5" data-test="platform-origins-page">
       <AdminPageHeader
-        title="Origins"
-        description="只登记服务端支持的 Origin 与回调地址；页面不会替你猜测或修正 URL，也不会提供合同未支持的编辑/删除按钮。"
+        title="接入地址"
+        description="登记允许接入的站点来源与登录回调地址。请填写完整、准确的 URL。"
         actions={
           <div className="flex gap-2">
             <Button

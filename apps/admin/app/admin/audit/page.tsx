@@ -478,7 +478,7 @@ function AdminAuditPageContent() {
     <main className="shell wide-shell" data-test="audit-page">
       <AdminPageHeader
         title="Audit"
-        description="只读查看脱敏审计事件。查询、游标和浏览器历史保持在 URL 中，读取失败不会被误显示为空数据。"
+        description="按操作、对象与结果查找审计记录，追踪管理动作。"
         actions={
           <Button
             type="button"

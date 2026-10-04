@@ -602,7 +602,7 @@ export function PlatformFilesPage() {
     <section className="grid gap-5" data-test="platform-files-page">
       <AdminPageHeader
         title="文件"
-        description="文件通过 Admin API 读取；浏览器不直连 Storage，不把列表消失当作物理删除或预算释放。"
+        description="查看文件状态、下载文件与管理存储策略。删除后的清理进度以文件状态为准。"
         actions={
           <Button
             variant="outline"

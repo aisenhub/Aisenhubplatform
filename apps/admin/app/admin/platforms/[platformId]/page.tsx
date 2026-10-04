@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { ResourceId } from '@kit/ui/resource-id';
@@ -14,22 +15,22 @@ const quickLinks = [
   {
     href: 'accounts',
     title: '平台账户',
-    description: '查看当前平台关联账户，并在后续阶段执行受控状态动作。',
+    description: '查找账户、查看状态与管理访问。',
   },
   {
     href: 'plans',
-    title: '平台计划',
-    description: '浏览这个平台的计划和权益配置。',
+    title: '平台套餐',
+    description: '管理免费与付费套餐。',
   },
   {
     href: 'subscriptions',
     title: '平台订阅',
-    description: '沿着平台上下文查看订阅资源。',
+    description: '查看账户的订阅与权益。',
   },
   {
     href: 'settings',
     title: '平台设置',
-    description: '管理 Origin、平台 Key 和保留的兼容操作。',
+    description: '调整运行状态与激活策略。',
   },
 ] as const;
 
@@ -41,7 +42,7 @@ export default function PlatformOverviewPage() {
     <section className="grid gap-5" data-test="platform-overview">
       <AdminPageHeader
         title="概览"
-        description="这里展示当前平台上下文的真实状态和下一步入口，不生成没有 API 来源的指标。"
+        description="查看平台运行状态，进入账户管理与接入配置。"
         actions={
           <Button
             variant="outline"
@@ -76,10 +77,9 @@ export default function PlatformOverviewPage() {
           </dl>
         </div>
         <div className="panel gap-3">
-          <h2>稳定标识</h2>
+          <h2>平台标识</h2>
           <p className="text-sm text-muted-foreground">
-            该 ID 同时用于工作区 URL、API
-            请求和支持排查。复制时只复制标识，不包含任何密钥材料。
+            接入配置或排查问题时，可复制此标识。
           </p>
           <ResourceId
             value={platform.platform_id}
@@ -92,22 +92,27 @@ export default function PlatformOverviewPage() {
         <div>
           <h2 id="platform-quick-links">快捷入口</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            进入资源页后，所有读取和动作都会继续绑定当前平台 ID。
+            以下操作均属于 {platform.name}。
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="panel admin-task-links">
           {quickLinks.map((item) => (
             <Link
               key={item.href}
               href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/${item.href}`}
-              className="panel gap-2 transition-colors hover:border-primary/40 hover:bg-primary/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="admin-task-link"
               data-test={`platform-quick-link-${item.href}`}
             >
-              <span className="font-medium text-foreground">{item.title}</span>
-              <span className="text-sm leading-6 text-muted-foreground">
-                {item.description}
+              <span>
+                <span className="block text-sm font-medium">{item.title}</span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {item.description}
+                </span>
               </span>
-              <span className="text-sm font-medium text-primary">打开 →</span>
+              <ArrowUpRight
+                className="size-4 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
             </Link>
           ))}
         </div>

@@ -325,7 +325,7 @@ export function PlatformKeysPage() {
     return (
       <section className="grid gap-5" data-test="platform-keys-loading">
         <AdminPageHeader
-          title="Platform Keys"
+          title="接入密钥"
           description="Key metadata、一次性明文交付和部署生命周期。"
         />
         <AsyncState state="loading" />
@@ -336,8 +336,8 @@ export function PlatformKeysPage() {
   return (
     <section className="grid gap-5" data-test="platform-keys-page">
       <AdminPageHeader
-        title="Platform Keys"
-        description="Key metadata 由服务端权威维护；明文只进入一次性内存面板，页面不提供第二次创建恢复入口。"
+        title="接入密钥"
+        description="创建接入密钥、确认部署与撤销旧密钥。新密钥明文仅显示一次，请及时保存。"
         actions={
           <div className="flex gap-2">
             <Button

@@ -188,10 +188,19 @@ export function AdminShell({ children }: AdminShellProps) {
         data-test="admin-shell"
         className="admin-shell-root min-h-svh"
       >
+        <a
+          href="#admin-content"
+          className="admin-skip-link"
+          data-test="admin-skip-link"
+        >
+          跳到页面内容
+        </a>
         <AdminSidebar />
         <div className="admin-shell-inset">
           <AdminTopbar />
-          <div className="admin-shell-content">{children}</div>
+          <div id="admin-content" tabIndex={-1} className="admin-shell-content">
+            {children}
+          </div>
         </div>
       </SidebarProvider>
     </AdminShellContextProvider>

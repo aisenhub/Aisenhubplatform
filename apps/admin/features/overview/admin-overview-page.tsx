@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowUpRight, Users, Boxes, Files, ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
@@ -286,7 +287,7 @@ export function AdminOverviewPage() {
     <main className="shell wide-shell" data-test="admin-overview">
       <AdminPageHeader
         title="概览"
-        description="只聚合当前真实 API 能有界返回的数据；任何数据源失败都会保留为失败，不会显示成绿色健康或假指标。"
+        description="进入平台工作区，处理需要关注的事项，查看最近活动。"
         actions={
           <Button
             variant="outline"
@@ -305,7 +306,10 @@ export function AdminOverviewPage() {
         onRetry={() => void loadAll(true)}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div
+        className="admin-overview-summary"
+        aria-label="当前返回结果中的关注事项"
+      >
         <SummaryCard
           label="停用平台"
           value={
@@ -317,13 +321,13 @@ export function AdminOverviewPage() {
         <SummaryCard
           label="需关注的删除任务"
           value={jobs.state === 'success' ? `${attentionJobs.length}` : '—'}
-          description="blocked / retry，最多 100 条结果"
+          description="已阻塞或等待重试，最多读取 100 条"
           tone="warning"
         />
         <SummaryCard
           label="正在处理"
           value={jobs.state === 'success' ? `${runningJobs.length}` : '—'}
-          description="pending / running，最多 100 条结果"
+          description="待执行或执行中，最多读取 100 条"
           tone="info"
         />
       </div>
@@ -337,7 +341,7 @@ export function AdminOverviewPage() {
             <div>
               <h2>平台关注项</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                来自有界平台列表；不会把未返回的平台猜成正常。
+                检查停用平台的配置，或进入目录管理账户。最多读取 100 个平台。
               </p>
             </div>
             <Link
@@ -387,18 +391,60 @@ export function AdminOverviewPage() {
 
         <section className="panel gap-4" data-test="overview-file-boundary">
           <div>
-            <h2>文件状态边界</h2>
+            <h2>常用管理</h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              全局 Admin 文件接口目前没有 status
-              filter。本页不从一页文件数据计算 deleting/unknown 全局数量。
+              先选择平台，再查看该平台的账户和资源。
             </p>
           </div>
-          <Link
-            href="/admin/platforms"
-            className="w-fit text-sm text-primary underline-offset-4 hover:underline"
-          >
-            进入平台 Files
-          </Link>
+          <div className="admin-task-links">
+            {[
+              {
+                title: '平台与账户',
+                description: '查找平台，进入账户目录',
+                href: '/admin/platforms',
+                icon: Users,
+              },
+              {
+                title: '平台配置',
+                description: '套餐、接入配置与密钥',
+                href: '/admin/platforms',
+                icon: Boxes,
+              },
+              {
+                title: '文件管理',
+                description: '选择平台，查看文件与存储策略',
+                href: '/admin/platforms',
+                icon: Files,
+              },
+              {
+                title: '安全与账户',
+                description: '检查登录状态与认证器',
+                href: '/admin/security',
+                icon: ShieldCheck,
+              },
+            ].map(({ title, description, href, icon: Icon }) => (
+              <Link
+                key={title}
+                href={href}
+                className="admin-task-link"
+                data-test={`overview-task-${title}`}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <Icon
+                    className="size-5 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">{title}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {description}
+                    </span>
+                  </span>
+                </span>
+                <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" />
+              </Link>
+            ))}
+          </div>
         </section>
       </div>
 
@@ -407,15 +453,14 @@ export function AdminOverviewPage() {
           <div>
             <h2>删除任务关注项</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Operations 使用同一 deletion-jobs
-              API；本页只提供入口，不复制重试逻辑。
+              查看已阻塞或等待重试的任务，在运维中心检查详情并处理。
             </p>
           </div>
           <Link
             href="/admin/operations"
             className="text-sm text-primary underline-offset-4 hover:underline"
           >
-            打开 Operations
+            打开运维中心
           </Link>
         </div>
         <SourceStateView
@@ -425,7 +470,7 @@ export function AdminOverviewPage() {
         />
         {jobs.state === 'success' && attentionJobs.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            当前返回窗口内没有 blocked/retry 任务。
+            当前返回窗口内没有已阻塞或等待重试的任务。
           </p>
         ) : null}
         {attentionJobs.length ? (
@@ -461,7 +506,7 @@ export function AdminOverviewPage() {
           <div>
             <h2>最近审计活动</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              仅展示审计 API 返回的最新 5 条；详情和技术 ID 在审计页查看。
+              最新 5 条操作记录。完整记录和筛选请进入审计页。
             </p>
           </div>
           <Link
@@ -518,12 +563,13 @@ export function AdminOverviewPage() {
         <div>
           <h2>快捷入口</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            进入真实资源页或安全边界；本页不提供第二套 mutation。
+            查看计费订单、后台任务与操作记录。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <QuickLink href="/admin/platforms" label="平台目录" />
-          <QuickLink href="/admin/operations" label="Operations" />
+          <QuickLink href="/admin/billing" label="计费管理" />
+          <QuickLink href="/admin/operations" label="运维中心" />
           <QuickLink href="/admin/audit" label="审计记录" />
           <QuickLink href="/admin/security" label="安全总览" />
         </div>
@@ -613,7 +659,7 @@ function SummaryCard({
   tone: 'danger' | 'warning' | 'info';
 }) {
   return (
-    <section className="panel gap-2">
+    <section className="grid gap-2">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p
         className={`text-2xl font-semibold ${tone === 'danger' ? 'text-destructive' : tone === 'warning' ? 'text-warning-foreground' : 'text-info-foreground'}`}

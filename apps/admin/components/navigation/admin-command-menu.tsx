@@ -60,20 +60,27 @@ export function AdminCommandMenu({ compact = false }: { compact?: boolean }) {
         variant="outline"
         size="sm"
         data-test="admin-command-trigger"
+        aria-label="快速跳转（Ctrl 或 Command + K）"
         className={
           compact
-            ? 'size-8 justify-center px-0 text-muted-foreground lg:w-56 lg:justify-between lg:px-2.5'
+            ? 'size-9 justify-center px-0 text-muted-foreground lg:w-56 lg:justify-between lg:px-2.5'
             : 'w-full justify-between gap-3 text-muted-foreground sm:w-56'
         }
         onClick={() => setOpen(true)}
       >
         <span className="flex min-w-0 items-center gap-2">
           <KeyboardIcon className="size-4" />
-          <span className={compact ? 'hidden truncate sm:inline' : 'truncate'}>
+          <span className={compact ? 'hidden truncate lg:inline' : 'truncate'}>
             快速跳转
           </span>
         </span>
-        <Kbd className="hidden sm:inline-flex">Ctrl K</Kbd>
+        <Kbd
+          className={
+            compact ? 'hidden lg:inline-flex' : 'hidden sm:inline-flex'
+          }
+        >
+          ⌘ / Ctrl K
+        </Kbd>
       </Button>
 
       <CommandDialog

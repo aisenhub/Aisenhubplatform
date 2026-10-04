@@ -347,7 +347,7 @@ export function PlatformAccountsPage() {
     <section className="grid gap-5" data-test="platform-accounts-page">
       <AdminPageHeader
         title="账户"
-        description="搜索当前平台账户、查看权威状态，并执行受控的账户操作。"
+        description="查找账户、查看状态，或管理账户访问。"
         actions={
           <Button
             variant="outline"
@@ -372,6 +372,7 @@ export function PlatformAccountsPage() {
             <input
               id="account-query"
               type="search"
+              maxLength={128}
               value={draftQuery}
               onChange={(event) => setDraftQuery(event.target.value)}
               placeholder="账户 ID、用户 ID 或状态"
@@ -445,7 +446,11 @@ export function PlatformAccountsPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2>账户目录</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p
+                className="mt-1 text-sm text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
                 当前结果 {accounts.length} 条
               </p>
             </div>
@@ -453,7 +458,9 @@ export function PlatformAccountsPage() {
           <div
             className="data-table"
             tabIndex={0}
+            role="region"
             aria-label="账户列表，可横向滚动"
+            aria-describedby="account-table-scroll-hint"
           >
             <Table className="min-w-[52rem]">
               <TableHeader>
@@ -476,6 +483,11 @@ export function PlatformAccountsPage() {
                   return (
                     <TableRow
                       key={account.platform_account_id}
+                      data-state={
+                        selectedAccountId === account.platform_account_id
+                          ? 'selected'
+                          : undefined
+                      }
                       data-test={`account-row-${account.platform_account_id}`}
                     >
                       <TableCell className="min-w-[20rem]">
@@ -504,7 +516,7 @@ export function PlatformAccountsPage() {
                       <TableCell className="text-right">
                         <span className="flex flex-wrap justify-end gap-2">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={(event) =>
                               selectAccount(
@@ -531,7 +543,8 @@ export function PlatformAccountsPage() {
                             {suspended ? '恢复' : '暂停'}
                           </Button>
                           <Button
-                            variant="destructive"
+                            variant="ghost"
+                            className="text-destructive"
                             size="sm"
                             disabled={pending}
                             onClick={() => openAction(account, 'close')}
@@ -547,6 +560,12 @@ export function PlatformAccountsPage() {
               </TableBody>
             </Table>
           </div>
+          <p
+            id="account-table-scroll-hint"
+            className="text-xs text-muted-foreground xl:hidden"
+          >
+            左右滑动查看全部列，或聚焦表格后使用方向键。
+          </p>
         </section>
       ) : null}
 
@@ -556,7 +575,7 @@ export function PlatformAccountsPage() {
           if (!open) closeInspector();
         }}
         title="账户详情"
-        description="详情来自当前平台范围的单条 Account API；未返回的订阅、文件和活动信息不会被页面补造。"
+        description="查看此账户在当前平台的状态与关键时间。"
         footer={
           inspectedAccount ? (
             <Button
@@ -637,11 +656,6 @@ export function PlatformAccountsPage() {
                 <dd>{formatUtc(inspectedAccount.updated_at)}</dd>
               </div>
             </dl>
-            <div className="rounded-lg border border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground">
-              文件摘要与活动时间线没有对应的当前 list/detail
-              contract，因此本页不展示虚构摘要；文件入口将在后续 Files
-              阶段接入。
-            </div>
             {activeAccount &&
             activeAccount.status !== inspectedAccount.status ? (
               <Alert>

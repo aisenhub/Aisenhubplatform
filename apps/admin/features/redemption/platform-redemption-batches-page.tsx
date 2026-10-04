@@ -464,7 +464,7 @@ export function PlatformRedemptionBatchesPage() {
     >
       <AdminPageHeader
         title="兑换码"
-        description="创建 pending_delivery 批次、一次性安全交付明文码，并在 receipt 校验后激活；页面不重新导出已生成的兑换码。"
+        description="创建兑换码批次，保存一次性明文并确认交付后激活。已生成的明文无法再次导出。"
         actions={
           <Button
             variant="outline"
@@ -614,8 +614,7 @@ export function PlatformRedemptionBatchesPage() {
               <div>
                 <h2>批次目录</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  列表由当前平台范围的真实 API 返回，最多读取 100
-                  条；当前合同不支持 cursor。
+                  最多显示 100 个批次，筛选作用于当前已加载结果。
                 </p>
               </div>
               <label className="grid gap-2 sm:w-72" htmlFor="batch-filter">

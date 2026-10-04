@@ -51,10 +51,13 @@ export function AdminTopbar() {
 
   return (
     <header
-      className="admin-topbar sticky top-0 z-20 flex items-center gap-3 border-b border-border/70 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6"
+      className="admin-topbar sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b px-4 md:px-6"
       data-test="admin-topbar"
     >
-      <SidebarTrigger data-test="admin-sidebar-toggle" />
+      <SidebarTrigger
+        aria-label="展开或收起导航"
+        data-test="admin-sidebar-toggle"
+      />
       <Separator orientation="vertical" className="hidden h-5 sm:block" />
       <div className="admin-topbar-context hidden min-w-0 items-center gap-2 lg:flex">
         {contextSegments.map((segment, index) => (
@@ -87,7 +90,10 @@ export function AdminTopbar() {
           {loggingOut ? '退出中…' : '退出登录'}
         </Button>
         {logoutError ? (
-          <span className="text-xs text-destructive" role="alert">
+          <span
+            className="admin-logout-error text-xs text-destructive"
+            role="alert"
+          >
             退出失败，请重试
           </span>
         ) : null}

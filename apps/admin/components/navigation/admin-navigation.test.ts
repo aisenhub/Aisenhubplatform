@@ -24,7 +24,7 @@ describe('admin navigation model', () => {
   it('uses the resource label for platform routes', () => {
     expect(
       adminNavigationLabel('/admin/platforms/platform-1/settings/origins'),
-    ).toBe('Origins');
+    ).toBe('接入地址');
     expect(
       adminNavigationLabel('/admin/platforms/platform-1/redemption-batches'),
     ).toBe('兑换码');

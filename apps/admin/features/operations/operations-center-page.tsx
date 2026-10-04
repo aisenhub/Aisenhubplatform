@@ -430,8 +430,8 @@ export function OperationsCenterPage() {
   return (
     <main className="shell wide-shell" data-test="operations-page">
       <AdminPageHeader
-        title="Operations"
-        description="集中查看有界的 Global Delete 任务。状态、checkpoint 和重试资格均以服务端 worker 合同为准。"
+        title="运维中心"
+        description="跟踪身份删除任务的执行进度，检查阻塞原因并处理重试。"
         actions={
           <Button
             variant="outline"
@@ -492,7 +492,7 @@ export function OperationsCenterPage() {
 
       <section className="panel gap-4" data-test="operations-start-panel">
         <div>
-          <h2>批准 deletion request</h2>
+          <h2>批准身份删除请求</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             只提交真实 request ID；审批结果为异步受理，后续 checkpoint 由 worker
             回报。
@@ -636,11 +636,9 @@ export function OperationsCenterPage() {
 
       <section className="grid gap-3 rounded-xl border border-dashed border-border/80 bg-muted/20 p-4">
         <div>
-          <h2 className="text-base">文件 attention 的边界</h2>
+          <h2 className="text-base">查看文件清理状态</h2>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            当前 Admin 文件接口没有全局 status filter；本页不把最多 100
-            条结果冒充全局 deleting/unknown 总量。请进入具体平台的 Files
-            页面查看服务端范围内的文件状态。
+            在平台的文件页面查看正在删除或结果待确认的文件。文件清理完成前不会释放存储额度。
           </p>
         </div>
         <Link
@@ -691,7 +689,7 @@ export function OperationsCenterPage() {
             ? checkpointLabel(inspectedJob.checkpoint)
             : '删除任务详情'
         }
-        description="只显示服务端返回的状态、checkpoint 和安全元数据；不虚构未由 API 返回的历史时间线。"
+        description="查看当前状态、执行检查点和失败原因。"
       >
         {inspectorState === 'loading' ? <AsyncState state="loading" /> : null}
         {inspectorState === 'error' && inspectorError ? (
@@ -724,7 +722,7 @@ export function OperationsCenterPage() {
                 {checkpointLabel(inspectedJob.checkpoint)}
               </p>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                API 只提供当前检查点；页面不把它展开成猜测的历史 timeline。
+                此处显示任务目前所在的步骤。
               </p>
             </div>
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
