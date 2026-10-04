@@ -2509,7 +2509,7 @@ async function exerciseAdminResourceFailureMatrix(page) {
       waitUntil: 'domcontentloaded',
     });
     await page
-      .getByRole('heading', { name: 'Operations', exact: true })
+      .getByRole('heading', { name: '运维中心', exact: true })
       .waitFor();
     const operationsError = page.locator('[data-test="recoverable-error"]');
     await operationsError
