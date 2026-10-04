@@ -1956,7 +1956,9 @@ async function exerciseSettingsLifecycleMatrix(page) {
         waitUntil: 'domcontentloaded',
       },
     );
-    await page.getByRole('heading', { name: '接入地址', exact: true }).waitFor();
+    await page
+      .getByRole('heading', { name: '接入地址', exact: true })
+      .waitFor();
     await page.getByText(origin.origin, { exact: true }).waitFor();
     await page.locator('[data-test="platform-origin-open-create"]').click();
     await page.locator('#origin-value').fill('not-a-url');
@@ -1980,7 +1982,9 @@ async function exerciseSettingsLifecycleMatrix(page) {
 
     originListMode = 'unavailable';
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.getByRole('heading', { name: '接入地址', exact: true }).waitFor();
+    await page
+      .getByRole('heading', { name: '接入地址', exact: true })
+      .waitFor();
     const originError = page.locator('[data-test="recoverable-error"]');
     await originError
       .getByText('服务暂时不可用，请稍后重试。', { exact: false })
