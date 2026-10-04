@@ -56,7 +56,7 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
       },
       {
         key: 'billing',
-        label: 'Billing',
+        label: '计费管理',
         href: '/admin/billing',
         description: '中央订单、结算、Provider 与人工处理',
         icon: CreditCard,
@@ -68,14 +68,14 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
     items: [
       {
         key: 'operations',
-        label: 'Operations',
+        label: '运维中心',
         href: '/admin/operations',
         description: '查看后台任务、检查点和可控重试',
         icon: Activity,
       },
       {
         key: 'audit',
-        label: 'Audit',
+        label: '审计记录',
         href: '/admin/audit',
         description: '只读查看脱敏审计事件',
         icon: ScrollText,
@@ -183,14 +183,14 @@ const platformNavigationDefinitions: Array<{
       },
       {
         key: 'origins',
-        label: 'Origins',
+        label: '接入地址',
         suffix: '/settings/origins',
         description: '管理浏览器 Origin allowlist',
         icon: Globe2,
       },
       {
         key: 'keys',
-        label: 'Platform Keys',
+        label: '接入密钥',
         suffix: '/settings/keys',
         description: '管理服务端 Platform Key',
         icon: KeyRound,

@@ -21,7 +21,9 @@ export function AdminPageHeader({
         <p className="max-w-2xl">{description}</p>
       </div>
       {actions ? (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        <div className="admin-page-actions flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
       ) : null}
     </header>
   );

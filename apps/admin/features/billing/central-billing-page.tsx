@@ -423,8 +423,8 @@ export function CentralBillingPage() {
       data-test="central-billing-page"
     >
       <AdminPageHeader
-        title="Billing"
-        description="查看 Provider 订单、结算状态、积压指标与人工处理原因。所有重查都经过近期 MFA、If-Match 和服务端幂等入口。"
+        title="计费管理"
+        description="查看支付渠道订单与结算状态，检查积压并处理异常订单。敏感操作需要再次验证身份。"
         actions={<Button onClick={() => void load()}>刷新</Button>}
       />
       {needsMfa ? (

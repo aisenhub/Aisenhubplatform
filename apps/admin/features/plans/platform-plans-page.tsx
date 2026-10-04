@@ -381,7 +381,7 @@ export function PlatformPlansPage() {
     <section className="grid gap-5" data-test="platform-plans-page">
       <AdminPageHeader
         title="套餐"
-        description="管理当前平台的 Free/paid Plan、默认 Free 回退和归档状态；features 只按服务端真实字段显示摘要。"
+        description="管理免费与付费套餐、默认免费套餐和归档状态。"
         actions={
           <div className="flex flex-wrap gap-2">
             <Button
@@ -424,8 +424,7 @@ export function PlatformPlansPage() {
           />
         </label>
         <p className="text-xs text-muted-foreground">
-          Plan API 当前不声明 q/cursor
-          参数，筛选只作用于已返回的本页数据，不改变服务端授权范围。
+          筛选当前已加载的套餐；未返回的套餐不包含在搜索结果中。
         </p>
       </section>
       {state === 'loading' ? <AsyncState state="loading" /> : null}
@@ -599,11 +598,10 @@ export function PlatformPlansPage() {
         <DialogContent data-test="plan-editor-dialog">
           <DialogHeader>
             <DialogTitle>
-              {editingPlan ? `编辑 Plan ${editingPlan.code}` : '创建 Plan'}
+              {editingPlan ? `编辑套餐 ${editingPlan.code}` : '创建套餐'}
             </DialogTitle>
             <DialogDescription>
-              只提交当前 Plan contract 支持的字段；features
-              作为结构化对象保留，页面不会自行计算权益。
+              设置套餐信息与权益配置。请核对字段后保存。
             </DialogDescription>
           </DialogHeader>
           {editorPayload ? (

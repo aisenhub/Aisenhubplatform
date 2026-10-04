@@ -380,7 +380,7 @@ export function PlatformSubscriptionPage() {
     <section className="grid gap-5" data-test="platform-subscription-page">
       <AdminPageHeader
         title="订阅"
-        description="当前 Admin API 没有订阅列表端点，本页只读取指定平台账户的真实投影；账户由平台范围搜索选择，不手输 Platform ID。"
+        description="选择当前平台的账户，查看订阅权益并执行受控调整。"
         actions={
           <Button
             variant="outline"
@@ -398,8 +398,7 @@ export function PlatformSubscriptionPage() {
         <div>
           <h2>选择平台账户</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            从 Account API
-            搜索真实账户，再读取其单条订阅投影；查询参数会保留在当前 URL。
+            按账户标识或状态搜索，选择账户后查看订阅详情。
           </p>
         </div>
         <form

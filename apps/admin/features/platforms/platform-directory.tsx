@@ -380,7 +380,7 @@ function PlatformDirectoryContent() {
     <main className="shell wide-shell" data-test="platform-directory">
       <AdminPageHeader
         title="平台目录"
-        description="从服务端读取平台上下文。打开具体平台后，所有账户、配置和资源操作都沿用 URL 中的 platformId。"
+        description="选择平台，管理其账户、订阅、文件与接入配置。"
         actions={
           <div className="flex flex-wrap gap-2">
             <Button
@@ -398,27 +398,28 @@ function PlatformDirectoryContent() {
       />
 
       <section
-        className="panel gap-4"
+        className="admin-resource-toolbar"
         aria-labelledby="platform-directory-query"
       >
-        <div>
-          <h2 id="platform-directory-query">查找平台</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            搜索由 Admin API 执行；本页只传递 API 合同支持的 q 和 limit 参数。
-          </p>
-        </div>
+        <h2 id="platform-directory-query" className="sr-only">
+          查找平台
+        </h2>
         <form
-          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          className="flex w-full flex-col gap-3 sm:flex-row sm:items-end"
+          role="search"
           onSubmit={submitQuery}
         >
           <div className="grid min-w-0 flex-1 gap-2">
-            <Label htmlFor="platform-directory-search">名称或 Code</Label>
+            <Label className="sr-only" htmlFor="platform-directory-search">
+              平台名称或标识
+            </Label>
             <Input
               id="platform-directory-search"
               type="search"
+              maxLength={128}
               value={queryInput}
               onChange={(event) => setQueryInput(event.target.value)}
-              placeholder="例如 pro 或 Aisenhub"
+              placeholder="搜索平台名称或标识…"
               data-test="platform-directory-search"
             />
           </div>
@@ -467,7 +468,7 @@ function PlatformDirectoryContent() {
       ) : null}
 
       <section
-        className="panel gap-4"
+        className="admin-resource-surface grid gap-4"
         aria-labelledby="platform-directory-list"
       >
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -533,66 +534,82 @@ function PlatformDirectoryContent() {
           </Empty>
         ) : null}
         {remoteState === 'success' && platforms.length > 0 ? (
-          <Table data-test="platform-directory-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>平台</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>激活策略</TableHead>
-                <TableHead>平台 ID</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {platforms.map((platform) => {
-                const status = platformStatus(platform.status);
-                const href = `/admin/platforms/${encodeURIComponent(platform.platform_id)}`;
-                return (
-                  <TableRow
-                    key={platform.platform_id}
-                    data-test="platform-directory-row"
-                  >
-                    <TableCell className="min-w-48 whitespace-normal">
-                      <Link
-                        href={href}
-                        className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
-                      >
-                        {platform.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {platform.code}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        label={status.label}
-                        tone={status.tone}
-                        rawValue={platform.status}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {platform.allow_activation ? '允许激活' : '禁止激活'}
-                    </TableCell>
-                    <TableCell className="max-w-56">
-                      <ResourceId value={platform.platform_id} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        nativeButton={false}
-                        render={<Link href={href} />}
-                        data-test="platform-directory-open"
-                      >
-                        打开工作区
-                      </Button>
-                    </TableCell>
+          <>
+            <p
+              id="platform-table-scroll-hint"
+              className="text-xs text-muted-foreground xl:hidden"
+            >
+              左右滑动查看全部列，或聚焦表格后使用方向键。
+            </p>
+            <div
+              className="data-table"
+              tabIndex={0}
+              role="region"
+              aria-label="平台列表，可横向滚动"
+              aria-describedby="platform-table-scroll-hint"
+              data-test="platform-directory-scroll"
+            >
+              <Table data-test="platform-directory-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>平台</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>激活策略</TableHead>
+                    <TableHead>平台 ID</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {platforms.map((platform) => {
+                    const status = platformStatus(platform.status);
+                    const href = `/admin/platforms/${encodeURIComponent(platform.platform_id)}`;
+                    return (
+                      <TableRow
+                        key={platform.platform_id}
+                        data-test="platform-directory-row"
+                      >
+                        <TableCell className="min-w-48 whitespace-normal">
+                          <Link
+                            href={href}
+                            className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                          >
+                            {platform.name}
+                          </Link>
+                          <span className="mt-1 block font-mono text-xs text-muted-foreground">
+                            {platform.code}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            label={status.label}
+                            tone={status.tone}
+                            rawValue={platform.status}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {platform.allow_activation ? '允许激活' : '禁止激活'}
+                        </TableCell>
+                        <TableCell className="max-w-56">
+                          <ResourceId value={platform.platform_id} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            nativeButton={false}
+                            render={<Link href={href} />}
+                            data-test="platform-directory-open"
+                          >
+                            打开工作区
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : null}
       </section>
     </main>

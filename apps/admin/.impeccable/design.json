@@ -1,0 +1,554 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T11:32:17.862Z",
+  "title": "Design System: Aisenhub Admin",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary",
+        "canonical": "#087b76",
+        "tonalRamp": [
+          "oklch(15.00% 0.08940 189.76)",
+          "oklch(26.43% 0.08940 189.76)",
+          "oklch(37.86% 0.08940 189.76)",
+          "oklch(49.29% 0.08940 189.76)",
+          "oklch(60.71% 0.08940 189.76)",
+          "oklch(72.14% 0.08940 189.76)",
+          "oklch(83.57% 0.08940 189.76)",
+          "oklch(95.00% 0.08940 189.76)"
+        ]
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "primary-dark",
+        "canonical": "#05635f",
+        "tonalRamp": [
+          "oklch(15.00% 0.07662 189.91)",
+          "oklch(26.43% 0.07662 189.91)",
+          "oklch(37.86% 0.07662 189.91)",
+          "oklch(49.29% 0.07662 189.91)",
+          "oklch(60.71% 0.07662 189.91)",
+          "oklch(72.14% 0.07662 189.91)",
+          "oklch(83.57% 0.07662 189.91)",
+          "oklch(95.00% 0.07662 189.91)"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "primary-soft",
+        "canonical": "#e7f3f1",
+        "tonalRamp": [
+          "oklch(15.00% 0.01297 185.09)",
+          "oklch(26.43% 0.01297 185.09)",
+          "oklch(37.86% 0.01297 185.09)",
+          "oklch(49.29% 0.01297 185.09)",
+          "oklch(60.71% 0.01297 185.09)",
+          "oklch(72.14% 0.01297 185.09)",
+          "oklch(83.57% 0.01297 185.09)",
+          "oklch(95.00% 0.01297 185.09)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "background",
+        "canonical": "#f4f6f8",
+        "tonalRamp": [
+          "oklch(15.00% 0.00342 247.86)",
+          "oklch(26.43% 0.00342 247.86)",
+          "oklch(37.86% 0.00342 247.86)",
+          "oklch(49.29% 0.00342 247.86)",
+          "oklch(60.71% 0.00342 247.86)",
+          "oklch(72.14% 0.00342 247.86)",
+          "oklch(83.57% 0.00342 247.86)",
+          "oklch(95.00% 0.00342 247.86)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "foreground",
+        "canonical": "#18232f",
+        "tonalRamp": [
+          "oklch(15.00% 0.02768 251.11)",
+          "oklch(26.43% 0.02768 251.11)",
+          "oklch(37.86% 0.02768 251.11)",
+          "oklch(49.29% 0.02768 251.11)",
+          "oklch(60.71% 0.02768 251.11)",
+          "oklch(72.14% 0.02768 251.11)",
+          "oklch(83.57% 0.02768 251.11)",
+          "oklch(95.00% 0.02768 251.11)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "card",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 89.88)",
+          "oklch(26.43% 0.00000 89.88)",
+          "oklch(37.86% 0.00000 89.88)",
+          "oklch(49.29% 0.00000 89.88)",
+          "oklch(60.71% 0.00000 89.88)",
+          "oklch(72.14% 0.00000 89.88)",
+          "oklch(83.57% 0.00000 89.88)",
+          "oklch(95.00% 0.00000 89.88)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "secondary",
+        "canonical": "#eaf0f3",
+        "tonalRamp": [
+          "oklch(15.00% 0.00759 228.85)",
+          "oklch(26.43% 0.00759 228.85)",
+          "oklch(37.86% 0.00759 228.85)",
+          "oklch(49.29% 0.00759 228.85)",
+          "oklch(60.71% 0.00759 228.85)",
+          "oklch(72.14% 0.00759 228.85)",
+          "oklch(83.57% 0.00759 228.85)",
+          "oklch(95.00% 0.00759 228.85)"
+        ]
+      },
+      "secondary-foreground": {
+        "role": "neutral",
+        "displayName": "secondary-foreground",
+        "canonical": "#344654",
+        "tonalRamp": [
+          "oklch(15.00% 0.03311 242.08)",
+          "oklch(26.43% 0.03311 242.08)",
+          "oklch(37.86% 0.03311 242.08)",
+          "oklch(49.29% 0.03311 242.08)",
+          "oklch(60.71% 0.03311 242.08)",
+          "oklch(72.14% 0.03311 242.08)",
+          "oklch(83.57% 0.03311 242.08)",
+          "oklch(95.00% 0.03311 242.08)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "canonical": "#eef2f5",
+        "tonalRamp": [
+          "oklch(15.00% 0.00588 239.82)",
+          "oklch(26.43% 0.00588 239.82)",
+          "oklch(37.86% 0.00588 239.82)",
+          "oklch(49.29% 0.00588 239.82)",
+          "oklch(60.71% 0.00588 239.82)",
+          "oklch(72.14% 0.00588 239.82)",
+          "oklch(83.57% 0.00588 239.82)",
+          "oklch(95.00% 0.00588 239.82)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "muted-foreground",
+        "canonical": "#5c6c7b",
+        "tonalRamp": [
+          "oklch(15.00% 0.03061 246.69)",
+          "oklch(26.43% 0.03061 246.69)",
+          "oklch(37.86% 0.03061 246.69)",
+          "oklch(49.29% 0.03061 246.69)",
+          "oklch(60.71% 0.03061 246.69)",
+          "oklch(72.14% 0.03061 246.69)",
+          "oklch(83.57% 0.03061 246.69)",
+          "oklch(95.00% 0.03061 246.69)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "border",
+        "canonical": "#dce3e9",
+        "tonalRamp": [
+          "oklch(15.00% 0.01114 243.66)",
+          "oklch(26.43% 0.01114 243.66)",
+          "oklch(37.86% 0.01114 243.66)",
+          "oklch(49.29% 0.01114 243.66)",
+          "oklch(60.71% 0.01114 243.66)",
+          "oklch(72.14% 0.01114 243.66)",
+          "oklch(83.57% 0.01114 243.66)",
+          "oklch(95.00% 0.01114 243.66)"
+        ]
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "input",
+        "canonical": "#b9c6d0",
+        "tonalRamp": [
+          "oklch(15.00% 0.02005 240.79)",
+          "oklch(26.43% 0.02005 240.79)",
+          "oklch(37.86% 0.02005 240.79)",
+          "oklch(49.29% 0.02005 240.79)",
+          "oklch(60.71% 0.02005 240.79)",
+          "oklch(72.14% 0.02005 240.79)",
+          "oklch(83.57% 0.02005 240.79)",
+          "oklch(95.00% 0.02005 240.79)"
+        ]
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "success",
+        "canonical": "#157047",
+        "tonalRamp": [
+          "oklch(15.00% 0.10523 157.99)",
+          "oklch(26.43% 0.10523 157.99)",
+          "oklch(37.86% 0.10523 157.99)",
+          "oklch(49.29% 0.10523 157.99)",
+          "oklch(60.71% 0.10523 157.99)",
+          "oklch(72.14% 0.10523 157.99)",
+          "oklch(83.57% 0.10523 157.99)",
+          "oklch(95.00% 0.10523 157.99)"
+        ]
+      },
+      "warning": {
+        "role": "neutral",
+        "displayName": "warning",
+        "canonical": "#93601a",
+        "tonalRamp": [
+          "oklch(15.00% 0.10479 69.44)",
+          "oklch(26.43% 0.10479 69.44)",
+          "oklch(37.86% 0.10479 69.44)",
+          "oklch(49.29% 0.10479 69.44)",
+          "oklch(60.71% 0.10479 69.44)",
+          "oklch(72.14% 0.10479 69.44)",
+          "oklch(83.57% 0.10479 69.44)",
+          "oklch(95.00% 0.10479 69.44)"
+        ]
+      },
+      "warning-foreground": {
+        "role": "neutral",
+        "displayName": "warning-foreground",
+        "canonical": "#805216",
+        "tonalRamp": [
+          "oklch(15.00% 0.09458 68.14)",
+          "oklch(26.43% 0.09458 68.14)",
+          "oklch(37.86% 0.09458 68.14)",
+          "oklch(49.29% 0.09458 68.14)",
+          "oklch(60.71% 0.09458 68.14)",
+          "oklch(72.14% 0.09458 68.14)",
+          "oklch(83.57% 0.09458 68.14)",
+          "oklch(95.00% 0.09458 68.14)"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "danger",
+        "canonical": "#b53342",
+        "tonalRamp": [
+          "oklch(15.00% 0.16566 18.79)",
+          "oklch(26.43% 0.16566 18.79)",
+          "oklch(37.86% 0.16566 18.79)",
+          "oklch(49.29% 0.16566 18.79)",
+          "oklch(60.71% 0.16566 18.79)",
+          "oklch(72.14% 0.16566 18.79)",
+          "oklch(83.57% 0.16566 18.79)",
+          "oklch(95.00% 0.16566 18.79)"
+        ]
+      },
+      "info": {
+        "role": "neutral",
+        "displayName": "info",
+        "canonical": "#2866a3",
+        "tonalRamp": [
+          "oklch(15.00% 0.11620 251.02)",
+          "oklch(26.43% 0.11620 251.02)",
+          "oklch(37.86% 0.11620 251.02)",
+          "oklch(49.29% 0.11620 251.02)",
+          "oklch(60.71% 0.11620 251.02)",
+          "oklch(72.14% 0.11620 251.02)",
+          "oklch(83.57% 0.11620 251.02)",
+          "oklch(95.00% 0.11620 251.02)"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "sidebar",
+        "canonical": "#182631",
+        "tonalRamp": [
+          "oklch(15.00% 0.02827 242.78)",
+          "oklch(26.43% 0.02827 242.78)",
+          "oklch(37.86% 0.02827 242.78)",
+          "oklch(49.29% 0.02827 242.78)",
+          "oklch(60.71% 0.02827 242.78)",
+          "oklch(72.14% 0.02827 242.78)",
+          "oklch(83.57% 0.02827 242.78)",
+          "oklch(95.00% 0.02827 242.78)"
+        ]
+      },
+      "sidebar-foreground": {
+        "role": "neutral",
+        "displayName": "sidebar-foreground",
+        "canonical": "#d9e4eb",
+        "tonalRamp": [
+          "oklch(15.00% 0.01521 235.39)",
+          "oklch(26.43% 0.01521 235.39)",
+          "oklch(37.86% 0.01521 235.39)",
+          "oklch(49.29% 0.01521 235.39)",
+          "oklch(60.71% 0.01521 235.39)",
+          "oklch(72.14% 0.01521 235.39)",
+          "oklch(83.57% 0.01521 235.39)",
+          "oklch(95.00% 0.01521 235.39)"
+        ]
+      },
+      "sidebar-primary": {
+        "role": "neutral",
+        "displayName": "sidebar-primary",
+        "canonical": "#9ae6d9",
+        "tonalRamp": [
+          "oklch(15.00% 0.07743 182.55)",
+          "oklch(26.43% 0.07743 182.55)",
+          "oklch(37.86% 0.07743 182.55)",
+          "oklch(49.29% 0.07743 182.55)",
+          "oklch(60.71% 0.07743 182.55)",
+          "oklch(72.14% 0.07743 182.55)",
+          "oklch(83.57% 0.07743 182.55)",
+          "oklch(95.00% 0.07743 182.55)"
+        ]
+      },
+      "sidebar-primary-foreground": {
+        "role": "neutral",
+        "displayName": "sidebar-primary-foreground",
+        "canonical": "#123a35",
+        "tonalRamp": [
+          "oklch(15.00% 0.04540 183.91)",
+          "oklch(26.43% 0.04540 183.91)",
+          "oklch(37.86% 0.04540 183.91)",
+          "oklch(49.29% 0.04540 183.91)",
+          "oklch(60.71% 0.04540 183.91)",
+          "oklch(72.14% 0.04540 183.91)",
+          "oklch(83.57% 0.04540 183.91)",
+          "oklch(95.00% 0.04540 183.91)"
+        ]
+      },
+      "sidebar-accent": {
+        "role": "neutral",
+        "displayName": "sidebar-accent",
+        "canonical": "#2b444e",
+        "tonalRamp": [
+          "oklch(15.00% 0.03516 225.08)",
+          "oklch(26.43% 0.03516 225.08)",
+          "oklch(37.86% 0.03516 225.08)",
+          "oklch(49.29% 0.03516 225.08)",
+          "oklch(60.71% 0.03516 225.08)",
+          "oklch(72.14% 0.03516 225.08)",
+          "oklch(83.57% 0.03516 225.08)",
+          "oklch(95.00% 0.03516 225.08)"
+        ]
+      },
+      "sidebar-accent-foreground": {
+        "role": "neutral",
+        "displayName": "sidebar-accent-foreground",
+        "canonical": "#b8f2e7",
+        "tonalRamp": [
+          "oklch(15.00% 0.06057 181.97)",
+          "oklch(26.43% 0.06057 181.97)",
+          "oklch(37.86% 0.06057 181.97)",
+          "oklch(49.29% 0.06057 181.97)",
+          "oklch(60.71% 0.06057 181.97)",
+          "oklch(72.14% 0.06057 181.97)",
+          "oklch(83.57% 0.06057 181.97)",
+          "oklch(95.00% 0.06057 181.97)"
+        ]
+      },
+      "sidebar-border": {
+        "role": "neutral",
+        "displayName": "sidebar-border",
+        "canonical": "#354651",
+        "tonalRamp": [
+          "oklch(15.00% 0.02867 236.87)",
+          "oklch(26.43% 0.02867 236.87)",
+          "oklch(37.86% 0.02867 236.87)",
+          "oklch(49.29% 0.02867 236.87)",
+          "oklch(60.71% 0.02867 236.87)",
+          "oklch(72.14% 0.02867 236.87)",
+          "oklch(83.57% 0.02867 236.87)",
+          "oklch(95.00% 0.02867 236.87)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "一级标题",
+        "purpose": "全局 h1 声明，页面组件另有字号工具类。"
+      },
+      "title": {
+        "displayName": "区块标题",
+        "purpose": "数据表面与关注区。"
+      },
+      "body": {
+        "displayName": "正文",
+        "purpose": "说明、表格和操作。"
+      },
+      "label": {
+        "displayName": "紧凑标签",
+        "purpose": "表头与数量提示。"
+      },
+      "identifier": {
+        "displayName": "机器标识",
+        "purpose": "可复制资源 ID 与 Code。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "surface-flat",
+        "value": "none",
+        "purpose": "常驻工作区卡片；浮层沿用共享 Sheet / Dialog 的 shadow-lg。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "field-and-task",
+        "value": "160ms ease",
+        "purpose": "输入边界与任务链接文字过渡。"
+      },
+      {
+        "name": "sidebar",
+        "value": "200ms linear",
+        "purpose": "导航宽度与位置过渡。"
+      },
+      {
+        "name": "sheet",
+        "value": "200ms ease-in-out",
+        "purpose": "共享详情浮层过渡。"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition: 0ms; animation: 1ms, one iteration",
+        "purpose": "prefers-reduced-motion: reduce。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-workspace",
+        "value": "40rem"
+      },
+      {
+        "name": "sm",
+        "value": "40rem"
+      },
+      {
+        "name": "md",
+        "value": "48rem"
+      },
+      {
+        "name": "lg",
+        "value": "64rem"
+      },
+      {
+        "name": "xl",
+        "value": "80rem"
+      }
+    ],
+    "previewNotes": "tonalRamp 是为 Impeccable 色板预览合成的 OKLCH 阶梯，未写入应用、不是已实现 token。components 为自包含视觉摘录，保留 CSS token 引用及回退；不模拟 API、焦点管理、授权、MFA 或动作协议。"
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "当前共享按钮的可见样式；操作协议由应用实现。",
+      "html": "<button class=\"ds-button ds-button-primary\">查询</button>",
+      "css": ".ds-button { display:inline-flex; align-items:center; justify-content:center; height:2rem; padding:0 .625rem; border:1px solid transparent; border-radius:var(--radius-lg,.625rem); font-family:var(--font-sans,system-ui,sans-serif); font-size:.875rem; font-weight:500; cursor:pointer; transition:all 150ms; } .ds-button:focus-visible { outline:2px solid var(--focus,#087b76); outline-offset:3px; box-shadow:0 0 0 3px color-mix(in oklch,var(--ring,#087b76) 50%,transparent); } .ds-button:active { transform:translateY(1px); } .ds-button:disabled { opacity:.5; pointer-events:none; } @media(max-width:40rem) { .ds-button { min-height:2.75rem; } } @media(prefers-reduced-motion:reduce) { .ds-button { transition-duration:0ms; } }.ds-button-primary { background:var(--primary,#087b76); color:var(--primary-foreground,#fff); } a.ds-button-primary:hover { background:color-mix(in oklch,var(--primary,#087b76) 80%,transparent); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "当前共享按钮的可见样式；操作协议由应用实现。",
+      "html": "<button class=\"ds-button ds-button-outline\">查看</button>",
+      "css": ".ds-button { display:inline-flex; align-items:center; justify-content:center; height:2rem; padding:0 .625rem; border:1px solid transparent; border-radius:var(--radius-lg,.625rem); font-family:var(--font-sans,system-ui,sans-serif); font-size:.875rem; font-weight:500; cursor:pointer; transition:all 150ms; } .ds-button:focus-visible { outline:2px solid var(--focus,#087b76); outline-offset:3px; box-shadow:0 0 0 3px color-mix(in oklch,var(--ring,#087b76) 50%,transparent); } .ds-button:active { transform:translateY(1px); } .ds-button:disabled { opacity:.5; pointer-events:none; } @media(max-width:40rem) { .ds-button { min-height:2.75rem; } } @media(prefers-reduced-motion:reduce) { .ds-button { transition-duration:0ms; } }.ds-button-outline { background:var(--background,#f4f6f8); border-color:var(--border,#dce3e9); color:var(--foreground,#18232f); } .ds-button-outline:hover { background:var(--muted,#eef2f5); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "当前共享按钮的可见样式；操作协议由应用实现。",
+      "html": "<button class=\"ds-button ds-button-ghost\">清除</button>",
+      "css": ".ds-button { display:inline-flex; align-items:center; justify-content:center; height:2rem; padding:0 .625rem; border:1px solid transparent; border-radius:var(--radius-lg,.625rem); font-family:var(--font-sans,system-ui,sans-serif); font-size:.875rem; font-weight:500; cursor:pointer; transition:all 150ms; } .ds-button:focus-visible { outline:2px solid var(--focus,#087b76); outline-offset:3px; box-shadow:0 0 0 3px color-mix(in oklch,var(--ring,#087b76) 50%,transparent); } .ds-button:active { transform:translateY(1px); } .ds-button:disabled { opacity:.5; pointer-events:none; } @media(max-width:40rem) { .ds-button { min-height:2.75rem; } } @media(prefers-reduced-motion:reduce) { .ds-button { transition-duration:0ms; } }.ds-button-ghost { background:transparent; color:var(--foreground,#18232f); } .ds-button-ghost:hover { background:var(--muted,#eef2f5); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "description": "当前共享按钮的可见样式；操作协议由应用实现。",
+      "html": "<button class=\"ds-button ds-button-destructive\">确认关闭</button>",
+      "css": ".ds-button { display:inline-flex; align-items:center; justify-content:center; height:2rem; padding:0 .625rem; border:1px solid transparent; border-radius:var(--radius-lg,.625rem); font-family:var(--font-sans,system-ui,sans-serif); font-size:.875rem; font-weight:500; cursor:pointer; transition:all 150ms; } .ds-button:focus-visible { outline:2px solid var(--focus,#087b76); outline-offset:3px; box-shadow:0 0 0 3px color-mix(in oklch,var(--ring,#087b76) 50%,transparent); } .ds-button:active { transform:translateY(1px); } .ds-button:disabled { opacity:.5; pointer-events:none; } @media(max-width:40rem) { .ds-button { min-height:2.75rem; } } @media(prefers-reduced-motion:reduce) { .ds-button { transition-duration:0ms; } }.ds-button-destructive { background:color-mix(in oklch,var(--destructive,#b53342) 10%,transparent); color:var(--destructive,#b53342); } .ds-button-destructive:hover { background:color-mix(in oklch,var(--destructive,#b53342) 20%,transparent); }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-input",
+      "description": "紧凑、显式提交的有标签搜索字段。",
+      "html": "<label class=\"ds-field\"><span class=\"ds-sr-only\">平台名称或标识</span><input class=\"ds-search\" type=\"search\" placeholder=\"搜索平台名称或标识…\"></label>",
+      "css": ".ds-field { display:block; } .ds-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); } .ds-search { width:100%; min-height:2.5rem; padding:.55rem .75rem; border:1px solid var(--input,#b9c6d0); border-radius:.5rem; background:var(--card,#fff); color:var(--foreground,#18232f); font-family:var(--font-sans,system-ui,sans-serif); font-size:.875rem; transition:border-color 160ms ease; } .ds-search::placeholder { color:var(--muted-foreground,#5c6c7b); } .ds-search:hover { border-color:var(--primary,#087b76); } .ds-search:focus-visible { border-color:var(--ring,#087b76); outline:2px solid var(--focus,#087b76); outline-offset:3px; } .ds-search:disabled { opacity:.5; pointer-events:none; }"
+    },
+    {
+      "name": "Platform Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "有范围、当前页和活动态的深色导航摘录。",
+      "html": "<nav class=\"ds-nav\" aria-label=\"平台\"><span class=\"ds-nav-label\">平台</span><a class=\"ds-nav-item\" href=\"#overview\">概览</a><a class=\"ds-nav-item ds-nav-active\" href=\"#accounts\" aria-current=\"page\">账户</a></nav>",
+      "css": ".ds-nav { padding:.75rem; background:var(--sidebar,#182631); color:var(--sidebar-foreground,#d9e4eb); font-family:var(--font-sans,system-ui,sans-serif); } .ds-nav-label { display:block; padding:.5rem; opacity:.75; font-size:.75rem; } .ds-nav-item { display:flex; align-items:center; min-height:2.5rem; padding:0 .5rem; border-radius:.5rem; font-size:.875rem; text-decoration:none; } .ds-nav-item:hover,.ds-nav-item:active,.ds-nav-active { background:var(--sidebar-accent,#2b444e); color:var(--sidebar-accent-foreground,#b8f2e7); } .ds-nav-active { font-weight:600; } .ds-nav-item:focus-visible { outline:2px solid var(--sidebar-ring,#9ae6d9); outline-offset:3px; }"
+    },
+    {
+      "name": "Success Status",
+      "kind": "chip",
+      "description": "非交互状态标签；颜色与文字共同表达状态。",
+      "html": "<span class=\"ds-status\"><span class=\"ds-status-dot\" aria-hidden=\"true\"></span>已激活</span>",
+      "css": ".ds-status { display:inline-flex; align-items:center; gap:.375rem; height:1.25rem; padding:.125rem .5rem; border:1px solid color-mix(in oklch,var(--success,#157047) 25%,transparent); border-radius:2rem; background:color-mix(in oklch,var(--success,#157047) 10%,transparent); color:var(--success,#157047); font-family:var(--font-sans,system-ui,sans-serif); font-size:.75rem; font-weight:500; } .ds-status-dot { width:.375rem; height:.375rem; border-radius:50%; background:currentColor; opacity:.8; }"
+    },
+    {
+      "name": "Resource Surface",
+      "kind": "card",
+      "refersTo": "resource-surface",
+      "description": "平面数据表面，通过边界与留白组织内容。",
+      "html": "<section class=\"ds-surface\"><h2 class=\"ds-surface-title\">平台列表</h2><p class=\"ds-surface-meta\">当前结果 2 个 · 最多读取 100 个平台</p></section>",
+      "css": ".ds-surface { display:grid; gap:1rem; padding:1.25rem; border:1px solid var(--border,#dce3e9); border-radius:.75rem; background:var(--card,#fff); color:var(--foreground,#18232f); box-shadow:none; font-family:var(--font-sans,system-ui,sans-serif); } .ds-surface-title { margin:0; font-size:1rem; font-weight:650; line-height:1.4; letter-spacing:-.01em; } .ds-surface-meta { margin:0; font-size:.875rem; color:var(--muted-foreground,#5c6c7b); } @media(max-width:40rem) { .ds-surface { padding:1rem; } }"
+    },
+    {
+      "name": "Selected Account Table",
+      "kind": "custom",
+      "refersTo": "table-selected",
+      "description": "单一可聚焦滚动区域与选中行；仅展示表格样式。",
+      "html": "<div class=\"ds-scroll\" role=\"region\" aria-label=\"账户列表，可横向滚动\" aria-describedby=\"ds-table-hint\" tabindex=\"0\"><table class=\"ds-table\"><thead><tr><th scope=\"col\">账户</th><th scope=\"col\">状态</th></tr></thead><tbody><tr><td>演示账户 A</td><td>已激活</td></tr><tr class=\"ds-selected\"><td>演示账户 B</td><td>已暂停</td></tr></tbody></table></div><p class=\"ds-hint\" id=\"ds-table-hint\">左右滑动查看全部列，或聚焦表格后使用方向键。</p>",
+      "css": ".ds-scroll { overflow-x:auto; border:1px solid var(--border,#dce3e9); border-radius:.625rem; } .ds-scroll:focus-visible { outline:2px solid var(--focus,#087b76); outline-offset:3px; } .ds-table { width:100%; border-collapse:collapse; color:var(--foreground,#18232f); font-family:var(--font-sans,system-ui,sans-serif); font-size:.875rem; } .ds-table th { height:2.75rem; padding:0 .5rem; background:var(--muted,#eef2f5); color:var(--muted-foreground,#5c6c7b); font-size:.75rem; font-weight:600; text-align:left; } .ds-table td { padding:.875rem .5rem; border-top:1px solid var(--border,#dce3e9); font-variant-numeric:tabular-nums; } .ds-table tbody tr { background:var(--card,#fff); } .ds-table tbody tr:hover { background:var(--muted,#eef2f5); } .ds-table tr.ds-selected { background:var(--primary-soft,#e7f3f1); } .ds-hint { color:var(--muted-foreground,#5c6c7b); font-size:.75rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "操作账簿 / Operations Ledger",
+    "overview": "深墨色导航承载管理范围，冷纸色工作区承载数据，青绿色引导操作。界面使用紧凑搜索、细分隔线和可比较的表格行，让管理员先找到平台和账户，再查看详情并确认变更。\n\n这是当前实现的视觉记录，依据 [全局样式](app/globals.css)、[Shell](components/shell/admin-shell.tsx)、[导航](components/navigation/admin-navigation.ts)及平台、账户、概览页面。视觉方向由用户交由 Agent 决定；方向 seed 为 `5b78f793`。组件预览、动效和断点元数据见 [.impeccable/design.json](.impeccable/design.json)，不代表后端能力或验收结果。",
+    "keyCharacteristics": [
+      "深色导航与浅色数据表面。",
+      "固定字号、等宽标识与对齐数字。",
+      "以中文任务名称组织搜索、列表、详情与操作。",
+      "通过明确文字区分失败、旧数据、处理中和结果未确认。"
+    ],
+    "rules": [
+      {
+        "name": "The Scope Rule",
+        "body": "深色导航表示管理范围，青绿操作色不替代危险、警告或结果未确认的语义。",
+        "section": "colors"
+      },
+      {
+        "name": "The Identity Rule",
+        "body": "人类名称先读，机器标识次读；保留 ID 的复制入口与完整详情，长标识按场景换行或截断。",
+        "section": "typography"
+      },
+      {
+        "name": "The One Scroll Rule",
+        "body": "平台与账户表格的外层区域承担唯一横向滚动，内部 Table 容器不重复滚动。区域有可访问名称、tabIndex、焦点轮廓和窄屏方向键提示；账户表格保留 52rem 最小宽度。",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Do 使用现有 token 与共享组件，并维持中文任务名称。",
+      "Do 在平台范围、当前操作目标及读取窗口旁保留明确说明。",
+      "Do 保留表格的单一滚动区域、可聚焦入口、选择态与详情焦点返回。",
+      "Do 为旧数据、危险动作与结果未确认提供明确文字和恢复步骤。"
+    ],
+    "donts": [
+      "Don't 将数据源读取失败、受理中或结果未确认表现为成功。",
+      "Don't 用颜色、图标或按钮可见性代替状态文字或授权边界。",
+      "Don't 在详情之外让每个表格单元成为单独滚动容器。",
+      "Don't 用装饰图片替代当前以任务与数据为主的界面；本方向没有 shipping raster。"
+    ]
+  }
+}

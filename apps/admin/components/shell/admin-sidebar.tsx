@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
@@ -17,6 +18,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from '@kit/ui/sidebar';
 
 import {
@@ -32,7 +34,9 @@ import { platformStatus } from '../platform-context/platform-types';
 import { useAdminShellContext } from './admin-shell-context';
 
 export function AdminSidebar() {
+  const { setOpenMobile } = useSidebar();
   const pathname = usePathname();
+  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
   const platformRoute = parseAdminPlatformPath(pathname);
   const { platform } = useAdminShellContext();
   const currentPlatform =
@@ -129,8 +133,8 @@ export function AdminSidebar() {
       <SidebarSeparator />
       <SidebarFooter className="p-3">
         <div className="admin-sidebar-footer-card rounded-xl px-3 py-2 text-xs group-data-[collapsible=icon]:hidden">
-          <div className="font-semibold">敏感操作</div>
-          <div className="mt-1 leading-5">近期 MFA 由服务端按需验证。</div>
+          <div className="font-semibold">操作保护</div>
+          <div className="mt-1 leading-5">敏感操作前可能需要再次验证身份。</div>
         </div>
       </SidebarFooter>
       <SidebarRail data-test="admin-sidebar-rail" />
