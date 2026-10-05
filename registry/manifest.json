@@ -5,7 +5,7 @@
   "build": {
     "node": "24.19.0",
     "pnpm": "11.18.0",
-    "next": "16.3.0",
+    "next": "16.3.8",
     "source_package": "apps/template-preview"
   },
   "sdk_compatibility": {
