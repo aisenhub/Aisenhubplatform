@@ -1,6 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertLocalSupabaseArguments,
+  assertLocalSupabaseEnvironment,
+} from './local-supabase.mjs';
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -14,25 +18,11 @@ if (!localActions.has(action)) {
   process.exit(2);
 }
 
-for (const variable of ['SUPABASE_URL', 'NEXT_PUBLIC_SITE_URL']) {
-  const value = process.env[variable];
-  if (
-    value &&
-    !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i.test(
-      value,
-    )
-  ) {
-    console.error(
-      `Refusing local Supabase action because ${variable} is not a localhost URL.`,
-    );
-    process.exit(2);
-  }
-}
-
-if (process.env.SUPABASE_PROJECT_REF) {
-  console.error(
-    'Refusing local Supabase action while SUPABASE_PROJECT_REF is set.',
-  );
+try {
+  assertLocalSupabaseEnvironment(process.env);
+  assertLocalSupabaseArguments(args);
+} catch (error) {
+  console.error(error.message);
   process.exit(2);
 }
 
@@ -45,20 +35,24 @@ const cliEntrypoint = path.join(
 );
 const command =
   action === 'db-reset'
-    ? ['db', 'reset', ...args]
+    ? ['db', 'reset', '--local', ...args]
     : action === 'db'
-      ? ['test', 'db', ...args]
+      ? ['test', 'db', '--local', ...args]
       : [action, ...args];
 // Calling the package entrypoint through the current Node executable avoids
 // Windows' non-executable .cmd shim while preserving the pinned project CLI.
 const result = spawnSync(process.execPath, [cliEntrypoint, ...command], {
   cwd: root,
   env: { ...process.env, SUPABASE_TELEMETRY_DISABLED: '1' },
-  stdio: 'inherit',
+  // `start` prints a JSON object containing the Local database password and
+  // Auth/Storage secrets. Keep it out of terminals and verification logs.
+  stdio: action === 'start' ? ['inherit', 'pipe', 'inherit'] : 'inherit',
 });
 
 if (result.error) {
   console.error(result.error.message);
 }
+if (action === 'start' && result.status === 0)
+  console.log('Local Supabase start PASS (credentials omitted).');
 
 process.exit(result.status ?? 1);

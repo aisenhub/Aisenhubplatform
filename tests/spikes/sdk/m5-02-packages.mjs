@@ -92,7 +92,8 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-rmSync(artifactsRoot, { recursive: true, force: true });
+rmSync(firstDestination, { recursive: true, force: true });
+rmSync(secondDestination, { recursive: true, force: true });
 rmSync(consumerDirectory, { recursive: true, force: true });
 mkdirSync(artifactsRoot, { recursive: true });
 runPnpm(['run', 'sdk:pack'], repositoryRoot, {

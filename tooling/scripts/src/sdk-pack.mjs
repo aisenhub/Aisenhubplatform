@@ -12,6 +12,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { pnpmCliPath } from './toolchain.mjs';
+import { assertSdkOutputDirectory } from './sdk-output.mjs';
 
 const repositoryRoot = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -23,9 +24,12 @@ const packageNames = [
   'account-auth-nextjs',
   'account-server',
 ];
-const destination = resolve(
+const destination = assertSdkOutputDirectory(
   repositoryRoot,
-  process.env.M5_SDK_PACK_DESTINATION ?? 'artifacts/sdk',
+  resolve(
+    repositoryRoot,
+    process.env.M5_SDK_PACK_DESTINATION ?? 'artifacts/sdk',
+  ),
 );
 
 const pnpmCli = pnpmCliPath();

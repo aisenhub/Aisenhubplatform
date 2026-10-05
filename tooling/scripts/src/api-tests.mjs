@@ -5,6 +5,8 @@ import { denoCommand } from './toolchain.mjs';
 const deno = denoCommand();
 
 const testFiles = [
+  'supabase/functions/_shared/storage.test.ts',
+  'supabase/functions/_shared/upload.test.ts',
   'supabase/functions/_shared/afdian.test.ts',
   'supabase/functions/billing-webhook/index.test.ts',
   'supabase/functions/maintenance/index.test.ts',

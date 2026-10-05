@@ -16,6 +16,7 @@
     "typecheck": "turbo typecheck --cache-dir=.turbo",
     "test": "pnpm run test:unit",
     "test:unit": "turbo test:unit --cache-dir=.turbo",
+    "test:tooling": "node --test tooling/scripts/src/*.test.mjs",
     "test:upload": "node tests/spikes/upload/controlled-receiver.mjs",
     "test:billing:crypto": "node tests/spikes/billing/crypto-vectors.mjs",
     "test:billing:crypto:deno": "node tooling/scripts/src/deno-run.mjs run tests/spikes/billing/crypto-vectors.mjs",
