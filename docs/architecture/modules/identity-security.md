@@ -74,7 +74,7 @@ Account Edge函数同时承载平台凭据认证的公开套餐接口和用户�
 | domain_owner | NOLOGIN、最小表权限及命名RLS policy；拥有指定领域函数，非全局BYPASSRLS |
 | recovery_executor | 离线、限时启用的恢复/匿名化入口，生产运行时不持有 |
 
-函数固定空search_path、全限定表名、参数化SQL；撤销PUBLIC/anon/authenticated的EXECUTE并设置默认权限。domain_owner不能拥有不相关Auth或Storage表。会话查询使用独立只读helper，仅授予所需Auth列SELECT，不能通过业务函数修改auth.users/auth.sessions。
+函数固定受控search_path、全限定表名、参数化SQL；显式撤销PUBLIC/anon/authenticated的EXECUTE，保留对应executor入口。每个新函数必须显式撤权；仅按schema设置默认权限不能撤销PostgreSQL全局PUBLIC EXECUTE默认值。全函数权限回归检查防止后续迁移重新暴露。domain_owner不能拥有不相关Auth或Storage表。会话查询使用独立只读helper，仅授予所需Auth列SELECT，不能通过业务函数修改auth.users/auth.sessions。
 
 public核心表全部RLS，显式撤销浏览器CRUD；View用security_invoker或不暴露。普通runtime不获Ledger/Event/Audit UPDATE/DELETE；匿名化例外仅通过recovery入口。数据库函数的测试必须使用真正executor角色，不能只以postgres测试。
 

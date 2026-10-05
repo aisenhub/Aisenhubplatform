@@ -1,6 +1,11 @@
 begin;
 
-select plan(9);
+select plan(13);
+
+-- Isolate global cleanup counts from older Local fixtures. These changes are
+-- rolled back with the whole test; no existing Local records are removed.
+delete from private.idempotency_keys;
+delete from private.admin_idempotency;
 
 select has_function(
   'private',
@@ -73,6 +78,23 @@ insert into private.admin_idempotency (
   'expired-admin-key', decode(repeat('bb', 32), 'hex'),
   'completed', 200, '{}'::jsonb, now() - interval '8 days', now() - interval '1 day'
 );
+insert into private.idempotency_keys (
+  platform_id, platform_account_id, operation, actor_scope,
+  idempotency_key, request_hash, state, response_status, response_body,
+  created_at, expires_at
+)
+select platform_id, platform_account_id, operation, actor_scope,
+  'live-user-key', request_hash, state, response_status, response_body,
+  now(), now() + interval '1 day'
+from private.idempotency_keys;
+insert into private.admin_idempotency (
+  admin_user_id, scope, operation, idempotency_key, request_hash,
+  state, response_status, response_body, created_at, expires_at
+)
+select admin_user_id, scope, operation, 'live-admin-key', request_hash,
+  state, response_status, response_body, now(), now() + interval '1 day'
+from private.admin_idempotency;
+
 insert into public.billing_checkout_intents (
   id, platform_id, platform_account_id, subscription_product_id,
   entitlement_plan_id, product_code, term_kind_snapshot,
@@ -118,6 +140,15 @@ select is(
   1::bigint,
   'expired ordinary cache cleanup preserves durable checkout binding'
 );
+
+select is((select count(*) from private.idempotency_keys where idempotency_key = 'expired-user-key'),
+  0::bigint, 'the expired user fixture is actually removed');
+select is((select count(*) from private.admin_idempotency where idempotency_key like 'expired-admin-key%'),
+  0::bigint, 'the expired admin fixtures are actually removed');
+select is((select count(*) from private.idempotency_keys where idempotency_key = 'live-user-key'),
+  1::bigint, 'unexpired user idempotency remains intact');
+select is((select count(*) from private.admin_idempotency where idempotency_key = 'live-admin-key'),
+  1::bigint, 'unexpired admin idempotency remains intact');
 
 select * from finish();
 rollback;
