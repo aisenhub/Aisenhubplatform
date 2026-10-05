@@ -31,6 +31,11 @@
       "import": "./dist/contracts/validation.js",
       "default": "./dist/contracts/validation.js"
     },
+    "./upload": {
+      "types": "./dist/upload.d.ts",
+      "import": "./dist/upload.js",
+      "default": "./dist/upload.js"
+    },
     "./redemption": {
       "types": "./dist/redemption.d.ts",
       "import": "./dist/redemption.js",

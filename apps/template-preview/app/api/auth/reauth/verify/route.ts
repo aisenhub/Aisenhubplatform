@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { readBoundedJson, UploadFault } from '@kit/domain/upload';
 import { AccountApiError, createAccountApiClient } from '@kit/account-server';
 import {
   authCookieNames,
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (!hasValidOrigin(request, runtime.origin) || !hasValidCsrf(request))
       return errorBody('INVALID_INPUT', 403, id);
 
-    const body = (await request.json().catch(() => null)) as {
+    const body = (await readBoundedJson(request)) as {
       token_hash?: unknown;
     } | null;
     if (!isTokenHash(body?.token_hash))
@@ -118,6 +119,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
     return response;
   } catch (error) {
+    if (error instanceof UploadFault)
+      return errorBody(
+        error.status >= 500 ? 'AUTHORIZATION_UNAVAILABLE' : 'INVALID_INPUT',
+        error.status,
+        id,
+      );
     if (error instanceof AccountApiError) return accountApiFailure(error, id);
     return errorBody('AUTHORIZATION_UNAVAILABLE', 503, id);
   } finally {

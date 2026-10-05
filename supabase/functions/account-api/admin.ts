@@ -43,7 +43,7 @@ export async function adminStepUp(
 }
 
 export function adminContextValues(session: SessionContext): unknown[] {
-  return [session.userId, session.sessionId, requestId()];
+  return [session.userId, session.sessionId, session.requestId ?? requestId()];
 }
 
 export function boundedLimit(value: string | null): number {

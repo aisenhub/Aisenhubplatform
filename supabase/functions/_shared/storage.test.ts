@@ -4,6 +4,46 @@ import { assertEquals, assertRejects } from 'jsr:@std/assert@1';
 
 import { createSupabaseStorageAdapter } from './storage.ts';
 
+Deno.test('Storage download deadline remains active while reading a stalled body', async () => {
+  const originalUrl = Deno.env.get('SUPABASE_URL');
+  const originalSecret = Deno.env.get('SUPABASE_SECRET_KEY');
+  const originalFetch = globalThis.fetch;
+  Deno.env.set('SUPABASE_URL', 'https://storage.example.test');
+  Deno.env.set('SUPABASE_SECRET_KEY', 'sb_secret_fake_fixture');
+  globalThis.fetch = (async (_input, init) =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          const signal = init?.signal;
+          const finish = setTimeout(() => {
+            signal?.removeEventListener('abort', abort);
+            controller.enqueue(new Uint8Array([1]));
+            controller.close();
+          }, 100);
+          function abort() {
+            clearTimeout(finish);
+            controller.error(signal?.reason);
+          }
+          signal?.addEventListener('abort', abort, { once: true });
+        },
+      }),
+    )) as typeof fetch;
+  try {
+    const response = await createSupabaseStorageAdapter().download({
+      bucket: 'platform-config-files',
+      path: 'fixture',
+      timeoutMs: 10,
+    });
+    await assertRejects(() => response.arrayBuffer());
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalUrl === undefined) Deno.env.delete('SUPABASE_URL');
+    else Deno.env.set('SUPABASE_URL', originalUrl);
+    if (originalSecret === undefined) Deno.env.delete('SUPABASE_SECRET_KEY');
+    else Deno.env.set('SUPABASE_SECRET_KEY', originalSecret);
+  }
+});
+
 Deno.test('Storage adapter exposes immutable server-only operations', async () => {
   const originalUrl = Deno.env.get('SUPABASE_URL');
   const originalSecret = Deno.env.get('SUPABASE_SECRET_KEY');

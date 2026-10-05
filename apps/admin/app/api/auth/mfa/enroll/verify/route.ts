@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { readBoundedJson, UploadFault } from '@kit/domain/upload';
 import { errorBody, issueAdminRecentProof, responseBody } from '../../../_lib';
 import {
   authCookieNames,
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     )
       return result({ code: 'INVALID_INPUT' }, 403);
 
-    const input = (await request.json()) as {
+    const input = (await readBoundedJson(request)) as {
       factor_id?: unknown;
       code?: unknown;
     };
@@ -175,7 +176,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     else response.cookies.delete(authCookieNames('admin').recentProof);
     return response;
-  } catch {
+  } catch (error) {
+    if (error instanceof UploadFault)
+      return errorBody(
+        error.status >= 500 ? 'AUTHORIZATION_UNAVAILABLE' : 'INVALID_INPUT',
+        error.status,
+      );
     return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
   }
 }

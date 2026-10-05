@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { readBoundedJson, UploadFault } from '@kit/domain/upload';
 import {
   authCookieNames,
   currentLogoutFence,
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const loginFence = currentLogoutFence(
       request.cookies.get(authCookieNames('admin').logoutFence)?.value,
     );
-    const body = (await request.json()) as {
+    const body = (await readBoundedJson(request)) as {
       email?: unknown;
       password?: unknown;
     };
@@ -78,7 +79,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       prefix: 'admin',
     });
     return response;
-  } catch {
+  } catch (error) {
+    if (error instanceof UploadFault)
+      return errorBody(
+        error.status >= 500 ? 'AUTHORIZATION_UNAVAILABLE' : 'INVALID_INPUT',
+        error.status,
+        id,
+      );
     return errorBody('AUTHORIZATION_UNAVAILABLE', 503, id);
   }
 }

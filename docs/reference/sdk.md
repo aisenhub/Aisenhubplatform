@@ -7,7 +7,7 @@
 | @kit/account-auth | Auth 合同、认证意图与校验 |
 | @kit/account-auth-nextjs | 服务端 SSR/Cookie/PKCE 与浏览器会话协调 |
 | @kit/account-server | 服务端 HTTP 客户端、认证辅助与 Key 材料 |
-| @kit/domain | DTO、校验、错误与兑换码材料 |
+| @kit/domain | DTO、校验、错误、兑换码材料与跨运行时有界上传工具 |
 
 包的 exports、依赖和版本以各 package.json 为准。account-server 使用 node:crypto，不能放入浏览器 bundle；领域包使用可供 Node/Edge 引入的 TypeScript 边界。
 
@@ -19,7 +19,7 @@
 
 根目录执行 pnpm sdk:pack，调用[打包脚本](../../tooling/scripts/src/sdk-pack.mjs)编译上述四个包并生成 tarball；脚本会对已解析的 package metadata 做稳定排序，保证同一源码的归档可复现。默认产物目录 artifacts/sdk，manifest.json 按本次产物写入版本、文件路径及 SHA-256。生成的 hash 只对应同目录的具体 tarball，不在文档固定旧构建校验和。
 
-M5_SDK_PACK_DESTINATION 可覆盖目标；打包会清空目标目录并重建各包 dist。包仍为 private，本地 tarball 不表示已发布到 npm。
+M5_SDK_PACK_DESTINATION 仅可指定仓库 artifacts 下的独立子目录，拒绝根目录、源码、外部路径及 symlink/junction；打包会清空该目标并重建各包 dist。`@kit/domain/upload`提供Node BFF与Deno共用的有界读取器和接收门闩。包仍为 private，本地 tarball 不表示已发布到 npm。
 
 ## Registry
 

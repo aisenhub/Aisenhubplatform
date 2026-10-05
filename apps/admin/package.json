@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@kit/account-auth-nextjs": "workspace:*",
+    "@kit/domain": "workspace:*",
     "@kit/ui": "workspace:*",
     "lucide-react": "catalog:",
     "next": "catalog:",

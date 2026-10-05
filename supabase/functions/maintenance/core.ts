@@ -107,8 +107,6 @@ export function authAdminAdapter(): AuthAdminAdapter {
   if (!baseUrl || !secret) throw new Error('AUTH_NOT_CONFIGURED');
   return {
     async deleteUser(userId) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
       let response: Response;
       try {
         response = await fetch(
@@ -119,18 +117,17 @@ export function authAdminAdapter(): AuthAdminAdapter {
               apikey: secret,
               Authorization: `Bearer ${secret}`,
             },
-            signal: controller.signal,
+            signal: AbortSignal.timeout(5000),
           },
         );
       } catch {
         throw new Error('PROVIDER_TIMEOUT');
-      } finally {
-        clearTimeout(timer);
       }
       if (!response.ok) {
-        await response.text();
+        await response.body?.cancel().catch(() => undefined);
         throw new Error(`AUTH_DELETE_FAILED_${response.status}`);
       }
+      await response.body?.cancel().catch(() => undefined);
     },
   };
 }

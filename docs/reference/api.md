@@ -42,7 +42,7 @@ Admin独立 /admin/api/v1：`GET /security/status` 在全局AAL2 gate前验证�
 
 JSON统一外壳为 data + request_id，错误为 error:{code,message} + request_id；错误文案可本地化，机器判断只使用code。下载成功返回字节和X-Request-Id，失败在发流前返回标准错误，发流后中断记录独立事件。
 
-UUID用字符串、时间为UTC ISO 8601，字节在V1范围内用JSON整数。列表默认20、最大100，游标按(created_at,id)稳定排序；不使用无界列表。上传体例外限1 MiB，其余JSON请求最大64 KiB；对metadata/preferences/features作基础类型和长度校验。
+UUID用字符串、时间为UTC ISO 8601，字节在V1范围内用JSON整数。列表默认20、最大100，游标按(created_at,id)稳定排序；不使用无界列表。上传体例外限1 MiB，其余JSON请求最大64 KiB；中央 API、BFF 及登录/MFA入口共用有界读取器，在接收过程中限制真实字节、大小声明、编码和接收超时，不先完整读取再检查；对metadata/preferences/features作基础类型和长度校验。
 
 ~~~ts
 type AccountPrincipal = {

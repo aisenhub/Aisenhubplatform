@@ -2,7 +2,60 @@
 
 import { assertEquals, assertRejects } from 'jsr:@std/assert@1';
 
-import { readBoundedBody, UploadFault, UploadGate } from './upload.ts';
+import {
+  readBoundedBody,
+  readBoundedJson,
+  UploadFault,
+  UploadGate,
+} from './upload.ts';
+
+Deno.test('JSON reader rejects chunked overflow before parsing or buffering the rest', async () => {
+  let cancelled = false;
+  const oversized = new Request('http://local/json', {
+    method: 'POST',
+    body: new ReadableStream({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(32_769));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    }),
+  });
+  await assertRejects(
+    () => readBoundedJson(oversized),
+    UploadFault,
+    'PAYLOAD_TOO_LARGE',
+  );
+  assertEquals(cancelled, true);
+  assertEquals(await readBoundedJson(request('{"name":"fixture"}')), {
+    name: 'fixture',
+  });
+  for (const invalid of ['null', '[]', '"scalar"', '{'])
+    await assertRejects(
+      () => readBoundedJson(request(invalid)),
+      UploadFault,
+      'INVALID_INPUT',
+    );
+});
+
+Deno.test('bounded reader times out stalled input and cancels its stream', async () => {
+  let cancelled = false;
+  const stalled = new Request('http://local/upload', {
+    method: 'PUT',
+    body: new ReadableStream({
+      cancel() {
+        cancelled = true;
+      },
+    }),
+  });
+  await assertRejects(
+    () => readBoundedBody(stalled, 5, 10),
+    UploadFault,
+    'STORAGE_UNAVAILABLE',
+  );
+  assertEquals(cancelled, true);
+});
 
 function request(body: BodyInit | null, headers: HeadersInit = {}): Request {
   return new Request('http://local/upload', { method: 'PUT', body, headers });

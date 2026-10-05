@@ -9,7 +9,7 @@
 首次接入按第2–10节顺序执行，再按需接订阅/文件等能力，最后执行第14节验收。遇到外部账号、配置或商业决策缺口，按第3节向用户提出具体请求，同时继续不依赖该输入的工作。
 
 - 中央项目开发先读[AGENTS](../../AGENTS.md)、[系统概览](../architecture/overview.md)、[开发发布流程](development-release-workflow.md)和本手册。
-- 本次只改手册属于R0；实际SDK/BFF/Auth/平台接入通常为R3，不能因为复制参考代码就跳过staging。
+- 本次只改手册属于R0；实际SDK/BFF/Auth/平台接入通常为R3，必须完成适用本地Supabase验收，最高不要求远程测试环境。
 - 不需要给每个新平台再建一套中央Supabase。每个环境共享该环境中央身份系统，以平台账户和Platform Key隔离平台。平台自己的业务数据库可以独立，但不复制中央权益账本。
 - 同一Supabase项目共享身份，不等于不同域名已具备自动登录。默认各平台独立登录会话；跨域SSO不在当前接入承诺内。
 
@@ -29,6 +29,7 @@ flowchart LR
 | 服务端API客户端 | `@kit/account-server` | Node服务端使用，含node:crypto，不导入浏览器；不假设纯Edge运行时兼容 |
 | Auth合同与Next.js适配 | `@kit/account-auth`、`@kit/account-auth-nextjs` | 复用Cookie、刷新、退出fence、回调与会话协调；不是注册/找回密码整站生成器 |
 | 类型与校验 | `@kit/domain`及其`/contracts`入口 | 不在Consumer复制SQL权益/配额算法；不把Key/兑换材料生成能力暴露给客户端 |
+| 有界上传 | `@kit/domain/upload` | BFF与中央共用读取器；BFF先取可信Principal并限制1 MiB、每实例16个/每账户2个；中央继续验证预约、当前策略和配额 |
 | 页面与BFF参考 | [apps/template-preview](../../apps/template-preview) | 可按需移植、可定制UI；独立安装必须解决引用依赖并验收 |
 | 安装元数据 | [Registry manifest](../../registry/manifest.json)、[templates](../../registry/templates.json) | local-only，不是线上Registry；没有可承诺的通用一键安装命令 |
 | SDK发行物 | `pnpm sdk:pack`的tarball和manifest | 包仍private，不能声称已发布npm；以本次产物hash核验 |
@@ -44,12 +45,12 @@ Agent先盘点新平台实际目录、框架、运行时和已有登录系统，
 新平台仓库、目录、当前分支：
 技术栈/运行时/已有Auth：
 需要功能：登录 / 平台激活 / 权益授权 / 资料 / 订阅购买 / 兑换 / 文件
-Local地址、Staging域名、Production域名：
+Local地址、Production域名：
 各环境中央API/Auth是否可用：
 首批需要保护的业务接口和feature名称：
 套餐、免费能力、注册/激活政策：
 中央基线commit、SDK发行批次/版本/hash：
-可用授权：本地代码 / Git / staging配置与部署 / 生产发布 / 真实支付
+可用授权：本地代码 / Git / 生产发布 / 真实支付
 用户待办、Agent待办、阻塞和下一独立任务：
 ```
 
@@ -63,11 +64,11 @@ Local地址、Staging域名、Production域名：
 | --- | --- | --- | --- |
 | 技术栈/功能/业务授权 | 盘点代码，列需要保护的操作和最小接入方案 | 确定平台名称、业务feature、套餐及范围 | 文档、接口清单、Mock、页面骨架 |
 | 仓库/托管/域名 | 列目标项目、域名与回调清单，核对现有权限 | 提供项目访问或授权、完成必须本人进行的登录/DNS确认 | 本地接入 |
-| 中央平台登记 | 准备Local/Staging/Production各环境配置表 | 确认code、允许激活/购买政策；需要时以管理员MFA完成或授权操作 | 安装包和BFF实现 |
+| 中央平台登记 | 准备Local/Production各环境配置表 | 确认code、允许激活/购买政策；需要时以管理员MFA完成或授权操作 | 安装包和BFF实现 |
 | Platform Key | 指定对应平台/环境、服务端变量和验证请求 | 经中央Admin流程签发并安全注入；不发聊天明文 | 无Key时停真实中央调用，用明确标记的Mock |
 | Auth测试用户/邮件 | 列测试邮箱、确认邮件与回调场景 | 控制测试邮箱，完成验证码/MFA等本人步骤；决定注册策略 | 其他非邮件测试 |
 | Provider/真实支付 | 准备商品、回调、金额/次数、退款和隔离清单 | 提供账号接入授权、确认真实交易范围 | 登录/权益Mock，不伪造渠道通过 |
-| Staging验收 | 整理准确候选、配置差异、用例和清理范围 | 缺少环境或部署授权时补齐 | 独立Local验收 |
+| 本地Supabase验收 | 整理准确候选、用例、fixture和清理范围 | 仅补齐无法由Agent完成的业务决定或工具条件 | 其他独立本地验证 |
 | Production | 完成可执行发布和恢复清单、门槛证据 | 明确允许目标版本/迁移/配置/交易动作 | 不触发生产，保留待发布版本 |
 
 Agent提示模板：
@@ -75,7 +76,7 @@ Agent提示模板：
 ```text
 待办：请确认/完成【具体事项】。
 原因：它阻塞【具体调用或验收】，当前已有【准备结果】。
-目标：环境【Local/Staging/Production】、平台【code/内部标识】。
+目标：环境【Local/Production】、平台【code/内部标识】。
 操作位置：【中央Admin模块/托管项目Secret设置/域名服务】。
 需要决定或注入的变量名称：【仅名称，不含Secret值】。
 完成确认：请回复“已配置”或决定；Agent随后执行【不泄密的验证】。
@@ -84,18 +85,18 @@ Agent提示模板：
 
 不得代用户虚构域名、Provider账号、商业feature或生产授权；也不能只说“给我环境变量”而不说明每项的用途、来源、环境和存放位置。
 
-## 4. 三环境配置与中央准备
+## 4. 环境配置与中央准备
 
 ### 4.1 环境对应
 
-| 项目 | Local | Staging | Production |
-| --- | --- | --- | --- |
-| 新平台前端/BFF | 本地Next.js | 托管HTTPS测试站 | 正式托管站 |
-| 中央Auth/API/Storage | 本机Supabase Docker及已启动API | 独立Hosted staging | 独立Hosted production |
-| 平台、Key、用户、码 | Local独立fixture | Staging独立fixture | 正式配置与业务数据 |
-| 数据处理 | Local重置需确认范围 | 默认保留，按测试批次清理 | 不用于失败注入或测试清空 |
+| 项目 | Local | Production |
+| --- | --- | --- |
+| 新平台前端/BFF | 本地Next.js | 正式托管站 |
+| 中央Auth/API/Storage | 本机Supabase Docker及已启动API | 独立Production |
+| 平台、Key、用户、码 | Local独立fixture | 正式配置与业务数据 |
+| 数据处理 | Local重置需确认范围 | 不用于失败注入或测试清空 |
 
-前端运行在本机但连接Hosted staging属于远程联调，不计纯Local。Local/Preview不能连接Production。每个环境独立登记和签发Key；可复用platform code语义，但不要假设UUID相同。多本地平台尽量用不同hostname/浏览器配置隔离，Cookie不按端口隔离，同一localhost不同端口可能共享同名Cookie。
+最高测试环境为本地Supabase；可选远程联调不计纯Local，也不作为额外上线测试门槛。Local/Preview不能连接Production。每个环境独立登记和签发Key；可复用platform code语义，但不要假设UUID相同。多本地平台尽量用不同hostname/浏览器配置隔离，Cookie不按端口隔离，同一localhost不同端口可能共享同名Cookie。
 
 ### 4.2 中央维护Agent的准备清单
 
@@ -126,10 +127,10 @@ ACCOUNT_PLATFORM_KEY=
 
 ```dotenv
 # Hosted示意：全部替换为目标环境真实配置，example.invalid不可运行
-TEMPLATE_ORIGIN=https://platform-staging.example.invalid
-NEXT_PUBLIC_SUPABASE_URL=https://auth-staging.example.invalid
+TEMPLATE_ORIGIN=https://platform-production.example.invalid
+NEXT_PUBLIC_SUPABASE_URL=https://auth-production.example.invalid
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-ACCOUNT_API_URL=https://api-staging.example.invalid/functions/v1/account-api
+ACCOUNT_API_URL=https://api-production.example.invalid/functions/v1/account-api
 ACCOUNT_API_TIMEOUT_MS=5000
 ACCOUNT_PLATFORM_KEY=
 ```
@@ -143,7 +144,7 @@ ACCOUNT_PLATFORM_KEY=
 | `NEXT_PUBLIC_SUPABASE_URL` | 中央Auth项目配置；允许公开 | 必须与API及Key同环境 |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 对应Auth项目公开Key | 允许公开不是业务平台Key；不能替换为secret/service_role |
 | `SUPABASE_URL`、`SUPABASE_PUBLISHABLE_KEY` | Auth服务端可选显式覆盖 | 当前Auth helper支持，设置时必须与公开配置同环境，不制造两套Auth |
-| `NODE_ENV` | 框架/部署工具控制 | Hosted staging也用production构建/运行，HTTPS Secure Cookie；不能设development绕过安全行为 |
+| `NODE_ENV` | 框架/部署工具控制 | Production用production构建/运行，HTTPS Secure Cookie；不能设development绕过安全行为 |
 
 Consumer不需要中央SQL URL、SUPABASE_SECRET_KEY、HMAC、Worker Token、Provider Token、Webhook密钥。平台标识由Key绑定，不给SDK杜撰`platformId`/`platformCode`构造参数；当前客户端构造仅使用baseUrl/platformKey等实际参数。
 
@@ -162,7 +163,7 @@ Next.js公开环境值可能在构建时内联；不能把指向staging的bundle
 pnpm sdk:pack
 ```
 
-[脚本](../../tooling/scripts/src/sdk-pack.mjs)会清空目标目录并重建四个包的dist，不能将`M5_SDK_PACK_DESTINATION`指向新平台源码、下载目录或共享文件夹。软件安装/缓存遵守根AGENTS，不为文档示例擅自安装工具。
+[脚本](../../tooling/scripts/src/sdk-pack.mjs)会清空目标目录并重建四个包的dist；`M5_SDK_PACK_DESTINATION`只允许仓库`artifacts/`下的独立子目录，拒绝根目录、源码、外部路径、symlink和junction。不能指向共享产物目录。软件安装/缓存遵守根AGENTS，不为文档示例擅自安装工具。
 
 交付四个tarball、同批manifest.json、中央commit、测试状态、兼容说明和本手册。当前常见文件名为`kit-domain-0.1.0.tgz`、`kit-account-auth-0.1.0.tgz`、`kit-account-auth-nextjs-0.1.0.tgz`、`kit-account-server-0.1.0.tgz`；实际名字/版本以产物manifest为准。
 
@@ -200,7 +201,7 @@ pnpm install --store-dir E:/AppData/pnpm
 pnpm install --frozen-lockfile --store-dir E:/AppData/pnpm
 ```
 
-先核对新平台包管理器和已有锁文件，不混用npm/yarn/pnpm。当前参考工具链由[Registry](../../registry/manifest.json)记录Node24.19.0、pnpm11.18.0、Next16.3.0；这是仓库基线，不代表应强行升级所有既有平台。不同版本先跑兼容验证，不能盲用latest。
+先核对新平台包管理器和已有锁文件，不混用npm/yarn/pnpm。当前参考工具链由[Registry](../../registry/manifest.json)记录Node24.19.0、pnpm11.18.0、Next16.3.8；这是仓库基线，不代表应强行升级所有既有平台。不同版本先跑兼容验证，不能盲用latest。
 
 不要复制`workspace:*`、`catalog:`到没有中央workspace/catalog的新项目；它们不是公开npm版本。参考页面若引入`@kit/ui`、`@kit/shared`、样式、字体或其他组件，四个核心包并不包含这些依赖：优先用平台自己的UI，只复制必要接线；整页移植需逐个盘点并另交付所需包。
 
@@ -376,7 +377,7 @@ feature授权也不等于具体资源所有权或配额扣减。平台自己的�
 5. 配置有/无`advanced_config`权益的fixture，直接请求业务API分别验证允许/拒绝；隐藏按钮不能代替此测试。
 6. 测试中央不可用、会话过期、退出后旧Tab/迟到刷新；确保不错误放行或复活退出。
 7. 在独立新平台目录安装、构建、运行，不能依赖中央workspace软链接或开发机绝对路径。
-8. 按[发布流程](development-release-workflow.md)进入Hosted staging，验证真实HTTPS/Cookie/回调/网关；生产发布与环境配置另有明确授权。
+8. 按[发布流程](development-release-workflow.md)完成本地Supabase及浏览器/BFF/Auth/API链路验收后进入上线流程，不再要求Hosted staging；生产发布按实际环境和已有授权执行。
 
 ## 11. 可选能力如何逐项接入
 
@@ -425,15 +426,15 @@ Node后端可复用`@kit/account-server`，自行实现该框架的同源BFF和�
 | Local中央业务 | principal/激活、真实服务端授权、资料/购买/兑换/文件适用项 | 正向与失败断言、最终中央状态 |
 | 安全隔离 | 错环境Key/JWT、跨用户/平台、Cookie/CSRF、无浏览器Secret | 拒绝结果及脱敏请求ID |
 | 并发恢复 | 同意图重复、断响应、刷新重放、兑换竞争/文件失败适用项 | 真实多会话/连接及最终唯一性 |
-| Hosted staging | 实际域名/构建/网关/邮件/会话/中央链路 | 与候选版本绑定的验收记录 |
-| Provider | Mock/沙箱/真实测试明确区分；仅购买相关适用 | 渠道事实、中央Order/Grant、恢复结果 |
+| 本地Supabase | 本机Auth/Storage/SQL/网关及API/BFF完整适用链路 | 与候选版本绑定的本地验收记录 |
+| Provider Mock | 本地协议/重放/失败恢复；仅购买相关适用 | 合成渠道事实、中央Order/Grant、恢复结果；不冒充远程已联调 |
 | Production | G0–G5发布门槛、批准、G6观察 | 与Git合并分开的部署记录 |
 
-结果仅PASS/FAIL/NOT_RUN/PARTIAL/BLOCKED，不适用另写理由。没有独立平台测试或Hosted环境就写“文档/本地准备完成，接入验收未完成”，不能用中央旧测试记录充当新平台成功。
+结果仅PASS/FAIL/NOT_RUN/PARTIAL/BLOCKED，不适用另写理由。没有独立平台的适用本地测试就写“接入验收未完成”，不能用中央旧测试记录充当新平台成功；缺Hosted环境不增加验收阻塞。
 
 中央已有入口：`pnpm docs:check`、`pnpm contracts:check`、`pnpm test:registry:m5-04`、`pnpm test:sdk:m5-02`、`pnpm test:consumer:m5-05`、`pnpm test:e2e:t16-r2`。执行前读脚本：打包/独立安装脚本会重建产物和临时目录，E2E依赖本地服务及fixture；它们不自动验证每个新平台。新平台验收命令从其package.json核对，不要求不存在的脚本冒充通过；缺用例先实现。
 
-staging默认保留基础数据和证据，测试按批次隔离清理。未完成真实测试付款、回调、Job或退款不能清掉；详见开发发布流程第5.2节。首次开启真实购买前由中央完成Provider/G-OPS门槛，新平台页面上线不自动获得收费授权。
+本地合成fixture按批次隔离清理；已有非本任务数据、未完成Job和恢复证据不得随意删除。最高测试环境为本地Supabase，Provider协议与失败恢复在本地Mock验证；远程未联调单独记NOT_RUN。首次开启真实购买仍核对正式Provider配置和已有收费授权。
 
 ## 15. 给新平台Agent的提示词
 
@@ -447,7 +448,7 @@ staging默认保留基础数据和证据，测试按批次隔离清理。未完�
 缺平台登记、域名、Key、邮箱/MFA或部署授权时，给我明确待办和验证方式；
 不要让我把真实Secret发聊天，继续不依赖它的工作，不伪造环境和成功结果。
 保持平台UI可定制，安全/协议复用包；不得把Platform Key放浏览器。
-最终交付文件清单、安装/环境说明、Local及Staging测试、未完成项、升级及回退方法。
+最终交付文件清单、安装/环境说明、Local及本地Supabase测试、未完成项、升级及回退方法。
 Git操作遵循目标仓库授权，不把中央仓库的自动合并授权扩大到未知新仓库。
 ```
 
@@ -466,7 +467,7 @@ Git操作遵循目标仓库授权，不把中央仓库的自动合并授权扩�
 | 支付/权益/兑换/文件 | 页面承诺、状态映射、服务器授权、Provider/任务门槛及失败恢复 |
 | Registry/工具链 | 真正存在的路由、安装方式、兼容版本和独立项目验收 |
 
-新平台升级：记录当前版本/定制差异 → 阅读中央变更及合同兼容 → 校验新发行物 → 更新四包/overrides及锁文件 → 编译与本地回归 → staging验收 → 发布批准。不得覆盖平台自有页面；按参考commit差异手动合并安全接线修复。相同0.1.0版本不同hash必须按不同发行批次记录，不用版本号掩盖内容变化。
+新平台升级：记录当前版本/定制差异 → 阅读中央变更及合同兼容 → 校验新发行物 → 更新四包/overrides及锁文件 → 编译与适用本地Supabase回归 → 发布核对与上线。不得覆盖平台自有页面；按参考commit差异手动合并安全接线修复。相同0.1.0版本不同hash必须按不同发行批次记录，不用版本号掩盖内容变化。
 
 回退只回退兼容的应用/SDK版本，中央迁移和交易数据不能随Consumer回退删除。中央接口采用兼容扩展并说明旧消费者支持窗口；不兼容变更先同步所有受影响平台，不能仅更新手册就发布。
 

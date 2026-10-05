@@ -10,6 +10,7 @@ import {
 } from '@kit/account-auth-nextjs';
 
 import { GET, POST, isAllowedAdminPath } from './route';
+import { POST as login } from '../../auth/login/route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const ACCESS_TOKEN = `e30.${Buffer.from(
@@ -77,6 +78,29 @@ describe('admin BFF', () => {
     vi.unstubAllGlobals();
   });
 
+  it('rejects oversized business and login JSON before contacting upstream', async () => {
+    const oversized = 'x'.repeat(65_537);
+    const response = await POST(
+      request('POST', 'admin/api/v1/platforms', {
+        csrf: true,
+        body: oversized,
+      }),
+      context(['admin', 'api', 'v1', 'platforms']),
+    );
+    expect(response.status).toBe(413);
+    vi.stubEnv('SUPABASE_URL', 'http://local-auth');
+    vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', 'fake-publishable-key');
+    const loginResponse = await login(
+      request('POST', 'auth/login', { csrf: true, body: oversized }),
+    );
+    expect(loginResponse.status).toBe(413);
+    const invalidLogin = await login(
+      request('POST', 'auth/login', { csrf: true, body: 'null' }),
+    );
+    expect(invalidLogin.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('keeps the explicit allowlist aligned with every Admin OpenAPI operation', () => {
     const contract = JSON.parse(
       readFileSync(
@@ -108,6 +132,21 @@ describe('admin BFF', () => {
     }
 
     expect(operationCount).toBe(45);
+  });
+
+  it('preserves the central request ID for response and audit correlation', async () => {
+    const centralId = '11111111-1111-4111-8111-111111111112';
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [], request_id: centralId }), {
+        headers: { 'x-request-id': centralId },
+      }),
+    );
+    const response = await GET(
+      request('GET', 'admin/api/v1/platforms'),
+      context(['admin', 'api', 'v1', 'platforms']),
+    );
+    expect(response.headers.get('x-request-id')).toBe(centralId);
+    expect((await response.json()).request_id).toBe(centralId);
   });
 
   it('rejects paths outside the explicit Admin allowlist', async () => {

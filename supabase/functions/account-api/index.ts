@@ -26,12 +26,13 @@ export async function handleRequest(
     const optionalSessionRead =
       request.method === 'GET' &&
       (path === 'v1/plans' || path === 'v1/subscription/products');
-    const session =
+    let session =
       path.startsWith('admin/') ||
       (optionalSessionRead && request.headers.has('authorization')) ||
       !optionalSessionRead
         ? await verifiedSessionFromRequest(request, dependencies)
         : undefined;
+    if (session) session = { ...session, requestId: id };
     const reauthSession =
       path === 'v1/auth/recent-proof' && request.method === 'POST'
         ? await verifiedSessionFromAccessToken(

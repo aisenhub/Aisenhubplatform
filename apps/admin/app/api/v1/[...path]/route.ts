@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { readBoundedBody, UploadFault } from '@kit/domain/upload';
 import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
 
 import { accountApiSignal } from '../../_lib/account-api';
@@ -141,9 +142,15 @@ async function dispatch(
     const upstream = await fetch(target, {
       method: request.method,
       headers,
-      body: mutation ? await request.text() : undefined,
+      body:
+        mutation && request.body
+          ? new TextDecoder().decode(
+              (await readBoundedBody(request, 65_536)).bytes,
+            )
+          : undefined,
       signal: accountApiSignal(),
     });
+    const upstreamRequestId = upstream.headers.get('x-request-id') ?? id;
     if (binaryDownload) {
       return new Response(upstream.body, {
         status: upstream.status,
@@ -156,7 +163,7 @@ async function dispatch(
             upstream.headers.get('content-disposition') ?? 'attachment',
           'X-Content-Type-Options':
             upstream.headers.get('x-content-type-options') ?? 'nosniff',
-          'X-Request-Id': id,
+          'X-Request-Id': upstreamRequestId,
           ...(upstream.headers.get('etag')
             ? { ETag: upstream.headers.get('etag') as string }
             : {}),
@@ -169,13 +176,15 @@ async function dispatch(
       headers: {
         'Cache-Control': 'no-store',
         'Content-Type': 'application/json',
-        'X-Request-Id': id,
+        'X-Request-Id': upstreamRequestId,
         ...(upstream.headers.get('etag')
           ? { ETag: upstream.headers.get('etag') as string }
           : {}),
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof UploadFault)
+      return errorResponse(error.status, error.code, id);
     return errorResponse(503, 'AUTHORIZATION_UNAVAILABLE', id);
   }
 }
