@@ -1,6 +1,6 @@
 # 本地开发
 
-开始任务先读[Agent 开发与发布流程](development-release-workflow.md)，明确变更分级、消费者和验收路线。此页仅说明本地启动；本地通过不自动允许生产部署，R2/R3还需Hosted Staging验收。
+开始任务先读[Agent 开发与发布流程](development-release-workflow.md)，明确变更分级、消费者和验收路线。最高测试环境为本地 Supabase；适用本地测试通过即可进入上线流程，不再要求 Hosted Staging。部署前仍核对目标、配置、迁移兼容、恢复清单及已有授权。
 
 先核对[工具链](../reference/toolchain.md)。在仓库根目录安装锁定依赖：
 
@@ -16,7 +16,7 @@ pnpm --filter template-preview dev --port 3001
 
 打开 `/subscription` 可使用订阅模板测试入口。登录后从方案卡创建 Checkout，页面会打开服务端生成的爱发电付款地址，并轮询中央 Account API 的订单状态；不要直接把爱发电后台的公共商品链接当作端到端测试入口，因为它没有本次 Checkout 的 `custom_order_id`。
 
-该页面的 staging 部署需要设置 `ACCOUNT_API_URL`、服务端 `ACCOUNT_PLATFORM_KEY`、`TEMPLATE_ORIGIN` 以及公开 Supabase 配置；平台 Key 只能存在 Consumer BFF 的服务端环境变量。账户页的可选 Auth 操作需设置[公开配置](../reference/configuration.md)。
+该页面的部署需要设置 `ACCOUNT_API_URL`、服务端 `ACCOUNT_PLATFORM_KEY`、`TEMPLATE_ORIGIN` 以及公开 Supabase 配置；平台 Key 只能存在 Consumer BFF 的服务端环境变量。账户页的可选 Auth 操作需设置[公开配置](../reference/configuration.md)。
 
 启动管理端：
 

@@ -1,6 +1,6 @@
 # ADR-0003：本地验证与生产门槛
 
-状态：Accepted。Supersedes [ADR-0002](0002-development-release-environments.md)。详细执行规则统一维护在[Agent开发与发布流程](../guides/development-release-workflow.md)。
+状态：Superseded by [ADR-0004](0004-local-only-test-acceptance.md)。本决策保留历史背景，当前执行规则统一维护在[Agent开发与发布流程](../guides/development-release-workflow.md)。
 
 ## 背景
 

@@ -4,9 +4,9 @@
 
 ## 1. 环境和发布
 
-Staging不随部署清空；按[开发流程第5.2节](development-release-workflow.md#52-staging数据保留批次清理与重建)保留基础数据和验收证据、按批次清理临时数据。未完成交易/任务和外部回调绑定不得随意删除；全库重建属于需明确授权的独立操作。
+本地测试按批次隔离和清理合成数据；已有非本任务数据不得随意重置。未完成交易/任务和外部回调绑定不得随意删除；全库重建属于需明确授权的独立操作。
 
-Local本机Supabase Docker、独立Hosted Staging和独立Hosted Production不共享Auth用户、数据库、对象、Secret、Platform Key、HMAC、兑换码或数据库凭据。Admin与平台前端分别连接对应环境；Local/Preview禁止连接Production，明确连接Staging的本地前端只计远程联调，不能替代Hosted前端验收。生产数据不作为Local或日常Staging fixture。工作规则见[开发与发布流程](development-release-workflow.md)，环境存在与可用性仍需实际核验。
+Local本机Supabase Docker和独立Production不共享Auth用户、数据库、对象、Secret、Platform Key、HMAC、兑换码或数据库凭据。Admin与平台前端连接对应环境；Local/Preview禁止连接Production，生产数据不作为Local fixture。最高测试环境为本地Supabase；可选远程联调需另行派发，不增加上线测试门槛。工作规则见[开发与发布流程](development-release-workflow.md)。
 
 迁移由Supabase CLI生成时间戳文件，版本固定后先读CLI help。Auth/Storage/Origin/调度配置纳入受控配置与漂移检查，不能依赖开发者手工Dashboard操作。Secrets只存各环境Secret Manager，仓库保存变量名与配置模板。
 
@@ -14,7 +14,7 @@ CI 负责执行仓库中已配置的格式、lint、typecheck、构建、领域�
 
 安全、审计、并发和恢复测试在对应功能开发时建立；发布前执行统一回归。生产迁移是独立release gate，不随普通merge执行。数据库变更采用expand→兼容部署→验证→contract；已产生业务数据后优先forward-fix，不通过删除Ledger来“回滚”。
 
-标准发布路径为Local → Staging → 生产前门槛 → Production。R0不部署应用，严格限定的R1展示修改可跳过Staging但仍须精简门槛；R2/R3必须Hosted验收。生产迁移、Secret/配置、权限、数据修正和开启真实支付同样需要适用门槛与明确授权。CI保留质量检查，Git推送不等于生产部署；完整分类、G0–G6与例外处理唯一维护在[开发与发布流程](development-release-workflow.md)。
+标准发布路径为Local → 发布核对 → Production。适用本地测试通过即可进入上线流程；R2/R3增加本地Supabase和领域验证，不要求Hosted Staging、远程Provider或额外CI验收。生产迁移、Secret/配置、权限、数据修正和开启真实支付按实际范围核对授权与恢复清单。完整分类和发布规则唯一维护在[开发与发布流程](development-release-workflow.md)。
 
 发布证据包含依赖锁、上游commit/license、迁移结果、测试报告、备份manifest、恢复演练、Key轮换、配置漂移检查和实际Edge/BFF限制报告。缺证据标为未验收，不用勾选符号假装已完成。
 

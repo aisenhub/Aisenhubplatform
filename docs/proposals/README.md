@@ -2,6 +2,8 @@
 
 本目录存放尚未完全落地的模块优化设计和可执行计划。当前实际架构仍维护在 [architecture](../architecture/overview.md)；计划中的目标架构不能提前写入当前架构。
 
+所有计划的测试门槛统一遵循[当前开发发布流程](../guides/development-release-workflow.md)及[ADR-0004](../decisions/0004-local-only-test-acceptance.md)：最高只要求本地 Supabase。旧计划中的 Hosted Staging、远程 Provider 或额外 CI 验收描述不再构成上线测试门槛；历史实际结果仍保留，不改写成已通过。
+
 ## 目录骨架
 
 ```text
