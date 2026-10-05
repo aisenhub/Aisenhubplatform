@@ -6,7 +6,7 @@ import {
   encodeAuthSessionAcknowledgement,
 } from '@kit/account-auth-nextjs';
 
-import { GET, POST, PUT } from './route';
+import { DELETE, GET, POST, PUT } from './route';
 import { POST as login } from '../../auth/login/route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
@@ -29,7 +29,7 @@ type RequestOptions = {
 };
 
 function request(
-  method: 'GET' | 'POST' | 'PUT',
+  method: 'DELETE' | 'GET' | 'POST' | 'PUT',
   path: string,
   options: RequestOptions = {},
 ): NextRequest {
@@ -90,6 +90,27 @@ describe('template-preview Consumer BFF', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+  });
+
+  it('forwards an empty streamed DELETE body while keeping its byte limit', async () => {
+    const response = await DELETE(
+      request('DELETE', `config-files/${SESSION_ID}`, {
+        authenticated: true,
+        csrf: true,
+        body: '',
+        headers: {
+          origin: 'https://template.example',
+          'x-csrf-token': 'csrf-token',
+        },
+      }),
+      context(['config-files', SESSION_ID]),
+    );
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'DELETE',
+      body: '',
+    });
   });
 
   it('rejects oversized business and login JSON before contacting upstream', async () => {

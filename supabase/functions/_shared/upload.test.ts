@@ -55,6 +55,19 @@ Deno.test('bounded reader times out stalled input and cancels its stream', async
     'STORAGE_UNAVAILABLE',
   );
   assertEquals(cancelled, true);
+  const failedCancel = new Request('http://local/upload', {
+    method: 'PUT',
+    body: new ReadableStream({
+      cancel() {
+        throw new Error('fixture cancellation failed');
+      },
+    }),
+  });
+  await assertRejects(
+    () => readBoundedBody(failedCancel, 5, 10),
+    UploadFault,
+    'STORAGE_UNAVAILABLE',
+  );
 });
 
 function request(body: BodyInit | null, headers: HeadersInit = {}): Request {
@@ -69,6 +82,24 @@ Deno.test('bounded reader accepts exact bytes and rejects empty bodies', async (
     () => readBoundedBody(request(null), 5),
     UploadFault,
     'INVALID_INPUT',
+  );
+});
+
+Deno.test('proxy reader permits empty DELETE bodies without relaxing upload or size checks', async () => {
+  for (const body of [null, '']) {
+    const empty = new Request('http://local/file', { method: 'DELETE', body });
+    assertEquals((await readBoundedBody(empty, 65_536, 15_000, true)).size, 0);
+  }
+  await assertRejects(
+    () =>
+      readBoundedBody(
+        request(null, { 'content-length': '1' }),
+        5,
+        15_000,
+        true,
+      ),
+    UploadFault,
+    'UPLOAD_SIZE_MISMATCH',
   );
 });
 

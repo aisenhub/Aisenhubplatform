@@ -172,7 +172,8 @@ async function dispatch(request: NextRequest, context: RouteContext) {
               ? uploadBody
               : request.body
                 ? new TextDecoder().decode(
-                    (await readBoundedBody(request, 65_536)).bytes,
+                    (await readBoundedBody(request, 65_536, 15_000, true))
+                      .bytes,
                   )
                 : undefined,
         signal: accountApiSignal(),

@@ -9,7 +9,7 @@ import {
   encodeAuthSessionAcknowledgement,
 } from '@kit/account-auth-nextjs';
 
-import { GET, POST, isAllowedAdminPath } from './route';
+import { DELETE, GET, POST, isAllowedAdminPath } from './route';
 import { POST as login } from '../../auth/login/route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
@@ -23,7 +23,7 @@ const LOGIN_ACK = encodeAuthSessionAcknowledgement({
 });
 
 function request(
-  method: 'GET' | 'POST',
+  method: 'DELETE' | 'GET' | 'POST',
   path: string,
   options: {
     readonly csrf?: boolean;
@@ -76,6 +76,22 @@ describe('admin BFF', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+  });
+
+  it('forwards an empty streamed DELETE body while keeping its byte limit', async () => {
+    const response = await DELETE(
+      request('DELETE', `admin/api/v1/config-files/${SESSION_ID}`, {
+        csrf: true,
+        body: '',
+      }),
+      context(['admin', 'api', 'v1', 'config-files', SESSION_ID]),
+    );
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'DELETE',
+      body: '',
+    });
   });
 
   it('rejects oversized business and login JSON before contacting upstream', async () => {

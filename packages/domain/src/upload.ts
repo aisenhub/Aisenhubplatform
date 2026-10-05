@@ -31,6 +31,7 @@ export async function readBoundedBody(
   request: Request,
   limit: number,
   timeoutMs = 15_000,
+  allowEmpty = false,
 ): Promise<BoundedBody> {
   if (!Number.isSafeInteger(limit) || limit < 1)
     throw new UploadFault('INVALID_INPUT', 400);
@@ -42,14 +43,19 @@ export async function readBoundedBody(
     throw new UploadFault('INVALID_INPUT', 400);
 
   const reader = request.body?.getReader();
-  if (!reader) throw new UploadFault('INVALID_INPUT', 400);
+  if (!reader) {
+    if (declared !== undefined && declared !== 0)
+      throw new UploadFault('UPLOAD_SIZE_MISMATCH', 400);
+    if (allowEmpty) return { bytes: new Uint8Array(0), size: 0 };
+    throw new UploadFault('INVALID_INPUT', 400);
+  }
   const chunks: Uint8Array[] = [];
   let size = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
-        void reader.cancel('upload receive timeout');
+        void reader.cancel('upload receive timeout').catch(() => undefined);
         reject(new UploadFault('STORAGE_UNAVAILABLE', 503));
       }, timeoutMs);
     });
@@ -69,7 +75,7 @@ export async function readBoundedBody(
     await Promise.race([read, timeout]);
     if (declared !== undefined && declared !== size)
       throw new UploadFault('UPLOAD_SIZE_MISMATCH', 400);
-    if (size === 0) throw new UploadFault('INVALID_INPUT', 400);
+    if (size === 0 && !allowEmpty) throw new UploadFault('INVALID_INPUT', 400);
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) {
