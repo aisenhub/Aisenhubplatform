@@ -44,7 +44,6 @@ function isAllowedPath(method: string, path: string): boolean {
     return (
       path === 'v1/account/activate' ||
       path === 'v1/account/close' ||
-      path === 'v1/auth/recent-proof' ||
       path === 'v1/identity/delete-request' ||
       path === 'v1/subscription/checkout' ||
       path === 'v1/subscription/redeem' ||
@@ -152,7 +151,6 @@ async function dispatch(request: NextRequest, context: RouteContext) {
               'idempotency-key',
               'if-match',
               'x-recent-auth-proof',
-              'x-reauth-access-token',
             ].flatMap((name) => {
               const value = request.headers.get(name);
               return value ? [[name, value]] : [];

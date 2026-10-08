@@ -2,6 +2,7 @@
 
 import { assertEquals, assertMatch } from 'jsr:@std/assert@1';
 
+import { createAdminMfaAttestation } from '../../../packages/domain/src/admin-mfa-attestation.ts';
 import { handleRequest } from './index.ts';
 import { UploadGate } from '../_shared/upload.ts';
 
@@ -1438,6 +1439,41 @@ Deno.test('Account API uses the presented-key Principal fast path', async () => 
 });
 
 Deno.test('Account API issues a recent proof only after Auth verification and AAL2', async () => {
+  const adminMfaAttestationSecret =
+    'test-admin-mfa-attestation-secret-32-bytes-minimum';
+  const factorId = '00000000-0000-4000-8000-000000000006';
+  const attestation = await createAdminMfaAttestation({
+    secret: adminMfaAttestationSecret,
+    userId,
+    sessionId,
+    factorId,
+  });
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/auth/recent-proof',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'X-Mfa-Attestation': attestation,
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      adminMfaAttestationSecret,
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 201);
+  assertEquals(
+    (await response.json()).data.proof_id,
+    '00000000-0000-4000-8000-000000000005',
+  );
+});
+
+Deno.test('Account API refuses Admin recent-proof issuance without a server MFA attestation', async () => {
   const response = await handleRequest(
     new Request(
       'http://local/functions/v1/account-api/admin/api/v1/auth/recent-proof',
@@ -1455,11 +1491,8 @@ Deno.test('Account API issues a recent proof only after Auth verification and AA
       verifyAccessToken: async () => userId,
     },
   );
-  assertEquals(response.status, 201);
-  assertEquals(
-    (await response.json()).data.proof_id,
-    '00000000-0000-4000-8000-000000000005',
-  );
+  assertEquals(response.status, 403);
+  assertEquals((await response.json()).error.code, 'RECENT_MFA_REQUIRED');
 });
 
 Deno.test('Account API refuses recent-proof issuance at AAL1', async () => {

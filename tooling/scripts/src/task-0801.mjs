@@ -169,6 +169,7 @@ async function startAccountApiForT12(env) {
         REDEMPTION_HMAC_SECRET:
           'local-fixture-only-task-0801-redemption-secret',
         REDEMPTION_HMAC_KEY_VERSION: '1',
+        ADMIN_MFA_ATTESTATION_SECRET: env.ADMIN_MFA_ATTESTATION_SECRET,
         ACCOUNT_API_PORT: '8789',
       }),
       stdio: 'ignore',
@@ -235,6 +236,8 @@ async function main() {
     SUPABASE_LOCAL_PUBLISHABLE_KEY: local.PUBLISHABLE_KEY,
     SUPABASE_LOCAL_SECRET_KEY: local.SERVICE_ROLE_KEY,
     SUPABASE_DB_URL: local.DB_URL,
+    ADMIN_MFA_ATTESTATION_SECRET:
+      'local-fixture-only-task-0801-admin-mfa-attestation-secret',
     DENO_BIN: deno,
   };
 

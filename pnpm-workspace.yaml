@@ -63,6 +63,7 @@ catalog:
   zod: 4.4.3
 overrides:
   # Security fixes for transitive dependencies; preserve their major versions.
+  'source-map-js': 1.2.2
   'nanoid@3.3.17': 3.3.18
   'fast-uri@3.1.5': 3.1.8
   'hono@4.12.33': 4.13.7

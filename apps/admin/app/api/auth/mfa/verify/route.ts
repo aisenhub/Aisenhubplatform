@@ -19,6 +19,7 @@ function config(): {
   publishableKey: string;
   origin: string;
   accountApiUrl: string;
+  mfaAttestationSecret: string;
 } {
   const url = (
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -30,9 +31,23 @@ function config(): {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const origin = process.env.ADMIN_ORIGIN;
   const accountApiUrl = process.env.ACCOUNT_API_URL?.replace(/\/$/u, '');
-  if (!url || !publishableKey || !origin || !accountApiUrl)
+  const mfaAttestationSecret = process.env.ADMIN_MFA_ATTESTATION_SECRET;
+  if (
+    !url ||
+    !publishableKey ||
+    !origin ||
+    !accountApiUrl ||
+    !mfaAttestationSecret ||
+    new TextEncoder().encode(mfaAttestationSecret).byteLength < 32
+  )
     throw new Error('AUTH_NOT_CONFIGURED');
-  return { url, publishableKey, origin, accountApiUrl };
+  return {
+    url,
+    publishableKey,
+    origin,
+    accountApiUrl,
+    mfaAttestationSecret,
+  };
 }
 
 function result(data: unknown, status = 200): NextResponse {
@@ -126,15 +141,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     const elevatedSession = elevatedSessionResult.data.session;
     if (elevatedSessionResult.error || !elevatedSession)
       return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
-    if (
-      sessionIdFromAccessToken(elevatedSession.access_token) !==
-      gate.acknowledgement.session_id
-    )
+    const elevatedSessionId = sessionIdFromAccessToken(
+      elevatedSession.access_token,
+    );
+    if (elevatedSessionId !== gate.acknowledgement.session_id)
       return result({ code: 'AUTHORIZATION_UNAVAILABLE' }, 503);
 
     const proof = await issueAdminRecentProof({
       accountApiUrl: runtimeConfig.accountApiUrl,
       accessToken: elevatedSession.access_token,
+      attestationSecret: runtimeConfig.mfaAttestationSecret,
+      userId: elevatedSession.user.id,
+      sessionId: elevatedSessionId,
       factorId: input.factor_id,
     });
     const proofStatus = proof.ok

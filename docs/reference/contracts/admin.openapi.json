@@ -30,12 +30,19 @@
       "post": {
         "operationId": "adminIssueRecentAuthProof",
         "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/MfaFactorId" }],
+        "parameters": [{ "$ref": "#/components/parameters/MfaAttestation" }],
         "responses": {
           "201": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" }
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "503": {
+            "description": "MFA attestation verification is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+              }
+            }
+          }
         }
       }
     },
@@ -637,11 +644,12 @@
       }
     },
     "parameters": {
-      "MfaFactorId": {
-        "name": "X-Mfa-Factor-Id",
+      "MfaAttestation": {
+        "name": "X-Mfa-Attestation",
         "in": "header",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "description": "Short-lived server-signed attestation created by the Admin BFF only after Supabase MFA verification.",
+        "schema": { "type": "string", "minLength": 32, "maxLength": 4096 }
       },
       "IfMatch": {
         "name": "If-Match",

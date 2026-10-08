@@ -50,6 +50,7 @@ export interface AccountApiDependencies {
     readonly secret: string;
     readonly version: number;
   }[];
+  readonly adminMfaAttestationSecret?: string;
   /**
    * Verifies a bearer token with Supabase Auth and returns its subject. This
    * is injectable only for isolated Deno tests; production uses Auth's

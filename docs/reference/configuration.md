@@ -13,6 +13,7 @@
 | ADMIN_ORIGIN | 同源校验的精确 origin |
 | ACCOUNT_API_URL | 中央 API base URL；代理在其后追加资源路径 |
 | ACCOUNT_API_TIMEOUT_MS | Admin BFF 到中央 Account API 的请求超时，默认 5000ms，最大 30000ms |
+| ADMIN_MFA_ATTESTATION_SECRET | Admin BFF 与中央 API 共享的服务端 HMAC Secret，至少 32 bytes；仅用于签发最多 60 秒的近期 MFA attestation，不得进入浏览器或日志 |
 | NODE_ENV | production 时写 Secure Cookie |
 
 ## 平台参考页
@@ -33,6 +34,7 @@
 | ACCOUNT_API_DB_URL、SUPABASE_DB_URL | 独立连接缺失时依次回退 |
 | ACCOUNT_API_DB_POOL_MAX | Account API 数据库连接池上限，允许 4–64，默认 8；按实际数据库连接预算调整 |
 | ACCOUNT_API_DB_ROLE_MODE | 默认 `transaction`，每个事务设置 executor 角色；设为 `startup` 时在 Account/Admin 独立连接池建立时固定对应 executor 角色，需确认连接用户允许 `SET ROLE` |
+| ADMIN_MFA_ATTESTATION_SECRET | 与 Admin BFF 相同的服务端 HMAC Secret；中央 API 用它验证 user/session/factor/时间绑定后才允许签发 recent proof |
 | PLATFORM_KEY_HMAC_SECRET | 当前平台 Key HMAC Secret |
 | PLATFORM_KEY_HMAC_SECRET_PREVIOUS | 可选上一平台 Secret |
 | REDEMPTION_HMAC_SECRET | 当前兑换 Secret |

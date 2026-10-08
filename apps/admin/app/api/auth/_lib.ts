@@ -13,6 +13,7 @@ import {
   terminalClearAuthSessionCookies,
   type AuthCookieWriter,
 } from '@kit/account-auth-nextjs';
+import { createAdminMfaAttestation } from '@kit/domain/admin-mfa-attestation';
 
 import { accountApiSignal } from '../_lib/account-api';
 
@@ -40,6 +41,9 @@ export function config(): {
 export async function issueAdminRecentProof(input: {
   readonly accountApiUrl: string;
   readonly accessToken: string;
+  readonly attestationSecret: string;
+  readonly userId: string;
+  readonly sessionId: string;
   readonly factorId: string;
   readonly fetcher?: typeof fetch;
 }): Promise<
@@ -47,6 +51,12 @@ export async function issueAdminRecentProof(input: {
   | { readonly ok: false; readonly status: number }
 > {
   try {
+    const attestation = await createAdminMfaAttestation({
+      secret: input.attestationSecret,
+      userId: input.userId,
+      sessionId: input.sessionId,
+      factorId: input.factorId,
+    });
     const response = await (input.fetcher ?? fetch)(
       `${input.accountApiUrl.replace(/\/$/u, '')}/admin/api/v1/auth/recent-proof`,
       {
@@ -55,7 +65,7 @@ export async function issueAdminRecentProof(input: {
           Accept: 'application/json',
           Authorization: `Bearer ${input.accessToken}`,
           'Cache-Control': 'no-store',
-          'X-Mfa-Factor-Id': input.factorId,
+          'X-Mfa-Attestation': attestation,
         },
         cache: 'no-store',
         signal: accountApiSignal(),

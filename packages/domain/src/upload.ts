@@ -1,14 +1,23 @@
 export class UploadFault extends Error {
+  readonly code:
+    | 'INVALID_INPUT'
+    | 'PAYLOAD_TOO_LARGE'
+    | 'UPLOAD_SIZE_MISMATCH'
+    | 'STORAGE_UNAVAILABLE';
+  readonly status: number;
+
   constructor(
-    readonly code:
+    code:
       | 'INVALID_INPUT'
       | 'PAYLOAD_TOO_LARGE'
       | 'UPLOAD_SIZE_MISMATCH'
       | 'STORAGE_UNAVAILABLE',
-    readonly status: number,
+    status: number,
   ) {
     super(code);
     this.name = 'UploadFault';
+    this.code = code;
+    this.status = status;
   }
 }
 
@@ -111,11 +120,13 @@ export async function readBoundedJson(
 export class UploadGate {
   private active = 0;
   private readonly accounts = new Map<string, number>();
+  private readonly instanceLimit: number;
+  private readonly accountLimit: number;
 
-  constructor(
-    private readonly instanceLimit = 16,
-    private readonly accountLimit = 2,
-  ) {}
+  constructor(instanceLimit = 16, accountLimit = 2) {
+    this.instanceLimit = instanceLimit;
+    this.accountLimit = accountLimit;
+  }
 
   tryAcquire(accountId: string): boolean {
     const accountActive = this.accounts.get(accountId) ?? 0;

@@ -40,6 +40,11 @@
       "types": "./dist/redemption.d.ts",
       "import": "./dist/redemption.js",
       "default": "./dist/redemption.js"
+    },
+    "./admin-mfa-attestation": {
+      "types": "./dist/admin-mfa-attestation.d.ts",
+      "import": "./dist/admin-mfa-attestation.js",
+      "default": "./dist/admin-mfa-attestation.js"
     }
   },
   "scripts": {

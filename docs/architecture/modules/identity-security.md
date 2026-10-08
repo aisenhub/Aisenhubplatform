@@ -52,7 +52,7 @@ Admin Shell 在渲染普通管理页面前先读取该状态：未登录转登�
 
 生成/轮换/撤销Key、生成及确认兑换码交付、Manual Grant/revoke/pause/resume、管理员下载/删除配置文件、Global Delete、替换管理员等高风险动作，要求最近5分钟完成一次服务端验证的MFA challenge。
 
-Admin Auth adapter在官方MFA验证成功后写入 private.admin_step_up：user_id、session_id、verified_at、expires_at、factor_id；证明绑定当前会话，服务端存储，用户不可自行写。普通token refresh不延长窗口，撤销会话或替换管理员立即使证明不可用。收到挑战完成的客户端布尔值不构成证明。
+Admin Auth adapter完成官方MFA验证后，由Admin BFF使用共享服务端HMAC Secret签发最多60秒的attestation，绑定user_id、session_id、factor_id、verified_at和随机nonce；中央Account API必须验证签名、当前AAL2 bearer的user/session绑定与时效后，才调用private.admin_step_up_issue写入private.admin_step_up。证明记录保存user_id、session_id、verified_at、expires_at、factor_id和attestation_nonce；nonce按当前管理员会话唯一消费，重放拒绝。普通token refresh不延长窗口，撤销会话或替换管理员立即使证明不可用。浏览器提交的factor id、挑战完成布尔值或已有AAL2本身都不构成近期MFA证明。
 
 Admin数据库入口的授权包装函数重新检查成员、会话、AAL2已验证上下文及step-up证明，再调用共用领域函数；Account executor无权调用Admin包装或记录step-up。数据库不自行验证HTTP JWT签名，由服务器Auth adapter验证后传入受控上下文。
 

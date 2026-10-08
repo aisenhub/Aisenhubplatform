@@ -152,6 +152,27 @@ describe('template-preview Consumer BFF', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('rejects recent-proof issuance through the generic Consumer proxy', async () => {
+    const response = await POST(
+      request('POST', 'auth/recent-proof', {
+        authenticated: true,
+        csrf: true,
+        headers: {
+          origin: 'https://template.example',
+          'x-csrf-token': 'csrf-token',
+          'x-reauth-access-token': 'browser-controlled-reauth-token',
+        },
+      }),
+      context(['auth', 'recent-proof']),
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'NOT_FOUND' },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('allows public catalog reads without a session and injects the server platform key', async () => {
     const response = await GET(
       request('GET', 'plans', { query: '?limit=10' }),
@@ -404,7 +425,7 @@ describe('template-preview Consumer BFF', () => {
     expect(headers.get('authorization')).toBe(`Bearer ${ACCESS_TOKEN}`);
     expect(headers.get('x-platform-key')).toBe('server-platform-key');
     expect(headers.get('x-recent-auth-proof')).toBe('cookie-proof');
-    expect(headers.get('x-reauth-access-token')).toBe('event-access-token');
+    expect(headers.get('x-reauth-access-token')).toBeNull();
     expect(headers.get('idempotency-key')).toBe('idem-1');
     expect(headers.get('x-untrusted-header')).toBeNull();
     expect(headers.get('origin')).toBeNull();
