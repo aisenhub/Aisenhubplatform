@@ -1,6 +1,6 @@
 # 跨模块合同与所有权
 
-本文件描述当前代码、数据库函数、共享类型、API、SDK、Admin 和 Maintenance 之间的所有权与调用边界。详细接口字段见 [API](api.md) 和 [OpenAPI 合同](contracts/account.openapi.json)。
+本文件描述当前代码、数据库函数、共享类型、API、SDK、Admin 和 Maintenance 之间的所有权与调用边界。详细接口字段见 [API](api.md) 和 [OpenAPI 合同](../../contracts/account/v1/openapi.json)。
 
 ## 1. 目录和唯一维护方
 

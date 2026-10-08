@@ -16,13 +16,21 @@ const requiredFiles = [
   'reference/api.md',
   'reference/configuration.md',
   'reference/data-model.md',
-  'reference/contracts/account.openapi.json',
-  'reference/contracts/admin.openapi.json',
+];
+const requiredRootFiles = [
+  'contracts/account/v1/openapi.json',
+  'contracts/admin/v1/openapi.json',
+  'contracts/account/v1/COMPATIBILITY.md',
+  'contracts/admin/v1/COMPATIBILITY.md',
 ];
 const failures = [];
 for (const relative of requiredFiles) {
   if (!existsSync(path.join(docsRoot, relative)))
     failures.push(`missing required document: docs/${relative}`);
+}
+for (const relative of requiredRootFiles) {
+  if (!existsSync(path.join(root, relative)))
+    failures.push(`missing required contract: ${relative}`);
 }
 function markdownFiles(directory) {
   if (!existsSync(directory)) return [];

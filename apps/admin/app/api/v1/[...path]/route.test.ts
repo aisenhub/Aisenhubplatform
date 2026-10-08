@@ -122,7 +122,7 @@ describe('admin BFF', () => {
       readFileSync(
         resolve(
           process.cwd(),
-          '../../docs/reference/contracts/admin.openapi.json',
+          '../../contracts/admin/v1/openapi.json',
         ),
         'utf8',
       ),

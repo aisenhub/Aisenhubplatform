@@ -14,7 +14,7 @@
         "contains": "subscriptionProductDto"
       },
       "openapi": {
-        "path": "docs/reference/contracts/account.openapi.json",
+        "path": "contracts/account/v1/openapi.json",
         "pointer": "#/components/schemas/SubscriptionProduct"
       },
       "consumers": [
@@ -148,7 +148,7 @@
         "contains": "subscriptionCheckoutDto"
       },
       "openapi": {
-        "path": "docs/reference/contracts/account.openapi.json",
+        "path": "contracts/account/v1/openapi.json",
         "pointer": "#/components/schemas/SubscriptionCheckoutData"
       },
       "consumers": [
@@ -249,7 +249,7 @@
         "contains": "entitlementDto"
       },
       "openapi": {
-        "path": "docs/reference/contracts/account.openapi.json",
+        "path": "contracts/account/v1/openapi.json",
         "pointer": "#/components/schemas/Entitlement"
       },
       "consumers": [
@@ -340,7 +340,7 @@
         "contains": "admin_billing_order_read_v3"
       },
       "openapi": {
-        "path": "docs/reference/contracts/admin.openapi.json",
+        "path": "contracts/admin/v1/openapi.json",
         "pointer": "#/components/schemas/BillingOrderDetail"
       },
       "consumers": [

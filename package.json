@@ -48,6 +48,7 @@
     "toolchain:check": "node tooling/scripts/src/toolchain-check.mjs",
     "docs:check": "pnpm run --filter scripts docs:check",
     "contracts:check": "node tooling/scripts/src/openapi-check.mjs && node tooling/scripts/src/contract-consumer-check.mjs",
+    "contracts:breaking": "node tooling/scripts/src/contract-breaking-check.mjs",
     "db:start": "pnpm run --filter scripts supabase start",
     "db:stop": "pnpm run --filter scripts supabase stop",
     "db:reset": "pnpm run --filter scripts supabase db-reset",

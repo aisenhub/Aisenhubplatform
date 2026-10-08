@@ -1,6 +1,6 @@
 # HTTP、SDK、模板与 API 合同
 
-本文件描述当前 API、SDK 和模板合同。整体边界见 [系统架构](../architecture/overview.md)。OpenAPI 3.1 合同位于 [Account](contracts/account.openapi.json) 和 [Admin](contracts/admin.openapi.json)，共享类型位于 `packages/domain/src/contracts`。SDK 与 BFF 必须遵守同一合同，不能各自复制领域规则。
+本文件描述当前 API、SDK 和模板合同。整体边界见 [系统架构](../architecture/overview.md)。OpenAPI 3.1 合同位于 [Account](../../contracts/account/v1/openapi.json) 和 [Admin](../../contracts/admin/v1/openapi.json)，共享类型位于 `packages/domain/src/contracts`。SDK 与 BFF 必须遵守同一合同，不能各自复制领域规则。
 
 ## 1. 调用和权限矩阵
 

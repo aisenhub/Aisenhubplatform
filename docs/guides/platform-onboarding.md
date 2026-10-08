@@ -2,7 +2,7 @@
 
 适用对象：新平台开发Agent、中央平台维护Agent、项目所有者。主路径为Next.js App Router + Node服务端；其他技术栈按第13节适配。本文维护当前可用方法，不把规划、参考页面或测试脚本写成已发布的一键接入产品。
 
-文档版本基线：2026-09-15；SDK当前版本0.1.0，Registry为local-only。每次接入记录实际中央commit、SDK版本及tarball SHA-256，不能只凭本文日期判断兼容。字段以[Account OpenAPI](../reference/contracts/account.openapi.json)、[DTO](../../packages/domain/src/contracts/api.ts)和[SDK源码](../../packages/account-server/src/index.ts)为准。
+文档版本基线：2026-09-15；SDK当前版本0.1.0，Registry为local-only。每次接入记录实际中央commit、SDK版本及tarball SHA-256，不能只凭本文日期判断兼容。字段以[Account OpenAPI](../../contracts/account/v1/openapi.json)为公共 HTTP 字段准绳；当前 DTO/SDK 只是迁移期实现，不能覆盖 canonical wire contract。
 
 ## 1. 从哪里开始
 
