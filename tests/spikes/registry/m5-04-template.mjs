@@ -18,9 +18,13 @@ const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const templates = JSON.parse(readFileSync(templatesPath, 'utf8'));
 assert(manifest.status === 'local-only', 'Registry must remain local-only');
 assert(
-  manifest.sdk_compatibility.range === '>=0.1.0 <0.2.0',
-  'SDK range drifted',
+  manifest.schema_version === '2.0.0' &&
+    manifest.contract_compatibility?.account?.major === 'v1' &&
+    manifest.contract_compatibility?.admin?.major === 'v1' &&
+    manifest.contract_compatibility?.reference_consumer === 'apps/template-preview',
+  'HTTP contract compatibility metadata drifted',
 );
+assert(!('sdk_compatibility' in manifest), 'SDK compatibility must be absent');
 assert(
   Array.isArray(templates) && templates.length === 9,
   'template coverage is incomplete',

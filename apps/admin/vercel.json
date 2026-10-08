@@ -1,3 +1,3 @@
 {
-  "buildCommand": "cd ../.. && pnpm run sdk:pack && pnpm --filter admin build"
+  "buildCommand": "cd ../.. && pnpm --filter admin build"
 }

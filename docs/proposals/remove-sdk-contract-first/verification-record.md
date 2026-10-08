@@ -20,8 +20,8 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Contract baseline 与治理 | 已交付 | OpenAPI canonical 路径、compatibility/changelog/manifest、breaking checker、路径引用已实施并通过定向验证 | 无 | 919559107c105c02279f41f68c307115639ffc6d | 已 push 并核对远端分支 |
 | 02 | Reference Consumer 无 Account SDK/Domain | 已交付 | app-local bounded input/public contract/Account fetch/fail-closed authorization 已实施；Reference Consumer 已无 account-server/domain 依赖 | 无 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | 已 push 并核对远端分支 |
-| 03 | Auth/BFF 去 SDK 化 | 验收通过待推送 | Reference Consumer/Admin app-local Auth 已接管 Cookie/session/replay/Supabase adapter；两个 app 已无 Auth SDK import | commit/push | 未验证 | 未验证 |
-| 04 | 删除 SDK package/发行链 | 未开始 | 未验证 | 03 | 未验证 | 未验证 |
+| 03 | Auth/BFF 去 SDK 化 | 验收通过待推送 | Reference Consumer/Admin app-local Auth 已接管 Cookie/session/replay/Supabase adapter；两个 app 已无 Auth SDK import | GitHub 网络恢复后 push | 2d4eff5 | push 阻塞：无法连接 github.com:443 |
+| 04 | 删除 SDK package/发行链 | 验收通过待推送 | 三个 Account SDK package、SDK pack/output、SDK/install probes 与 build 前置已删除；Registry 已切到 contract compatibility | commit；GitHub 网络恢复后 push | 待提交 | push 阻塞继承自当前网络环境 |
 | 05 | Contract/Reference gates | 未开始 | 未验证 | 04 | 未验证 | 未验证 |
 | 06 | 文档与 R3 总体验收 | 未开始 | 未验证 | 05 | 未验证 | 未验证 |
 
@@ -42,7 +42,8 @@
 - 安全回归：Reference Consumer 迁入原 adapter、safe-returnTo、refresh single-flight、mutation replay、logout epoch/BroadcastChannel 等关键测试；Admin 保留 MFA attestation、AAL2/recent-MFA 与 BFF allowlist 测试。
 
 ### Phase 04
-- 实际修改：未开始。
+- 实际修改：删除 `packages/account-auth`、`packages/account-auth-nextjs`、`packages/account-server`，删除 SDK pack/output 工具、SDK package probe 与旧 Account Consumer tarball install probe；root build/typecheck 不再运行 `sdk:pack`；Admin Vercel build 删除 SDK 前置；Registry schema 升级并改为 Account/Admin `v1` contract compatibility；lockfile 重算后 workspace 收敛为 8 个有效包。
+- 有意保留：`packages/domain` 继续作为中央内部模块；`test:consumer:fe-r1-ui` 只验证共享 UI 独立安装，与 Account Consumer SDK 无关；`task-0801` 的旧 SDK gate 在 Phase 05 统一替换。
 
 ### Phase 05
 - 实际修改：未开始。
@@ -71,6 +72,16 @@
 | 2026-10-08 | 03 | worktree | `pnpm --filter template-preview build` | Local | 0 | PASS：Next 16 production build 完成 |
 | 2026-10-08 | 03 | worktree | `pnpm --filter admin build` | Local | 0 | PASS：Next 16 production build 完成 |
 | 2026-10-08 | 03 | worktree | `git grep -n @kit/account-auth -- apps/template-preview apps/admin` | Local | 1 | PASS（预期无匹配）：两个 app 不再 import Auth SDK |
+| 2026-10-08 | 03 | 2d4eff5 | `git push` | Local/GitHub | 128 | BLOCKED：GitHub HTTPS 连接被 reset；本地 commit 完整保留 |
+| 2026-10-08 | 03 | 2d4eff5 | `git push`（重试） | Local/GitHub | 128 | BLOCKED：无法连接 `github.com:443`，未声称已交付 |
+| 2026-10-08 | 04 | worktree | `pnpm install --lockfile-only` | Local | 0 | PASS：workspace 解析为 9 个 project（root + 8 workspace），lockfile 更新且 supply-chain policy 通过 |
+| 2026-10-08 | 04 | worktree | `pnpm test:registry:m5-04` | Local | 0 | PASS：Registry contract compatibility、模板覆盖与 secret boundary 通过 |
+| 2026-10-08 | 04 | worktree | `pnpm test:tooling` | Local | 0 | PASS：2/2 tooling safety tests |
+| 2026-10-08 | 04 | worktree | `pnpm runtime:probe` | Local | 0 | PASS：Node/Deno 均可导入保留的 central `packages/domain` Edge boundary |
+| 2026-10-08 | 04 | worktree | `pnpm typecheck` | Local | 0 | PASS：Turbo 只包含 8 个现存 workspace，6/6 typecheck tasks 成功 |
+| 2026-10-08 | 04 | worktree | `pnpm build` | Local | 0 | PASS：Admin + Reference Consumer production build 成功，未运行 SDK pack |
+| 2026-10-08 | 04 | worktree | `pnpm test:unit` | Local | 0 | PASS：Domain 13、UI 36、Admin 22、Reference Consumer 44 tests，4/4 tasks 成功 |
+| 2026-10-08 | 04 | worktree | `git diff --check` | Local | 0 | PASS |
 
 ## GitHub 交付记录
 
@@ -78,13 +89,13 @@
 | --- | --- | --- | --- | --- | --- |
 | 01 | 919559107c105c02279f41f68c307115639ffc6d | codex/remove-sdk-contract-first | 已 push | 已核对 | Contract baseline |
 | 02 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | codex/remove-sdk-contract-first | 已 push | 已核对 | Reference Consumer HTTP integration |
-| 03 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
+| 03 | 2d4eff5 | codex/remove-sdk-contract-first | 失败：网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
 | 04 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 | 05 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 | 06 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 
 ## 交接信息
 
-- 当前 Phase 03 已完成验证，下一阶段从 Phase 04 删除 SDK package/发行链开始。
+- 当前 Phase 04 已完成本地验收，下一阶段从 Phase 05 Contract/Reference gates 开始；Phase 03/04 的 GitHub push 受当前网络阻塞。
 - 生产部署/真实支付/费用/Secret/数据操作均不在本任务授权范围。
 - main 合并前必须确认生产自动部署绑定；未知时保留在任务分支。
