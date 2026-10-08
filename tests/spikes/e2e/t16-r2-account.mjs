@@ -941,7 +941,7 @@ async function exerciseAdmin(page, adminTotp) {
   await page.waitForURL(/\/admin$/u, { waitUntil: 'domcontentloaded' });
   await exerciseAdminErrorCopyMatrix(page);
   await exerciseAdminResourceFailureMatrix(page);
-  await exerciseFilesStateMatrix(page, adminTotp);
+  await exerciseFilesStateMatrix(page);
   await exerciseSettingsLifecycleMatrix(page);
   await page.goto(`${adminUrl}/admin/platforms`, {
     waitUntil: 'domcontentloaded',
@@ -1315,7 +1315,7 @@ async function exerciseAdminErrorCopyMatrix(page) {
   }
 }
 
-async function exerciseFilesStateMatrix(page, adminTotp) {
+async function exerciseFilesStateMatrix(page) {
   const filesEndpoint = '/api/v1/admin/api/v1/config-files';
   const policyEndpoint = `/api/v1/admin/api/v1/platforms/${platformAId}/file-policy`;
   const activeFileId = crypto.randomUUID();
@@ -1357,7 +1357,7 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
   let downloadRequestCount = 0;
   let downloadMode = 'storage-error';
   let policyPatchCount = 0;
-  let policyPatchMode = 'mfa';
+  let policyPatchMode = 'success';
   const filesRoute = (url) => new URL(url).pathname === filesEndpoint;
   const policyRoute = (url) => new URL(url).pathname === policyEndpoint;
   const downloadEndpoint = `${filesEndpoint}/${activeFileId}/content`;
@@ -1408,26 +1408,47 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
   await page.route(policyRoute, async (route) => {
     if (route.request().method() === 'PATCH') {
       policyPatchCount += 1;
-      const isMfa = policyPatchMode === 'mfa';
       const isPrecondition = policyPatchMode === 'precondition';
+      const isConflict = policyPatchMode === 'conflict';
+      if (!isPrecondition && !isConflict) {
+        await route.fulfill({
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'x-request-id': crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            data: {
+              enabled: true,
+              max_file_bytes: 1048576,
+              max_files: 20,
+              max_total_bytes: 4096,
+              reserved_bytes: 2304,
+              reserved_count: 6,
+              available_bytes: 1792,
+              available_count: 14,
+              over_quota: true,
+              updated_at: now,
+            },
+            request_id: crypto.randomUUID(),
+          }),
+        });
+        return;
+      }
       await route.fulfill({
-        status: isMfa ? 403 : isPrecondition ? 412 : 409,
+        status: isPrecondition ? 412 : 409,
         headers: {
           'content-type': 'application/json',
           'x-request-id': crypto.randomUUID(),
         },
         body: JSON.stringify({
           error: {
-            code: isMfa
-              ? 'RECENT_MFA_REQUIRED'
-              : isPrecondition
-                ? 'PRECONDITION_FAILED'
-                : 'IDEMPOTENCY_CONFLICT',
-            message: isMfa
-              ? 'RECENT_MFA_REQUIRED'
-              : isPrecondition
-                ? 'PRECONDITION_FAILED'
-                : 'IDEMPOTENCY_CONFLICT',
+            code: isPrecondition
+              ? 'PRECONDITION_FAILED'
+              : 'IDEMPOTENCY_CONFLICT',
+            message: isPrecondition
+              ? 'PRECONDITION_FAILED'
+              : 'IDEMPOTENCY_CONFLICT',
           },
           request_id: crypto.randomUUID(),
         }),
@@ -1467,17 +1488,28 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       return;
     }
     downloadRequestCount += 1;
-    const isMfa = downloadMode === 'mfa';
+    if (downloadMode === 'success') {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/octet-stream',
+          'content-disposition': 'attachment; filename="active.json"',
+          'x-request-id': crypto.randomUUID(),
+        },
+        body: '{"fixture":true}',
+      });
+      return;
+    }
     await route.fulfill({
-      status: isMfa ? 403 : 503,
+      status: 503,
       headers: {
         'content-type': 'application/json',
         'x-request-id': crypto.randomUUID(),
       },
       body: JSON.stringify({
         error: {
-          code: isMfa ? 'RECENT_MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
-          message: isMfa ? 'RECENT_MFA_REQUIRED' : 'STORAGE_UNAVAILABLE',
+          code: 'STORAGE_UNAVAILABLE',
+          message: 'STORAGE_UNAVAILABLE',
         },
         request_id: crypto.randomUUID(),
       }),
@@ -1667,8 +1699,8 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       'download storage failure must submit exactly once',
     );
 
-    downloadMode = 'mfa';
-    const [mfaDownloadResponse] = await Promise.all([
+    downloadMode = 'success';
+    const [downloadSuccessResponse] = await Promise.all([
       page.waitForResponse((response) => {
         const requestUrl = new URL(response.url());
         return (
@@ -1680,15 +1712,16 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
         .locator(`[data-test="platform-file-download-${activeFileId}"]`)
         .click(),
     ]);
-    assert.equal(mfaDownloadResponse.status(), 403, 'download MFA response');
-    await page
-      .locator('[data-test="platform-files-download-step-up"]')
-      .getByText('下载需要近期 MFA', { exact: false })
-      .waitFor();
+    assert.equal(downloadSuccessResponse.status(), 200, 'AAL2 file download');
     assert.equal(
       downloadRequestCount,
       2,
-      'download MFA response must not be automatically replayed',
+      'AAL2 file download must submit exactly once without recent MFA',
+    );
+    assert.equal(
+      await page.locator('[data-test="recent-mfa-panel"]').count(),
+      0,
+      'ordinary file download must not render recent MFA',
     );
 
     await page.goto(`${adminUrl}/admin/platforms/${platformAId}/files`, {
@@ -1705,29 +1738,29 @@ async function exerciseFilesStateMatrix(page, adminTotp) {
       .locator(`[data-test="platform-file-row-${acceptedFileId}"]`)
       .waitFor();
     const policyPanel = page.locator('[data-test="platform-file-policy"]');
-    await policyPanel
-      .locator('[data-test="platform-file-policy-save"]')
-      .click();
-    await policyPanel.locator('[data-test="recent-mfa-panel"]').waitFor();
-    assert.equal(
-      policyPatchCount,
-      1,
-      'policy save must submit once before MFA step-up',
-    );
-    await policyPanel
-      .locator('[data-test="recent-mfa-code"]')
-      .fill(totp(adminTotp.secret));
-    await policyPanel.locator('[data-test="recent-mfa-submit"]').click();
     const policySave = policyPanel.locator(
       '[data-test="platform-file-policy-save"]',
     );
-    await policyPanel
-      .locator('[data-test="recent-mfa-panel"]')
-      .waitFor({ state: 'detached' });
+    const [policySaveResponse] = await Promise.all([
+      page.waitForResponse((response) => {
+        const requestUrl = new URL(response.url());
+        return (
+          requestUrl.pathname === policyEndpoint &&
+          response.request().method() === 'PATCH'
+        );
+      }),
+      policySave.click(),
+    ]);
+    assertStatus(policySaveResponse.status(), 200, 'AAL2 file policy save');
     assert.equal(
-      await policySave.isDisabled(),
-      false,
-      'policy save must become explicitly available after MFA verification',
+      policyPatchCount,
+      1,
+      'AAL2 file policy save must submit exactly once without recent MFA',
+    );
+    assert.equal(
+      await policyPanel.locator('[data-test="recent-mfa-panel"]').count(),
+      0,
+      'ordinary file policy mutation must not render recent MFA',
     );
 
     policyPatchMode = 'conflict';

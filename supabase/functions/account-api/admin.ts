@@ -326,7 +326,6 @@ export async function dispatchAdmin(
     UUID.test(billingRequeryMatch[1]!) &&
     request.method === 'POST'
   ) {
-    await adminStepUp(transaction, session, request);
     const input = await body(request);
     const operationId = uuidValue(input.operation_id);
     const reason = stringValue(input.reason);
@@ -351,7 +350,6 @@ export async function dispatchAdmin(
     UUID.test(billingResolveMatch[1]!) &&
     request.method === 'POST'
   ) {
-    await adminStepUp(transaction, session, request);
     const input = await body(request);
     const operationId = uuidValue(input.operation_id);
     const decision = stringValue(input.decision);
@@ -438,7 +436,6 @@ export async function dispatchAdmin(
       return { status: 200, data: result };
     }
     if (request.method === 'PATCH') {
-      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const enabled = input.enabled;
       const maxFileBytes = Number(input.max_file_bytes);
@@ -478,15 +475,13 @@ export async function dispatchAdmin(
     return { status: 200, data: adminFileDto(result) };
   }
   if (adminFileMatch && request.method === 'DELETE') {
-    await adminStepUp(transaction, session, request);
     const fileId = uuidValue(adminFileMatch[1]);
-    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
     const idempotencyKey = request.headers.get('idempotency-key');
-    if (!fileId || !proofId || !idempotencyKey || idempotencyKey.length > 128)
+    if (!fileId || !idempotencyKey || idempotencyKey.length > 128)
       throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
-      'select * from private.admin_file_delete_request(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
-      [...context, fileId, proofId, idempotencyKey],
+      'select * from private.admin_file_delete_request(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text)',
+      [...context, fileId, idempotencyKey],
     );
     if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     return { status: 202, data: adminFileDto(result) };
@@ -634,8 +629,6 @@ export async function dispatchAdmin(
     UUID.test(accountActionMatch[2]!)
   ) {
     const action = accountActionMatch[3]!;
-    if (action === 'suspend' || action === 'close')
-      await adminStepUp(transaction, session, request);
     const [result] = await transaction.unsafe<Row>(
       'select * from private.admin_account_transition(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
       [...context, accountActionMatch[1], accountActionMatch[2], action],
@@ -737,7 +730,6 @@ export async function dispatchAdmin(
       return { status: 200, data: rows };
     }
     if (request.method === 'POST') {
-      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const planId = uuidValue(input.plan_id);
       const [result] = await transaction.unsafe<Row>(
@@ -773,7 +765,6 @@ export async function dispatchAdmin(
       return { status: 200, data: result, headers: withEtag(result) };
     }
     if (request.method === 'PATCH') {
-      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const paidPlanId =
         input.paid_plan_id === null ? null : uuidValue(input.paid_plan_id);
@@ -825,7 +816,6 @@ export async function dispatchAdmin(
       return { status: 200, data: rows };
     }
     if (request.method === 'POST') {
-      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const inputPlatformId = uuidValue(input.platform_id);
       const planId = uuidValue(input.plan_id);
@@ -938,7 +928,6 @@ export async function dispatchAdmin(
       path,
     );
   if (confirmMatch && UUID.test(confirmMatch[1]!)) {
-    await adminStepUp(transaction, session, request);
     const input = await body(request);
     const platformId = uuidValue(input.platform_id);
     if (!platformId) throw new ApiFault(400, 'INVALID_INPUT');
@@ -972,7 +961,6 @@ export async function dispatchAdmin(
     const platformId = uuidValue(url.searchParams.get('platform_id'));
     if (!platformId) throw new ApiFault(400, 'INVALID_INPUT');
     if (path.endsWith('/commands')) {
-      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const [result] = await transaction.unsafe<Row>(
         'select * from private.admin_entitlement_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::uuid, $9::integer, $10::text, $11::uuid, $12::text)',

@@ -360,25 +360,42 @@ async function runBrowserFlow(secret) {
     where user_id = ${userId}
   `;
   await new Promise((resolve) => setTimeout(resolve, 1_200));
-  await page.locator('[data-test="plan-create-open"]').click();
-  await page.locator('[data-test="plan-editor-code"]').fill('browser-proof');
-  await page.locator('[data-test="plan-editor-name"]').fill('Browser Proof');
+  const loadKeysResponsePromise = page.waitForResponse(
+    (response) =>
+      response
+        .url()
+        .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/keys`) &&
+      response.request().method() === 'GET',
+  );
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/settings/keys`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="platform-keys-page"]').waitFor({
+    state: 'visible',
+  });
+  const loadKeysResponse = await loadKeysResponsePromise;
+  assertStatus(loadKeysResponse.status(), 200, 'browser admin key list');
+  await page.locator('[data-test="platform-key-open-create"]').click();
   const [expiredProofResponse] = await Promise.all([
     page.waitForResponse(
       (response) =>
         response
           .url()
-          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`) &&
+          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/keys`) &&
         response.request().method() === 'POST',
     ),
-    page.locator('[data-test="plan-editor-submit"]').click(),
+    page.locator('[data-test="confirm-action-submit"]').click(),
   ]);
-  assertStatus(expiredProofResponse.status(), 403, 'expired recent proof');
+  assertStatus(
+    expiredProofResponse.status(),
+    403,
+    'expired recent proof on critical key create',
+  );
   assert.equal(
     (await expiredProofResponse.json()).error?.code,
     'RECENT_MFA_REQUIRED',
   );
-  await page.locator('[data-test="plan-editor-step-up"]').waitFor({
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
     state: 'visible',
   });
   await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
@@ -389,26 +406,30 @@ async function runBrowserFlow(secret) {
     page.locator('[data-test="recent-mfa-submit"]').click(),
   ]);
   assertStatus(recentMfaResponse.status(), 200, 'recent MFA verification');
-  await page.getByText('MFA 已验证', { exact: true }).waitFor({
-    state: 'visible',
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
+    state: 'detached',
   });
   const [notAutoSubmitted] = await sql`
     select count(*)::integer as count
-    from public.plans
-    where platform_id = ${platformId} and code = 'browser-proof'
+    from private.platform_api_keys
+    where platform_id = ${platformId}
   `;
   assert.equal(notAutoSubmitted.count, 0, 'step-up must not replay the write');
-  const [proofPlanResponse] = await Promise.all([
+  const [proofKeyResponse] = await Promise.all([
     page.waitForResponse(
       (response) =>
         response
           .url()
-          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/plans`) &&
+          .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/keys`) &&
         response.request().method() === 'POST',
     ),
-    page.locator('[data-test="plan-editor-submit"]').click(),
+    page.locator('[data-test="confirm-action-submit"]').click(),
   ]);
-  assertStatus(proofPlanResponse.status(), 201, 'explicit post-step-up submit');
+  assertStatus(
+    proofKeyResponse.status(),
+    201,
+    'explicit post-step-up key submit',
+  );
 
   if (previousSystemAdmin) {
     await sql`

@@ -8,13 +8,11 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import { adminAuthSession } from '../../app/_lib/auth-session';
 import {
   caughtResourceError,
   readApiPayload,
   resourceError,
-  isRecentMfaRequired,
   resourcePath,
   type ResourceError,
 } from '../resources/admin-resource-utils';
@@ -53,7 +51,6 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [needsMfa, setNeedsMfa] = useState(false);
   const [unknownOutcome, setUnknownOutcome] = useState(false);
   const [message, setMessage] = useState<ResourceError | null>(null);
 
@@ -108,7 +105,6 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
     if (!config || saving) return;
     setSaving(true);
     setMessage(null);
-    setNeedsMfa(false);
     setUnknownOutcome(false);
     const epoch = adminAuthSession.getEpoch();
     try {
@@ -135,9 +131,6 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
       const payload = await readApiPayload<SubscriptionConfig>(response);
       if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setNeedsMfa(true);
-        }
         setMessage(resourceError(response, payload, '订阅配置更新'));
         return;
       }
@@ -341,26 +334,13 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
               />
             </div>
           </div>
-          {needsMfa ? (
-            <AdminRecentMfaPanel
-              onVerified={() => {
-                setNeedsMfa(false);
-                setMessage({
-                  title: '近期 MFA 已验证',
-                  description: '请再次点击“保存订阅配置”提交刚才的修改。',
-                  requestId: null,
-                  technicalDetail: null,
-                });
-              }}
-            />
-          ) : null}
           {unknownOutcome ? (
             <Button variant="outline" onClick={() => void load()}>
               重新读取配置
             </Button>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => void save()} disabled={saving || needsMfa}>
+            <Button onClick={() => void save()} disabled={saving}>
               {saving ? '保存中…' : '保存订阅配置'}
             </Button>
             <Button
@@ -371,7 +351,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
               重新读取
             </Button>
             <span className="text-xs text-muted-foreground">
-              保存需要近期 MFA；并发修改会由 If-Match 阻止。
+              当前操作要求 AAL2；并发修改会由 If-Match 阻止。
             </span>
           </div>
         </>

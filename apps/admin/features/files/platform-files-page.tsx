@@ -20,7 +20,6 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -29,7 +28,6 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
-  isRecentMfaRequired,
   resourcePath,
   statusLabel,
   type ApiErrorPayload,
@@ -157,7 +155,6 @@ export function PlatformFilesPage() {
   const [policyRefreshError, setPolicyRefreshError] =
     useState<ResourceError | null>(null);
   const [policySaving, setPolicySaving] = useState(false);
-  const [policyNeedsStepUp, setPolicyNeedsStepUp] = useState(false);
   const [policyErrorMessage, setPolicyErrorMessage] =
     useState<ResourceError | null>(null);
   const [deletingFileIds, setDeletingFileIds] = useState<Set<string>>(
@@ -170,10 +167,6 @@ export function PlatformFilesPage() {
   const [deleteState, setDeleteState] =
     useState<MutationState>('confirm_required');
   const [deleteError, setDeleteError] = useState<ResourceError | null>(null);
-  const [downloadTarget, setDownloadTarget] = useState<DownloadTarget | null>(
-    null,
-  );
-  const [downloadNeedsStepUp, setDownloadNeedsStepUp] = useState(false);
   const [downloadError, setDownloadError] = useState<ResourceError | null>(
     null,
   );
@@ -331,7 +324,7 @@ export function PlatformFilesPage() {
 
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!policy || policySaving || policyNeedsStepUp) return;
+    if (!policy || policySaving) return;
     setPolicySaving(true);
     setPolicyErrorMessage(null);
     try {
@@ -351,15 +344,9 @@ export function PlatformFilesPage() {
       );
       const payload = await readApiPayload<Policy>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setPolicyNeedsStepUp(true);
-          setPolicyErrorMessage(null);
-        } else {
-          setPolicyErrorMessage(apiError(response, payload, '文件策略'));
-        }
+        setPolicyErrorMessage(apiError(response, payload, '文件策略'));
         return;
       }
-      setPolicyNeedsStepUp(false);
       await loadPolicy(true);
     } catch (caught) {
       setPolicyErrorMessage({
@@ -445,10 +432,6 @@ export function PlatformFilesPage() {
       );
       const payload = await readApiPayload<ConfigFile>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setDeleteState('step_up_required');
-          return;
-        }
         setDeleteState('failure');
         setDeleteError(apiError(response, payload, '文件删除'));
         return;
@@ -541,11 +524,6 @@ export function PlatformFilesPage() {
       );
       const payload = await readApiPayload<unknown>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setDownloadTarget(target);
-          setDownloadNeedsStepUp(true);
-          return;
-        }
         setDownloadError(apiError(response, payload, '文件下载'));
         return;
       }
@@ -555,8 +533,6 @@ export function PlatformFilesPage() {
       anchor.download = target.name || 'config-file';
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
-      setDownloadTarget(null);
-      setDownloadNeedsStepUp(false);
     } catch (caught) {
       setDownloadError({
         title: '下载流结果待确认',
@@ -662,35 +638,6 @@ export function PlatformFilesPage() {
           </AlertDescription>
         </Alert>
       ) : null}
-      {downloadTarget ? (
-        <Alert data-test="platform-files-download-step-up">
-          <AlertTitle>
-            {downloadNeedsStepUp
-              ? '下载需要近期 MFA'
-              : 'MFA 已验证，请继续下载'}
-          </AlertTitle>
-          <AlertDescription>
-            原下载目标已保留；验证成功后不会自动重放，请显式点击继续下载。
-            <div className="mt-3 grid gap-3">
-              {downloadNeedsStepUp ? (
-                <AdminRecentMfaPanel
-                  onVerified={() => setDownloadNeedsStepUp(false)}
-                />
-              ) : null}
-              {!downloadNeedsStepUp ? (
-                <Button
-                  size="sm"
-                  className="w-fit"
-                  onClick={() => void downloadFile(downloadTarget)}
-                  data-test="platform-files-download-after-mfa"
-                >
-                  继续下载
-                </Button>
-              ) : null}
-            </div>
-          </AlertDescription>
-        </Alert>
-      ) : null}
       {downloadError ? (
         <Alert variant="destructive" data-test="platform-files-download-error">
           <AlertTitle>{downloadError.title}</AlertTitle>
@@ -730,7 +677,7 @@ export function PlatformFilesPage() {
                   onChange={(event) =>
                     setPolicy({ ...policy, enabled: event.target.checked })
                   }
-                  disabled={policySaving || policyNeedsStepUp}
+                  disabled={policySaving}
                   data-test="platform-file-policy-enabled"
                 />
                 策略启用
@@ -741,7 +688,7 @@ export function PlatformFilesPage() {
                   label="单文件上限（字节）"
                   value={policy.max_file_bytes}
                   max={1048576}
-                  disabled={policySaving || policyNeedsStepUp}
+                  disabled={policySaving}
                   onChange={(value) =>
                     setPolicy({ ...policy, max_file_bytes: value })
                   }
@@ -750,7 +697,7 @@ export function PlatformFilesPage() {
                   id="file-policy-max-files"
                   label="文件数量上限"
                   value={policy.max_files}
-                  disabled={policySaving || policyNeedsStepUp}
+                  disabled={policySaving}
                   onChange={(value) =>
                     setPolicy({ ...policy, max_files: value })
                   }
@@ -759,7 +706,7 @@ export function PlatformFilesPage() {
                   id="file-policy-max-total"
                   label="总字节上限"
                   value={policy.max_total_bytes}
-                  disabled={policySaving || policyNeedsStepUp}
+                  disabled={policySaving}
                   onChange={(value) =>
                     setPolicy({ ...policy, max_total_bytes: value })
                   }
@@ -791,11 +738,6 @@ export function PlatformFilesPage() {
                   </AlertDescription>
                 </Alert>
               ) : null}
-              {policyNeedsStepUp ? (
-                <AdminRecentMfaPanel
-                  onVerified={() => setPolicyNeedsStepUp(false)}
-                />
-              ) : null}
               {policyErrorMessage ? (
                 <Alert
                   variant="destructive"
@@ -814,10 +756,10 @@ export function PlatformFilesPage() {
               <Button
                 type="submit"
                 className="w-fit"
-                disabled={policySaving || policyNeedsStepUp}
+                disabled={policySaving}
                 data-test="platform-file-policy-save"
               >
-                {policySaving ? '保存中…' : '保存策略（需近期 MFA）'}
+                {policySaving ? '保存中…' : '保存策略'}
               </Button>
             </form>
           ) : (
@@ -1019,13 +961,6 @@ export function PlatformFilesPage() {
           reasonRequired
           state={deleteState}
           error={deleteError}
-          stepUpContent={
-            deleteState === 'step_up_required' ? (
-              <AdminRecentMfaPanel
-                onVerified={() => setDeleteState('confirm_required')}
-              />
-            ) : null
-          }
           onCheckUnknown={
             deleteState === 'unknown_outcome'
               ? () => void checkDeleteUnknown()

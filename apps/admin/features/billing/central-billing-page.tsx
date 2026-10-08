@@ -8,13 +8,11 @@ import { Input } from '@kit/ui/input';
 import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
 import {
-  isRecentMfaRequired,
   readApiPayload,
   resourceError,
   type ResourceError,
@@ -203,7 +201,6 @@ export function CentralBillingPage() {
   const [error, setError] = useState<ResourceError | null>(null);
   const [actionError, setActionError] = useState<ResourceError | null>(null);
   const [busy, setBusy] = useState(false);
-  const [needsMfa, setNeedsMfa] = useState(false);
   const [draftFilters, setDraftFilters] = useState<BillingFilters>(
     EMPTY_BILLING_FILTERS,
   );
@@ -350,7 +347,6 @@ export function CentralBillingPage() {
       );
       const payload = await readApiPayload(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) setNeedsMfa(true);
         if ([400, 409, 412].includes(response.status))
           requeryOperationRef.current = null;
         setActionError(resourceError(response, payload, '订单重查'));
@@ -397,7 +393,6 @@ export function CentralBillingPage() {
       );
       const payload = await readApiPayload(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) setNeedsMfa(true);
         if ([400, 409, 412].includes(response.status))
           resolveOperationRef.current = null;
         setActionError(resourceError(response, payload, '订单结案'));
@@ -424,12 +419,9 @@ export function CentralBillingPage() {
     >
       <AdminPageHeader
         title="计费管理"
-        description="查看支付渠道订单与结算状态，检查积压并处理异常订单。敏感操作需要再次验证身份。"
+        description="查看支付渠道订单与结算状态，检查积压并处理异常订单。当前页面操作以 AAL2 管理员会话为授权基线。"
         actions={<Button onClick={() => void load()}>刷新</Button>}
       />
-      {needsMfa ? (
-        <AdminRecentMfaPanel onVerified={() => setNeedsMfa(false)} />
-      ) : null}
       {actionError ? (
         <Alert variant="destructive">
           <AlertTitle>{actionError.title}</AlertTitle>

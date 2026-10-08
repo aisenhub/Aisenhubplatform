@@ -1,6 +1,6 @@
 begin;
 
-select plan(7);
+select plan(9);
 
 select has_function(
   'private',
@@ -33,6 +33,16 @@ select ok(
    from pg_proc
    where oid = 'private.admin_step_up_issue(private.admin_context, uuid, timestamptz, uuid)'::regprocedure),
   'recent-auth proof issuer pins a system-only search path'
+);
+select ok(
+  pg_get_functiondef('private.admin_step_up_issue(private.admin_context, uuid, timestamptz, uuid)'::regprocedure) like '%30 minutes%'
+    or pg_get_functiondef('private.admin_step_up_issue(private.admin_context, uuid, timestamptz, uuid)'::regprocedure) like '%00:30:00%',
+  'recent-auth proof issuer grants at most thirty minutes'
+);
+select ok(
+  pg_get_functiondef('private.admin_step_up_valid(uuid, uuid, uuid)'::regprocedure) like '%30 minutes%'
+    or pg_get_functiondef('private.admin_step_up_valid(uuid, uuid, uuid)'::regprocedure) like '%00:30:00%',
+  'recent-auth proof validator enforces the thirty-minute bound'
 );
 select ok(
   (select indexdef ilike 'create unique index%attestation_nonce%'

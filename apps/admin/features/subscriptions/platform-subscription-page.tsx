@@ -15,7 +15,6 @@ import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import {
   adminAuthSession,
@@ -25,7 +24,6 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
-  isRecentMfaRequired,
   resourcePath,
   statusLabel,
   statusTone,
@@ -313,10 +311,6 @@ export function PlatformSubscriptionPage() {
       );
       const payload = await readApiPayload<unknown>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setMutationState('step_up_required');
-          return;
-        }
         if (response.status === 409) {
           await loadSubscription(true);
           setMutationState('failure');
@@ -682,16 +676,6 @@ export function PlatformSubscriptionPage() {
           reasonRequired
           state={mutationState}
           error={mutationError}
-          stepUpContent={
-            mutationState === 'step_up_required' ? (
-              <AdminRecentMfaPanel
-                onVerified={() => {
-                  setMutationState('confirm_required');
-                  setMutationError(null);
-                }}
-              />
-            ) : null
-          }
           onCheckUnknown={
             mutationState === 'unknown_outcome' ? checkUnknown : undefined
           }

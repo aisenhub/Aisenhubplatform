@@ -66,9 +66,9 @@ select ok(
 select ok(
   exists (select 1 from pg_constraint
           where conrelid = 'private.admin_step_up'::regclass
-            and (pg_get_constraintdef(oid) like '%5 minutes%'
-                 or pg_get_constraintdef(oid) like '%00:05:00%')),
-  'step-up expiry is bounded to five minutes'
+            and (pg_get_constraintdef(oid) like '%30 minutes%'
+                 or pg_get_constraintdef(oid) like '%00:30:00%')),
+  'step-up expiry is bounded to thirty minutes'
 );
 select ok(
   exists (select 1 from pg_constraint

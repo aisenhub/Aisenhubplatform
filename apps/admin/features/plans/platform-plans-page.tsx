@@ -33,7 +33,6 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -41,7 +40,6 @@ import {
 import {
   readApiPayload,
   resourceError,
-  isRecentMfaRequired,
   resourcePath,
   statusLabel,
   statusTone,
@@ -95,8 +93,6 @@ export function PlatformPlansPage() {
   const [editorPayload, setEditorPayload] = useState<PlanPayload | null>(null);
   const [editorSaving, setEditorSaving] = useState(false);
   const [editorError, setEditorError] = useState<ResourceError | null>(null);
-  const [editorNeedsStepUp, setEditorNeedsStepUp] = useState(false);
-  const [editorVerified, setEditorVerified] = useState(false);
   const [actionIntent, setActionIntent] = useState<PlanActionIntent | null>(
     null,
   );
@@ -184,8 +180,6 @@ export function PlatformPlansPage() {
       clear_default: false,
     });
     setEditorError(null);
-    setEditorNeedsStepUp(false);
-    setEditorVerified(false);
     setEditorOpen(true);
   }
 
@@ -203,14 +197,12 @@ export function PlatformPlansPage() {
       clear_default: false,
     });
     setEditorError(null);
-    setEditorNeedsStepUp(false);
-    setEditorVerified(false);
     setEditorOpen(true);
   }
 
   async function submitEditor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editorPayload || editorSaving || editorNeedsStepUp) return;
+    if (!editorPayload || editorSaving) return;
     if (
       !editorPayload.code.trim() ||
       !/^[a-z0-9][a-z0-9._-]*$/u.test(editorPayload.code)
@@ -256,17 +248,10 @@ export function PlatformPlansPage() {
       );
       const responsePayload = await readApiPayload<Plan>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, responsePayload)) {
-          setEditorNeedsStepUp(true);
-          setEditorVerified(false);
-          return;
-        }
         setEditorError(resourceError(response, responsePayload, 'Plan'));
         return;
       }
       setEditorOpen(false);
-      setEditorNeedsStepUp(false);
-      setEditorVerified(false);
       await load(true);
     } catch (caught) {
       if (caught instanceof SessionRetryRequiredError) {
@@ -337,10 +322,6 @@ export function PlatformPlansPage() {
       );
       const payload = await readApiPayload<Plan>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setActionState('step_up_required');
-          return;
-        }
         setActionState('failure');
         setActionError(resourceError(response, payload, 'Plan 操作'));
         return;
@@ -592,7 +573,7 @@ export function PlatformPlansPage() {
       <Dialog
         open={editorOpen}
         onOpenChange={(open) => {
-          if (!editorSaving && !editorNeedsStepUp) setEditorOpen(open);
+          if (!editorSaving) setEditorOpen(open);
         }}
       >
         <DialogContent data-test="plan-editor-dialog">
@@ -617,9 +598,7 @@ export function PlatformPlansPage() {
                       code: event.target.value,
                     })
                   }
-                  disabled={
-                    Boolean(editingPlan) || editorSaving || editorNeedsStepUp
-                  }
+                  disabled={Boolean(editingPlan) || editorSaving}
                   data-test="plan-editor-code"
                 />
               </div>
@@ -634,7 +613,7 @@ export function PlatformPlansPage() {
                       name: event.target.value,
                     })
                   }
-                  disabled={editorSaving || editorNeedsStepUp}
+                  disabled={editorSaving}
                   data-test="plan-editor-name"
                 />
               </div>
@@ -649,11 +628,7 @@ export function PlatformPlansPage() {
                       kind: event.target.value as Plan['kind'],
                     })
                   }
-                  disabled={
-                    Boolean(editingPlan?.is_default) ||
-                    editorSaving ||
-                    editorNeedsStepUp
-                  }
+                  disabled={Boolean(editingPlan?.is_default) || editorSaving}
                   data-test="plan-editor-kind"
                 >
                   <option value="paid">paid</option>
@@ -671,7 +646,7 @@ export function PlatformPlansPage() {
                       description: event.target.value,
                     })
                   }
-                  disabled={editorSaving || editorNeedsStepUp}
+                  disabled={editorSaving}
                   maxLength={4096}
                   data-test="plan-editor-description"
                 />
@@ -688,43 +663,19 @@ export function PlatformPlansPage() {
                   </AlertDescription>
                 </Alert>
               ) : null}
-              {editorNeedsStepUp ? (
-                <Alert data-test="plan-editor-step-up">
-                  <AlertTitle>需要近期 MFA</AlertTitle>
-                  <AlertDescription>
-                    保存草稿仍在当前窗口；验证完成后必须显式再次点击提交，不会自动重放。
-                    <div className="mt-3">
-                      <AdminRecentMfaPanel
-                        onVerified={() => {
-                          setEditorNeedsStepUp(false);
-                          setEditorVerified(true);
-                        }}
-                      />
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              {editorVerified ? (
-                <Alert>
-                  <AlertTitle>MFA 已验证</AlertTitle>
-                  <AlertDescription>
-                    草稿未改变；请再次点击保存提交同一份 Plan 变更。
-                  </AlertDescription>
-                </Alert>
-              ) : null}
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setEditorOpen(false)}
-                  disabled={editorSaving || editorNeedsStepUp}
+                  disabled={editorSaving}
                   data-test="plan-editor-cancel"
                 >
                   取消
                 </Button>
                 <Button
                   type="submit"
-                  disabled={editorSaving || editorNeedsStepUp}
+                  disabled={editorSaving}
                   data-test="plan-editor-submit"
                 >
                   {editorSaving
@@ -754,16 +705,6 @@ export function PlatformPlansPage() {
           reversible={actionIntent.reversible}
           state={actionState}
           error={actionError}
-          stepUpContent={
-            actionState === 'step_up_required' ? (
-              <AdminRecentMfaPanel
-                onVerified={() => {
-                  setActionState('confirm_required');
-                  setActionError(null);
-                }}
-              />
-            ) : null
-          }
           onCheckUnknown={
             actionState === 'unknown_outcome'
               ? async () => {

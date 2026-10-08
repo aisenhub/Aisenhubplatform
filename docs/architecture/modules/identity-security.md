@@ -50,11 +50,11 @@ system_admin singleton 保证最多一名管理员；每个普通 Admin Route/Se
 
 Admin Shell 在渲染普通管理页面前先读取该状态：未登录转登录，AAL1 管理员只进入 `/admin/mfa`，AAL2 管理员进入普通管理页面，非管理员和授权服务故障均保持在无业务内容的阻断界面。`/admin/login` 是唯一不读取 status 的登录入口；BFF 仅代理状态请求，不复制管理员或 AAL 判断。
 
-生成/轮换/撤销Key、生成及确认兑换码交付、Manual Grant/revoke/pause/resume、管理员下载/删除配置文件、Global Delete、替换管理员等高风险动作，要求最近5分钟完成一次服务端验证的MFA challenge。
+普通 Admin 操作以活动管理员会话 + AAL2 为统一授权基线。只有关键密钥生命周期（Platform Key 创建、部署确认、撤销）、Global Delete 启动/重试，以及管理员替换要求近期 step-up；近期 MFA 证明最长有效 30 分钟。账户 suspend/close、Plan 与订阅配置、兑换码批次与交付、Manual Grant/revoke/pause/resume、Billing 处理、配置文件读取/下载/普通删除与文件策略均不再额外要求 recent MFA。管理员替换当前尚无公开 Admin Route；未来实现时必须进入同一 30 分钟 step-up 边界。
 
-Admin Auth adapter完成官方MFA验证后，由Admin BFF使用共享服务端HMAC Secret签发最多60秒的attestation，绑定user_id、session_id、factor_id、verified_at和随机nonce；中央Account API必须验证签名、当前AAL2 bearer的user/session绑定与时效后，才调用private.admin_step_up_issue写入private.admin_step_up。证明记录保存user_id、session_id、verified_at、expires_at、factor_id和attestation_nonce；nonce按当前管理员会话唯一消费，重放拒绝。普通token refresh不延长窗口，撤销会话或替换管理员立即使证明不可用。浏览器提交的factor id、挑战完成布尔值或已有AAL2本身都不构成近期MFA证明。
+Admin Auth adapter完成官方MFA验证后，由Admin BFF使用共享服务端HMAC Secret签发最多60秒的attestation，绑定user_id、session_id、factor_id、verified_at和随机nonce；中央Account API必须验证签名、当前AAL2 bearer的user/session绑定与时效后，才调用private.admin_step_up_issue写入private.admin_step_up。attestation 只负责证明“刚完成 MFA”并保持 60 秒短寿命，真正的 step-up 证明最长有效 30 分钟。证明记录保存user_id、session_id、verified_at、expires_at、factor_id和attestation_nonce；nonce按当前管理员会话唯一消费，重放拒绝。普通token refresh不延长窗口，撤销会话或替换管理员立即使证明不可用。浏览器提交的factor id、挑战完成布尔值或已有AAL2本身都不构成近期MFA证明。
 
-Admin数据库入口的授权包装函数重新检查成员、会话、AAL2已验证上下文及step-up证明，再调用共用领域函数；Account executor无权调用Admin包装或记录step-up。数据库不自行验证HTTP JWT签名，由服务器Auth adapter验证后传入受控上下文。
+中央 Account API 对普通 Admin Route 统一要求活动管理员会话与 AAL2；私有数据库包装函数继续重新检查管理员成员关系和活动 session。Global Delete 的数据库包装额外校验与当前 user/session 绑定且未过期的 step-up proof；关键密钥生命周期在中央 API 边界执行同一 step-up 校验，并且其私有函数只授权 admin_executor。Account executor无权调用Admin包装或记录step-up。数据库不自行验证HTTP JWT签名，由服务器Auth adapter验证后传入受控上下文。
 
 普通用户的近期认证使用独立的 Supabase email sign-in 事件：当前业务会话先由 BFF 恢复并确认用户，邮件中的 `token_hash` 在不持久化的临时 Auth client 中验证，随后 BFF 只把临时 access token 通过 `X-Reauth-Access-Token` 传给中央 Account API。中央 API 分别验证当前 bearer 与事件 token 的 Auth 用户、解析出的 `session_id`，并由窄范围的 security-definer helper 检查事件 session 属于同一用户、创建时间在 5 分钟内且仍有效；proof 只写入原业务 session，临时 session 在 BFF 中撤销且不会返回浏览器。邮件 token 不放入中央 API body、proof cookie 仍为 HttpOnly，缺少任一事件/绑定/撤销证据即拒绝。该实现不把 `iat`、AAL2 或客户端布尔值当作近期认证证明；Supabase 的 `reauthenticate()`/nonce 流程仍仅保留为资料或密码变更语义，不作为本 proof 协议。
 
