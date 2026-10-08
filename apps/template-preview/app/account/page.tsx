@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
-import { createBrowserSupabaseClient } from '@kit/account-auth-nextjs/browser';
+import { createBrowserSupabaseClient } from '../_lib/auth/browser';
 
 import { ConsumerShell } from '../../components/consumer-shell';
 

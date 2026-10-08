@@ -3,7 +3,7 @@ import {
   authCookieNames,
   authSessionGate,
   currentLogoutFence,
-} from '@kit/account-auth-nextjs';
+} from '../../_lib/auth/server';
 
 type ApiErrorCode =
   | 'INVALID_INPUT'

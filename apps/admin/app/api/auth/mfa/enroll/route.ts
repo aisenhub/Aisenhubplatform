@@ -5,7 +5,7 @@ import {
   authSessionGate,
   createRequestAuthClient,
   setRequestAuthSession,
-} from '@kit/account-auth-nextjs';
+} from '../../../../_lib/auth/server';
 
 export const dynamic = 'force-dynamic';
 

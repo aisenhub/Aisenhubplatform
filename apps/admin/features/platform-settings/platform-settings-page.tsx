@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { SessionRetryRequiredError } from '@kit/account-auth-nextjs/browser';
+import { SessionRetryRequiredError } from '../../app/_lib/auth/browser';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
 import { ConfirmActionDialog } from '@kit/ui/confirm-action-dialog';

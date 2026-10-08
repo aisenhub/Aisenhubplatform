@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { SessionExpiredError } from '@kit/account-auth-nextjs/browser';
+import { SessionExpiredError } from '../../app/_lib/auth/browser';
 
 import { Button } from '@kit/ui/button';
 import { SidebarProvider } from '@kit/ui/sidebar';

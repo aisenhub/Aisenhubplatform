@@ -19,8 +19,8 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Contract baseline 与治理 | 已交付 | OpenAPI canonical 路径、compatibility/changelog/manifest、breaking checker、路径引用已实施并通过定向验证 | 无 | 919559107c105c02279f41f68c307115639ffc6d | 已 push 并核对远端分支 |
-| 02 | Reference Consumer 无 Account SDK/Domain | 验收通过待推送 | app-local bounded input/public contract/Account fetch/fail-closed authorization 已实施；Reference Consumer 已无 account-server/domain 依赖 | commit/push | 未验证 | 未验证 |
-| 03 | Auth/BFF 去 SDK 化 | 未开始 | 未验证 | 02 | 未验证 | 未验证 |
+| 02 | Reference Consumer 无 Account SDK/Domain | 已交付 | app-local bounded input/public contract/Account fetch/fail-closed authorization 已实施；Reference Consumer 已无 account-server/domain 依赖 | 无 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | 已 push 并核对远端分支 |
+| 03 | Auth/BFF 去 SDK 化 | 验收通过待推送 | Reference Consumer/Admin app-local Auth 已接管 Cookie/session/replay/Supabase adapter；两个 app 已无 Auth SDK import | commit/push | 未验证 | 未验证 |
 | 04 | 删除 SDK package/发行链 | 未开始 | 未验证 | 03 | 未验证 | 未验证 |
 | 05 | Contract/Reference gates | 未开始 | 未验证 | 04 | 未验证 | 未验证 |
 | 06 | 文档与 R3 总体验收 | 未开始 | 未验证 | 05 | 未验证 | 未验证 |
@@ -38,7 +38,8 @@
 - 与计划偏差：`pnpm --filter template-preview test:unit` 在 package metadata 变化后自动完成一次 workspace dependency resolution 并同步 lockfile，无新增外部依赖。
 
 ### Phase 03
-- 实际修改：未开始。
+- 实际修改：在 `apps/template-preview/app/_lib/auth` 与 `apps/admin/app/_lib/auth` 建立 app-local core/cookie/server/browser-session/browser；所有 Auth/BFF/UI import 改为 app-local；两个 app 直接声明 Supabase SSR/client 依赖；Admin 移除 `transpilePackages` 中的旧 Auth package。
+- 安全回归：Reference Consumer 迁入原 adapter、safe-returnTo、refresh single-flight、mutation replay、logout epoch/BroadcastChannel 等关键测试；Admin 保留 MFA attestation、AAL2/recent-MFA 与 BFF allowlist 测试。
 
 ### Phase 04
 - 实际修改：未开始。
@@ -63,13 +64,20 @@
 | 2026-10-08 | 02 | worktree | `pnpm --filter template-preview typecheck` | Local | 0 | PASS |
 | 2026-10-08 | 02 | worktree | `pnpm --filter template-preview build` | Local | 0 | PASS：Next 16 production build，15 条 app routes 成功生成 |
 | 2026-10-08 | 02 | worktree | `git grep -E @kit/account-server\|@kit/domain -- apps/template-preview` | Local | 1 | PASS（预期无匹配）：Reference Consumer 源码/package 已无两类依赖 |
+| 2026-10-08 | 03 | worktree | `pnpm --filter template-preview test:unit` | Local | 0 | PASS：6 files / 44 tests；含 14 个 browser-session 并发/恢复测试、9 个 server adapter 测试 |
+| 2026-10-08 | 03 | worktree | `pnpm --filter admin test:unit` | Local | 0 | PASS：5 files / 22 tests；Admin MFA/BFF/security 回归通过 |
+| 2026-10-08 | 03 | worktree | `pnpm --filter template-preview typecheck` | Local | 0 | PASS |
+| 2026-10-08 | 03 | worktree | `pnpm --filter admin typecheck` | Local | 0 | PASS |
+| 2026-10-08 | 03 | worktree | `pnpm --filter template-preview build` | Local | 0 | PASS：Next 16 production build 完成 |
+| 2026-10-08 | 03 | worktree | `pnpm --filter admin build` | Local | 0 | PASS：Next 16 production build 完成 |
+| 2026-10-08 | 03 | worktree | `git grep -n @kit/account-auth -- apps/template-preview apps/admin` | Local | 1 | PASS（预期无匹配）：两个 app 不再 import Auth SDK |
 
 ## GitHub 交付记录
 
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 备注 |
 | --- | --- | --- | --- | --- | --- |
 | 01 | 919559107c105c02279f41f68c307115639ffc6d | codex/remove-sdk-contract-first | 已 push | 已核对 | Contract baseline |
-| 02 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
+| 02 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | codex/remove-sdk-contract-first | 已 push | 已核对 | Reference Consumer HTTP integration |
 | 03 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 | 04 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 | 05 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
@@ -77,6 +85,6 @@
 
 ## 交接信息
 
-- 当前从 Phase 01 开始。
+- 当前 Phase 03 已完成验证，下一阶段从 Phase 04 删除 SDK package/发行链开始。
 - 生产部署/真实支付/费用/Secret/数据操作均不在本任务授权范围。
 - main 合并前必须确认生产自动部署绑定；未知时保留在任务分支。

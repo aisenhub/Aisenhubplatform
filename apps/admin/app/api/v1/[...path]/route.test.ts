@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   authCookieNames,
   encodeAuthSessionAcknowledgement,
-} from '@kit/account-auth-nextjs';
+} from '../../../_lib/auth/server';
 
 import { DELETE, GET, POST, isAllowedAdminPath } from './route';
 import { POST as login } from '../../auth/login/route';

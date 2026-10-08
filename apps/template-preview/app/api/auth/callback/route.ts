@@ -8,7 +8,7 @@ import {
   writeAuthSessionCookies,
   writeLoginAcknowledgement,
   type AuthCookieWriter,
-} from '@kit/account-auth-nextjs';
+} from '../../../_lib/auth/server';
 import { config, errorBody, flowFence, requestId } from '../_lib';
 
 export const dynamic = 'force-dynamic';

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
+import { authCookieNames, authSessionGate } from '../../../_lib/auth/server';
 import {
   readBoundedBody,
   UploadFault,

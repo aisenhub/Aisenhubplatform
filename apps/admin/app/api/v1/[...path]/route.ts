@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { readBoundedBody, UploadFault } from '@kit/domain/upload';
-import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
+import { authCookieNames, authSessionGate } from '../../../_lib/auth/server';
 
 import { accountApiSignal } from '../../_lib/account-api';
 

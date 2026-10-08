@@ -8,7 +8,7 @@ import {
   createRequestAuthClient,
   setRequestAuthSession,
   verifyEmailOtpToken,
-} from '@kit/account-auth-nextjs';
+} from '../../../../_lib/auth/server';
 
 import {
   config,

@@ -6,7 +6,7 @@ import {
   type AuthSessionManager,
   SessionExpiredError,
   SessionRetryRequiredError,
-} from '@kit/account-auth-nextjs/browser';
+} from './auth/browser';
 
 export const consumerAuthSession = createAuthSessionManager({
   scope: 'consumer',
