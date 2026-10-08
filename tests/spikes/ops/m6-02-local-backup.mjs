@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
 import postgres from 'postgres';
+import { assertLocalSupabaseEnvironment } from '../../../tooling/scripts/src/local-supabase.mjs';
 
 const execFileAsync = promisify(execFile);
 const repositoryRoot = process.cwd();
@@ -33,15 +35,22 @@ const databaseUrl = localStatus.DB_URL;
 const serviceKey = localStatus.SERVICE_ROLE_KEY;
 if (!apiUrl || !databaseUrl || !serviceKey)
   throw new Error('M6-02 local simulation requires Local Supabase status');
+assertLocalSupabaseEnvironment({
+  SUPABASE_URL: apiUrl,
+  SUPABASE_DB_URL: databaseUrl,
+});
 
 const sql = postgres(databaseUrl, {
   max: 4,
   prepare: false,
   onnotice: () => undefined,
 });
-const artifactDirectory = await mkdtemp(
-  join('E:\\AppData', 'm6-02-local-backup-'),
-);
+const artifactRoot =
+  process.platform === 'win32'
+    ? 'E:\\AppData\\m6-02-local-backup'
+    : join(tmpdir(), 'm6-02-local-backup');
+await mkdir(artifactRoot, { recursive: true });
+const artifactDirectory = await mkdtemp(join(artifactRoot, 'run-'));
 const platformId = crypto.randomUUID();
 const accountId = crypto.randomUUID();
 const fileId = crypto.randomUUID();
@@ -144,6 +153,11 @@ async function cleanup() {
     () => undefined,
   );
   await sql.end({ timeout: 5 }).catch(() => undefined);
+  assert.ok(
+    isAbsolute(artifactDirectory) &&
+      artifactDirectory.startsWith(join(artifactRoot, 'run-')),
+    'backup cleanup must remain inside its dedicated artifact directory',
+  );
   await rm(artifactDirectory, { recursive: true, force: true });
 }
 
@@ -324,7 +338,7 @@ try {
         objectManifestHashVerification: 'PASS',
         externalTombstoneIsolation: 'PASS',
         failedRecoverySetReleasesBarrier: 'PASS',
-        externalBackupTarget: 'NOT_RUN (X04 unavailable)',
+        externalBackupTarget: 'NOT_RUN (outside Local scope)',
         manifestSha256: manifestHash,
       },
       null,

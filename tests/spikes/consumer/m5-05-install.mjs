@@ -104,7 +104,7 @@ const packageJson = {
     '@kit/account-auth': `file:${tarballs['@kit/account-auth']}`,
     '@kit/account-auth-nextjs': `file:${tarballs['@kit/account-auth-nextjs']}`,
     '@kit/account-server': `file:${tarballs['@kit/account-server']}`,
-    next: '16.3.0',
+    next: '16.3.8',
     react: '19.2.8',
     'react-dom': '19.2.8',
   },
@@ -115,7 +115,7 @@ const packageJson = {
     '@types/react-dom': '19.2.4',
     tailwindcss: '4.3.3',
     typescript: '7.0.2',
-    vitest: '4.1.10',
+    vitest: '4.1.11',
   },
 };
 writeFileSync(

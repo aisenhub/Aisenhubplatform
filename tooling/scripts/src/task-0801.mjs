@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 import { denoCommand, pnpmCliPath } from './toolchain.mjs';
+import { assertLocalSupabaseEnvironment } from './local-supabase.mjs';
 
 const root = process.cwd();
 const isWindows = process.platform === 'win32';
@@ -12,44 +13,8 @@ const deno = denoCommand();
 const evidence = [];
 const children = new Set();
 
-function localUrl(value, name) {
-  if (!value) return;
-  if (
-    !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/iu.test(
-      value,
-    )
-  )
-    throw new Error(`TASK-0801-NEG: ${name} is not a localhost URL`);
-}
-
 function verifyLocalEnvironment() {
-  localUrl(process.env.SUPABASE_URL, 'SUPABASE_URL');
-  localUrl(process.env.NEXT_PUBLIC_SITE_URL, 'NEXT_PUBLIC_SITE_URL');
-  localUrl(process.env.SUPABASE_LOCAL_URL, 'SUPABASE_LOCAL_URL');
-  localUrl(process.env.ACCOUNT_API_URL, 'ACCOUNT_API_URL');
-  if (process.env.SUPABASE_PROJECT_REF)
-    throw new Error(
-      'TASK-0801-NEG: SUPABASE_PROJECT_REF is set for a Local run',
-    );
-  if (
-    process.env.SUPABASE_DB_URL &&
-    !/^postgres(?:ql)?:\/\/(?:[^@/]+@)?(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?\//iu.test(
-      process.env.SUPABASE_DB_URL,
-    )
-  )
-    throw new Error(
-      'TASK-0801-NEG: SUPABASE_DB_URL is not a localhost database URL',
-    );
-  for (const [name, value] of Object.entries(process.env)) {
-    if (
-      name.endsWith('_DB_URL') &&
-      value &&
-      !/^postgres(?:ql)?:\/\/(?:[^@/]+@)?(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?\//iu.test(
-        value,
-      )
-    )
-      throw new Error(`TASK-0801-NEG: ${name} is not a localhost database URL`);
-  }
+  assertLocalSupabaseEnvironment(process.env);
 }
 
 function childEnvironment(extra = {}) {
@@ -204,6 +169,7 @@ async function startAccountApiForT12(env) {
         REDEMPTION_HMAC_SECRET:
           'local-fixture-only-task-0801-redemption-secret',
         REDEMPTION_HMAC_KEY_VERSION: '1',
+        ADMIN_MFA_ATTESTATION_SECRET: env.ADMIN_MFA_ATTESTATION_SECRET,
         ACCOUNT_API_PORT: '8789',
       }),
       stdio: 'ignore',
@@ -250,13 +216,18 @@ function stopChildren() {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  if (args.some((argument) => argument !== '--reuse-local'))
+    throw new Error('TASK-0801 only accepts --reuse-local');
   verifyLocalEnvironment();
   assertNoPlaceholderApiTest();
   runPnpm('toolchain versions', ['toolchain:check']);
 
   runPnpm('start Local Supabase', ['db:start']);
-  runPnpm('reset Local database', ['db:reset', '--', '--yes']);
-  restartLocalKong();
+  if (!args.includes('--reuse-local')) {
+    runPnpm('reset Local database', ['db:reset', '--yes']);
+    restartLocalKong();
+  }
   const local = localSupabaseStatus();
   await waitForLocalAuth(local.API_URL);
   const localEnv = {
@@ -265,6 +236,8 @@ async function main() {
     SUPABASE_LOCAL_PUBLISHABLE_KEY: local.PUBLISHABLE_KEY,
     SUPABASE_LOCAL_SECRET_KEY: local.SERVICE_ROLE_KEY,
     SUPABASE_DB_URL: local.DB_URL,
+    ADMIN_MFA_ATTESTATION_SECRET:
+      'local-fixture-only-task-0801-admin-mfa-attestation-secret',
     DENO_BIN: deno,
   };
 
@@ -272,12 +245,8 @@ async function main() {
   runPnpm('lint', ['lint']);
   runPnpm('typecheck', ['typecheck']);
   runPnpm('build', ['build'], localEnv);
-  runPnpm('domain unit tests', ['--filter', '@kit/domain', 'test:unit']);
-  runPnpm('account-server unit tests', [
-    '--filter',
-    '@kit/account-server',
-    'test:unit',
-  ]);
+  runPnpm('workspace unit tests', ['test:unit']);
+  runPnpm('tooling safety tests', ['test:tooling']);
   runPnpm('Edge/API tests', ['test:api'], localEnv);
   runPnpm('database tests', ['test:db'], localEnv);
   runPnpm(

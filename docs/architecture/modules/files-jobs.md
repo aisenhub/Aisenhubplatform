@@ -8,7 +8,7 @@
 
 platform_file_policies 为 typed 表，platform_id PK/FK、enabled、max_file_bytes、max_files、max_total_bytes、updated_at。默认1 MiB/10个/10 MiB；V1 max_file_bytes 可下调但不得超过1 MiB，所有上限为正整数。调大单文件上限必须重新评审后端内存、网关和平台限制。
 
-上传意图声明 size 只用于预约上限；Content-Length、MIME 和文件名都不可信。BFF 与 Account API 分别以有界读取器计数，最多读取 min(requested_size_bytes,max_file_bytes)+1 字节，超出立即终止，不调用 Storage。禁止在检查前使用无限制 arrayBuffer/formData 或把浏览器输入直接流式转发给 Storage。禁止 Content-Encoding 压缩体，避免解压字节边界歧义。
+上传意图声明 size 只用于预约上限；Content-Length、MIME 和文件名都不可信。BFF 与 Account API 共用 `@kit/domain/upload` 的有界读取器：BFF上限为1 MiB，Account API进一步限制为min(requested_size_bytes,max_file_bytes)，发现超出立即终止，不调用Storage。BFF先从中央Principal取得可信账户，再取得每实例16个、每账户2个接收名额；名额覆盖接收及上游请求，并在所有退出路径释放。禁止检查前使用无限制arrayBuffer/formData或直接流式转发；拒绝非identity Content-Encoding。
 
 Account API得到完整有界字节后校验实际大小>0、<=声明、<=当前策略，计算SHA-256，然后重新事务校验Principal、配额及上传租约，最后才上传该不可变缓冲区。BFF与Account API分别限制每实例最多16个并发接收、每账户最多2个接收，在读body前取得接收名额；超过返回429。实际内存须在 Local 以目标并发模型做压力探针，Production 上线后再核对真实限制，不能仅以文件大小推算总实例内存。中央层独立校验，避免BFF配置错误成为绕过入口。
 

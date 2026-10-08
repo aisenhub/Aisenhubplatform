@@ -71,7 +71,7 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 
 ## 4. 共享结果与序列化
 
-DomainResult<T>为成功data或确定性业务拒绝code/status，不把业务拒绝全部raise成事务异常；SQL基础设施异常向外回滚。HTTP adapter统一生成request_id外壳与脱敏错误。request_id不是幂等key。
+DomainResult<T>为成功data或确定性业务拒绝code/status，不把业务拒绝全部raise成事务异常；SQL基础设施异常向外回滚。HTTP adapter统一生成request_id外壳与脱敏错误。同一Account/Admin请求的响应外壳、X-Request-Id和SQL context使用同一个服务端生成ID；文件授权及后续下载事件沿用该ID。BFF保留中央响应ID，不用自己的ID覆盖；客户端输入的ID不构成审计来源。request_id不是幂等key。
 
 Admin Grant必须有operation_id UUID和reason；兑换operation_id来自code.id；source+operation_id永久唯一。重放先重新鉴权。Profiles/Preferences增加row_version bigint（初始1、每次成功patch+1），ETag为服务端生成的不透明版本表示，客户端仅If-Match回传；updated_at仍用于展示。
 

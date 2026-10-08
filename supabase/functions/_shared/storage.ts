@@ -50,13 +50,8 @@ async function fetchWithTimeout(
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(input, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+  // Keep the deadline attached to streamed downloads after headers arrive.
+  return fetch(input, { ...init, signal: AbortSignal.timeout(timeoutMs) });
 }
 
 function headers(): Headers {

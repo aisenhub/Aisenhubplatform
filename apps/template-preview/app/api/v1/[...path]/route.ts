@@ -1,11 +1,14 @@
 import { NextRequest } from 'next/server';
 import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
+import { readBoundedBody, UploadFault, UploadGate } from '@kit/domain/upload';
+import { isUuid } from '@kit/domain/validation';
 
 import { accountApiSignal } from '../../_lib/account-api';
 
 export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
+const uploadGate = new UploadGate();
 
 function errorResponse(status: number, code: string): Response {
   return new Response(JSON.stringify({ error: { code, message: code } }), {
@@ -41,7 +44,6 @@ function isAllowedPath(method: string, path: string): boolean {
     return (
       path === 'v1/account/activate' ||
       path === 'v1/account/close' ||
-      path === 'v1/auth/recent-proof' ||
       path === 'v1/identity/delete-request' ||
       path === 'v1/subscription/checkout' ||
       path === 'v1/subscription/redeem' ||
@@ -91,7 +93,49 @@ async function dispatch(request: NextRequest, context: RouteContext) {
       return errorResponse(403, 'INVALID_INPUT');
   }
 
+  let uploadAccountId: string | undefined;
   try {
+    let uploadBody: ArrayBuffer | undefined;
+    if (request.method === 'PUT') {
+      // Resolve the account from the central service, never a client header or
+      // an unverified JWT claim, before allocating the upload buffer.
+      const principal = await fetch(`${baseUrl}/v1/account/principal`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'X-Platform-Key': platformKey,
+        },
+        cache: 'no-store',
+        signal: accountApiSignal(),
+      });
+      if (!principal.ok)
+        return new Response(principal.body, {
+          status: principal.status,
+          headers: {
+            'Cache-Control': 'no-store',
+            'Content-Type': 'application/json',
+            ...(principal.headers.get('x-request-id')
+              ? {
+                  'X-Request-Id': principal.headers.get(
+                    'x-request-id',
+                  ) as string,
+                }
+              : {}),
+          },
+        });
+      const accountId: unknown = (await principal.json()).data
+        ?.platform_account_id;
+      if (typeof accountId !== 'string' || !isUuid(accountId))
+        return errorResponse(409, 'ACCOUNT_NOT_ACTIVATED');
+      if (!uploadGate.tryAcquire(accountId)) {
+        const response = errorResponse(429, 'RATE_LIMITED');
+        response.headers.set('Retry-After', '1');
+        return response;
+      }
+      uploadAccountId = accountId;
+      const received = await readBoundedBody(request, 1_048_576);
+      uploadBody = new ArrayBuffer(received.size);
+      new Uint8Array(uploadBody).set(received.bytes);
+    }
     const upstream = await fetch(
       `${baseUrl}/${pathValue}${request.nextUrl.search}`,
       {
@@ -107,7 +151,6 @@ async function dispatch(request: NextRequest, context: RouteContext) {
               'idempotency-key',
               'if-match',
               'x-recent-auth-proof',
-              'x-reauth-access-token',
             ].flatMap((name) => {
               const value = request.headers.get(name);
               return value ? [[name, value]] : [];
@@ -124,8 +167,13 @@ async function dispatch(request: NextRequest, context: RouteContext) {
           request.method === 'GET'
             ? undefined
             : request.method === 'PUT'
-              ? await request.arrayBuffer()
-              : await request.text(),
+              ? uploadBody
+              : request.body
+                ? new TextDecoder().decode(
+                    (await readBoundedBody(request, 65_536, 15_000, true))
+                      .bytes,
+                  )
+                : undefined,
         signal: accountApiSignal(),
       },
     );
@@ -157,8 +205,12 @@ async function dispatch(request: NextRequest, context: RouteContext) {
           : {}),
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof UploadFault)
+      return errorResponse(error.status, error.code);
     return errorResponse(503, 'AUTHORIZATION_UNAVAILABLE');
+  } finally {
+    if (uploadAccountId) uploadGate.release(uploadAccountId);
   }
 }
 

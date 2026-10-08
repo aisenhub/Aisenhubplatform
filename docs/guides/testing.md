@@ -4,9 +4,9 @@
 
 ## 环境约定
 
-Staging默认保留数据，不随部署重置；测试按独立批次隔离并受控清理，旧数据升级和空库安装分别验证。全库重建必须单独明确授权，数据分类及清理检查见[开发流程第5.2节](development-release-workflow.md#52-staging数据保留批次清理与重建)。
+测试使用本地合成 fixture，按独立批次隔离并受控清理；已有非本任务数据不得随意重置。数据库变更分别验证旧数据升级和空库安装。规则见[开发流程第5节](development-release-workflow.md#5-local-supabase-验证)。
 
-项目采用Local本机Supabase Docker、独立Hosted Staging、独立Hosted Production。按[Agent 开发与发布流程](development-release-workflow.md)分级：R0无需应用部署，R1可记录理由后跳过Staging，R2/R3必须Hosted验收；所有实际生产部署均有对应生产前门槛。生产数据不得作为Local或日常Staging fixture，环境是否已配置以实际证据为准。
+项目采用 Local 本机 Supabase Docker → Production。最高测试环境为本地 Supabase；R0做适用静态检查，R1做适用本地检查，R2/R3增加本地 Supabase 和领域验证。适用本地测试通过即可进入上线流程，不要求 Hosted Staging、远程 Provider 或额外 CI 验收。生产目标、配置、迁移兼容和恢复方案仍须核对；生产数据不作为测试 fixture。
 
 | 命令 | 范围与条件 |
 | --- | --- |
@@ -15,13 +15,15 @@ Staging默认保留数据，不随部署重置；测试按独立批次隔离并�
 | pnpm format:check / pnpm lint | 格式和静态 lint |
 | pnpm typecheck / pnpm build | 类型与构建；前置 SDK 打包 |
 | pnpm test:unit | Turbo 调用 workspace 单元测试 |
+| pnpm test:tooling | 本地 Supabase 参数/环境守卫、SDK 输出目录防误删负向测试 |
 | pnpm test:upload | 本地有界上传读取器探针 |
 | pnpm runtime:probe | Node 与 Deno 共享导入边界 |
 | pnpm test:db | 本地 Supabase pgTAP，需要数据库服务 |
-| pnpm test:maintenance | Deno worker 测试；命令含 Windows 固定 Deno 路径 |
-| pnpm test:api | 聚合运行 Account API、Maintenance、Billing Webhook 与 Provider 适配层的隔离 Deno 测试 |
+| pnpm test:maintenance | Deno worker 测试；使用固定工具链的 DENO_BIN 或 PATH |
+| pnpm test:api | 聚合运行 Account API、Maintenance、Billing Webhook、Provider、Storage 和上传读取器的隔离 Deno 测试 |
 | pnpm test:e2e | 调用 tests/spikes/e2e/t16-r2-account.mjs，需要本地服务和浏览器条件 |
-| pnpm test:ops:m6-02-local | 本地备份模拟，操作本地夹具与临时产物 |
+| pnpm test:ops:m6-02-local | 本地备份模拟，操作本地夹具；Windows 临时产物位于 E:\AppData\m6-02-local-backup 独立目录 |
+| pnpm test:perf:r15-local | 本地授权压力探针；默认100次/秒、15分钟，需本地 Account API；R15_START_API=1可由脚本启动 |
 
 ## 定向验证
 
@@ -29,10 +31,10 @@ Staging默认保留数据，不随部署重置；测试按独立批次隔离并�
 
 中央 API 的隔离 Deno 测试为 [index.test.ts](../../supabase/functions/account-api/index.test.ts)，Storage 与上传读取器测试位于 [共享目录](../../supabase/functions/_shared)。
 
-参考应用页面与 registry/templates.json 的路由定义存在差异；Consumer/Registry/E2E 脚本是否适用于当前页面必须由执行结果判定，不能复用其他页面版本的成功结论。
+参考应用页面、registry/templates.json和Consumer/Registry/E2E脚本必须针对当前版本核对与实际执行，不能复用其他页面版本的成功结论。
 
 ## 结果解释
 
-CI 运行全仓格式、lint、typecheck、build、单元测试、中央 Edge/API 隔离测试、运行时导入和文档合同检查，不运行整个 SQL/API/浏览器/Hosted 验证矩阵。Local完成逻辑、SQL和定向验证；R2/R3还须在Hosted Staging验证实际部署链路，不能将本地reset/清理脚本直接改URL指向远程。Production在获授权后做受控部署与观察，不承担破坏性回归。
+`pnpm verify:task:0801` 在本地 Docker Supabase 运行静态、构建、全工作区单测、工具安全、Edge/API、SQL、结算并发、SDK/Registry/Consumer 安装、运行时、浏览器及文档合同检查；默认重置当前本地数据库，执行前必须确认 fixture 范围。已确认本地迁移与fixture时可用 `pnpm verify:task:0801 --reuse-local` 保留数据库重跑，不能把它当全新迁移证据。CI调用同一入口，不增加远程验收。未覆盖领域仍需定向本地测试；Production不承担破坏性回归。
 
-测试结果在任务回复或测试平台报告中说明环境、版本、命令、断言与限制，仅使用PASS/FAIL/NOT_RUN/PARTIAL/BLOCKED；不适用另写范围和理由。Local、CI、Hosted Staging、Provider与生产观察分别记录。隔离mock不代表真实Auth、Storage或生产恢复成功，历史PASS不能代替当前版本验收。
+测试结果在任务回复或测试平台报告中说明环境、版本、命令、断言与限制，仅使用PASS/FAIL/NOT_RUN/PARTIAL/BLOCKED；不适用另写理由。Local、可选CI/外部联调与生产观察分别记录。Mock不代表真实Auth、Storage或Provider已联调；历史PASS不能代替当前版本验收。未执行可选远程验证不增加本地已验收版本的上线测试门槛。

@@ -2,6 +2,7 @@
 
 import { generateRedemptionCodes } from '../../../packages/domain/src/redemption.ts';
 import { BILLING_ADMIN_ORDER_STATUSES } from '../../../packages/domain/src/contracts/billing.ts';
+import { verifyAdminMfaAttestation } from '../../../packages/domain/src/admin-mfa-attestation.ts';
 import {
   type Row,
   type Transaction,
@@ -43,7 +44,7 @@ export async function adminStepUp(
 }
 
 export function adminContextValues(session: SessionContext): unknown[] {
-  return [session.userId, session.sessionId, requestId()];
+  return [session.userId, session.sessionId, session.requestId ?? requestId()];
 }
 
 export function boundedLimit(value: string | null): number {
@@ -119,11 +120,31 @@ export async function dispatchAdmin(
   }
   if (path === 'admin/api/v1/auth/recent-proof' && request.method === 'POST') {
     if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
-    const factorId = uuidValue(request.headers.get('x-mfa-factor-id'));
-    if (!factorId) throw new ApiFault(400, 'INVALID_INPUT');
+    const encodedAttestation = request.headers.get('x-mfa-attestation');
+    if (!encodedAttestation) throw new ApiFault(403, 'RECENT_MFA_REQUIRED');
+    const attestationSecret =
+      dependencies.adminMfaAttestationSecret ??
+      Deno.env.get('ADMIN_MFA_ATTESTATION_SECRET');
+    if (
+      !attestationSecret ||
+      new TextEncoder().encode(attestationSecret).byteLength < 32
+    )
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    const attestation = await verifyAdminMfaAttestation({
+      attestation: encodedAttestation,
+      secret: attestationSecret,
+      expectedUserId: session.userId,
+      expectedSessionId: session.sessionId,
+    });
+    if (!attestation) throw new ApiFault(403, 'RECENT_MFA_REQUIRED');
     const [proof] = await transaction.unsafe<Row>(
-      'select * from private.admin_step_up_issue(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
-      [...context, factorId],
+      'select * from private.admin_step_up_issue(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::timestamptz, $6::uuid)',
+      [
+        ...context,
+        attestation.factorId,
+        attestation.verifiedAt,
+        attestation.nonce,
+      ],
     );
     if (!proof) throw new ApiFault(403, 'MFA_REQUIRED');
     return { status: 201, data: proof };

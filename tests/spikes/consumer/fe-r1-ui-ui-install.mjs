@@ -91,7 +91,7 @@ const packageJson = {
   dependencies: {
     '@kit/shared': `file:${tarballs['@kit/shared']}`,
     '@kit/ui': `file:${tarballs['@kit/ui']}`,
-    next: '16.3.0',
+    next: '16.3.8',
     react: '19.2.8',
     'react-dom': '19.2.8',
   },

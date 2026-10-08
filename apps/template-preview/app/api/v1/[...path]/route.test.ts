@@ -6,7 +6,8 @@ import {
   encodeAuthSessionAcknowledgement,
 } from '@kit/account-auth-nextjs';
 
-import { GET, POST, PUT } from './route';
+import { DELETE, GET, POST, PUT } from './route';
+import { POST as login } from '../../auth/login/route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const ACCESS_TOKEN = `e30.${Buffer.from(
@@ -28,7 +29,7 @@ type RequestOptions = {
 };
 
 function request(
-  method: 'GET' | 'POST' | 'PUT',
+  method: 'DELETE' | 'GET' | 'POST' | 'PUT',
   path: string,
   options: RequestOptions = {},
 ): NextRequest {
@@ -66,14 +67,22 @@ describe('template-preview Consumer BFF', () => {
     vi.stubEnv('ACCOUNT_PLATFORM_KEY', 'server-platform-key');
     vi.stubEnv('TEMPLATE_ORIGIN', 'https://template.example');
     fetchMock.mockReset();
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ data: [] }), {
-        status: 200,
-        headers: {
-          'content-type': 'application/json',
-          'x-request-id': 'upstream-request-id',
-        },
-      }),
+    fetchMock.mockImplementation(
+      async (url: string) =>
+        new Response(
+          JSON.stringify({
+            data: url.endsWith('/v1/account/principal')
+              ? { platform_account_id: SESSION_ID }
+              : [],
+          }),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'application/json',
+              'x-request-id': 'upstream-request-id',
+            },
+          },
+        ),
     );
     vi.stubGlobal('fetch', fetchMock);
   });
@@ -83,10 +92,78 @@ describe('template-preview Consumer BFF', () => {
     vi.unstubAllGlobals();
   });
 
+  it('forwards an empty streamed DELETE body while keeping its byte limit', async () => {
+    const response = await DELETE(
+      request('DELETE', `config-files/${SESSION_ID}`, {
+        authenticated: true,
+        csrf: true,
+        body: '',
+        headers: {
+          origin: 'https://template.example',
+          'x-csrf-token': 'csrf-token',
+        },
+      }),
+      context(['config-files', SESSION_ID]),
+    );
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'DELETE',
+      body: '',
+    });
+  });
+
+  it('rejects oversized business and login JSON before contacting upstream', async () => {
+    const options = {
+      authenticated: true,
+      csrf: true,
+      body: 'x'.repeat(65_537),
+      headers: {
+        origin: 'https://template.example',
+        'x-csrf-token': 'csrf-token',
+      },
+    };
+    const response = await POST(
+      request('POST', 'account/activate', options),
+      context(['account', 'activate']),
+    );
+    expect(response.status).toBe(413);
+    vi.stubEnv('SUPABASE_URL', 'http://local-auth');
+    vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', 'fake-publishable-key');
+    const loginResponse = await login(request('POST', 'auth/login', options));
+    expect(loginResponse.status).toBe(413);
+    const invalidLogin = await login(
+      request('POST', 'auth/login', { ...options, body: 'null' }),
+    );
+    expect(invalidLogin.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('rejects paths outside the Consumer allowlist before contacting upstream', async () => {
     const response = await GET(
       request('GET', 'admin/api/v1/platforms'),
       context(['admin', 'api', 'v1', 'platforms']),
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'NOT_FOUND' },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects recent-proof issuance through the generic Consumer proxy', async () => {
+    const response = await POST(
+      request('POST', 'auth/recent-proof', {
+        authenticated: true,
+        csrf: true,
+        headers: {
+          origin: 'https://template.example',
+          'x-csrf-token': 'csrf-token',
+          'x-reauth-access-token': 'browser-controlled-reauth-token',
+        },
+      }),
+      context(['auth', 'recent-proof']),
     );
 
     expect(response.status).toBe(404);
@@ -185,12 +262,137 @@ describe('template-preview Consumer BFF', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'https://account.example/v1/account/principal',
+    );
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
     expect(init.body).toBeInstanceOf(ArrayBuffer);
     expect(Array.from(new Uint8Array(init.body as ArrayBuffer))).toEqual(
       Array.from(bytes),
     );
+  });
+
+  it('rejects declared, streamed and compressed oversized uploads before sending content upstream', async () => {
+    const fileId = SESSION_ID;
+    const cases: readonly {
+      body: BodyInit;
+      headers: Record<string, string>;
+      status: number;
+    }[] = [
+      { body: 'x', headers: { 'content-length': '1048577' }, status: 413 },
+      { body: new Uint8Array(1_048_577).buffer, headers: {}, status: 413 },
+      { body: 'x', headers: { 'content-encoding': 'gzip' }, status: 400 },
+    ];
+    for (const options of cases) {
+      fetchMock.mockClear();
+      const response = await PUT(
+        request('PUT', `config-files/${fileId}/content`, {
+          authenticated: true,
+          csrf: true,
+          body: options.body,
+          headers: {
+            origin: 'https://template.example',
+            'x-csrf-token': 'csrf-token',
+            ...options.headers,
+          },
+        }),
+        context(['config-files', fileId, 'content']),
+      );
+      expect(response.status).toBe(options.status);
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(
+        'https://account.example/v1/account/principal',
+      );
+    }
+  });
+
+  it('rejects invalid sessions without reading upload bytes', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: { code: 'SESSION_REVOKED' } }), {
+        status: 401,
+      }),
+    );
+    const input = request('PUT', `config-files/${SESSION_ID}/content`, {
+      authenticated: true,
+      csrf: true,
+      body: 'private bytes',
+      headers: {
+        origin: 'https://template.example',
+        'x-csrf-token': 'csrf-token',
+      },
+    });
+    const response = await PUT(
+      input,
+      context(['config-files', SESSION_ID, 'content']),
+    );
+    expect(response.status).toBe(401);
+    expect(input.bodyUsed).toBe(false);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('limits concurrent body reads by the central account and releases admission after completion', async () => {
+    const controllers: ReadableStreamDefaultController<Uint8Array>[] = [];
+    const waiting = [0, 1].map(() => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controllers.push(controller);
+        },
+      });
+      return PUT(
+        request('PUT', `config-files/${SESSION_ID}/content`, {
+          authenticated: true,
+          csrf: true,
+          body,
+          headers: {
+            origin: 'https://template.example',
+            'x-csrf-token': 'csrf-token',
+          },
+        }),
+        context(['config-files', SESSION_ID, 'content']),
+      );
+    });
+    // Both requests have acquired admission and are waiting for body chunks.
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const third = request('PUT', `config-files/${SESSION_ID}/content`, {
+      authenticated: true,
+      csrf: true,
+      body: 'x',
+      headers: {
+        origin: 'https://template.example',
+        'x-csrf-token': 'csrf-token',
+      },
+    });
+    try {
+      const response = await PUT(
+        third,
+        context(['config-files', SESSION_ID, 'content']),
+      );
+      expect(response.status).toBe(429);
+      expect(third.bodyUsed).toBe(false);
+      expect(response.headers.get('retry-after')).toBe('1');
+    } finally {
+      for (const controller of controllers) {
+        controller.enqueue(new Uint8Array([1]));
+        controller.close();
+      }
+      const responses = await Promise.all(waiting);
+      expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    }
+    const final = await PUT(
+      request('PUT', `config-files/${SESSION_ID}/content`, {
+        authenticated: true,
+        csrf: true,
+        body: 'x',
+        headers: {
+          origin: 'https://template.example',
+          'x-csrf-token': 'csrf-token',
+        },
+      }),
+      context(['config-files', SESSION_ID, 'content']),
+    );
+    expect(final.status).toBe(200);
   });
 
   it('forwards only the approved credential headers and prefers trusted cookie credentials', async () => {
@@ -223,7 +425,7 @@ describe('template-preview Consumer BFF', () => {
     expect(headers.get('authorization')).toBe(`Bearer ${ACCESS_TOKEN}`);
     expect(headers.get('x-platform-key')).toBe('server-platform-key');
     expect(headers.get('x-recent-auth-proof')).toBe('cookie-proof');
-    expect(headers.get('x-reauth-access-token')).toBe('event-access-token');
+    expect(headers.get('x-reauth-access-token')).toBeNull();
     expect(headers.get('idempotency-key')).toBe('idem-1');
     expect(headers.get('x-untrusted-header')).toBeNull();
     expect(headers.get('origin')).toBeNull();

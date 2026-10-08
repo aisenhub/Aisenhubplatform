@@ -3,6 +3,7 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import postgres from 'postgres';
+import { assertLocalSupabaseEnvironment } from '../../../tooling/scripts/src/local-supabase.mjs';
 
 const execFileAsync = promisify(execFile);
 const repositoryRoot = process.cwd();
@@ -64,6 +65,11 @@ const authUrl = status.API_URL;
 const anonKey = status.ANON_KEY;
 const databaseUrl = status.DB_URL;
 assert(authUrl && anonKey && databaseUrl, 'Local Supabase status is required');
+assertLocalSupabaseEnvironment({
+  SUPABASE_URL: authUrl,
+  SUPABASE_DB_URL: databaseUrl,
+  ACCOUNT_API_URL: apiOrigin,
+});
 const apiPort = new URL(apiOrigin).port || '8000';
 
 const sql = postgres(databaseUrl, {
@@ -141,30 +147,37 @@ async function stopManagedApi() {
 }
 
 async function cleanup() {
-  if (userId) {
-    await sql`delete from public.platform_accounts where user_id = ${userId}`.catch(
-      () => undefined,
+  try {
+    // Only this probe's synthetic platform/user; respect FK order and surface
+    // cleanup failures instead of silently leaving fixtures behind.
+    await sql.begin(async (transaction) => {
+      await transaction`delete from public.audit_logs where platform_id = ${platformId}`;
+      await transaction`delete from private.idempotency_keys where platform_id = ${platformId}`;
+      await transaction`delete from public.platform_accounts where platform_id = ${platformId}`;
+      if (userId) {
+        await transaction`delete from auth.sessions where user_id = ${userId}`;
+        await transaction`delete from auth.identities where user_id = ${userId}`;
+        await transaction`delete from auth.users where id = ${userId}`;
+      }
+      await transaction`delete from private.platform_api_keys where id = ${keyId}`;
+      await transaction`update public.platforms set default_plan_id = null where id = ${platformId}`;
+      await transaction`delete from public.platform_subscription_config where platform_id = ${platformId}`;
+      await transaction`delete from public.platform_file_policies where platform_id = ${platformId}`;
+      await transaction`delete from public.plans where id = ${planId}`;
+      await transaction`delete from public.platforms where id = ${platformId}`;
+    });
+    const [remaining] = await sql`
+      select count(*)::integer as count from public.platforms where id = ${platformId}
+    `;
+    assert.equal(
+      remaining.count,
+      0,
+      'R15 must clean up its synthetic platform',
     );
-    await sql`delete from auth.sessions where user_id = ${userId}`.catch(
-      () => undefined,
-    );
-    await sql`delete from auth.identities where user_id = ${userId}`.catch(
-      () => undefined,
-    );
-    await sql`delete from auth.users where id = ${userId}`.catch(
-      () => undefined,
-    );
+    console.log('R15 fixture cleanup PASS');
+  } finally {
+    await sql.end({ timeout: 5 });
   }
-  await sql`delete from private.platform_api_keys where id = ${keyId}`.catch(
-    () => undefined,
-  );
-  await sql`delete from public.plans where id = ${planId}`.catch(
-    () => undefined,
-  );
-  await sql`delete from public.platforms where id = ${platformId}`.catch(
-    () => undefined,
-  );
-  await sql.end({ timeout: 5 }).catch(() => undefined);
 }
 
 async function signup() {

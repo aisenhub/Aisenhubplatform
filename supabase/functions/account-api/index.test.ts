@@ -2,8 +2,124 @@
 
 import { assertEquals, assertMatch } from 'jsr:@std/assert@1';
 
+import { createAdminMfaAttestation } from '../../../packages/domain/src/admin-mfa-attestation.ts';
 import { handleRequest } from './index.ts';
 import { UploadGate } from '../_shared/upload.ts';
+
+Deno.test('Account API rejects oversized JSON at its HTTP boundary', async () => {
+  const response = await handleRequest(
+    new Request('http://local/v1/profile', {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${fakeJwt()}`,
+        'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        'If-Match': 'W/"1"',
+      },
+      body: 'x'.repeat(65_537),
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'fake-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 413);
+  assertEquals((await response.json()).error.code, 'PAYLOAD_TOO_LARGE');
+});
+
+Deno.test('Account API bounds Auth response bodies after headers arrive', async () => {
+  const names = [
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY',
+    'ACCOUNT_API_AUTH_TIMEOUT_MS',
+  ];
+  const previous = names.map((name) => Deno.env.get(name));
+  const originalFetch = globalThis.fetch;
+  Deno.env.set('SUPABASE_URL', 'http://body-timeout-auth');
+  Deno.env.set('SUPABASE_ANON_KEY', 'fake-publishable-key');
+  Deno.env.set('ACCOUNT_API_AUTH_TIMEOUT_MS', '10');
+  globalThis.fetch = (async (_input, init) =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          const signal = init?.signal;
+          const finish = setTimeout(() => {
+            signal?.removeEventListener('abort', abort);
+            controller.enqueue(
+              new TextEncoder().encode(JSON.stringify({ id: userId })),
+            );
+            controller.close();
+          }, 100);
+          function abort() {
+            clearTimeout(finish);
+            controller.error(signal?.reason);
+          }
+          signal?.addEventListener('abort', abort, { once: true });
+        },
+      }),
+    )) as typeof fetch;
+  try {
+    const response = await handleRequest(
+      new Request('http://local/v1/account/principal', {
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        },
+      }),
+      { database: fakeDatabase(), platformKeySecret: 'fake-platform-secret' },
+    );
+    assertEquals(response.status, 503);
+    assertEquals(
+      (await response.json()).error.code,
+      'AUTHORIZATION_UNAVAILABLE',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    names.forEach((name, index) =>
+      previous[index] === undefined
+        ? Deno.env.delete(name)
+        : Deno.env.set(name, previous[index]!),
+    );
+  }
+});
+
+Deno.test('Account and Admin SQL contexts share the response request ID', async () => {
+  for (const [path, contextIndex] of [
+    ['v1/profile', 4],
+    ['admin/api/v1/platforms', 2],
+  ] as const) {
+    const contexts: unknown[] = [];
+    const response = await handleRequest(
+      new Request(`http://local/${path}`, {
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'X-Request-Id': 'untrusted-client-id',
+        },
+      }),
+      {
+        database: fakeDatabase((query, values) => {
+          if (
+            query.includes('::private.account_context') ||
+            query.includes('::private.admin_context')
+          )
+            contexts.push(values?.[contextIndex]);
+        }),
+        platformKeySecret: 'fake-platform-secret',
+        verifyAccessToken: async () => userId,
+      },
+    );
+    const payload = await response.json();
+    const id = response.headers.get('x-request-id');
+    assertEquals(id === 'untrusted-client-id', false);
+    assertEquals(payload.request_id, id);
+    assertEquals(contexts.length > 0, true);
+    assertEquals(
+      contexts.every((contextId) => contextId === id),
+      true,
+    );
+  }
+});
 
 const platformId = '00000000-0000-4000-8000-000000000001';
 const keyId = '00000000-0000-4000-8000-000000000002';
@@ -1323,6 +1439,41 @@ Deno.test('Account API uses the presented-key Principal fast path', async () => 
 });
 
 Deno.test('Account API issues a recent proof only after Auth verification and AAL2', async () => {
+  const adminMfaAttestationSecret =
+    'test-admin-mfa-attestation-secret-32-bytes-minimum';
+  const factorId = '00000000-0000-4000-8000-000000000006';
+  const attestation = await createAdminMfaAttestation({
+    secret: adminMfaAttestationSecret,
+    userId,
+    sessionId,
+    factorId,
+  });
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/auth/recent-proof',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'X-Mfa-Attestation': attestation,
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      adminMfaAttestationSecret,
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 201);
+  assertEquals(
+    (await response.json()).data.proof_id,
+    '00000000-0000-4000-8000-000000000005',
+  );
+});
+
+Deno.test('Account API refuses Admin recent-proof issuance without a server MFA attestation', async () => {
   const response = await handleRequest(
     new Request(
       'http://local/functions/v1/account-api/admin/api/v1/auth/recent-proof',
@@ -1340,11 +1491,8 @@ Deno.test('Account API issues a recent proof only after Auth verification and AA
       verifyAccessToken: async () => userId,
     },
   );
-  assertEquals(response.status, 201);
-  assertEquals(
-    (await response.json()).data.proof_id,
-    '00000000-0000-4000-8000-000000000005',
-  );
+  assertEquals(response.status, 403);
+  assertEquals((await response.json()).error.code, 'RECENT_MFA_REQUIRED');
 });
 
 Deno.test('Account API refuses recent-proof issuance at AAL1', async () => {

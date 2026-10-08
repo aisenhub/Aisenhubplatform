@@ -258,7 +258,10 @@ export async function handleDownload(
   });
   return new Response(stream, {
     status: 200,
-    headers: downloadHeaders(target.original_name),
+    headers: {
+      ...downloadHeaders(target.original_name),
+      ...(session.requestId ? { 'X-Request-Id': session.requestId } : {}),
+    },
   });
 }
 

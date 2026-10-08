@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { readBoundedJson, UploadFault } from '@kit/domain/upload';
 import {
   authCookieNames,
   createRequestAuthClient,
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const runtimeConfig = config();
     if (!hasValidOrigin(request, runtimeConfig.origin))
       return errorBody('INVALID_INPUT', 403, id);
-    const body = (await request.json()) as {
+    const body = (await readBoundedJson(request)) as {
       email?: unknown;
       password?: unknown;
     };
@@ -77,7 +78,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       prefix: 'consumer',
     });
     return response;
-  } catch {
+  } catch (error) {
+    if (error instanceof UploadFault)
+      return errorBody(
+        error.status >= 500 ? 'AUTHORIZATION_UNAVAILABLE' : 'INVALID_INPUT',
+        error.status,
+        id,
+      );
     return errorBody('AUTHORIZATION_UNAVAILABLE', 503, id);
   }
 }
