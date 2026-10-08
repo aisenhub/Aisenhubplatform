@@ -8,7 +8,7 @@
 
 platform_file_policies 为 typed 表，platform_id PK/FK、enabled、max_file_bytes、max_files、max_total_bytes、updated_at。默认1 MiB/10个/10 MiB；V1 max_file_bytes 可下调但不得超过1 MiB，所有上限为正整数。调大单文件上限必须重新评审后端内存、网关和平台限制。
 
-上传意图声明 size 只用于预约上限；Content-Length、MIME 和文件名都不可信。BFF 与 Account API 共用 `@kit/domain/upload` 的有界读取器：BFF上限为1 MiB，Account API进一步限制为min(requested_size_bytes,max_file_bytes)，发现超出立即终止，不调用Storage。BFF先从中央Principal取得可信账户，再取得每实例16个、每账户2个接收名额；名额覆盖接收及上游请求，并在所有退出路径释放。禁止检查前使用无限制arrayBuffer/formData或直接流式转发；拒绝非identity Content-Encoding。
+上传意图声明 size 只用于预约上限；Content-Length、MIME 和文件名都不可信。Reference Consumer BFF 使用 app-local bounded-body 读取器，Account API 使用中央内部的共享有界读取边界：BFF上限为1 MiB，Account API进一步限制为min(requested_size_bytes,max_file_bytes)，发现超出立即终止，不调用Storage。BFF先从中央Principal取得可信账户，再取得每实例16个、每账户2个接收名额；名额覆盖接收及上游请求，并在所有退出路径释放。禁止检查前使用无限制arrayBuffer/formData或直接流式转发；拒绝非identity Content-Encoding。
 
 Account API得到完整有界字节后校验实际大小>0、<=声明、<=当前策略，计算SHA-256，然后重新事务校验Principal、配额及上传租约，最后才上传该不可变缓冲区。BFF与Account API分别限制每实例最多16个并发接收、每账户最多2个接收，在读body前取得接收名额；超过返回429。实际内存须在 Local 以目标并发模型做压力探针，Production 上线后再核对真实限制，不能仅以文件大小推算总实例内存。中央层独立校验，避免BFF配置错误成为绕过入口。
 
@@ -79,7 +79,7 @@ create unique index one_live_replacement_per_file
 ## 3. 上传接口与状态机
 
 1. POST /v1/config-files/upload-intent：JSON 为 name、size、content_type、purpose、可选 replaces_file_id；需要用户、平台凭据、Idempotency-Key。事务预约配额，创建10分钟有效 pending，返回 file_id、upload_path、expires_at，不返回任何 Storage URL。
-2. PUT /v1/config-files/:id/content：application/octet-stream 原始体，通过同源 BFF 与 server SDK 转发；同一 file_id 同时只允许一个接收租约。pending→receiving 后在有界内存接收，收齐前不写 Storage。
+2. PUT /v1/config-files/:id/content：application/octet-stream 原始体，通过同源 BFF 按 canonical HTTP contract 转发；同一 file_id 同时只允许一个接收租约。pending→receiving 后在有界内存接收，收齐前不写 Storage。
 3. 收齐后在短事务中重新检查状态、账户、策略、租约；记录实际大小/hash、write attempt，receiving→storing，提交事务后上传独立路径，upsert=false。
 4. Storage成功后查询对象大小并校验，账户锁下storing→active，记Audit。若用户在storing后被Suspend，允许已经授权的存储操作结算并保留占用，但后续访问拒绝；若处于Close/Global Delete则转deleting补偿，不重新开放账户。返回文件信息；完成为后端内部步骤，**没有浏览器可调用的 /complete API**。
 5. active 的重复 PUT 验证实际字节/hash 与已提交内容一致时返回既有结果；不同内容返回 FILE_CONTENT_CONFLICT；不覆盖对象。请求中断后 GET 文件状态恢复进度，不能盲目生成另一个对象。
@@ -164,8 +164,8 @@ pending 且未写入可取消并释放；receiving/storing 有租约或未知写
 
 文件与运维过程负责在主库中消费屏障并写入墓碑事件；独立恢复任务负责把 manifest 和墓碑复制到主库之外的恢复介质，并在恢复时重新应用。没有外部恢复介质时，只能运行屏障故障注入和隔离模拟，不能宣称联合备份已通过。
 
-### 7.4 HTTP/SDK映射冻结
+### 7.4 HTTP/Consumer 映射冻结
 
 Account侧只保留现有六个文件操作：`POST /v1/config-files/upload-intent`、`PUT/GET /v1/config-files/{fileId}/content`、`GET /v1/config-files`、`GET/DELETE /v1/config-files/{fileId}`；不增加浏览器 `complete`、signed-upload或Storage直连路径。Admin侧的file-policy、files、deletion-jobs列表/详情/下载/受控delete/retry均必须调用同一领域入口；页面只能调用这些入口，不能在UI中重算预算或直接写表。
 
-HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。Admin 文件列表支持可选精确 `platform_id`：过滤在服务端游标分页前执行；无效 UUID 返回400、未知平台返回404、与平台范围不一致的 cursor 返回400 `INVALID_INPUT`。不带该参数仍保留全局列表语义。若需要变更字段，必须先同步本节、`docs/reference/contracts.md`、OpenAPI、DTO、SDK和测试，不能静默改名。
+HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。Admin 文件列表支持可选精确 `platform_id`：过滤在服务端游标分页前执行；无效 UUID 返回400、未知平台返回404、与平台范围不一致的 cursor 返回400 `INVALID_INPUT`。不带该参数仍保留全局列表语义。若需要变更字段，必须先同步本节、`docs/reference/contracts.md`、canonical OpenAPI、中央 DTO、Reference Consumer/BFF 和测试，不能静默改名。

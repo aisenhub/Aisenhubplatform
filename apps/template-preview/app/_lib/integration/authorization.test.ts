@@ -3,9 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { EntitlementDto } from './account-contract';
 import { authorizeProtectedFeature } from './authorization';
 
-function entitlement(
-  overrides: Partial<EntitlementDto> = {},
-): EntitlementDto {
+function entitlement(overrides: Partial<EntitlementDto> = {}): EntitlementDto {
   return {
     effective_status: 'active',
     entitlement_kind: 'term',
@@ -33,7 +31,8 @@ describe('reference consumer protected feature authorization', () => {
   it('fails closed for suspended or missing feature access', async () => {
     await expect(
       authorizeProtectedFeature({
-        getSubscription: async () => entitlement({ effective_status: 'suspended' }),
+        getSubscription: async () =>
+          entitlement({ effective_status: 'suspended' }),
         feature: 'advanced_config',
       }),
     ).resolves.toEqual({

@@ -106,7 +106,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function isBillingProductCode(value: unknown): value is BillingProductCode {
+export function isBillingProductCode(
+  value: unknown,
+): value is BillingProductCode {
   return (
     typeof value === 'string' &&
     (BILLING_PRODUCT_CODES as readonly string[]).includes(value)
@@ -138,7 +140,8 @@ export function isSubscriptionProductList(
       isMoneyAmount(item.price) &&
       item.currency === 'CNY' &&
       (term.kind === 'free' || term.kind === 'finite') &&
-      (typeof term.duration_value === 'number' || term.duration_value === null) &&
+      (typeof term.duration_value === 'number' ||
+        term.duration_value === null) &&
       (term.duration_unit === 'month' ||
         term.duration_unit === 'year' ||
         term.duration_unit === null) &&

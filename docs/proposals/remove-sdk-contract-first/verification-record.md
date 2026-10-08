@@ -22,8 +22,8 @@
 | 02 | Reference Consumer 无 Account SDK/Domain | 已交付 | app-local bounded input/public contract/Account fetch/fail-closed authorization 已实施；Reference Consumer 已无 account-server/domain 依赖 | 无 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | 已 push 并核对远端分支 |
 | 03 | Auth/BFF 去 SDK 化 | 验收通过待推送 | Reference Consumer/Admin app-local Auth 已接管 Cookie/session/replay/Supabase adapter；两个 app 已无 Auth SDK import | GitHub 网络恢复后 push | 2d4eff5 | push 阻塞：无法连接 github.com:443 |
 | 04 | 删除 SDK package/发行链 | 验收通过待推送 | 三个 Account SDK package、SDK pack/output、SDK/install probes 与 build 前置已删除；Registry 已切到 contract compatibility | GitHub 网络恢复后 push | c94f5d6 | push 阻塞继承自当前网络环境 |
-| 05 | Contract/Reference gates | 验收通过待推送 | 新增 Reference Consumer 架构 probe；consumer owner 清单移除 SDK owner；TASK-0801 已切换到 breaking/registry/reference gates | commit；GitHub 网络恢复后 push | 待提交 | push 阻塞继承自当前网络环境 |
-| 06 | 文档与 R3 总体验收 | 未开始 | 未验证 | 05 | 未验证 | 未验证 |
+| 05 | Contract/Reference gates | 验收通过待推送 | 新增 Reference Consumer 架构 probe；consumer owner 清单移除 SDK owner；TASK-0801 已切换到 breaking/registry/reference gates | GitHub 网络恢复后 push | b552fe5 | push 阻塞继承自当前网络环境 |
+| 06 | 文档与 R3 总体验收 | 验证失败 | architecture/reference/guides/onboarding 已同步；静态/构建/单元/API/DB/合同均通过 | 稳定并重跑 T16/完整 R3 gate；随后 commit/push | 待提交 | 未验证 |
 
 状态只使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
 
@@ -50,7 +50,9 @@
 - 未放宽项：原 format/lint/typecheck/build/unit/API/DB/concurrency/runtime/browser/docs/contracts gates 均保留。
 
 ### Phase 06
-- 实际修改：未开始。
+- 实际修改：architecture overview/frontends、API/contracts/configuration/data-model、testing/development/release/operations、Registry 与 AGENTS 导航同步到 Contract-First；平台接入手册重写为“固定 contract major → 配置 Auth/API/Platform Key → 复制并自行拥有 Reference Consumer Auth/BFF/integration → 最小闭环 → 独立验收”；删除 `docs/reference/sdk.md`。历史 archive/review 的过去 SDK 事实保留。
+- 格式收敛：首次最终 `format:check` 报 12 个本次阶段修改文件格式不一致；运行仓库 `format:fix` 后复测通过，因此 Phase 06 包含这些文件的纯格式变更。
+- R3 阻塞：完整 `verify:task:0801 --reuse-local` 在 T16 文件上传得到 503；单独 T16 重跑越过上传后在 Admin MFA 后导航超时。失败点不一致，未通过降低断言、扩大 timeout 或反复碰运气标绿。
 
 ## 验证记录
 
@@ -92,6 +94,26 @@
 | 2026-10-08 | 05 | worktree | `node --check tooling/scripts/src/task-0801.mjs` | Local | 0 | PASS |
 | 2026-10-08 | 05 | worktree | TASK-0801 旧 SDK gate grep | Local | 1 | PASS（预期无匹配）：不再引用 SDK package/install tests |
 | 2026-10-08 | 05 | worktree | `git diff --check` | Local | 0 | PASS |
+| 2026-10-08 | 06 | worktree | `pnpm toolchain:check` | Local | 0 | PASS：Node 24.19.0 / pnpm 11.18.0 / Deno 2.9.6 / Supabase CLI 2.111.0 |
+| 2026-10-08 | 06 | worktree | `pnpm format:check`（首次） | Local | 1 | FAIL：12 个本次修改代码/JSON 文件需 oxfmt；保留失败记录 |
+| 2026-10-08 | 06 | worktree | `pnpm format:fix && pnpm format:check` | Local | 0 | PASS：401 files 格式一致 |
+| 2026-10-08 | 06 | worktree | `pnpm lint` | Local | 0 | PASS：0 warnings / 0 errors，338 files |
+| 2026-10-08 | 06 | worktree | `pnpm typecheck` | Local | 0 | PASS：8 workspaces in scope，6/6 typecheck tasks |
+| 2026-10-08 | 06 | worktree | `pnpm build` | Local | 0 | PASS：Admin + Reference Consumer production build |
+| 2026-10-08 | 06 | worktree | `pnpm test:unit` | Local | 0 | PASS：Domain 13、UI 36、Admin 22、Reference Consumer 44 tests |
+| 2026-10-08 | 06 | worktree | `pnpm test:tooling` | Local | 0 | PASS：2/2 tooling safety tests |
+| 2026-10-08 | 06 | worktree | `pnpm contracts:check` | Local | 0 | PASS：Account 22/Admin 45；4 contracts / 39 fields ownership |
+| 2026-10-08 | 06 | worktree | `pnpm contracts:breaking` | Local | 0 | PASS：相对 origin/main 无 `/v1` wire breaking |
+| 2026-10-08 | 06 | worktree | `pnpm test:registry` | Local | 0 | PASS：contract compatibility、route inventory、secret boundary |
+| 2026-10-08 | 06 | worktree | `pnpm test:reference-consumer` | Local | 0 | PASS：forbidden dependency/source import 与 canonical contract 检查 |
+| 2026-10-08 | 06 | worktree | `pnpm runtime:probe` | Local | 0 | PASS：Node/Deno shared Edge boundary |
+| 2026-10-08 | 06 | worktree | `pnpm docs:check` | Local | 0 | PASS：101 documents、required entries、local links/navigation 一致 |
+| 2026-10-08 | 06 | worktree | `git diff --check` | Local | 0 | PASS |
+| 2026-10-08 | 06 | worktree | active runtime/package 静态搜索 | Local | 0 | PASS：apps 无旧 account-auth/account-server；Reference Consumer 无 `@kit/domain`；root/Admin Vercel 无 `sdk:pack` |
+| 2026-10-08 | 06 | worktree | canonical OpenAPI 路径核对 | Local | 0 | PASS：只返回 `contracts/account/v1/openapi.json` 与 `contracts/admin/v1/openapi.json` |
+| 2026-10-08 | 06 | worktree | `pnpm verify:task:0801 --reuse-local` | Local Supabase | 1 | FAIL：此前 format/lint/typecheck/build/unit/tooling、Edge/API 97 tests、DB 58 files/1082 assertions、结算并发、Contract/Registry/Reference/runtime 均通过；T16 文件内容上传期望 202 实得 503，任务在此停止 |
+| 2026-10-08 | 06 | worktree | `pnpm test:e2e:t16-r2`（诊断重跑） | Local Supabase | 1 | FAIL：已越过前次文件上传点；随后 Admin MFA “验证并继续”后等待 `/admin` 导航 15s 超时，失败点与首轮不同 |
+| 2026-10-08 | 06 | worktree | `pnpm test:e2e:t12-r2`（诊断尝试） | Local | 1 | INVALID INVOCATION：直接命令缺 TASK-0801 注入的 Local Supabase env/T12 fixture 参数；不计作产品回归证据，完整 gate 因 T16 提前失败未运行到 T12 |
 
 ## GitHub 交付记录
 
@@ -101,11 +123,12 @@
 | 02 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | codex/remove-sdk-contract-first | 已 push | 已核对 | Reference Consumer HTTP integration |
 | 03 | 2d4eff5 | codex/remove-sdk-contract-first | 失败：网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
 | 04 | c94f5d6 | codex/remove-sdk-contract-first | 未重试：已知网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
-| 05 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
+| 05 | b552fe5 | codex/remove-sdk-contract-first | 未重试：已知网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
 | 06 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 
 ## 交接信息
 
-- 当前 Phase 05 已完成本地验收，下一阶段从 Phase 06 文档同步与 R3 总体验收开始；Phase 03–05 的 GitHub push 受当前网络阻塞。
+- Phase 01–05 实施已完成；Phase 06 文档同步已完成，但 R3 浏览器总 gate 验证失败。下一步先诊断/稳定 T16 两个不一致失败点并形成一次完整 `verify:task:0801 --reuse-local` PASS，再允许 Phase 06 标“验收通过”。
+- Phase 03–05 的 GitHub push 仍受当前网络阻塞；Phase 06 尚未提交。
 - 生产部署/真实支付/费用/Secret/数据操作均不在本任务授权范围。
 - main 合并前必须确认生产自动部署绑定；未知时保留在任务分支。

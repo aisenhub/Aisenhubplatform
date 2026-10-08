@@ -120,10 +120,7 @@ describe('admin BFF', () => {
   it('keeps the explicit allowlist aligned with every Admin OpenAPI operation', () => {
     const contract = JSON.parse(
       readFileSync(
-        resolve(
-          process.cwd(),
-          '../../contracts/admin/v1/openapi.json',
-        ),
+        resolve(process.cwd(), '../../contracts/admin/v1/openapi.json'),
         'utf8',
       ),
     ) as {

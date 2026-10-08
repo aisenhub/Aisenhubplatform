@@ -54,10 +54,7 @@
       "fields": [
         {
           "name": "code",
-          "consumers": [
-            "consumer-ui",
-            "registry"
-          ],
+          "consumers": ["consumer-ui", "registry"],
           "tests": [
             "TASK-0103-NEG",
             "account-api-public-products",
@@ -66,100 +63,57 @@
         },
         {
           "name": "name",
-          "consumers": [
-            "consumer-ui",
-            "registry"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui", "registry"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "description",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "price",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "currency",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.kind",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.duration_value",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.duration_unit",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "price_version",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "recommended",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "enabled",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "purchasable",
-          "consumers": [
-            "consumer-ui"
-          ],
+          "consumers": ["consumer-ui"],
           "tests": [
             "TASK-0103-NEG",
             "account-api-public-products",
@@ -168,13 +122,8 @@
         },
         {
           "name": "reason",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "TASK-0103-NEG",
-            "account-api-public-products"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["TASK-0103-NEG", "account-api-public-products"]
         }
       ]
     },
@@ -214,102 +163,58 @@
       "fields": [
         {
           "name": "checkout_id",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "status",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "product_code",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "price",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "currency",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "term",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "expires_at",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "payment_url",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "paid_at",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "granted_at",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "progress",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "checkout-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["checkout-api"]
         }
       ]
     },
@@ -354,86 +259,48 @@
       "fields": [
         {
           "name": "effective_status",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
         },
         {
           "name": "entitlement_kind",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
         },
         {
           "name": "plan",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api",
-            "domain-entitlement"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api", "domain-entitlement"]
         },
         {
           "name": "subscription_product",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
         },
         {
           "name": "features",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api",
-            "domain-entitlement"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api", "domain-entitlement"]
         },
         {
           "name": "started_at",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
         },
         {
           "name": "current_period_end",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
         },
         {
           "name": "evaluated_at",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
         },
         {
           "name": "next_transition_at",
-          "consumers": [
-            "consumer-ui"
-          ],
-          "tests": [
-            "entitlement-api"
-          ]
+          "consumers": ["consumer-ui"],
+          "tests": ["entitlement-api"]
         }
       ]
     },
@@ -478,58 +345,33 @@
       "fields": [
         {
           "name": "order_id",
-          "consumers": [
-            "admin-ui"
-          ],
-          "tests": [
-            "admin-billing-timeline"
-          ]
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-timeline"]
         },
         {
           "name": "provider_facts",
-          "consumers": [
-            "admin-ui"
-          ],
-          "tests": [
-            "admin-billing-timeline"
-          ]
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-timeline"]
         },
         {
           "name": "timeline",
-          "consumers": [
-            "admin-ui"
-          ],
-          "tests": [
-            "admin-billing-timeline",
-            "admin-billing-diagnostics"
-          ]
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-timeline", "admin-billing-diagnostics"]
         },
         {
           "name": "timeline.job_id",
-          "consumers": [
-            "admin-ui"
-          ],
-          "tests": [
-            "admin-billing-diagnostics"
-          ]
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-diagnostics"]
         },
         {
           "name": "timeline.payload_hash_prefix",
-          "consumers": [
-            "admin-ui"
-          ],
-          "tests": [
-            "admin-billing-diagnostics"
-          ]
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-diagnostics"]
         },
         {
           "name": "timeline.lease_owner_fingerprint",
-          "consumers": [
-            "admin-ui"
-          ],
-          "tests": [
-            "admin-billing-diagnostics"
-          ]
+          "consumers": ["admin-ui"],
+          "tests": ["admin-billing-diagnostics"]
         }
       ]
     }

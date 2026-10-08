@@ -2,7 +2,7 @@
 
 面向多个自营平台的统一身份、平台账户、订阅权益、兑换码和配置文件后端。
 
-仓库包含 Next.js 管理控制台、Supabase Account/Admin API、PostgreSQL 领域过程、文件维护任务、Auth/Server SDK，以及平台端本地参考页面。
+仓库包含 Next.js 管理控制台、Supabase Account/Admin API、PostgreSQL 领域过程、文件维护任务、canonical OpenAPI contracts，以及平台端 Reference Consumer。
 
 - [文档导航](docs/README.md)
 - [系统架构](docs/architecture/overview.md)

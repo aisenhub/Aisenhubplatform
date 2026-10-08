@@ -51,9 +51,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     const authorization = await authorizeProtectedFeature({
       feature: 'advanced_config',
       getSubscription: async () => {
-        const upstream = await accountApiJson<EntitlementDto>('/v1/subscription', {
-          accessToken,
-        });
+        const upstream = await accountApiJson<EntitlementDto>(
+          '/v1/subscription',
+          {
+            accessToken,
+          },
+        );
         upstreamRequestId = upstream.requestId;
         return upstream.data;
       },
@@ -62,8 +65,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       return json(
         {
           error: { code: authorization.code },
-          request_id:
-            authorization.requestId ?? upstreamRequestId ?? requestId,
+          request_id: authorization.requestId ?? upstreamRequestId ?? requestId,
         },
         authorization.code === 'AUTHORIZATION_UNAVAILABLE' ? 503 : 403,
         requestId,

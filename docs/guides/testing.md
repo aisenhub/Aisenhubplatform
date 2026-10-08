@@ -13,9 +13,11 @@
 | pnpm docs:check | 文档必需入口、相对链接与导航可达性 |
 | pnpm contracts:check | OpenAPI 引用、操作、样例与二进制合同 |
 | pnpm format:check / pnpm lint | 格式和静态 lint |
-| pnpm typecheck / pnpm build | 类型与构建；前置 SDK 打包 |
+| pnpm typecheck / pnpm build | 类型与构建；不生成 Account SDK 发行物 |
 | pnpm test:unit | Turbo 调用 workspace 单元测试 |
-| pnpm test:tooling | 本地 Supabase 参数/环境守卫、SDK 输出目录防误删负向测试 |
+| pnpm test:tooling | 本地 Supabase 参数/环境守卫等工具安全负向测试 |
+| pnpm contracts:breaking | 相对基线检查 `/v1` operation/schema/enum 破坏性变化 |
+| pnpm test:registry / pnpm test:reference-consumer | Registry contract compatibility 与 Reference Consumer forbidden dependency/source boundary |
 | pnpm test:upload | 本地有界上传读取器探针 |
 | pnpm runtime:probe | Node 与 Deno 共享导入边界 |
 | pnpm test:db | 本地 Supabase pgTAP，需要数据库服务 |
@@ -35,6 +37,6 @@
 
 ## 结果解释
 
-`pnpm verify:task:0801` 在本地 Docker Supabase 运行静态、构建、全工作区单测、工具安全、Edge/API、SQL、结算并发、SDK/Registry/Consumer 安装、运行时、浏览器及文档合同检查；默认重置当前本地数据库，执行前必须确认 fixture 范围。已确认本地迁移与fixture时可用 `pnpm verify:task:0801 --reuse-local` 保留数据库重跑，不能把它当全新迁移证据。CI调用同一入口，不增加远程验收。未覆盖领域仍需定向本地测试；Production不承担破坏性回归。
+`pnpm verify:task:0801` 在本地 Docker Supabase 运行静态、构建、全工作区单测、工具安全、Edge/API、SQL、结算并发、Contract breaking/Registry/Reference Consumer、运行时、浏览器及文档合同检查；默认重置当前本地数据库，执行前必须确认 fixture 范围。已确认本地迁移与fixture时可用 `pnpm verify:task:0801 --reuse-local` 保留数据库重跑，不能把它当全新迁移证据。CI调用同一入口，不增加远程验收。未覆盖领域仍需定向本地测试；Production不承担破坏性回归。
 
 测试结果在任务回复或测试平台报告中说明环境、版本、命令、断言与限制，仅使用PASS/FAIL/NOT_RUN/PARTIAL/BLOCKED；不适用另写理由。Local、可选CI/外部联调与生产观察分别记录。Mock不代表真实Auth、Storage或Provider已联调；历史PASS不能代替当前版本验收。未执行可选远程验证不增加本地已验收版本的上线测试门槛。

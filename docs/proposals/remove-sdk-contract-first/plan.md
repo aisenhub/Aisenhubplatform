@@ -38,7 +38,7 @@
 | 03 | Reference Consumer 与 Admin 退出 Auth SDK | 02 | 验收通过待推送 | [03 Auth/BFF decoupling](phases/03-auth-and-bff-decoupling.md) |
 | 04 | 删除 SDK packages、tarball、安装链和构建前置 | 03 | 验收通过待推送 | [04 Remove distribution](phases/04-remove-sdk-packages-and-distribution.md) |
 | 05 | 用 contract/reference probes 与现有 HTTP/E2E 门槛替代 SDK tests | 04 | 验收通过待推送 | [05 Contract gates](phases/05-contract-conformance-and-compatibility-gates.md) |
-| 06 | 同步 architecture/reference/guides，执行 R3 总体验收 | 05 | 未开始 | [06 Final verification](phases/06-documentation-cleanup-and-final-verification.md) |
+| 06 | 同步 architecture/reference/guides，执行 R3 总体验收 | 05 | 验证失败 | [06 Final verification](phases/06-documentation-cleanup-and-final-verification.md) |
 
 Phase 05 的部分脚本可在 01 后提前准备，但最终启用必须在 04 删除旧 SDK tests 后统一完成。涉及同一 `package.json`、OpenAPI、Reference Consumer 或 Auth 文件的阶段按表中顺序串行，不并行修改。
 
@@ -82,17 +82,17 @@ Phase 01–03 只增加替代路径/迁移消费者，旧 SDK package 仍存在�
 
 ## 总体验收
 
-- [ ] canonical OpenAPI 只维护在根 `contracts/`，active 引用正确。
-- [ ] `/v1` compatibility policy 与自动 breaking check 存在且通过。
-- [ ] Reference Consumer 不依赖/导入 `@kit/account-*` 或 `@kit/domain`。
-- [ ] Admin 不依赖/导入 `@kit/account-auth-nextjs`。
-- [ ] 三个 SDK/适配 package 和其打包/安装体系删除。
-- [ ] `prebuild`/`pretypecheck` 不产生 SDK tarball。
-- [ ] Registry 使用 contract compatibility，不使用 SDK compatibility。
-- [ ] Auth Cookie/CSRF/session/replay/recent-auth/MFA 安全测试保持。
-- [ ] Account BFF/protected feature/file upload 负例保持。
+- [x] canonical OpenAPI 只维护在根 `contracts/`，active 引用正确。
+- [x] `/v1` compatibility policy 与自动 breaking check 存在且通过。
+- [x] Reference Consumer 不依赖/导入 `@kit/account-*` 或 `@kit/domain`。
+- [x] Admin 不依赖/导入 `@kit/account-auth-nextjs`。
+- [x] 三个 SDK/适配 package 和其打包/安装体系删除。
+- [x] `prebuild`/`pretypecheck` 不产生 SDK tarball。
+- [x] Registry 使用 contract compatibility，不使用 SDK compatibility。
+- [x] Auth Cookie/CSRF/session/replay/recent-auth/MFA 安全测试保持。
+- [x] Account BFF/protected feature/file upload 负例保持。
 - [ ] R3 适用 Local 验证实际运行并写入 `verification-record.md`。
-- [ ] 当前架构、API、合同、接入手册、测试流程与实际代码一致。
+- [x] 当前架构、API、合同、接入手册、测试流程与实际代码一致。
 
 ## 风险与阻塞
 

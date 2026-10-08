@@ -23,10 +23,10 @@ Admin 使用深色导航与浅色数据工作区，平台目录提供紧凑的�
 | /subscription | 从中央 API 读取商品/权益，使用同源 BFF 创建服务端绑定 Checkout、轮询真实状态和兑换激活码；同时作为 staging 与后续 Consumer 模板的付款测试入口 |
 | /pricing | 重定向到 /subscription |
 
-ReferenceApiCard 展示接口调用示例，不执行示例代码。账户、文件和订阅页均通过同源 BFF 读取中央结果；账户页的邮箱/手机/密码验证仍依赖公开 Supabase Auth 配置。订阅页不伪造支付成功，`granted` 之前不会显示为已开通；购买必须从方案卡创建 Checkout，不能使用没有 `custom_order_id` 的裸 Provider 商品链接。价格、期限、Provider 计划和订单绑定由服务端快照决定，BFF 仅代理白名单路径，Provider 回调和真实会话生命周期仍需对应环境配置。Consumer 登录、刷新、退出、OAuth callback 和近期认证位于 `/api/auth/*`，受保护服务端示例位于 `/api/protected/advanced-config`，由 `@kit/account-server` 的 `authorizeProtectedFeature` 读取中央权益，不信任浏览器 plan 字段。
+ReferenceApiCard 展示接口调用示例，不执行示例代码。账户、文件和订阅页均通过同源 BFF 读取中央结果；账户页的邮箱/手机/密码验证仍依赖公开 Supabase Auth 配置。订阅页不伪造支付成功，`granted` 之前不会显示为已开通；购买必须从方案卡创建 Checkout，不能使用没有 `custom_order_id` 的裸 Provider 商品链接。价格、期限、Provider 计划和订单绑定由服务端快照决定，BFF 仅代理白名单路径，Provider 回调和真实会话生命周期仍需对应环境配置。Consumer 登录、刷新、退出、OAuth callback 和近期认证位于 `/api/auth/*`；Auth/session 实现位于 `app/_lib/auth`，HTTP DTO guard 与 fail-closed 授权位于 `app/_lib/integration`。受保护服务端示例 `/api/protected/advanced-config` 只信任中央权益结果，不信任浏览器 plan 字段。
 
 ## 共享 UI 与安装元数据
 
 packages/ui 提供 shadcn、经审查的上游适配组件和业务展示组件；Admin 与参考页面分别维护样式和页面结构。`src/makerkit/` 仅保留为上游来源追踪目录名，不代表当前产品品牌或业务模型。
 
-registry/templates.json 只登记当前参考应用真实存在的页面和同源 Auth callback；注册表不虚构 Signup、Forgot Password 等尚未提供的页面。安装校验脚本会对这些路径和 Secret 边界做一致性检查。相关源码与使用限制见[SDK 与 Registry](../../reference/sdk.md)。
+registry/templates.json 只登记当前参考应用真实存在的页面和同源 Auth callback；Registry manifest 记录当前 Account/Admin contract major 与 Reference Consumer 路径，不分发 Account SDK。校验脚本会检查这些路径、Secret 边界和 canonical contract。相关接入方式见[新平台接入手册](../../guides/platform-onboarding.md)。

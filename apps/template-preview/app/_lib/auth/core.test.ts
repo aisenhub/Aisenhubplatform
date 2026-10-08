@@ -4,7 +4,9 @@ import { requireSafeReturnTo, safeReturnTo } from './core';
 
 describe('reference consumer auth core', () => {
   it('accepts only local returnTo values without sensitive query material', () => {
-    expect(safeReturnTo('/dashboard?tab=profile')).toBe('/dashboard?tab=profile');
+    expect(safeReturnTo('/dashboard?tab=profile')).toBe(
+      '/dashboard?tab=profile',
+    );
     expect(safeReturnTo('https://evil.invalid')).toBe('/');
     expect(safeReturnTo('//evil.invalid')).toBe('/');
     expect(safeReturnTo('/update-password?access_token=secret')).toBe('/');

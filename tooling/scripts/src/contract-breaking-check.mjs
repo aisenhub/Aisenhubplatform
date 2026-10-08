@@ -4,7 +4,8 @@ import path from 'node:path';
 import process from 'node:process';
 
 const root = process.cwd();
-const baseRef = process.argv[2] ?? process.env.CONTRACT_BASE_REF ?? 'origin/main';
+const baseRef =
+  process.argv[2] ?? process.env.CONTRACT_BASE_REF ?? 'origin/main';
 const contracts = [
   {
     name: 'account',
@@ -29,7 +30,10 @@ function parseJson(raw, source) {
 }
 
 function readCurrent(relative) {
-  return parseJson(fs.readFileSync(path.join(root, relative), 'utf8'), relative);
+  return parseJson(
+    fs.readFileSync(path.join(root, relative), 'utf8'),
+    relative,
+  );
 }
 
 function readBase(entry) {
@@ -40,7 +44,10 @@ function readBase(entry) {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
       });
-      return { document: parseJson(raw, `${baseRef}:${candidate}`), path: candidate };
+      return {
+        document: parseJson(raw, `${baseRef}:${candidate}`),
+        path: candidate,
+      };
     } catch {
       // The canonical path changed in this migration; try the previous location.
     }
@@ -75,15 +82,24 @@ function compareSchema(name, before, after, location) {
   if (Array.isArray(before?.enum)) {
     const next = new Set(Array.isArray(after?.enum) ? after.enum : []);
     for (const value of before.enum) {
-      if (!next.has(value)) failures.push(`${name}: removed enum value ${location}=${JSON.stringify(value)}`);
+      if (!next.has(value))
+        failures.push(
+          `${name}: removed enum value ${location}=${JSON.stringify(value)}`,
+        );
     }
   }
 
-  const beforeRequired = new Set(Array.isArray(before?.required) ? before.required : []);
-  const afterRequired = new Set(Array.isArray(after?.required) ? after.required : []);
+  const beforeRequired = new Set(
+    Array.isArray(before?.required) ? before.required : [],
+  );
+  const afterRequired = new Set(
+    Array.isArray(after?.required) ? after.required : [],
+  );
   for (const field of afterRequired) {
     if (!beforeRequired.has(field) && before?.properties?.[field])
-      failures.push(`${name}: made existing field required at ${location}.${field}`);
+      failures.push(
+        `${name}: made existing field required at ${location}.${field}`,
+      );
   }
 
   const beforeProperties = before?.properties ?? {};
@@ -102,13 +118,19 @@ function compareSchema(name, before, after, location) {
 
 function compareOperation(name, route, method, before, after) {
   if (!after) {
-    failures.push(`${name}: removed operation ${method.toUpperCase()} ${route}`);
+    failures.push(
+      `${name}: removed operation ${method.toUpperCase()} ${route}`,
+    );
     return;
   }
   if (before.operationId !== after.operationId)
-    failures.push(`${name}: changed operationId for ${method.toUpperCase()} ${route}`);
+    failures.push(
+      `${name}: changed operationId for ${method.toUpperCase()} ${route}`,
+    );
   if (!sameJson(before.security, after.security))
-    failures.push(`${name}: changed security for ${method.toUpperCase()} ${route}`);
+    failures.push(
+      `${name}: changed security for ${method.toUpperCase()} ${route}`,
+    );
 
   const beforeParameters = new Map(
     (before.parameters ?? []).map((item) => [`${item.in}:${item.name}`, item]),
@@ -119,19 +141,37 @@ function compareOperation(name, route, method, before, after) {
   for (const [key, parameter] of afterParameters) {
     const previous = beforeParameters.get(key);
     if (!previous && parameter.required)
-      failures.push(`${name}: added required parameter ${key} to ${method.toUpperCase()} ${route}`);
+      failures.push(
+        `${name}: added required parameter ${key} to ${method.toUpperCase()} ${route}`,
+      );
     if (previous && !previous.required && parameter.required)
-      failures.push(`${name}: made parameter required ${key} on ${method.toUpperCase()} ${route}`);
-    if (previous && typeSignature(previous.schema) !== typeSignature(parameter.schema))
-      failures.push(`${name}: changed parameter schema ${key} on ${method.toUpperCase()} ${route}`);
+      failures.push(
+        `${name}: made parameter required ${key} on ${method.toUpperCase()} ${route}`,
+      );
+    if (
+      previous &&
+      typeSignature(previous.schema) !== typeSignature(parameter.schema)
+    )
+      failures.push(
+        `${name}: changed parameter schema ${key} on ${method.toUpperCase()} ${route}`,
+      );
   }
 
-  if (before.requestBody && after.requestBody && !before.requestBody.required && after.requestBody.required)
-    failures.push(`${name}: made request body required on ${method.toUpperCase()} ${route}`);
+  if (
+    before.requestBody &&
+    after.requestBody &&
+    !before.requestBody.required &&
+    after.requestBody.required
+  )
+    failures.push(
+      `${name}: made request body required on ${method.toUpperCase()} ${route}`,
+    );
 
   for (const status of Object.keys(before.responses ?? {})) {
     if (!(status in (after.responses ?? {})))
-      failures.push(`${name}: removed response ${status} from ${method.toUpperCase()} ${route}`);
+      failures.push(
+        `${name}: removed response ${status} from ${method.toUpperCase()} ${route}`,
+      );
   }
 }
 
@@ -140,7 +180,9 @@ function compareContract(entry) {
   const before = beforeSource.document;
   const after = readCurrent(entry.current);
   if (before.openapi !== after.openapi)
-    failures.push(`${entry.name}: changed OpenAPI dialect ${before.openapi} -> ${after.openapi}`);
+    failures.push(
+      `${entry.name}: changed OpenAPI dialect ${before.openapi} -> ${after.openapi}`,
+    );
 
   for (const [route, pathItem] of Object.entries(before.paths ?? {})) {
     const afterPathItem = after.paths?.[route];
@@ -150,22 +192,39 @@ function compareContract(entry) {
     }
     for (const [method, operation] of Object.entries(pathItem)) {
       if (!methods.has(method)) continue;
-      compareOperation(entry.name, route, method, operation, afterPathItem[method]);
+      compareOperation(
+        entry.name,
+        route,
+        method,
+        operation,
+        afterPathItem[method],
+      );
     }
   }
 
   const beforeSchemas = before.components?.schemas ?? {};
   const afterSchemas = after.components?.schemas ?? {};
   for (const [schemaName, schema] of Object.entries(beforeSchemas))
-    compareSchema(entry.name, schema, afterSchemas[schemaName], `#/components/schemas/${schemaName}`);
+    compareSchema(
+      entry.name,
+      schema,
+      afterSchemas[schemaName],
+      `#/components/schemas/${schemaName}`,
+    );
 
   return beforeSource.path;
 }
 
-const sources = contracts.map((entry) => `${entry.name}:${compareContract(entry)}`);
+const sources = contracts.map(
+  (entry) => `${entry.name}:${compareContract(entry)}`,
+);
 if (failures.length) {
-  console.error(`Contract breaking check FAIL against ${baseRef}: ${failures.length} issue(s)`);
+  console.error(
+    `Contract breaking check FAIL against ${baseRef}: ${failures.length} issue(s)`,
+  );
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log(`Contract breaking check PASS against ${baseRef} (${sources.join(', ')})`);
+console.log(
+  `Contract breaking check PASS against ${baseRef} (${sources.join(', ')})`,
+);

@@ -93,7 +93,7 @@ V1授权API目标p95<=500ms，上线前在 Local 按预期平台数及至少100�
 | 权益 | Free→Pro、到期/无默认、永久、不同Plan、暂停/恢复、月末/闰年、撤销缺口、影子Projection重放 |
 | 兑换 | 同码竞争、多码首次、Admin并发、Batch禁用并发、同key同/异body、超时/提交后响应丢失、交付未确认不可用 |
 | 文件 | 入存储前真实字节拒绝、chunked/伪造size、并发预算、满额Replace不损旧文件、unknown写入、DB/Storage各故障点、删除与备份屏障 |
-| 集成 | 全新消费项目SDK/Registry安装、公开Pricing、Auth/SSR、业务授权、账户/兑换/文件全链路、Secret bundle扫描 |
+| 集成 | canonical contract/Registry/Reference Consumer gate、公开Pricing、Auth/BFF、业务授权、账户/兑换/文件全链路、Secret bundle扫描 |
 | 运维 | 空库与升级、联合恢复、hash核对、删除墓碑、Code/Key恢复禁用、全部轮换、任务重复/超时与告警 |
 
 验证记录必须分清“文档静态检查”“自动化测试”“Local 演练”“生产观察”。没有实际运行的检查只能标为未验证。

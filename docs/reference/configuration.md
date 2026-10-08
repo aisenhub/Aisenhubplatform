@@ -93,7 +93,7 @@ Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 �
 | 变量 | 行为 |
 | --- | --- |
 | `ACCOUNT_API_URL` | 中央 Account API 地址；staging 使用 Supabase Edge Function 的 `/functions/v1/account-api` 地址 |
-| `ACCOUNT_API_TIMEOUT_MS` | Consumer BFF/服务端 SDK 到中央 Account API 的请求超时，默认 5000ms，最大 30000ms |
+| `ACCOUNT_API_TIMEOUT_MS` | Consumer BFF 到中央 Account API 的请求超时，默认 5000ms，最大 30000ms |
 | `ACCOUNT_PLATFORM_KEY` | `aisentest` 对应的服务端 Platform Key；只读服务端环境变量，不能使用 `NEXT_PUBLIC_` 前缀、不能进入浏览器、日志或 Git |
 | `TEMPLATE_ORIGIN` | 模板页面的精确 origin，用于 BFF 的 Origin/CSRF 校验 |
 
@@ -107,7 +107,6 @@ Maintenance 调度器应每分钟调用 `/maintenance/v1/billing/jobs/run`，请
 
 ## 开发与共享设施
 
-- M5_SDK_PACK_DESTINATION：SDK 打包输出，默认 artifacts/sdk；脚本会清空该目标，必须使用专属产物目录。
 - LOGGER：共享日志实现，默认 pino。
 - NEXT_PUBLIC_DEFAULT_LOCALE：共享 i18n 默认 en。
 - NEXT_PUBLIC_VERSION_UPDATER_REFETCH_INTERVAL_SECONDS：共享版本检查组件间隔。

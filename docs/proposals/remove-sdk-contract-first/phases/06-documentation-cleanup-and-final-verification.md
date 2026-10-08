@@ -1,6 +1,6 @@
 # Phase 06：当前文档同步与 R3 总体验收
 
-状态：未开始
+状态：验证失败
 
 ## 目标
 
@@ -54,3 +54,7 @@ git diff --check
 - Proposal 状态/verification record 更新。
 - commit push 且远端 SHA 核对后才标已交付。
 - main 合并按长期授权及生产自动部署绑定判断；绑定未知时只推任务分支。
+
+## 当前阻塞（2026-10-08）
+
+静态、构建、单元、API、数据库、并发、Contract/Registry/Reference Consumer 与文档检查均已通过。`pnpm verify:task:0801 --reuse-local` 在 T16 浏览器链路的文件内容上传处返回 503（预期 202）；随后单独重跑 T16 已通过该上传点，但在 Admin MFA 验证后的 `/admin` 导航等待超时。两个失败点不同，尚无稳定可复现的单一产品错误，因此当前 Phase 保持“验证失败”，不得标记验收通过或 Completed。下一步应先稳定/诊断 T16，再完整重跑 R3 gate。

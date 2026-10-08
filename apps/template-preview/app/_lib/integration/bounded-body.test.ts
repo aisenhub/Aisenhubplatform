@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { readBoundedBody, readBoundedJson, UploadFault, UploadGate } from './bounded-body';
+import {
+  readBoundedBody,
+  readBoundedJson,
+  UploadFault,
+  UploadGate,
+} from './bounded-body';
 
 describe('reference consumer bounded input', () => {
   it('rejects a declared body above the limit', async () => {

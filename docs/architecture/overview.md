@@ -7,11 +7,9 @@ Aisenhubplatform 为多个自营平台提供共享身份、平台账户、订阅
 | 位置 | 职责 |
 | --- | --- |
 | apps/admin | Next.js 管理控制台与同源认证、资源代理 |
-| apps/template-preview | 账户、配置文件、订阅的 Consumer 参考页面；订阅通过同源 server-only BFF |
-| packages/account-auth | Auth 接口、会话和认证意图类型 |
-| packages/account-auth-nextjs | Supabase Auth、Cookie、刷新、回调适配 |
-| packages/account-server | 服务端 Account API 客户端 |
-| packages/domain | DTO、校验、错误及兑换码材料生成 |
+| apps/template-preview | 账户、配置文件、订阅的 Reference Consumer；自行拥有 Auth/session、HTTP DTO guard、同源 BFF 与授权示例 |
+| contracts/account/v1、contracts/admin/v1 | 对 Consumer/Admin 稳定的 canonical OpenAPI 3.1 wire contract、兼容规则与变更记录 |
+| packages/domain | 中央内部 DTO、校验、错误、计费/兑换材料及跨运行时工具；不作为 Consumer runtime 依赖发布 |
 | packages/ui、packages/i18n、packages/shared | UI、语言和共享设施 |
 | supabase/functions/account-api | Account 与 Admin HTTP 接口；`index.ts` 仅组合路由/runtime，认证与共享设施在 `core.ts`，Account/Admin/文件处理分别在独立模块；管理端 BFF 使用显式 method/path allowlist 和上游 deadline |
 | supabase/functions/maintenance | 文件清理、对账、保留清理、身份删除和计费任务 lease/fence 步骤；`index.ts` 按 files/identity/billing capability token 鉴权和路由，alerts/files/identity/billing/retention 分模块维护 |
@@ -26,7 +24,6 @@ flowchart TD
   Admin[Admin 浏览器] --> Next[Next.js 认证与资源代理]
   Next --> Auth[Supabase Auth]
   Next --> API[Account API / Admin API]
-  SDK[服务端 Account SDK] --> API
   API --> Auth
   API --> SQL[PostgreSQL private 领域函数]
   API --> Storage[私有 Storage]
@@ -42,7 +39,7 @@ flowchart TD
   Preview --> OptionalAuth[可选 Supabase Auth 操作]
 ```
 
-Admin API 与 Account API 仍由同一个 Edge Function 入口分派，但实现已按 `core/account/admin/files` 模块拆分；入口根据路径分别切换数据库 executor 角色。管理端资源请求由 Next.js 按 Admin OpenAPI 对齐的显式 method/path allowlist 转发到该服务，并为上游请求设置 deadline，管理端本身不直接连接 SQL。Maintenance 同样保持单一 HTTP 入口与 `job_executor` 边界，按 files/identity/billing capability token 隔离入口，再把 files/identity/billing/retention 等 orchestration 拆到独立模块，不把 PostgreSQL `private` 领域规则搬回 TypeScript。Consumer BFF 同样保持显式 allowlist 与上游 deadline。
+Admin API 与 Account API 仍由同一个 Edge Function 入口分派，但实现已按 `core/account/admin/files` 模块拆分；入口根据路径分别切换数据库 executor 角色。管理端资源请求由 Next.js 按 Admin OpenAPI 对齐的显式 method/path allowlist 转发到该服务，并为上游请求设置 deadline，管理端本身不直接连接 SQL。Maintenance 同样保持单一 HTTP 入口与 `job_executor` 边界，按 files/identity/billing capability token 隔离入口，再把 files/identity/billing/retention 等 orchestration 拆到独立模块，不把 PostgreSQL `private` 领域规则搬回 TypeScript。Consumer BFF 同样保持显式 allowlist 与上游 deadline。Consumer 集成不依赖 AisenHub runtime SDK；新平台按 canonical `/v1` HTTP contract 实现，并可从 Reference Consumer 复制后自行维护经审查的 Auth/BFF/integration 代码。
 
 权益和配额写入通过共享数据库过程完成；业务 DTO 与密钥材料工具不承担第二套权益计算。BILL-04 建立了服务端定价 Checkout snapshot、Provider Order/Settlement 关系、hash-only Webhook Inbox 和可接管的 processing job 基础；BILL-05 增加 Provider-neutral 事实归一化、权威验证/结算、双游标对账与 `entitlement_apply` 统一写入；TASK-0301 的 forward-fix 对 Provider 事实执行显式 fail-closed 校验并保留 unknown 可恢复状态，TASK-0302 让过期 processing 可带新 fence 接管且 query/link/verify/finish/cursor 拒绝失效 lease；BILL-06 增加中央 Billing Admin wrapper、If-Match/operation_id 结案边界、Consumer 同源 BFF 与服务端权益授权辅助。没有 verified Provider mapping 时购买仍关闭，真实 Provider 与生产观察保持独立门槛。系统没有组织／团队服务、微服务消息总线或跨域自动登录服务。
 

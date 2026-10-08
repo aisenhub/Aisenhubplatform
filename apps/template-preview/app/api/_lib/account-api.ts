@@ -47,7 +47,8 @@ export async function accountApiJson<T>(
   options: AccountApiJsonOptions = {},
 ): Promise<{ readonly data: T; readonly requestId: string | null }> {
   const baseUrl = process.env.ACCOUNT_API_URL?.replace(/\/$/u, '');
-  if (!baseUrl) throw new AccountApiUpstreamError(503, 'AUTHORIZATION_UNAVAILABLE');
+  if (!baseUrl)
+    throw new AccountApiUpstreamError(503, 'AUTHORIZATION_UNAVAILABLE');
   const requirePlatformKey = options.requirePlatformKey ?? true;
   const platformKey = process.env.ACCOUNT_PLATFORM_KEY;
   if (requirePlatformKey && !platformKey)
@@ -81,13 +82,11 @@ export async function accountApiJson<T>(
         body: options.body ? JSON.stringify(options.body) : undefined,
         signal: AbortSignal.timeout(remainingMs),
       });
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            readonly data?: T;
-            readonly error?: { readonly code?: string };
-            readonly request_id?: string;
-          }
-        | null;
+      const payload = (await response.json().catch(() => null)) as {
+        readonly data?: T;
+        readonly error?: { readonly code?: string };
+        readonly request_id?: string;
+      } | null;
       const requestId =
         payload?.request_id ?? response.headers.get('x-request-id') ?? null;
       if (!response.ok) {

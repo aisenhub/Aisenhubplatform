@@ -42,4 +42,4 @@ pnpm typecheck
 pnpm build
 ```
 
-typecheck 和 build 的前置步骤会重新打包 SDK。build 使用 Next.js webpack，不执行生产部署。测试分类及运行限制见[测试指南](testing.md)。
+typecheck 和 build 直接针对当前 workspace，不生成或打包 Account SDK。build 使用 Next.js webpack，不执行生产部署。测试分类及运行限制见[测试指南](testing.md)。

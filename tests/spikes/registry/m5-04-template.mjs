@@ -21,7 +21,8 @@ assert(
   manifest.schema_version === '2.0.0' &&
     manifest.contract_compatibility?.account?.major === 'v1' &&
     manifest.contract_compatibility?.admin?.major === 'v1' &&
-    manifest.contract_compatibility?.reference_consumer === 'apps/template-preview',
+    manifest.contract_compatibility?.reference_consumer ===
+      'apps/template-preview',
   'HTTP contract compatibility metadata drifted',
 );
 assert(!('sdk_compatibility' in manifest), 'SDK compatibility must be absent');
