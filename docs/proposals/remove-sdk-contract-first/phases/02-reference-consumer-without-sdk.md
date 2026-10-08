@@ -1,6 +1,6 @@
 # Phase 02：Reference Consumer 退出 Account SDK 与 Domain Consumer 依赖
 
-状态：未开始
+状态：验收通过待推送
 
 ## 目标
 

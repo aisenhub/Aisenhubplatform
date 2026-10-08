@@ -33,8 +33,8 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | 提升 OpenAPI 为 canonical contract 并建立治理/兼容检查 | 无 | 验收通过待推送 | [01 Contract baseline](phases/01-contract-baseline-and-governance.md) |
-| 02 | Reference Consumer 退出 Account SDK 与 Domain consumer 依赖 | 01 | 未开始 | [02 Reference Consumer](phases/02-reference-consumer-without-sdk.md) |
+| 01 | 提升 OpenAPI 为 canonical contract 并建立治理/兼容检查 | 无 | 已交付 | [01 Contract baseline](phases/01-contract-baseline-and-governance.md) |
+| 02 | Reference Consumer 退出 Account SDK 与 Domain consumer 依赖 | 01 | 验收通过待推送 | [02 Reference Consumer](phases/02-reference-consumer-without-sdk.md) |
 | 03 | Reference Consumer 与 Admin 退出 Auth SDK | 02 | 未开始 | [03 Auth/BFF decoupling](phases/03-auth-and-bff-decoupling.md) |
 | 04 | 删除 SDK packages、tarball、安装链和构建前置 | 03 | 未开始 | [04 Remove distribution](phases/04-remove-sdk-packages-and-distribution.md) |
 | 05 | 用 contract/reference probes 与现有 HTTP/E2E 门槛替代 SDK tests | 04 | 未开始 | [05 Contract gates](phases/05-contract-conformance-and-compatibility-gates.md) |

@@ -1,7 +1,11 @@
 import { NextRequest } from 'next/server';
 import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
-import { readBoundedBody, UploadFault, UploadGate } from '@kit/domain/upload';
-import { isUuid } from '@kit/domain/validation';
+import {
+  readBoundedBody,
+  UploadFault,
+  UploadGate,
+} from '../../../_lib/integration/bounded-body';
+import { isUuid } from '../../../_lib/integration/validation';
 
 import { accountApiSignal } from '../../_lib/account-api';
 

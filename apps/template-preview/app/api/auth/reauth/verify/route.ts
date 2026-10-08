@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
-import { readBoundedJson, UploadFault } from '@kit/domain/upload';
-import { AccountApiError, createAccountApiClient } from '@kit/account-server';
+import {
+  readBoundedJson,
+  UploadFault,
+} from '../../../../_lib/integration/bounded-body';
 import {
   authCookieNames,
   createRequestAuthClient,
@@ -16,7 +18,10 @@ import {
   requestId,
   responseBody,
 } from '../../_lib';
-import { accountApiTimeoutMs } from '../../../_lib/account-api';
+import {
+  accountApiJson,
+  AccountApiUpstreamError,
+} from '../../../_lib/account-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,14 +39,12 @@ function isTokenHash(value: unknown): value is string {
 
 function runtimeConfig() {
   const base = config();
-  const accountApiUrl = process.env.ACCOUNT_API_URL?.replace(/\/$/u, '');
-  const platformKey = process.env.ACCOUNT_PLATFORM_KEY;
-  if (!accountApiUrl || !platformKey) throw new Error('AUTH_NOT_CONFIGURED');
-  return { ...base, accountApiUrl, platformKey };
+  if (!process.env.ACCOUNT_API_URL) throw new Error('AUTH_NOT_CONFIGURED');
+  return base;
 }
 
 function accountApiFailure(error: unknown, id: string): Response {
-  if (error instanceof AccountApiError) {
+  if (error instanceof AccountApiUpstreamError) {
     if (error.status === 401 || error.status === 403)
       return errorBody(
         error.status === 401 ? 'UNAUTHORIZED' : 'AUTHORIZATION_UNAVAILABLE',
@@ -96,15 +99,15 @@ export async function POST(request: NextRequest): Promise<Response> {
     )
       return errorBody('AUTHORIZATION_UNAVAILABLE', 403, id);
 
-    const accountApi = createAccountApiClient({
-      baseUrl: runtime.accountApiUrl,
-      platformKey: runtime.platformKey,
-      timeoutMs: accountApiTimeoutMs(),
-    });
-    const proof = await accountApi.issueRecentAuthProof(
+    const { data: proof } = await accountApiJson<{
+      readonly proof_id: string;
+      readonly expires_at: string;
+    }>('/v1/auth/recent-proof', {
+      method: 'POST',
       accessToken,
-      temporarySession.access_token,
-    );
+      reauthAccessToken: temporarySession.access_token,
+      requirePlatformKey: false,
+    });
     const response = responseBody(
       { verified: true, expires_at: proof.expires_at },
       200,
@@ -125,7 +128,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         error.status,
         id,
       );
-    if (error instanceof AccountApiError) return accountApiFailure(error, id);
+    if (error instanceof AccountApiUpstreamError)
+      return accountApiFailure(error, id);
     return errorBody('AUTHORIZATION_UNAVAILABLE', 503, id);
   } finally {
     if (temporaryClient)

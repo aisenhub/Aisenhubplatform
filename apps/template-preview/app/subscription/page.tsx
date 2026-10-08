@@ -11,7 +11,7 @@ import {
   type EntitlementDto,
   type SubscriptionCheckoutDto,
   type SubscriptionProductDto,
-} from '@kit/domain/contracts';
+} from '../_lib/integration/account-contract';
 
 import { ConsumerShell, Icon } from '../../components/consumer-shell';
 

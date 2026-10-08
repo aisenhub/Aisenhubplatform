@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
-import { readBoundedJson, UploadFault } from '@kit/domain/upload';
+import {
+  readBoundedJson,
+  UploadFault,
+} from '../../../_lib/integration/bounded-body';
 import {
   authCookieNames,
   createRequestAuthClient,

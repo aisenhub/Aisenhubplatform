@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
-import {
-  authorizeProtectedFeature,
-  createAccountApiClient,
-} from '@kit/account-server';
 import { authCookieNames, authSessionGate } from '@kit/account-auth-nextjs';
 
-import { accountApiTimeoutMs } from '../../_lib/account-api';
+import {
+  accountApiJson,
+  AccountApiUpstreamError,
+} from '../../_lib/account-api';
+import type { EntitlementDto } from '../../../_lib/integration/account-contract';
+import { authorizeProtectedFeature } from '../../../_lib/integration/authorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,31 +46,46 @@ export async function GET(request: NextRequest): Promise<Response> {
       requestId,
     );
 
-  const authorization = await authorizeProtectedFeature({
-    client: createAccountApiClient({
-      baseUrl,
-      platformKey,
-      timeoutMs: accountApiTimeoutMs(),
-    }),
-    accessToken,
-    feature: 'advanced_config',
-  });
-  if (!authorization.ok) {
+  try {
+    let upstreamRequestId: string | null = null;
+    const authorization = await authorizeProtectedFeature({
+      feature: 'advanced_config',
+      getSubscription: async () => {
+        const upstream = await accountApiJson<EntitlementDto>('/v1/subscription', {
+          accessToken,
+        });
+        upstreamRequestId = upstream.requestId;
+        return upstream.data;
+      },
+    });
+    if (!authorization.ok)
+      return json(
+        {
+          error: { code: authorization.code },
+          request_id:
+            authorization.requestId ?? upstreamRequestId ?? requestId,
+        },
+        authorization.code === 'AUTHORIZATION_UNAVAILABLE' ? 503 : 403,
+        requestId,
+      );
     return json(
       {
-        error: { code: authorization.code },
-        request_id: authorization.requestId ?? requestId,
+        data: { authorized: true, entitlement: authorization.entitlement },
+        request_id: upstreamRequestId ?? requestId,
       },
-      authorization.code === 'AUTHORIZATION_UNAVAILABLE' ? 503 : 403,
+      200,
+      requestId,
+    );
+  } catch (error) {
+    const upstreamRequestId =
+      error instanceof AccountApiUpstreamError ? error.requestId : null;
+    return json(
+      {
+        error: { code: 'AUTHORIZATION_UNAVAILABLE' },
+        request_id: upstreamRequestId ?? requestId,
+      },
+      503,
       requestId,
     );
   }
-  return json(
-    {
-      data: { authorized: true, entitlement: authorization.entitlement },
-      request_id: requestId,
-    },
-    200,
-    requestId,
-  );
 }
