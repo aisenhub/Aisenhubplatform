@@ -1,6 +1,6 @@
 # Phase 05：Contract、Registry 与 Reference Consumer 门槛
 
-状态：未开始
+状态：验收通过待推送
 
 ## 目标
 

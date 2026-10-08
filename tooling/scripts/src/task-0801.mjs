@@ -260,9 +260,9 @@ async function main() {
     localEnv,
   );
   runPnpm('admin typecheck', ['--filter', 'admin', 'typecheck'], localEnv);
-  runPnpm('SDK package test', ['test:sdk:m5-02']);
-  runPnpm('registry consumer test', ['test:registry:m5-04']);
-  runPnpm('consumer install test', ['test:consumer:m5-05'], localEnv);
+  runPnpm('contract breaking compatibility', ['contracts:breaking']);
+  runPnpm('registry contract test', ['test:registry']);
+  runPnpm('reference consumer architecture', ['test:reference-consumer']);
   runPnpm('runtime import probe', ['runtime:probe'], localEnv);
   runPnpm('consumer/admin browser flow', ['test:e2e:t16-r2'], localEnv);
   const accountApi = await startAccountApiForT12(localEnv);

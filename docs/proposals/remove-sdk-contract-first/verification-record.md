@@ -21,8 +21,8 @@
 | 01 | Contract baseline 与治理 | 已交付 | OpenAPI canonical 路径、compatibility/changelog/manifest、breaking checker、路径引用已实施并通过定向验证 | 无 | 919559107c105c02279f41f68c307115639ffc6d | 已 push 并核对远端分支 |
 | 02 | Reference Consumer 无 Account SDK/Domain | 已交付 | app-local bounded input/public contract/Account fetch/fail-closed authorization 已实施；Reference Consumer 已无 account-server/domain 依赖 | 无 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | 已 push 并核对远端分支 |
 | 03 | Auth/BFF 去 SDK 化 | 验收通过待推送 | Reference Consumer/Admin app-local Auth 已接管 Cookie/session/replay/Supabase adapter；两个 app 已无 Auth SDK import | GitHub 网络恢复后 push | 2d4eff5 | push 阻塞：无法连接 github.com:443 |
-| 04 | 删除 SDK package/发行链 | 验收通过待推送 | 三个 Account SDK package、SDK pack/output、SDK/install probes 与 build 前置已删除；Registry 已切到 contract compatibility | commit；GitHub 网络恢复后 push | 待提交 | push 阻塞继承自当前网络环境 |
-| 05 | Contract/Reference gates | 未开始 | 未验证 | 04 | 未验证 | 未验证 |
+| 04 | 删除 SDK package/发行链 | 验收通过待推送 | 三个 Account SDK package、SDK pack/output、SDK/install probes 与 build 前置已删除；Registry 已切到 contract compatibility | GitHub 网络恢复后 push | c94f5d6 | push 阻塞继承自当前网络环境 |
+| 05 | Contract/Reference gates | 验收通过待推送 | 新增 Reference Consumer 架构 probe；consumer owner 清单移除 SDK owner；TASK-0801 已切换到 breaking/registry/reference gates | commit；GitHub 网络恢复后 push | 待提交 | push 阻塞继承自当前网络环境 |
 | 06 | 文档与 R3 总体验收 | 未开始 | 未验证 | 05 | 未验证 | 未验证 |
 
 状态只使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
@@ -46,7 +46,8 @@
 - 有意保留：`packages/domain` 继续作为中央内部模块；`test:consumer:fe-r1-ui` 只验证共享 UI 独立安装，与 Account Consumer SDK 无关；`task-0801` 的旧 SDK gate 在 Phase 05 统一替换。
 
 ### Phase 05
-- 实际修改：未开始。
+- 实际修改：新增 `test:registry` 与 `test:reference-consumer`；Reference Consumer probe 检查 package/source forbidden dependency、app-local Auth/BFF/protected 文件和 Registry canonical contracts；`contract-consumers.json` 移除已删除的 `account-server`/SDK test owners；TASK-0801 用 `contracts:breaking`、Registry 与 Reference Consumer gates 替换旧 SDK package/install gates。
+- 未放宽项：原 format/lint/typecheck/build/unit/API/DB/concurrency/runtime/browser/docs/contracts gates 均保留。
 
 ### Phase 06
 - 实际修改：未开始。
@@ -82,6 +83,15 @@
 | 2026-10-08 | 04 | worktree | `pnpm build` | Local | 0 | PASS：Admin + Reference Consumer production build 成功，未运行 SDK pack |
 | 2026-10-08 | 04 | worktree | `pnpm test:unit` | Local | 0 | PASS：Domain 13、UI 36、Admin 22、Reference Consumer 44 tests，4/4 tasks 成功 |
 | 2026-10-08 | 04 | worktree | `git diff --check` | Local | 0 | PASS |
+| 2026-10-08 | 05 | worktree | `pnpm contracts:check` | Local | 0 | PASS：Account 22/Admin 45 operations；4 contracts / 39 fields ownership 对齐 |
+| 2026-10-08 | 05 | worktree | `pnpm contracts:breaking` | Local | 0 | PASS：相对 `origin/main` 无 wire breaking change |
+| 2026-10-08 | 05 | worktree | `pnpm test:registry` | Local | 0 | PASS：contract compatibility、模板/Secret 边界通过 |
+| 2026-10-08 | 05 | worktree | `pnpm test:reference-consumer` | Local | 0 | PASS：forbidden dependency/source import 均不存在，必需 integration/auth 与 canonical contract 存在 |
+| 2026-10-08 | 05 | worktree | `pnpm test:tooling` | Local | 0 | PASS：2/2 tooling safety tests |
+| 2026-10-08 | 05 | worktree | `pnpm runtime:probe` | Local | 0 | PASS：Node/Deno shared boundary |
+| 2026-10-08 | 05 | worktree | `node --check tooling/scripts/src/task-0801.mjs` | Local | 0 | PASS |
+| 2026-10-08 | 05 | worktree | TASK-0801 旧 SDK gate grep | Local | 1 | PASS（预期无匹配）：不再引用 SDK package/install tests |
+| 2026-10-08 | 05 | worktree | `git diff --check` | Local | 0 | PASS |
 
 ## GitHub 交付记录
 
@@ -90,12 +100,12 @@
 | 01 | 919559107c105c02279f41f68c307115639ffc6d | codex/remove-sdk-contract-first | 已 push | 已核对 | Contract baseline |
 | 02 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | codex/remove-sdk-contract-first | 已 push | 已核对 | Reference Consumer HTTP integration |
 | 03 | 2d4eff5 | codex/remove-sdk-contract-first | 失败：网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
-| 04 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
+| 04 | c94f5d6 | codex/remove-sdk-contract-first | 未重试：已知网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
 | 05 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 | 06 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
 
 ## 交接信息
 
-- 当前 Phase 04 已完成本地验收，下一阶段从 Phase 05 Contract/Reference gates 开始；Phase 03/04 的 GitHub push 受当前网络阻塞。
+- 当前 Phase 05 已完成本地验收，下一阶段从 Phase 06 文档同步与 R3 总体验收开始；Phase 03–05 的 GitHub push 受当前网络阻塞。
 - 生产部署/真实支付/费用/Secret/数据操作均不在本任务授权范围。
 - main 合并前必须确认生产自动部署绑定；未知时保留在任务分支。
