@@ -3,7 +3,7 @@
   "info": {
     "title": "Aisenhub Admin API",
     "version": "1.0.0",
-    "description": "Admin API contract. Mutations require an administrator session and high-risk operations require server-side step-up proof."
+    "description": "Admin API contract. Ordinary routes require an active administrator session at AAL2. Platform Key create/confirm/revoke and Global Delete start/retry additionally require a server-side recent-MFA proof valid for at most 30 minutes."
   },
   "servers": [{ "url": "https://admin.example.invalid" }],
   "paths": {
@@ -164,7 +164,6 @@
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/suspend": {
       "post": {
         "operationId": "adminSuspendAccount",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -173,7 +172,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -195,7 +194,6 @@
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/close": {
       "post": {
         "operationId": "adminCloseAccount",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -204,7 +202,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -296,7 +294,6 @@
       },
       "patch": {
         "operationId": "adminPatchSubscriptionConfig",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -306,7 +303,7 @@
         "responses": {
           "200": { "$ref": "#/components/responses/SubscriptionConfig" },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "$ref": "#/components/responses/Conflict" },
           "412": { "$ref": "#/components/responses/PreconditionFailed" },
@@ -333,12 +330,11 @@
     "/admin/api/v1/redemption-batches/{batchId}/confirm-delivery": {
       "post": {
         "operationId": "adminConfirmRedemptionDelivery",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -346,12 +342,11 @@
     "/admin/api/v1/redemption-batches/{batchId}/disable": {
       "post": {
         "operationId": "adminDisableRedemptionBatch",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -370,13 +365,12 @@
     "/admin/api/v1/subscriptions/{accountId}/commands": {
       "post": {
         "operationId": "adminApplySubscriptionCommand",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/AccountId" }],
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "409": { "$ref": "#/components/responses/Conflict" }
         }
       }
@@ -431,12 +425,11 @@
       },
       "delete": {
         "operationId": "adminDeleteConfigFile",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/FileId" }],
         "responses": {
           "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -454,14 +447,13 @@
       },
       "patch": {
         "operationId": "adminUpdateFilePolicy",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -527,7 +519,6 @@
       "post": {
         "operationId": "adminRequeryBillingOrder",
         "description": "Queues a provider requery. The resulting job keeps its bounded retry budget and may enter manual_review with a classified failure for operator action.",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/BillingOrderId" },
@@ -536,7 +527,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "412": { "$ref": "#/components/responses/PreconditionFailed" }
         }
       }
@@ -544,7 +535,6 @@
     "/admin/api/v1/billing/orders/{orderId}/resolve": {
       "post": {
         "operationId": "adminResolveBillingOrder",
-        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/BillingOrderId" },
@@ -553,7 +543,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "412": { "$ref": "#/components/responses/PreconditionFailed" }
         }
       }
@@ -903,7 +893,7 @@
         }
       },
       "StepUpRequired": {
-        "description": "Fresh server-side step-up proof is required.",
+        "description": "A server-side recent-MFA proof bound to the current Admin session and valid for at most 30 minutes is required.",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }

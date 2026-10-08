@@ -18,6 +18,7 @@ import { createAdminMfaAttestation } from '@kit/domain/admin-mfa-attestation';
 import { accountApiSignal } from '../_lib/account-api';
 
 export const dynamic = 'force-dynamic';
+export const ADMIN_RECENT_MFA_MAX_AGE_SECONDS = 30 * 60;
 
 export function config(): {
   url: string;

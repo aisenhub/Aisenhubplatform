@@ -24,7 +24,6 @@ import {
 } from '@kit/ui/table';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import {
   adminAuthSession,
@@ -34,7 +33,6 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
-  isRecentMfaRequired,
   statusLabel,
   statusTone,
   type ResourceError,
@@ -306,10 +304,6 @@ export function PlatformRedemptionBatchesPage() {
           delivery_receipt?: string;
         }>(response);
         if (!response.ok) {
-          if (isRecentMfaRequired(response, payload)) {
-            setMutationState('step_up_required');
-            return;
-          }
           setMutationState('failure');
           setMutationError(resourceError(response, payload, '兑换批次创建'));
           return;
@@ -382,10 +376,6 @@ export function PlatformRedemptionBatchesPage() {
       );
       const payload = await readApiPayload<Batch>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setMutationState('step_up_required');
-          return;
-        }
         setMutationState('failure');
         setMutationError(
           resourceError(
@@ -744,16 +734,6 @@ export function PlatformRedemptionBatchesPage() {
           reversible={intent.kind === 'confirm-delivery'}
           state={mutationState}
           error={mutationError}
-          stepUpContent={
-            mutationState === 'step_up_required' ? (
-              <AdminRecentMfaPanel
-                onVerified={() => {
-                  setMutationState('confirm_required');
-                  setMutationError(null);
-                }}
-              />
-            ) : null
-          }
           onCheckUnknown={
             mutationState === 'unknown_outcome' ? checkUnknown : undefined
           }

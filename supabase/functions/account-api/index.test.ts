@@ -1910,7 +1910,6 @@ Deno.test('Account API exposes central Billing order and requery wrappers', asyn
       method: 'POST',
       headers: {
         ...auth,
-        'X-Recent-Auth-Proof': keyId,
         'If-Match': 'W/"1"',
         'Content-Type': 'application/json',
       },
@@ -1980,7 +1979,7 @@ Deno.test('Account API uses stable Billing cursors and server-side filters', asy
   assertEquals(nextCall?.values?.[4], keyId);
 });
 
-Deno.test('Account API exposes subscription config ETags and step-up mutation boundary', async () => {
+Deno.test('Account API allows subscription config mutation with AAL2 and no recent proof', async () => {
   const base =
     'http://local/functions/v1/account-api/admin/api/v1/platforms/' +
     `${platformId}/subscription-config`;
@@ -1998,7 +1997,6 @@ Deno.test('Account API exposes subscription config ETags and step-up mutation bo
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${fakeJwt('aal2')}`,
-        'X-Recent-Auth-Proof': keyId,
         'If-Match': 'W/"3"',
         'Content-Type': 'application/json',
       },
@@ -2016,6 +2014,43 @@ Deno.test('Account API exposes subscription config ETags and step-up mutation bo
   );
   assertEquals(patch.status, 200);
   assertEquals(patch.headers.get('etag'), 'W/"3"');
+});
+
+Deno.test('Account API keeps recent MFA on critical Key and Global Delete operations', async () => {
+  const keyCreate = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/keys`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: 'no-proof-key' }),
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(keyCreate.status, 403);
+  assertEquals((await keyCreate.json()).error.code, 'RECENT_MFA_REQUIRED');
+
+  const globalDelete = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/deletion-jobs',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'delete-no-proof-fixture',
+        },
+        body: JSON.stringify({ request_id: sessionId }),
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(globalDelete.status, 403);
+  assertEquals((await globalDelete.json()).error.code, 'RECENT_MFA_REQUIRED');
 });
 
 Deno.test('Account API exposes Global Delete job start and list wrappers', async () => {
@@ -2052,7 +2087,13 @@ Deno.test('Account API exposes Global Delete job start and list wrappers', async
   const fileDelete = await handleRequest(
     new Request(
       `http://local/functions/v1/account-api/admin/api/v1/config-files/${keyId}`,
-      { method: 'DELETE', headers },
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Idempotency-Key': 'file-delete-aal2-fixture',
+        },
+      },
     ),
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
   );
@@ -2335,7 +2376,7 @@ Deno.test('Account API streams an authorized file with download security headers
   assertEquals(auditEvents, 1);
 });
 
-Deno.test('Account API requires recent MFA before an Admin file download', async () => {
+Deno.test('Account API requires AAL2 before an Admin file download', async () => {
   let storageCalls = 0;
   const response = await handleRequest(
     new Request(

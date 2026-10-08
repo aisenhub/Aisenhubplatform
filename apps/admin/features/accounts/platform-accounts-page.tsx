@@ -25,7 +25,6 @@ import {
 import type { MutationState } from '@kit/ui/mutation-state';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import {
   adminAuthSession,
@@ -35,7 +34,6 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
-  isRecentMfaRequired,
   resourcePath,
   statusLabel,
   statusTone,
@@ -283,10 +281,6 @@ export function PlatformAccountsPage() {
       );
       const payload = await readApiPayload<Account>(response);
       if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setMutationState('step_up_required');
-          return;
-        }
         setMutationState('failure');
         setMutationError(resourceError(response, payload, '账户动作'));
         return;
@@ -685,16 +679,6 @@ export function PlatformAccountsPage() {
           reasonRequired
           state={mutationState}
           error={mutationError}
-          stepUpContent={
-            mutationState === 'step_up_required' ? (
-              <AdminRecentMfaPanel
-                onVerified={() => {
-                  setMutationState('confirm_required');
-                  setMutationError(null);
-                }}
-              />
-            ) : null
-          }
           onCheckUnknown={
             mutationState === 'unknown_outcome' ? checkUnknown : undefined
           }

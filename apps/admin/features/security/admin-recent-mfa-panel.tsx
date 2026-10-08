@@ -154,7 +154,8 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
       <Alert data-test="recent-mfa-verified">
         <AlertTitle>近期 MFA 已验证</AlertTitle>
         <AlertDescription>
-          请回到上方确认按钮，显式再次提交原操作。
+          当前 Admin session 的近期证明最长 30
+          分钟有效。请回到上方确认按钮，显式再次提交原操作。
         </AlertDescription>
       </Alert>
     );
@@ -170,7 +171,8 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
           在当前页面完成近期 MFA
         </div>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          proof 由服务端签发并绑定当前 Admin session；页面不会计算或保存有效期。
+          proof 由服务端签发并绑定当前 Admin session，最长 30
+          分钟有效；页面不会自行计算或保存有效期。
         </p>
       </div>
       <div

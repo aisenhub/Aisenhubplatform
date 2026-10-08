@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readBoundedJson, UploadFault } from '@kit/domain/upload';
-import { errorBody, issueAdminRecentProof, responseBody } from '../../_lib';
+import {
+  ADMIN_RECENT_MFA_MAX_AGE_SECONDS,
+  errorBody,
+  issueAdminRecentProof,
+  responseBody,
+} from '../../_lib';
 import {
   authCookieNames,
   authSessionGate,
@@ -186,7 +191,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         path: '/',
-        maxAge: 5 * 60,
+        maxAge: ADMIN_RECENT_MFA_MAX_AGE_SECONDS,
       });
     else response.cookies.delete(names.recentProof);
     return response;

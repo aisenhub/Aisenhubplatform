@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { verifyAdminMfaAttestation } from '@kit/domain/admin-mfa-attestation';
 
-import { issueAdminRecentProof } from './_lib';
+import {
+  ADMIN_RECENT_MFA_MAX_AGE_SECONDS,
+  issueAdminRecentProof,
+} from './_lib';
 
 const signingKey = 'fixture-admin-mfa-attestation-key-32-bytes-minimum';
 const userId = '00000000-0000-4000-8000-000000000001';
@@ -10,6 +13,10 @@ const sessionId = '00000000-0000-4000-8000-000000000002';
 const factorId = '00000000-0000-4000-8000-000000000003';
 
 describe('Admin auth server helpers', () => {
+  it('keeps the recent MFA proof window at thirty minutes', () => {
+    expect(ADMIN_RECENT_MFA_MAX_AGE_SECONDS).toBe(30 * 60);
+  });
+
   it('exchanges a server-signed MFA attestation instead of a browser factor header', async () => {
     const result = await issueAdminRecentProof({
       accountApiUrl: 'https://account.example',
