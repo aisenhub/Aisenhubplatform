@@ -103,6 +103,9 @@
 | 2026-10-09 | 05 | worktree | `pnpm test:e2e:t12-r2`（直接调用） | Local | 1 | ENV FAIL：缺少 T12 要求的 Local Supabase env，浏览器未启动；保留守卫，改由 TASK-0801 canonical launcher 注入 |
 | 2026-10-09 | 05 | worktree | `pnpm verify:task:0801 --reuse-local` | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：20 executable gates；Deno/API 97 tests、DB 58 files/1082 tests、Harness 9 项 Local E2E、Admin MFA/安全流全 PASS；responsive/a11y 75 route-viewports（含 Consumer Lab） |
 | 2026-10-09 | 05 | f7fb885 | `git push -u origin codex/admin-consumer-lab-harness` + `git ls-remote origin refs/heads/codex/admin-consumer-lab-harness` | Local/GitHub | 0 | PASS：远端 head `f7fb885eb16fd419e2ea2c851fc183cd4a57a8f3` 与本地实现 head 完全一致；Phase 01–05 commits 均已交付 |
+| 2026-10-09 | post-delivery | main `a360737` | Vercel Git deployment | Vercel | 1 | FAIL：Vercel Node `24.21.0` 在 `pnpm install` 根 `preinstall` 被仓库精确 `24.19.0` 守卫拒绝；应用 build 尚未开始。该失败暴露部署运行时版本策略与仓库精确 pin 不兼容，不代表 Consumer Lab/Harness runtime 回归。 |
+| 2026-10-09 | post-delivery | worktree | Node 24.x compatibility + `pnpm install --frozen-lockfile` + `pnpm toolchain:check` | Local | 0 | PASS：安装/runtime 接受 Node 24.x；`.nvmrc` 与 GitHub CI 仍以 `24.19.0` 作为可重复验证基线；pnpm 继续固定 `11.18.0`。 |
+| 2026-10-09 | post-delivery | worktree | `pnpm verify:task:0801 --reuse-local` | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：Node 24.x 部署兼容修复后的最终候选仍为 20 executable gates 全 PASS；Deno/API 97、DB 58 files/1082 tests、Harness Local E2E、Admin T12、docs/contracts 全通过。 |
 
 ## GitHub 交付记录
 

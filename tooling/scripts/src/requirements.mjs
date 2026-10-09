@@ -17,10 +17,19 @@ function checkRequirements() {
 
 function checkNodeVersion() {
   const current = process.versions.node;
-  if (current !== TOOLCHAIN.node)
+  const expectedMajor = TOOLCHAIN.node.split('.')[0];
+  const currentMajor = current.split('.')[0];
+
+  if (currentMajor !== expectedMajor)
     fail(
-      `Aisenhubplatform requires Node ${TOOLCHAIN.node}; received ${current}.`,
+      `Aisenhubplatform requires Node ${expectedMajor}.x for installation; received ${current}.`,
     );
+
+  if (current !== TOOLCHAIN.node)
+    console.warn(
+      `Node ${current} is install-compatible; the verified Local/CI baseline remains ${TOOLCHAIN.node}.`,
+    );
+
   console.log('\x1b[32m%s\x1b[0m', `You are running Node ${current}.`);
 }
 
