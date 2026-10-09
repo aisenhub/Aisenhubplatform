@@ -1,6 +1,6 @@
 # 移除 Consumer SDK 与 Contract-First 接入架构设计
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](plan.md)
 

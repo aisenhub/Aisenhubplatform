@@ -1,6 +1,6 @@
 # 移除 Consumer SDK 与 Contract-First 接入总计划
 
-状态：In Progress
+状态：Completed
 
 关联：[优化设计](design.md)
 
@@ -35,10 +35,10 @@
 | --- | --- | --- | --- | --- |
 | 01 | 提升 OpenAPI 为 canonical contract 并建立治理/兼容检查 | 无 | 已交付 | [01 Contract baseline](phases/01-contract-baseline-and-governance.md) |
 | 02 | Reference Consumer 退出 Account SDK 与 Domain consumer 依赖 | 01 | 已交付 | [02 Reference Consumer](phases/02-reference-consumer-without-sdk.md) |
-| 03 | Reference Consumer 与 Admin 退出 Auth SDK | 02 | 验收通过待推送 | [03 Auth/BFF decoupling](phases/03-auth-and-bff-decoupling.md) |
-| 04 | 删除 SDK packages、tarball、安装链和构建前置 | 03 | 验收通过待推送 | [04 Remove distribution](phases/04-remove-sdk-packages-and-distribution.md) |
-| 05 | 用 contract/reference probes 与现有 HTTP/E2E 门槛替代 SDK tests | 04 | 验收通过待推送 | [05 Contract gates](phases/05-contract-conformance-and-compatibility-gates.md) |
-| 06 | 同步 architecture/reference/guides，执行 R3 总体验收 | 05 | 验证失败 | [06 Final verification](phases/06-documentation-cleanup-and-final-verification.md) |
+| 03 | Reference Consumer 与 Admin 退出 Auth SDK | 02 | 已交付 | [03 Auth/BFF decoupling](phases/03-auth-and-bff-decoupling.md) |
+| 04 | 删除 SDK packages、tarball、安装链和构建前置 | 03 | 已交付 | [04 Remove distribution](phases/04-remove-sdk-packages-and-distribution.md) |
+| 05 | 用 contract/reference probes 与现有 HTTP/E2E 门槛替代 SDK tests | 04 | 已交付 | [05 Contract gates](phases/05-contract-conformance-and-compatibility-gates.md) |
+| 06 | 同步 architecture/reference/guides，执行 R3 总体验收 | 05 | 已交付 | [06 Final verification](phases/06-documentation-cleanup-and-final-verification.md) |
 
 Phase 05 的部分脚本可在 01 后提前准备，但最终启用必须在 04 删除旧 SDK tests 后统一完成。涉及同一 `package.json`、OpenAPI、Reference Consumer 或 Auth 文件的阶段按表中顺序串行，不并行修改。
 
@@ -91,7 +91,7 @@ Phase 01–03 只增加替代路径/迁移消费者，旧 SDK package 仍存在�
 - [x] Registry 使用 contract compatibility，不使用 SDK compatibility。
 - [x] Auth Cookie/CSRF/session/replay/recent-auth/MFA 安全测试保持。
 - [x] Account BFF/protected feature/file upload 负例保持。
-- [ ] R3 适用 Local 验证实际运行并写入 `verification-record.md`。
+- [x] R3 适用 Local 验证实际运行并写入 `verification-record.md`。
 - [x] 当前架构、API、合同、接入手册、测试流程与实际代码一致。
 
 ## 风险与阻塞

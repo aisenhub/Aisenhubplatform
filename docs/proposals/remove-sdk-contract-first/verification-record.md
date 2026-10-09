@@ -20,10 +20,10 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Contract baseline 与治理 | 已交付 | OpenAPI canonical 路径、compatibility/changelog/manifest、breaking checker、路径引用已实施并通过定向验证 | 无 | 919559107c105c02279f41f68c307115639ffc6d | 已 push 并核对远端分支 |
 | 02 | Reference Consumer 无 Account SDK/Domain | 已交付 | app-local bounded input/public contract/Account fetch/fail-closed authorization 已实施；Reference Consumer 已无 account-server/domain 依赖 | 无 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | 已 push 并核对远端分支 |
-| 03 | Auth/BFF 去 SDK 化 | 验收通过待推送 | Reference Consumer/Admin app-local Auth 已接管 Cookie/session/replay/Supabase adapter；两个 app 已无 Auth SDK import | GitHub 网络恢复后 push | 2d4eff5 | push 阻塞：无法连接 github.com:443 |
-| 04 | 删除 SDK package/发行链 | 验收通过待推送 | 三个 Account SDK package、SDK pack/output、SDK/install probes 与 build 前置已删除；Registry 已切到 contract compatibility | GitHub 网络恢复后 push | c94f5d6 | push 阻塞继承自当前网络环境 |
-| 05 | Contract/Reference gates | 验收通过待推送 | 新增 Reference Consumer 架构 probe；consumer owner 清单移除 SDK owner；TASK-0801 已切换到 breaking/registry/reference gates | GitHub 网络恢复后 push | b552fe5 | push 阻塞继承自当前网络环境 |
-| 06 | 文档与 R3 总体验收 | 验证失败 | architecture/reference/guides/onboarding 已同步；静态/构建/单元/API/DB/合同均通过 | 稳定并重跑 T16/完整 R3 gate；随后 commit/push | 待提交 | 未验证 |
+| 03 | Auth/BFF 去 SDK 化 | 已交付 | Reference Consumer/Admin app-local Auth 已接管 Cookie/session/replay/Supabase adapter；两个 app 已无 Auth SDK import | 无 | 2d4eff5 | 已随 Phase 06 分支 push，远端已核对可达；当时网络失败记录保留在下方历史验证 |
+| 04 | 删除 SDK package/发行链 | 已交付 | 三个 Account SDK package、SDK pack/output、SDK/install probes 与 build 前置已删除；Registry 已切到 contract compatibility | 无 | c94f5d6 | 已随 Phase 06 分支 push，远端已核对可达 |
+| 05 | Contract/Reference gates | 已交付 | 新增 Reference Consumer 架构 probe；consumer owner 清单移除 SDK owner；TASK-0801 已切换到 breaking/registry/reference gates | 无 | b552fe5 | 已随 Phase 06 分支 push，远端已核对可达 |
+| 06 | 文档与 R3 总体验收 | 已交付 | architecture/reference/guides/onboarding 已同步；最终 R3 `verify:task:0801 --reuse-local` 21 个 executable gates PASS | 无 | bd2c564a97d11a19c321c9a79e6485b59530ab67 | 已 push 并核对远端 SHA；最终记录 follow-up 见分支 HEAD |
 
 状态只使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
 
@@ -53,7 +53,7 @@
 - 实际修改：architecture overview/frontends、API/contracts/configuration/data-model、testing/development/release/operations、Registry 与 AGENTS 导航同步到 Contract-First；平台接入手册重写为“固定 contract major → 配置 Auth/API/Platform Key → 复制并自行拥有 Reference Consumer Auth/BFF/integration → 最小闭环 → 独立验收”；删除 `docs/reference/sdk.md`。历史 archive/review 的过去 SDK 事实保留。
 - 格式收敛：首次最终 `format:check` 报 12 个本次阶段修改文件格式不一致；运行仓库 `format:fix` 后复测通过，因此 Phase 06 包含这些文件的纯格式变更。
 - R3 诊断与修复：canonical OpenAPI 要求 ordinary recent-proof 使用 Platform Key，但 Reference Consumer reauth BFF 曾显式 `requirePlatformKey: false`，且 reference API 文档仍写无需 Key；已改为服务端注入 Key并同步文档。T16 同时补充 Consumer/Admin hydration gate、Profile/Preferences 用户可见完成状态等待、上传/reauth 脱敏错误码，以及中断 T16 合成 `system_admin` 不再被当作 previous admin 恢复的 fixture 防污染逻辑。
-- R3 最终状态：重建后的 T16 20 项浏览器/HTTP 矩阵、T12 ordinary-proof 真实 Local Auth/DB/API probe 已 PASS；进一步把服务 ready gate 收紧为“200 + HTML marker”，并移除 T16 人工压缩到 15 秒的全局 Playwright UI/action timeout。恢复 Docker 后未 reset 数据库，确认 `private.system_admin` 为空，DB 58 files / 1082 tests PASS；最终 `pnpm verify:task:0801 --reuse-local` 退出码 0，21 个 executable gates 全部 PASS。Phase 06 已通过 R3，当前仅待 commit/push 与远端 SHA 核对后标记交付。
+- R3 最终状态：重建后的 T16 20 项浏览器/HTTP 矩阵、T12 ordinary-proof 真实 Local Auth/DB/API probe 已 PASS；进一步把服务 ready gate 收紧为“200 + HTML marker”，并移除 T16 人工压缩到 15 秒的全局 Playwright UI/action timeout。恢复 Docker 后未 reset 数据库，确认 `private.system_admin` 为空，DB 58 files / 1082 tests PASS；最终 `pnpm verify:task:0801 --reuse-local` 退出码 0，21 个 executable gates 全部 PASS。Phase 01–06 与任务分支交付均已完成；下方历史 FAIL/BLOCKED 记录继续保留。
 
 ## 验证记录
 

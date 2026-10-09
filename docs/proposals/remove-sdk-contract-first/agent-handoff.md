@@ -36,8 +36,8 @@
 
 ## 阶段完成门槛
 
-- [ ] 本阶段范围实施且没有未说明行为差异。
-- [ ] 必需测试实际运行并记录真实结果。
-- [ ] architecture/reference/guides 按阶段需要同步。
-- [ ] diff/敏感信息检查完成。
-- [ ] 阶段 commit 已 push 且远端核对。
+- [x] 本阶段范围实施且没有未说明行为差异。
+- [x] 必需测试实际运行并记录真实结果。
+- [x] architecture/reference/guides 按阶段需要同步。
+- [x] diff/敏感信息检查完成。
+- [x] 阶段 commit 已 push 且远端核对。

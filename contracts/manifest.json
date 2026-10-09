@@ -3,7 +3,7 @@
   "contracts": {
     "account": {
       "major": "v1",
-      "spec_version": "1.0.0",
+      "spec_version": "1.0.1",
       "path": "contracts/account/v1/openapi.json"
     },
     "admin": {

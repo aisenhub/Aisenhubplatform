@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Aisenhub Account API",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Account API contract. Runtime routes are defined in supabase/functions/account-api/index.ts."
   },
   "servers": [{ "url": "https://account.example.invalid" }],
@@ -734,6 +734,7 @@
               "product_disabled",
               "provider_mapping_unavailable",
               "lifetime_already_purchased",
+              "purchases_paused",
               "platform_disabled"
             ]
           }
