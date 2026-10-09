@@ -78,11 +78,11 @@ flowchart LR
 | R0：不改变运行产物 | 纯文档、注释；仅测试用例且不进入产物、不改变测试工具链或门槛 | 适用静态检查 | 不部署生产则不适用；若触发站点构建/运行部署，重新分级 |
 | R1：基础 | 非业务静态文案、图片、局部颜色/间距，满足下方全部条件 | 本地检查、目标页面验证 | G0–G5 精简检查；发布后 G6 |
 | R2：进阶 | 一般功能、共享 UI、构建/依赖/CI 配置等，无 R3 影响 | 本地检查 + 本地 Supabase 验证 | G0–G5 完整适用项；发布后 G6 |
-| R3：核心与安全 | 数据库、Auth、权限、支付、权益、兑换、Storage、业务 API/SDK/BFF、Secret、Worker、恢复等 | R2 本地验证 + 本地领域合同、权限、并发/恢复和 Provider Mock 验证 | G0–G5 + 本地域验收；发布后 G6 |
+| R3：核心与安全 | 数据库、Auth、权限、支付、权益、兑换、Storage、业务 API/Contract/BFF、Secret、Worker、恢复等 | R2 本地验证 + 本地领域合同、权限、并发/恢复和 Provider Mock 验证 | G0–G5 + 本地域验收；发布后 G6 |
 
 R1 必须全部满足：
 
-- 不改数据库、迁移、API、DTO、SDK、BFF、网络请求、依赖、构建或部署配置。
+- 不改数据库、迁移、API、DTO、公共 Contract、BFF、网络请求、依赖、构建或部署配置。
 - 不改价格、币种、期限、“永久”、退款、额度、权限或支付/权益状态的含义。
 - 不改点击事件、提交、跳转、表单、焦点顺序、键盘行为、遮罩、按钮可用性或敏感信息可见性。
 - 不影响共享组件的业务消费者；全局样式、响应式断点、支付/管理操作区域布局按 R2，可能误导资金/授权操作按 R3。
@@ -94,10 +94,10 @@ R1 必须全部满足：
 | --- | --- | --- | --- |
 | 普通说明文档 | docs、README、AGENTS | R0 | 链接、规则一致性；不自动实施文档中的部署动作 |
 | 单纯增加负向测试 | supabase/tests、tests/spikes | R0 | 本地实际执行新增用例；不能删失败或放宽断言；同时改实现则随实现级别 |
-| 普通页面交互/列表筛选 | apps/admin、apps/template-preview、packages/ui | R2 | Local UI、键盘、窄屏、空/错/加载；牵涉作用域或写操作升 R3 |
+| 普通页面交互/列表筛选 | apps/admin、packages/ui | R2 | Local UI、键盘、窄屏、空/错/加载；牵涉作用域或写操作升 R3 |
 | 支付价格、重复点击、状态恢复、管理动作 | subscription 页面、features/billing/subscriptions/redemption | R3 | 订单/权益最终状态、响应丢失、202、If-Match、operation_id、原因/MFA/审计 |
 | 中央 API、DTO、错误与合同 | supabase/functions/account-api、packages/domain、docs/reference/contracts | R3 | 实际HTTP及所有消费者兼容；纯非语义注释按 R0 |
-| SDK、Auth适配、BFF、Registry可执行模板 | packages/account-server、account-auth*、apps/*/app/api、registry | R3 | 独立安装消费者、旧新版本、server-only、缓存与跨环境隔离 |
+| Consumer Auth/BFF、canonical contract、Registry/Harness | 目标 Consumer 自有 Auth/BFF、tests/consumer-harness、contracts/**、registry | R3 | HTTP兼容、server-only Secret、会话安全、Consumer 独立边界与跨环境隔离 |
 | schema、SQL函数、RLS、角色、索引、回填 | supabase/migrations | R3 | 空库及旧数据升级、权限、并发、DDL锁预算、forward-fix |
 | Auth、MFA、Origin、Cookie、Platform Key | 认证路由、配置、管理员恢复 | R3 | 过期/撤销会话、跨账户平台、跨环境、近期MFA、CSRF |
 | Provider、Checkout、Webhook、退款、兑换 | _shared/afdian、billing-webhook、领域过程 | R3 | 第 7 节资金权益门槛；Mock不能替代真实渠道合同 |
@@ -113,7 +113,7 @@ Git操作遵循第2.2节长期授权，生产部署仍需明确授权并单独�
 按任务执行：保留缺陷反例 → 最小修复 → 同步合同消费者 → 定向测试 → 检查差异和敏感信息 → 准备候选版本。已有正确防护保留回归，不人为制造 FAIL。
 
 - 权益、配额、兑换及订单结算仍由共享 private 领域过程唯一写入；Admin、Account API、Worker 不复制算法，不增加浏览器直连 SQL/私有 Storage 的入口。
-- 每次 API/数据改动列出 `SQL → Edge → OpenAPI/DTO → SDK → BFF → Consumer/Admin → Registry → 测试` 的影响；不适用项写理由，不遗漏消费者到最后才补。
+- 每次 API/数据改动列出 `SQL → Edge → OpenAPI/DTO → Consumer-owned BFF/Harness → Consumer/Admin → Registry → 测试` 的影响；不适用项写理由，不遗漏消费者到最后才补。
 - Local 必须确认端点指向本机。启动 Next.js 不代表 Docker/API/Worker 已运行；脚本指向远程时不得解除防误连守卫强跑。
 - 单元/Mock 用于逻辑；实际 HTTP 用于认证和合同；至少两个独立连接/会话用于真实并发。单进程顺序调用不能证明租约接管、重复结算或兑换竞争安全。
 - 有数据库变更同时验证“全新数据库迁移”和“从当前生产基线 schema + 合成旧数据升级”；只执行空库 reset 不足以通过。
@@ -128,22 +128,22 @@ Local 退出：任务适用的检查通过，失败未隐藏，消费者同步�
 | 类别 | 已有入口 | 使用条件/限制 |
 | --- | --- | --- |
 | 文档/合同 | `pnpm docs:check`、`pnpm contracts:check`、`git diff --check` | 文档改动至少这些；合同静态通过不证明业务正确 |
-| 静态/构建 | `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm build` | 运行代码/构建变更适用；typecheck/build前置SDK打包，可能产生输出 |
+| 静态/构建 | `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm build` | 运行代码/构建变更适用；直接验证当前 workspace，不生成 Account SDK 发行物 |
 | 单元/运行时 | `pnpm test:unit`、`pnpm runtime:probe` | 相应包/运行时变更；已有CI也执行，但需核对当前SHA的实际结果 |
 | SQL/RLS | `pnpm test:db` | Local Docker；不能传远程目标或当升级演练替代品 |
 | 支付并发 | `pnpm test:sql:bill-05-concurrency` | 核对fixture、双连接、最终Grant/Job断言；不代表覆盖所有并发场景 |
 | Worker | `pnpm test:maintenance` | handler测试，不证明完整调度链路实际运行 |
 | API | `pnpm test:api`、`test:api:t12-ordinary-proof`、`test:api:t16-m2-management` 等定向脚本 | 通用入口运行隔离 Edge/Provider/Storage/上传测试；定向脚本验证真实本地 HTTP，Mock 不冒充真实链路 |
-| 工具安全 | `pnpm test:tooling` | 本地 Supabase 防误连和 SDK 输出目录负向用例 |
-| Consumer/Admin E2E | `pnpm test:e2e:t16-r2`、`pnpm test:e2e:t12-r2` | Local服务/浏览器和独立fixture；现有runner适配范围逐项核对 |
-| SDK/Registry消费者 | `pnpm test:sdk:m5-02`、`pnpm test:registry:m5-04`、`pnpm test:consumer:m5-05` | 旧新消费者及安装验证；不能只跑工作区引用测试 |
+| 工具安全 | `pnpm test:tooling` | 本地 Supabase 防误连与工具边界负向用例 |
+| Consumer/Admin E2E | `pnpm test:e2e:consumer-harness`、`pnpm test:e2e:t12-r2` | Local服务/浏览器和独立fixture；Harness 证明公共 Consumer 边界，T12 验证 Admin |
+| Contract/Registry/Consumer Harness | `pnpm contracts:breaking`、`pnpm test:registry`、`pnpm test:consumer-harness` | `/v1` breaking、Registry canonical contract、Harness forbidden dependency/source boundary；不能只跑工作区引用测试 |
 | 备份恢复 | `pnpm test:ops:m6-02-local` | 本地演练，不能外推生产备份/Storage恢复成功 |
 
 本地脚本必须核对端点、写入及清理范围；不得通过替换 URL 连接 Production。缺少本地 Supabase 时，相关验证记为 NOT_RUN 或 BLOCKED，不得用远程环境替代。
 
 ### 4.2 CI 的实际边界
 
-当前 [Workflow](../../.github/workflows/workflow.yml)调用 `verify:task:0801`，在 runner 的本地 Docker Supabase 运行格式、lint、typecheck、build、全工作区单测、工具安全、Edge/API、SQL、结算并发、SDK/Registry/Consumer 安装、运行时、浏览器和文档合同检查。入口存在不代表当前候选已通过；它仍不覆盖全部领域用例或生产部署。
+当前 [Workflow](../../.github/workflows/workflow.yml)调用 `verify:task:0801`，在 runner 的本地 Docker Supabase 运行格式、lint、typecheck、build、全工作区单测、工具安全、Edge/API、SQL、结算并发、contract breaking、Registry/Consumer Harness、运行时、Harness/Admin 浏览器和文档合同检查。入口存在不代表当前候选已通过；它仍不覆盖全部领域用例或生产部署。
 
 正式发布以准确候选版本的本地检查及本地 Supabase 证据为准。CI 未触发时记录 NOT_RUN，不阻止本地已验收版本上线；不宣称 CI 通过。CI 若运行，保留失败和复测证据；已有分支保护仍须遵守。不得为了得到 CI 结果额外要求远程环境、Provider 或真实交易验收。
 
@@ -223,7 +223,7 @@ G5不是每一步重复要确认：已有授权精确覆盖该版本、环境和
 
 1. 使用固定版本CLI，先核对 `pnpm exec supabase --version` 和 `pnpm exec supabase migration new --help`，再生成审核过slug的真实时间戳迁移。不修改已应用生产迁移，修复用forward-fix。
 2. 同一份迁移先完成Local及本地 Supabase 验证，再进入production；核对migration history/hash及实际schema漂移。环境已经应用的迁移不要改内容后继续冒充同版本。迁移中不得写真实Secret或用户数据。
-3. 顺序默认：兼容schema扩展/领域过程和权限 → API/Worker兼容版本 → SDK/BFF/前端 → 验证 → 稍后单独收缩旧结构。最终顺序须根据本任务依赖具体列出；破坏兼容的contract阶段也是独立R3发布。
+3. 顺序默认：兼容schema扩展/领域过程和权限 → API/Worker兼容版本 → Consumer 自有 BFF/前端与 Harness conformance → 验证 → 稍后单独收缩旧结构。最终顺序须根据本任务依赖具体列出；破坏兼容的contract阶段也是独立R3发布。
 4. 核对旧数据约束、索引/DDL锁时间、批量回填检查点、在途订单/Job、旧版消费者及失败续跑。禁止生产reset，不能删Ledger/审计/交易数据充当回滚。
 5. 候选源码、锁文件、依赖及迁移保持一致。Next.js公开环境值可能在构建时内联；不得直接把内含非生产地址的bundle晋升生产。需要分环境重建时，用同一源码/锁文件/构建方式，记录允许差异并扫描生产包，额外验证配置绑定。
 6. 同步配置名称与模板，但Secret各环境独立生成。生产Secret仅在批准操作中核验/切换，禁止把生产密钥复制到本地或其他环境。
@@ -271,7 +271,7 @@ G6发布后观察：
 起始 HEAD/分支；候选 SHA/产物；生产基线：
 已有工作区改动及保护：
 变更文件；迁移顺序/hash；配置名称及允许差异：
-SQL/API/OpenAPI/DTO/SDK/BFF/Consumer/Admin/Registry消费者：
+SQL/API/OpenAPI/DTO/Consumer-owned BFF/Harness/Consumer/Admin/Registry消费者：
 Local：用例、环境、命令、结果、证据：
 CI：可选复跑的候选SHA、结果或NOT_RUN；不另设测试门槛：
 Local Supabase：目标、迁移版本、用例、结果；不适用项写理由：

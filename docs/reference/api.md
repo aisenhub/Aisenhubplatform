@@ -1,10 +1,10 @@
-# HTTP、SDK、模板与 API 合同
+# HTTP、Consumer Conformance 与 API 合同
 
-本文件描述当前 API、SDK 和模板合同。整体边界见 [系统架构](../architecture/overview.md)。OpenAPI 3.1 合同位于 [Account](contracts/account.openapi.json) 和 [Admin](contracts/admin.openapi.json)，共享类型位于 `packages/domain/src/contracts`。SDK 与 BFF 必须遵守同一合同，不能各自复制领域规则。
+本文件描述当前 API、Consumer conformance 与 Admin 集成合同。整体边界见 [系统架构](../architecture/overview.md)。Canonical OpenAPI 3.1 合同位于 [Account](../../contracts/account/v1/openapi.json) 和 [Admin](../../contracts/admin/v1/openapi.json)；`packages/domain/src/contracts` 是中央内部类型源，不是 Consumer runtime 依赖。Consumer/Admin BFF 必须遵守同一 wire contract，不能各自复制领域规则。
 
 ## 1. 调用和权限矩阵
 
-Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外层前缀由apiUrl统一封装，不进入业务合同。Platform Key在X-Platform-Key中传递；用户access token在Authorization: Bearer中传递，禁止放入URL。platformCode只用于SDK启动一致性检查，不能覆盖Key映射的platformId。
+Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外层前缀属于部署地址，不进入业务合同。Platform Key在X-Platform-Key中传递；用户access token在Authorization: Bearer中传递，禁止放入URL。platformId 由服务端 Key 映射确定，Consumer 不提交可覆盖归属的 platform 标识。
 
 | 方法与路径 | 用户条件 | 平台凭据 | 说明 |
 |---|---|---|---|
@@ -14,7 +14,7 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 | GET /v1/subscription/checkout/:id | active账户 | 必需、平台active | 只读自身结账状态；不返回Provider ID、token或Secret，始终no-store |
 | GET /v1/account/principal | 有效用户/会话 | 必需 | 可返回not_activated/suspended/closed/disabled状态供界面提示 |
 | POST /v1/account/activate | 有效用户、非Admin、非deleting | 必需、平台active | 仅首次需要allow_activation |
-| POST /v1/auth/recent-proof | 当前业务会话 + 独立 email `token_hash` 事件会话 | 不需要Platform Key | 服务端校验同user、事件session及5分钟窗口，仅签发绑定原业务session的proof |
+| POST /v1/auth/recent-proof | 当前业务会话 + 独立 email `token_hash` 事件会话 | 必需、平台active | Consumer BFF 在服务端注入 Platform Key；中央服务校验同user、独立事件session及5分钟窗口，仅签发绑定原业务session的proof |
 | POST /v1/account/close | active或suspended用户、近期重新认证 | 必需、平台active | 幂等关闭；closed返回既有状态 |
 | GET /v1/profile | active账户 | 必需、平台active | 自身资料 |
 | PATCH /v1/profile | active账户 | 必需、平台active | 白名单字段更新 |
@@ -91,43 +91,27 @@ Profile PATCH仅允许display_name/avatar_url/bio/locale/timezone/metadata，拒
 
 跨租户/跨用户资源统一404，不泄露存在性。CODE_DISABLED/EXPIRED仅针对已确认同平台码返回。所有错误去除SQL细节和Secret。
 
-Account普通请求超时5秒；BFF业务授权总预算3秒，预算内只允许一次安全读取重试。SDK仅对网络错误/502/503/504重试幂等读取或携带同一幂等key的受支持操作，最多2次、指数退避加抖动，遵守总预算和Retry-After；业务拒绝不重试。
+Account普通请求默认超时5秒；Consumer BFF 当前通过 server-only HTTP fetch 和 AbortSignal deadline 调用中央服务。安全读取是否重试由具体 Consumer 明确实现；写操作不得因为网络失败盲目重放，只有合同明确支持且保持同一 Idempotency-Key 的操作才可恢复。业务拒绝不重试。
 
 上传流不自动重传，断线后先GET状态；用户明确重试时使用同file_id及同内容。Admin生成兑换码不自动重试生成明文，只查询原operation状态。预算结束返回明确可恢复错误，不默认放行。
 
 V1 Principal、权益、Profile、文件、Auth和Admin响应均private,no-store。公开套餐也默认no-store，以兑现features实时更新；以后启用缓存须另定义一致性窗口，不在V1偷偷使用CDN长期缓存。
 
-## 4. SDK职责
+## 4. Consumer 集成职责
 
-- account-auth：login/signup/logout/OAuth/linking/password-reset意图；不含Server Key，不直接访问业务表。
-- account-auth-nextjs：Browser/Server client、Cookie、刷新、PKCE/Callback、验证helper、同源BFF模板；仅处理框架变化。
-- account-server：server-only，封装所有Account endpoint、超时、request_id、错误、幂等。初始化platformKey/apiUrl，平台编号只校验不授权。
+- `contracts/account/v1/openapi.json` 与 `contracts/admin/v1/openapi.json` 是公共 wire contract；兼容规则与 changelog 与合同同目录维护。
+- `tests/consumer-harness` 是 test-only 可执行 conformance Consumer。它用独立 Node server + 极薄 UI 验证 Cookie/session/CSRF、server-only Platform Key BFF、canonical allowlist、binary 与 fail-closed 授权，但不是产品 starter。
+- `apps/admin` 同样自行拥有 Admin Auth adapter；中央业务规则仍只在 PostgreSQL private 领域函数和中央 API 中实现。
+- `packages/domain` 保留为中央内部模块，Consumer 不安装、不 vendor，也不能通过 workspace 引用把内部 DTO/算法重新变成公共 SDK。
 
-~~~ts
-const account = createAccountClient({ platformKey, apiUrl, platformCode });
-await account.plans.list(); // 公开套餐，不传userToken
-const p = await account.principal.get(userToken);
-if (p.platformStatus !== 'active' || p.accountStatus !== 'active') deny();
-await account.activate(userToken);
-const products = await account.listSubscriptionProducts(); // server-only Platform Key boundary
-await account.subscription.redeem(userToken, { code, idempotencyKey });
-await account.configFiles.createUploadIntent(userToken, input, { idempotencyKey });
-// uploadContent只接受V1有界字节/可控流，不返回或传递Storage Secret
-await account.configFiles.uploadContent(userToken, fileId, bytes);
-~~~
+Account handler不依赖Consumer浏览器正确判断，服务端再次鉴权。业务保护判断platform/account状态；需付费能力还检查effective_status和features，不能只看Auth成功。Consumer 遇到中央不可用必须 fail closed，不能本地降级成 Free 或授权成功。
 
-Account handler不依赖Consumer浏览器正确判断，服务端再次鉴权。业务保护判断platformStatus与accountStatus；需付费能力还检查effective_status和features，不能只看Auth成功。
+## 5. Consumer Harness、Registry 与版本
 
-## 5. 模板、安装和版本
+Registry `contract_compatibility` 记录 Account/Admin `v1` canonical contract、Consumer Harness 与 Admin Consumer Lab 路径，并记录静态/Local E2E 验证命令；不再维护页面模板 inventory 或 starter 分发元数据。
 
-统一安装三个包 account-auth、account-auth-nextjs、account-server。正式包命名空间与Registry域名在发布前固定到项目拥有的地址，文档中的包名是职责名，不伪造当前已发布npm包。
+新平台不安装 AisenHub runtime SDK。接入时先固定中央 commit 与 contract major，阅读 changelog/compatibility，再按目标技术栈自行实现并拥有 Auth/BFF/integration，并用 Harness 对照协议/安全行为。品牌、页面布局和平台业务可以定制；金额、期限、授权、配额、支付进度和错误语义不能随 UI 改写。
 
-Registry含auth-login、OAuth callback、pricing-page、profile-settings、preferences-settings、subscription-status、subscription-redeem、config-files-manager、user-menu。Signup、Forgot Password和Reset Password在当前参考模板未提供，不登记为可安装路由。模板复制UI、路由配置和BFF调用胶水；授权/金额/日期/配额算法不复制。
+API保持 `/v1` 向后兼容扩展；破坏字段、鉴权或语义必须进入新 major 或经过明确兼容迁移。`pnpm contracts:breaking` 对基线检查删除 operation、删除 schema 字段、收窄 enum 等破坏性变化；`pnpm test:consumer-harness` 防止 `@kit/*`、Next/React、Admin/Domain 私有实现或 server credential marker 进入 Harness。
 
-模板的工程与组件组织可以参考 MakerKit，但不要求复刻 MakerKit 的视觉模板。产品 UI 以操作顺畅、信息清楚、状态反馈及时和页面有质感为验收标准，品牌、布局和视觉语言可独立定制。
-
-品牌配置含name/logo/routes，UI可以改；Pricing不含支付Checkout。文件UI显示真实占用（包括删除中/未知写入）、剩余预算、Replace所需临时空间及任务状态，不能把“已标记删除”显示成“容量已释放”。
-
-SDK使用SemVer，API保持/v1；破坏性字段或语义修改进入/v2或受审兼容发布。Registry产物记录SDK兼容区间、精确构建版本、依赖和内容校验和，发布固定版本URL。安装命令固定shadcn CLI版本，不用不可重现的latest。
-
-CI在临时全新Next.js消费项目安装实际打包SDK和Registry，执行typecheck/build/Playwright；浏览器bundle扫描禁止Platform Key、Supabase Secret和SQL凭据。模板preview不部署到生产。
+Harness static/process、Registry/contract gates 与 `test:e2e:consumer-harness` 的 Local browser/Auth/API/DB/Storage 链路共同构成中央 conformance 证据；Harness 浏览器资源中禁止 Platform Key、Supabase Secret、SQL/Provider 凭据。Harness 不是生产部署承诺，新平台仍必须在自己的仓库和环境完成实际验收。

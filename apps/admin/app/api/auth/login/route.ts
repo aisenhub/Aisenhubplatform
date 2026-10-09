@@ -8,7 +8,7 @@ import {
   writeLoginAcknowledgement,
   writeAuthSessionCookies,
   type AuthCookieWriter,
-} from '@kit/account-auth-nextjs';
+} from '../../../_lib/auth/server';
 import {
   config,
   errorBody,

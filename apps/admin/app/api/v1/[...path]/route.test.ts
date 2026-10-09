@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   authCookieNames,
   encodeAuthSessionAcknowledgement,
-} from '@kit/account-auth-nextjs';
+} from '../../../_lib/auth/server';
 
 import { DELETE, GET, POST, isAllowedAdminPath } from './route';
 import { POST as login } from '../../auth/login/route';
@@ -120,10 +120,7 @@ describe('admin BFF', () => {
   it('keeps the explicit allowlist aligned with every Admin OpenAPI operation', () => {
     const contract = JSON.parse(
       readFileSync(
-        resolve(
-          process.cwd(),
-          '../../docs/reference/contracts/admin.openapi.json',
-        ),
+        resolve(process.cwd(), '../../contracts/admin/v1/openapi.json'),
         'utf8',
       ),
     ) as {

@@ -151,7 +151,7 @@ actor_scope 对用户操作固定 user:账户ID，对 Admin 操作固定 admin:�
 - 所有跨租户敏感关系使用复合 FK；同账户关系进一步包含 platform_account_id。事件中的非空 code/subscription/grant 引用必须能由数据库验证。
 - Platform、Plan、Account、Code 不物理删除；Global Purge 留墓碑账户并脱离身份，文件内容按保留策略实际清除。
 - 所有 updated_at 由统一 trigger 更新，业务方不能覆盖 created_at。原始事件排序不依赖客户端时钟。
-- Profile/Preferences的row_version用于ETag/If-Match原子条件更新；成功PATCH递增，失败不变。updated_at不替代并发版本。迁移、API 和 SDK 必须共同遵守这一并发版本模型。
+- Profile/Preferences的row_version用于ETag/If-Match原子条件更新；成功PATCH递增，失败不变。updated_at不替代并发版本。迁移、API、canonical contract 和 Consumer 必须共同遵守这一并发版本模型。
 - 业务 Ledger 的 effect 字段 append-only；管理员原因不得携带个人信息。受控清除可匿名化 actor/metadata，不得改变 Plan、时间、sequence 或 reversal 目标。
 - 高风险审计同业务事务写入，审计写入失败则业务回滚。拒绝事件与基础设施失败的记录见订阅与兑换文档。
 - 迁移中显式建立 RLS、REVOKE、最小权限 policy 和必要索引；public 表的位置不代表可公开读取。

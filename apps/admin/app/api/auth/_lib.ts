@@ -12,7 +12,7 @@ import {
   currentLogoutFence,
   terminalClearAuthSessionCookies,
   type AuthCookieWriter,
-} from '@kit/account-auth-nextjs';
+} from '../../_lib/auth/server';
 import { createAdminMfaAttestation } from '@kit/domain/admin-mfa-attestation';
 
 import { accountApiSignal } from '../_lib/account-api';

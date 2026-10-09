@@ -1,26 +1,32 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "3.0.0",
   "status": "local-only",
   "registry_name": "aisenhub-local-registry",
   "build": {
-    "node": "24.19.0",
+    "node": "24.x",
     "pnpm": "11.18.0",
     "next": "16.3.8",
-    "source_package": "apps/template-preview"
+    "admin_consumer_lab": "apps/admin",
+    "consumer_harness": "tests/consumer-harness"
   },
-  "sdk_compatibility": {
-    "range": ">=0.1.0 <0.2.0",
-    "packages": [
-      "@kit/domain@0.1.0",
-      "@kit/account-auth@0.1.0",
-      "@kit/account-auth-nextjs@0.1.0",
-      "@kit/account-server@0.1.0"
-    ],
-    "checksums": "artifacts/sdk/manifest.json"
+  "contract_compatibility": {
+    "account": {
+      "major": "v1",
+      "contract": "contracts/account/v1/openapi.json"
+    },
+    "admin": {
+      "major": "v1",
+      "contract": "contracts/admin/v1/openapi.json"
+    },
+    "consumer_harness": "tests/consumer-harness",
+    "consumer_lab": "apps/admin/app/admin/consumer-lab/page.tsx"
   },
-  "templates": "registry/templates.json",
+  "verification": {
+    "static": "pnpm test:consumer-harness",
+    "local_e2e": "pnpm test:e2e:consumer-harness"
+  },
   "install": {
     "command": "pnpm install --frozen-lockfile",
-    "note": "This manifest describes a local preview; it is not a published npm or production Registry entry."
+    "note": "This manifest records local contract/conformance surfaces; it is not a published npm, template distribution, or production Registry entry."
   }
 }

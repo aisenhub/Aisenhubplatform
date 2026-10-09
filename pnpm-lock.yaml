@@ -187,15 +187,18 @@ importers:
 
   apps/admin:
     dependencies:
-      '@kit/account-auth-nextjs':
-        specifier: workspace:*
-        version: link:../../packages/account-auth-nextjs
       '@kit/domain':
         specifier: workspace:*
         version: link:../../packages/domain
       '@kit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@supabase/ssr':
+        specifier: 'catalog:'
+        version: 0.12.6(@supabase/supabase-js@2.111.0)
+      '@supabase/supabase-js':
+        specifier: 'catalog:'
+        version: 2.111.0
       lucide-react:
         specifier: 'catalog:'
         version: 1.28.0(react@19.2.8)
@@ -227,108 +230,6 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-
-  apps/template-preview:
-    dependencies:
-      '@kit/account-auth-nextjs':
-        specifier: workspace:*
-        version: link:../../packages/account-auth-nextjs
-      '@kit/account-server':
-        specifier: workspace:*
-        version: link:../../packages/account-server
-      '@kit/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
-      '@kit/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      next:
-        specifier: 'catalog:'
-        version: 16.3.8(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react:
-        specifier: 'catalog:'
-        version: 19.2.8
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.8(react@19.2.8)
-    devDependencies:
-      '@tailwindcss/postcss':
-        specifier: 'catalog:'
-        version: 4.3.3
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.3
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.18
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.2.4(@types/react@19.2.18)
-      tailwindcss:
-        specifier: 'catalog:'
-        version: 4.3.3
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-
-  packages/account-auth:
-    devDependencies:
-      '@kit/domain':
-        specifier: workspace:*
-        version: link:../domain
-      '@kit/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-
-  packages/account-auth-nextjs:
-    dependencies:
-      '@kit/account-auth':
-        specifier: workspace:*
-        version: link:../account-auth
-      '@supabase/ssr':
-        specifier: 'catalog:'
-        version: 0.12.6(@supabase/supabase-js@2.111.0)
-      '@supabase/supabase-js':
-        specifier: 'catalog:'
-        version: 2.111.0
-    devDependencies:
-      '@kit/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-
-  packages/account-server:
-    dependencies:
-      '@kit/account-auth':
-        specifier: workspace:*
-        version: link:../account-auth
-      '@kit/domain':
-        specifier: workspace:*
-        version: link:../domain
-    devDependencies:
-      '@kit/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.13.3
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))

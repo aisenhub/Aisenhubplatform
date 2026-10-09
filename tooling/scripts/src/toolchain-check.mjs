@@ -20,6 +20,14 @@ function assertEqual(label, actual, expected) {
     );
 }
 
+function assertNodeMajor(label, actual, expectedMajor) {
+  const actualMajor = actual?.split('.')[0];
+  if (actualMajor !== expectedMajor)
+    throw new Error(
+      `TOOLCHAIN_MISMATCH: ${label} expected ${expectedMajor}.x, received ${actual}`,
+    );
+}
+
 function pnpmOutput(args) {
   return execFileSync(process.execPath, [pnpmCliPath(), ...args], {
     cwd: repositoryRoot,
@@ -36,8 +44,9 @@ const workflow = readFileSync(
   resolve(repositoryRoot, '.github/workflows/workflow.yml'),
   'utf8',
 );
+const nodeMajorRange = `${TOOLCHAIN.node.split('.')[0]}.x`;
 
-assertEqual('package engines.node', packageJson.engines?.node, TOOLCHAIN.node);
+assertEqual('package engines.node', packageJson.engines?.node, nodeMajorRange);
 assertEqual('package engines.pnpm', packageJson.engines?.pnpm, TOOLCHAIN.pnpm);
 assertEqual(
   'package packageManager',
@@ -50,7 +59,7 @@ assertEqual(
   TOOLCHAIN.supabase,
 );
 assertEqual('.nvmrc', nvmrc, TOOLCHAIN.node);
-assertEqual('registry node', registry.build?.node, TOOLCHAIN.node);
+assertEqual('registry node', registry.build?.node, nodeMajorRange);
 assertEqual('registry pnpm', registry.build?.pnpm, TOOLCHAIN.pnpm);
 assertEqual('Deno lock path', denoConfig.lock?.path, './deno.lock');
 assertEqual('Deno lock frozen', denoConfig.lock?.frozen, true);
@@ -66,7 +75,11 @@ for (const expected of [
     throw new Error(`TOOLCHAIN_MISMATCH: workflow is missing ${expected}`);
 }
 
-assertEqual('runtime Node', process.versions.node, TOOLCHAIN.node);
+assertNodeMajor(
+  'runtime Node',
+  process.versions.node,
+  TOOLCHAIN.node.split('.')[0],
+);
 assertEqual('runtime pnpm', pnpmOutput(['--version']), TOOLCHAIN.pnpm);
 
 const deno = spawnSync(denoCommand(), ['--version'], {
@@ -89,7 +102,8 @@ assertEqual(
 console.log(
   JSON.stringify(
     {
-      node: TOOLCHAIN.node,
+      node: nodeMajorRange,
+      nodeBaseline: TOOLCHAIN.node,
       pnpm: TOOLCHAIN.pnpm,
       deno: TOOLCHAIN.deno,
       supabase: TOOLCHAIN.supabase,

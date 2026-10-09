@@ -6,7 +6,7 @@
 
 ## Context
 
-Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份和平台内账户能力。系统需要在共享 Auth 身份的同时保持平台租户隔离，并让 Account API、Admin、Maintenance 和 SDK 使用一致的安全与领域规则。
+Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份和平台内账户能力。系统需要在共享 Auth 身份的同时保持平台租户隔离，并让 Account API、Admin、Maintenance 和 Consumer HTTP 集成使用一致的安全与领域规则。
 
 ## Decisions
 
@@ -26,10 +26,10 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 ## Consequences
 
 - `platform_accounts` 是平台用户状态根；同一 Auth 用户可以在多个平台注册账户，但各平台资料、偏好、权益和文件隔离。
-- Account API 和 Admin API 必须通过受控 context 调用 PostgreSQL private 函数；页面、BFF、SDK 和 Maintenance 只能编排请求，不能绕过领域入口。
+- Account API 和 Admin API 必须通过受控 context 调用 PostgreSQL private 函数；页面、BFF、Consumer HTTP 集成和 Maintenance 只能编排请求，不能绕过领域入口。
 - 关闭、暂停、删除中和平台禁用状态必须在每次敏感写入时重新检查；中央服务不可用时默认拒绝授权。
 - 文件、权益、Key、兑换码和删除任务都需要 append-only 事件或可恢复状态，不能用直接覆盖投影或物理删除掩盖历史。
-- 新平台通过配置、Origin、Plan、Key 和 SDK 接入，不通过核心代码中的 hard-coded platform 分支接入。
+- 新平台通过配置、Origin、Plan、Key 和 canonical `/v1` HTTP contract 接入，不通过核心代码中的 hard-coded platform 分支接入。
 
 ## 当前默认参数
 
@@ -41,7 +41,7 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | 文件数量/总量 | 10 个 / 10 MiB | 平台账户预算 |
 | Access JWT | 15 分钟 | Auth 配置目标 |
 | Recent proof | 5 分钟 | 普通近期认证和 Admin step-up |
-| Account API 总预算 | 5 秒 | SDK 默认请求超时 |
+| Account API 总预算 | 5 秒 | Consumer BFF 推荐默认请求超时；Harness 用同一边界验证 |
 | 上传接收并发 | 每实例 16、每账户 2 | 进程内 `UploadGate` |
 | 兑换限流 | 每账户 5/分钟、每可信 IP 30/分钟、每平台 300/分钟 | 数据库窗口计数器 |
 | 关闭账户清理 | 30 天 | 资料、偏好和文件的默认清理策略 |
@@ -71,7 +71,7 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | Account/Admin/BFF 的真实部署 host 和可信代理链 | SSR、上传、Origin 和缓存验证 | 本地 HTTP、CSRF、Storage adapter 测试 |
 | OAuth 测试客户端、回调地址和 SMTP 测试配置 | Provider、邮箱和浏览器 E2E | 密码流程、callback 负向测试和会话单测 |
 | 独立备份目标、加密凭据和告警渠道 | 联合备份、墓碑恢复和 RPO/RTO 演练 | manifest、屏障和隔离恢复模拟 |
-| 正式 npm scope、Registry 地址和发布权限 | SDK/Registry 发布验证 | 本地 tarball、manifest 和消费项目构建 |
+| 新平台仓库访问、contract baseline 与目标运行环境 | Contract-First Consumer 接入验证 | Harness 对照、目标平台自有 Auth/BFF 实现、构建与本地 HTTP 验收 |
 | 生产区域、预算、平台数量和负载 | 容量、性能和运营阈值 | 默认负载下的 Local 压力探针 |
 
 ## 开发与发布边界

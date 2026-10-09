@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "task": "TASK-0103",
-  "scope": "database-to-registry consumer compatibility",
+  "scope": "database-to-contract-first-consumer compatibility",
   "contracts": [
     {
       "id": "subscription-product-catalog",
@@ -14,29 +14,19 @@
         "contains": "subscriptionProductDto"
       },
       "openapi": {
-        "path": "docs/reference/contracts/account.openapi.json",
+        "path": "contracts/account/v1/openapi.json",
         "pointer": "#/components/schemas/SubscriptionProduct"
       },
       "consumers": [
         {
-          "id": "account-server",
-          "path": "packages/account-server/src/index.ts",
-          "contains": "listSubscriptionProducts"
-        },
-        {
           "id": "consumer-bff",
-          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
-          "contains": "v1/subscription/products"
+          "path": "tests/consumer-harness/server.mjs",
+          "contains": "publicOperation"
         },
         {
-          "id": "consumer-ui",
-          "path": "apps/template-preview/app/subscription/page.tsx",
-          "contains": "isSubscriptionProductList"
-        },
-        {
-          "id": "registry",
-          "path": "registry/templates.json",
-          "contains": "subscription-status"
+          "id": "consumer-contract",
+          "path": "tests/consumer-harness/contract.mjs",
+          "contains": "/v1/subscription/products"
         }
       ],
       "test_owners": [
@@ -44,11 +34,6 @@
           "id": "TASK-0103-NEG",
           "path": "packages/domain/tests/billing.test.ts",
           "contains": "validates the product DTO"
-        },
-        {
-          "id": "TASK-0103-REC",
-          "path": "packages/account-server/tests/client.test.ts",
-          "contains": "lists subscription products"
         },
         {
           "id": "account-api-public-products",
@@ -64,7 +49,7 @@
       "fields": [
         {
           "name": "code",
-          "consumers": ["account-server", "consumer-ui", "registry"],
+          "consumers": ["consumer-contract"],
           "tests": [
             "TASK-0103-NEG",
             "account-api-public-products",
@@ -73,57 +58,57 @@
         },
         {
           "name": "name",
-          "consumers": ["consumer-ui", "registry"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "description",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "price",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "currency",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.kind",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.duration_value",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.duration_unit",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "price_version",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "recommended",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "enabled",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "purchasable",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": [
             "TASK-0103-NEG",
             "account-api-public-products",
@@ -132,7 +117,7 @@
         },
         {
           "name": "reason",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG", "account-api-public-products"]
         }
       ]
@@ -148,24 +133,19 @@
         "contains": "subscriptionCheckoutDto"
       },
       "openapi": {
-        "path": "docs/reference/contracts/account.openapi.json",
+        "path": "contracts/account/v1/openapi.json",
         "pointer": "#/components/schemas/SubscriptionCheckoutData"
       },
       "consumers": [
         {
-          "id": "account-server",
-          "path": "packages/account-server/src/index.ts",
-          "contains": "createSubscriptionCheckout"
-        },
-        {
           "id": "consumer-bff",
-          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
-          "contains": "v1/subscription/checkout"
+          "path": "tests/consumer-harness/server.mjs",
+          "contains": "operationFor"
         },
         {
-          "id": "consumer-ui",
-          "path": "apps/template-preview/app/subscription/page.tsx",
-          "contains": "SubscriptionCheckoutDto"
+          "id": "consumer-contract",
+          "path": "tests/consumer-harness/contract.mjs",
+          "contains": "/v1/subscription/checkout"
         }
       ],
       "test_owners": [
@@ -173,67 +153,62 @@
           "id": "checkout-api",
           "path": "supabase/functions/account-api/index.test.ts",
           "contains": "creates and reads a server-priced checkout snapshot"
-        },
-        {
-          "id": "checkout-sdk",
-          "path": "packages/account-server/tests/client.test.ts",
-          "contains": "creates and reads subscription checkout"
         }
       ],
       "fields": [
         {
           "name": "checkout_id",
-          "consumers": ["account-server", "consumer-ui"],
-          "tests": ["checkout-api", "checkout-sdk"]
+          "consumers": ["consumer-contract"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "status",
-          "consumers": ["consumer-ui"],
-          "tests": ["checkout-api", "checkout-sdk"]
+          "consumers": ["consumer-contract"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "product_code",
-          "consumers": ["account-server", "consumer-ui"],
-          "tests": ["checkout-api", "checkout-sdk"]
+          "consumers": ["consumer-contract"],
+          "tests": ["checkout-api"]
         },
         {
           "name": "price",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "currency",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "term",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "expires_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "payment_url",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "paid_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "granted_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "progress",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         }
       ]
@@ -249,24 +224,19 @@
         "contains": "entitlementDto"
       },
       "openapi": {
-        "path": "docs/reference/contracts/account.openapi.json",
+        "path": "contracts/account/v1/openapi.json",
         "pointer": "#/components/schemas/Entitlement"
       },
       "consumers": [
         {
-          "id": "account-server",
-          "path": "packages/account-server/src/index.ts",
-          "contains": "getSubscription"
-        },
-        {
           "id": "consumer-bff",
-          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
-          "contains": "v1/subscription"
+          "path": "tests/consumer-harness/server.mjs",
+          "contains": "protectedFeature"
         },
         {
-          "id": "consumer-ui",
-          "path": "apps/template-preview/app/subscription/page.tsx",
-          "contains": "EntitlementDto"
+          "id": "consumer-contract",
+          "path": "tests/consumer-harness/contract.mjs",
+          "contains": "/v1/subscription"
         }
       ],
       "test_owners": [
@@ -284,47 +254,47 @@
       "fields": [
         {
           "name": "effective_status",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "entitlement_kind",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "plan",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api", "domain-entitlement"]
         },
         {
           "name": "subscription_product",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "features",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api", "domain-entitlement"]
         },
         {
           "name": "started_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "current_period_end",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "evaluated_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "next_transition_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         }
       ]
@@ -340,7 +310,7 @@
         "contains": "admin_billing_order_read_v3"
       },
       "openapi": {
-        "path": "docs/reference/contracts/admin.openapi.json",
+        "path": "contracts/admin/v1/openapi.json",
         "pointer": "#/components/schemas/BillingOrderDetail"
       },
       "consumers": [

@@ -57,4 +57,9 @@ describe('admin navigation model', () => {
     expect(adminNavigationLabel('/admin/security')).toBe('安全与账户');
     expect(adminNavigationLabel('/admin/mfa')).toBe('管理员控制台');
   });
+
+  it('exposes the global Consumer Lab without platform context', () => {
+    expect(adminNavigationLabel('/admin/consumer-lab')).toBe('Consumer Lab');
+    expect(parseAdminPlatformPath('/admin/consumer-lab')).toBeNull();
+  });
 });

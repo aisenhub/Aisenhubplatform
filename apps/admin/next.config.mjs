@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   typescript: { ignoreBuildErrors: false },
-  transpilePackages: ['@kit/ui', '@kit/shared', '@kit/account-auth-nextjs'],
+  transpilePackages: ['@kit/ui', '@kit/shared'],
   allowedDevOrigins: ['127.0.0.1'],
 };
 

@@ -672,6 +672,7 @@ async function runResponsiveA11yMatrix() {
     },
     { label: 'Operations', path: '/admin/operations' },
     { label: 'Audit', path: '/admin/audit' },
+    { label: 'Consumer Lab', path: '/admin/consumer-lab' },
     { label: 'Security', path: '/admin/security' },
     { label: 'MFA', path: '/admin/mfa' },
   ];

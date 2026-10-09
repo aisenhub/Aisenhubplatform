@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "contracts": {
+    "account": {
+      "major": "v1",
+      "spec_version": "1.0.1",
+      "path": "contracts/account/v1/openapi.json"
+    },
+    "admin": {
+      "major": "v1",
+      "spec_version": "1.0.0",
+      "path": "contracts/admin/v1/openapi.json"
+    }
+  }
+}

@@ -254,17 +254,16 @@ async function main() {
     ['run', 'test:sql:bill-05-concurrency'],
     localEnv,
   );
+  runPnpm('admin typecheck', ['--filter', 'admin', 'typecheck'], localEnv);
+  runPnpm('contract breaking compatibility', ['contracts:breaking']);
+  runPnpm('registry contract test', ['test:registry']);
+  runPnpm('consumer harness boundary', ['test:consumer-harness']);
+  runPnpm('runtime import probe', ['runtime:probe'], localEnv);
   runPnpm(
-    'template typecheck',
-    ['--filter', 'template-preview', 'typecheck'],
+    'consumer harness Local E2E',
+    ['test:e2e:consumer-harness'],
     localEnv,
   );
-  runPnpm('admin typecheck', ['--filter', 'admin', 'typecheck'], localEnv);
-  runPnpm('SDK package test', ['test:sdk:m5-02']);
-  runPnpm('registry consumer test', ['test:registry:m5-04']);
-  runPnpm('consumer install test', ['test:consumer:m5-05'], localEnv);
-  runPnpm('runtime import probe', ['runtime:probe'], localEnv);
-  runPnpm('consumer/admin browser flow', ['test:e2e:t16-r2'], localEnv);
   const accountApi = await startAccountApiForT12(localEnv);
   const admin = await startAdminForT12(localEnv);
   try {
