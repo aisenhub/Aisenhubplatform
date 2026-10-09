@@ -15,7 +15,9 @@
 
 1. 根 `AGENTS.md`、docs 导航/规则、开发发布流程、platform onboarding。
 2. 本 Proposal design/plan/当前 phase/verification-record。
-3. canonical contracts、Admin navigation、当前 template-preview、Registry、T16/TASK-0801。
+3. canonical contracts、Admin Consumer Lab、Consumer Harness、Registry、TASK-0801。
+
+当前 Proposal 已完成并交付；后续只在新的明确任务中修改这些边界，不继续沿用本执行计划追加产品代码。
 
 ## 执行提示
 

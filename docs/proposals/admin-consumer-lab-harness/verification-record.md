@@ -19,11 +19,11 @@
 
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | Contract foundation | 验收通过待推送 | Account spec 1.0.1 补齐 `purchases_paused`；breaking comparator 可单测并解析 local `$ref`；前序 Proposal 当前状态已收口 | push/远端核对 | 828132c | GitHub connection reset，待重试 |
-| 02 | Consumer Conformance Harness | 验收通过待推送 | test-only Node Harness、HttpOnly Auth/CSRF/BFF、thin UI、static+process smoke 已实施 | push/远端核对 | 9299cc5 | 继承 GitHub 网络阻塞 |
-| 03 | Admin Consumer Lab | 验收通过待推送 | `/admin/consumer-lab`、canonical contract summary/table、Global 导航与 unit/build 验证已实施 | push/远端核对 | 34b09e3 | 继承 GitHub 网络阻塞 |
-| 04 | 删除 template-preview 与迁移 gates/E2E | 验收通过待推送 | Harness 扩至 19 canonical operations；真实 Local Auth/API/Storage E2E；Registry/TASK-0801/consumer ownership 已迁移；旧 app/T16/template inventory 已删除；workspace 收敛为 8 projects | push/远端核对 | 47ed9c1 | GitHub connection reset，待重试 |
-| 05 | 文档与 R3 总体验收 | 验收通过待推送 | active architecture/reference/guides 已同步；Admin T12 纳入 Consumer Lab；最终 TASK-0801 20 executable gates PASS | commit/push/远端核对 | 待提交 | 未验证 |
+| 01 | Contract foundation | 已交付 | Account spec 1.0.1 补齐 `purchases_paused`；breaking comparator 可单测并解析 local `$ref`；前序 Proposal 当前状态已收口 | 无 | 828132c | 已 push；远端 head `f7fb885` 包含该 commit |
+| 02 | Consumer Conformance Harness | 已交付 | test-only Node Harness、HttpOnly Auth/CSRF/BFF、thin UI、static+process smoke 已实施 | 无 | 9299cc5 | 已 push；远端 head `f7fb885` 包含该 commit |
+| 03 | Admin Consumer Lab | 已交付 | `/admin/consumer-lab`、canonical contract summary/table、Global 导航与 unit/build 验证已实施 | 无 | 34b09e3 | 已 push；远端 head `f7fb885` 包含该 commit |
+| 04 | 删除 template-preview 与迁移 gates/E2E | 已交付 | Harness 扩至 19 canonical operations；真实 Local Auth/API/Storage E2E；Registry/TASK-0801/consumer ownership 已迁移；旧 app/T16/template inventory 已删除；workspace 收敛为 8 projects | 无 | 47ed9c1 | 已 push；远端 head `f7fb885` 包含该 commit |
+| 05 | 文档与 R3 总体验收 | 已交付 | active architecture/reference/guides 已同步；Admin T12 纳入 Consumer Lab；最终 TASK-0801 20 executable gates PASS | 无 | f7fb885 | 已 push 并核对远端 SHA |
 
 状态只使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
 
@@ -102,19 +102,20 @@
 | 2026-10-09 | 05 | worktree | `pnpm format:check` | Local | 0 | PASS：370 files |
 | 2026-10-09 | 05 | worktree | `pnpm test:e2e:t12-r2`（直接调用） | Local | 1 | ENV FAIL：缺少 T12 要求的 Local Supabase env，浏览器未启动；保留守卫，改由 TASK-0801 canonical launcher 注入 |
 | 2026-10-09 | 05 | worktree | `pnpm verify:task:0801 --reuse-local` | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：20 executable gates；Deno/API 97 tests、DB 58 files/1082 tests、Harness 9 项 Local E2E、Admin MFA/安全流全 PASS；responsive/a11y 75 route-viewports（含 Consumer Lab） |
+| 2026-10-09 | 05 | f7fb885 | `git push -u origin codex/admin-consumer-lab-harness` + `git ls-remote origin refs/heads/codex/admin-consumer-lab-harness` | Local/GitHub | 0 | PASS：远端 head `f7fb885eb16fd419e2ea2c851fc183cd4a57a8f3` 与本地实现 head 完全一致；Phase 01–05 commits 均已交付 |
 
 ## GitHub 交付记录
 
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| 01 | 828132c | codex/admin-consumer-lab-harness | 失败 | 未核对 | 两次 GitHub HTTPS connection reset |
-| 02 | 9299cc5 | codex/admin-consumer-lab-harness | 待推送 | 未核对 | 继承网络阻塞 |
-| 03 | 34b09e3 | codex/admin-consumer-lab-harness | 待推送 | 未核对 | 继承网络阻塞 |
-| 04 | 47ed9c1 | codex/admin-consumer-lab-harness | 失败 | 未核对 | GitHub HTTPS connection reset |
-| 05 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
+| 01 | 828132c | codex/admin-consumer-lab-harness | 已 push | 已核对 | 远端 `f7fb885` 包含 |
+| 02 | 9299cc5 | codex/admin-consumer-lab-harness | 已 push | 已核对 | 远端 `f7fb885` 包含 |
+| 03 | 34b09e3 | codex/admin-consumer-lab-harness | 已 push | 已核对 | 远端 `f7fb885` 包含 |
+| 04 | 47ed9c1 | codex/admin-consumer-lab-harness | 已 push | 已核对 | 远端 `f7fb885` 包含 |
+| 05 | f7fb885 | codex/admin-consumer-lab-harness | 已 push | 已核对 | 远端 head 精确匹配 |
 
 ## 交接信息
 
-- 下一步：仅创建 Phase 05 提交、push 当前任务分支并核对远端 SHA；push 成功后再把 Proposal/各 Phase 标为 Completed/已交付。
-- 当前未提交修改：Phase 05 active docs、T12 Consumer Lab 浏览器覆盖与验证记录，归本任务。
+- 下一步：本 Proposal 无后续实施阶段；新的功能或集成需求应创建新任务/Proposal。
+- 当前未提交修改：仅本次交付状态记录，提交并推送后工作区应保持 clean。
 - 生产部署/真实支付/费用/Production 数据：未授权且不在范围。

@@ -1,6 +1,6 @@
 # Admin Consumer Lab 与 Consumer Conformance Harness 总计划
 
-状态：In Progress
+状态：Completed
 
 关联：[优化设计](design.md) · [执行交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -20,11 +20,11 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | 修复 canonical contract 漂移并强化 breaking gate；收尾前序 Proposal 状态 | 无 | 验收通过待推送 | [01 Contract foundation](phases/01-contract-foundation.md) |
-| 02 | 建立非 workspace、极薄 Consumer Conformance Harness | 01 | 验收通过待推送 | [02 Harness](phases/02-consumer-conformance-harness.md) |
-| 03 | 在 Admin 增加 Consumer Lab | 01，可与 02 部分并行 | 验收通过待推送 | [03 Admin Lab](phases/03-admin-consumer-lab.md) |
-| 04 | 迁移 E2E/Registry/TASK-0801 并删除 `apps/template-preview` | 02、03 | 验收通过待推送 | [04 Remove preview](phases/04-remove-template-preview.md) |
-| 05 | 同步 active 文档并执行最终 R3 Local 验收 | 04 | 验收通过待推送 | [05 Final verification](phases/05-docs-and-r3-verification.md) |
+| 01 | 修复 canonical contract 漂移并强化 breaking gate；收尾前序 Proposal 状态 | 无 | 已交付 | [01 Contract foundation](phases/01-contract-foundation.md) |
+| 02 | 建立非 workspace、极薄 Consumer Conformance Harness | 01 | 已交付 | [02 Harness](phases/02-consumer-conformance-harness.md) |
+| 03 | 在 Admin 增加 Consumer Lab | 01，可与 02 部分并行 | 已交付 | [03 Admin Lab](phases/03-admin-consumer-lab.md) |
+| 04 | 迁移 E2E/Registry/TASK-0801 并删除 `apps/template-preview` | 02、03 | 已交付 | [04 Remove preview](phases/04-remove-template-preview.md) |
+| 05 | 同步 active 文档并执行最终 R3 Local 验收 | 04 | 已交付 | [05 Final verification](phases/05-docs-and-r3-verification.md) |
 
 Phase 02 与 Phase 03 可在 Phase 01 后并行设计，但本次单 Agent 串行实施。Phase 04 是 destructive code removal gate，只有新 Harness 已通过真实 Local 行为且 Admin Lab build/unit 可用时才能进入。
 
