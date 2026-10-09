@@ -383,6 +383,27 @@ function fakeDatabase(
             ] as unknown as R[];
           }
           if (
+            query.startsWith('select * from private.admin_identity_accounts')
+          ) {
+            return [
+              {
+                user_id: userId,
+                identity_state: 'active',
+                account_count: 1,
+                accounts: [
+                  {
+                    platform_id: platformId,
+                    platform_code: 'fixture',
+                    platform_name: 'Fixture',
+                    platform_status: 'active',
+                    platform_account_id: sessionId,
+                    status: 'active',
+                  },
+                ],
+              },
+            ] as unknown as R[];
+          }
+          if (
             query.startsWith('select * from private.admin_deletion_job_list')
           ) {
             return [
@@ -1773,6 +1794,70 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   assertEquals(searchedList.status, 200);
   assertEquals((await searchedList.json()).data[0].code, 'fixture');
 
+  let authIdentityFilter: string | null | undefined;
+  const identities = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/accounts?q=identity%40example.invalid&platform_id=${platformId}&limit=20`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      listAdminAuthUsers: async (page, _perPage, filter) => {
+        authIdentityFilter = filter;
+        return page === 1
+          ? [
+              {
+                id: userId,
+                email: 'identity@example.invalid',
+                created_at: '2026-09-08T00:00:00.000Z',
+                last_sign_in_at: '2026-09-08T01:00:00.000Z',
+              },
+            ]
+          : [];
+      },
+    },
+  );
+  assertEquals(identities.status, 200);
+  const identityPayload = await identities.json();
+  assertEquals(authIdentityFilter, 'identity@example.invalid');
+  assertEquals(identityPayload.data[0].email, 'identity@example.invalid');
+  assertEquals(identityPayload.data[0].accounts[0].platform_id, platformId);
+
+  const identityByUserId = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/accounts?q=${userId}`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      getAdminAuthUserById: async (requestedUserId) =>
+        requestedUserId === userId
+          ? {
+              id: userId,
+              email: 'identity@example.invalid',
+              created_at: '2026-09-08T00:00:00.000Z',
+              last_sign_in_at: '2026-09-08T01:00:00.000Z',
+            }
+          : null,
+      listAdminAuthUsers: async () => {
+        throw new Error('UUID identity lookup must not scan Auth users');
+      },
+    },
+  );
+  assertEquals(identityByUserId.status, 200);
+  assertEquals((await identityByUserId.json()).data[0].user_id, userId);
+
+  const invalidIdentityScope = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/accounts?platform_id=not-a-uuid',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(invalidIdentityScope.status, 400);
+
   const origins = await handleRequest(
     new Request(
       'http://local/functions/v1/account-api/admin/api/v1/platforms/00000000-0000-4000-8000-000000000001/origins?q=local',
@@ -1910,6 +1995,7 @@ Deno.test('Account API exposes central Billing order and requery wrappers', asyn
       method: 'POST',
       headers: {
         ...auth,
+        'X-Recent-Auth-Proof': '00000000-0000-4000-8000-000000000009',
         'If-Match': 'W/"1"',
         'Content-Type': 'application/json',
       },
@@ -2016,7 +2102,7 @@ Deno.test('Account API allows subscription config mutation with AAL2 and no rece
   assertEquals(patch.headers.get('etag'), 'W/"3"');
 });
 
-Deno.test('Account API keeps recent MFA on critical Key and Global Delete operations', async () => {
+Deno.test('Account API keeps recent MFA on critical Admin management operations', async () => {
   const keyCreate = await handleRequest(
     new Request(
       `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/keys`,
@@ -2033,6 +2119,89 @@ Deno.test('Account API keeps recent MFA on critical Key and Global Delete operat
   );
   assertEquals(keyCreate.status, 403);
   assertEquals((await keyCreate.json()).error.code, 'RECENT_MFA_REQUIRED');
+
+  const accountSuspend = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${sessionId}/suspend`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(accountSuspend.status, 403);
+  assertEquals((await accountSuspend.json()).error.code, 'RECENT_MFA_REQUIRED');
+
+  const accountPatch = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${sessionId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'suspended' }),
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(accountPatch.status, 403);
+  assertEquals((await accountPatch.json()).error.code, 'RECENT_MFA_REQUIRED');
+
+  const accountSuspendRead = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${sessionId}/suspend`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(accountSuspendRead.status, 404);
+
+  const billingRequery = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/billing/orders/${keyId}/requery`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'If-Match': 'W/"1"',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ operation_id: sessionId, reason: 'no proof' }),
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(billingRequery.status, 403);
+  assertEquals((await billingRequery.json()).error.code, 'RECENT_MFA_REQUIRED');
+
+  const billingResolve = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/billing/orders/${keyId}/resolve`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'If-Match': 'W/"1"',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation_id: sessionId,
+          decision: 'closed_anomaly',
+          reason: 'no proof',
+        }),
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(billingResolve.status, 403);
+  assertEquals((await billingResolve.json()).error.code, 'RECENT_MFA_REQUIRED');
 
   const globalDelete = await handleRequest(
     new Request(

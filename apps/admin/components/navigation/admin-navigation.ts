@@ -25,6 +25,7 @@ export type AdminNavigationItem = {
   description: string;
   icon: LucideIcon;
   match?: 'exact' | 'prefix';
+  aliases?: string[];
 };
 
 export type AdminNavigationGroup = {
@@ -66,7 +67,8 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
       {
         key: 'billing',
         label: '计费管理',
-        href: '/admin/billing',
+        href: '/admin/billing/orders',
+        aliases: ['/admin/billing'],
         description: '中央订单、结算、Provider 与人工处理',
         icon: CreditCard,
       },
@@ -268,11 +270,49 @@ export function isAdminNavigationItemActive(
   pathname: string,
   item: AdminNavigationItem,
 ): boolean {
+  const candidates = [item.href, ...(item.aliases ?? [])];
   if (item.match === 'exact' || item.href === '/admin') {
-    return pathname === item.href;
+    return candidates.includes(pathname);
   }
 
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  return candidates.some(
+    (candidate) =>
+      pathname === candidate || pathname.startsWith(`${candidate}/`),
+  );
+}
+
+export function mapAdminScopeRoute(
+  pathname: string,
+  targetPlatformId: string | null,
+): string {
+  const currentPlatform = parseAdminPlatformPath(pathname);
+
+  if (targetPlatformId) {
+    const targetPrefix = `/admin/platforms/${encodeURIComponent(targetPlatformId)}`;
+    if (currentPlatform) {
+      return `${targetPrefix}${currentPlatform.suffix}`;
+    }
+    if (
+      pathname === '/admin/accounts' ||
+      pathname.startsWith('/admin/accounts/')
+    ) {
+      return `${targetPrefix}/accounts`;
+    }
+    if (
+      pathname === '/admin/billing' ||
+      pathname === '/admin/billing/orders' ||
+      pathname.startsWith('/admin/billing/orders/')
+    ) {
+      return `${targetPrefix}/billing`;
+    }
+    return targetPrefix;
+  }
+
+  if (!currentPlatform) return pathname;
+  if (currentPlatform.suffix === '') return '/admin';
+  if (currentPlatform.suffix === '/accounts') return '/admin/accounts';
+  if (currentPlatform.suffix === '/billing') return '/admin/billing/orders';
+  return '/admin/platforms';
 }
 
 export function adminNavigationLabel(pathname: string): string {

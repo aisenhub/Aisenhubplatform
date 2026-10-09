@@ -1,8 +1,8 @@
 # Admin 平台中心化与双轨透镜信息架构设计
 
-状态：Proposed
+状态：Implemented（核心范围）
 
-文档性质：后续优化目标架构；尚未实施。本文件冻结信息架构、职责边界、双轨透镜模型（Dual-Scope Lens Model）与平滑迁移原则，不代表当前代码已经具备目标页面或所有数据聚合能力，也不在当前阶段引入破坏性变更。
+文档性质：已落地核心目标架构。本文件冻结信息架构、职责边界、双轨透镜模型（Dual-Scope Lens Model）与平滑迁移原则；Global Identity、共享 Billing Workspace、双透镜导航与 URL 驱动筛选已经实现。独立 Settlement UI、全局 Identity 写操作等未有既有领域合同支撑的能力仍属于后续范围，不因本状态而视为已实现。
 
 关联：[当前 Admin 架构](../../architecture/modules/frontends.md) · [系统概览](../../architecture/overview.md) · [ADR-0001 自营平台统一账户与安全边界](../../decisions/0001-platform-account-boundaries.md) · [Admin 2.0 导航与桌面工作区](../admin-2-navigation-ia/design.md) · [Admin 操作体验改进](../admin-ux-review/design.md) · [Admin 设计系统](../../../apps/admin/DESIGN.md)
 
@@ -277,7 +277,7 @@ Aisenhub
 /admin/platforms/:platformId/settings/keys  # 平台 Platform Keys
 ```
 
-*迁移策略：第一阶段完全保留现有 `/admin/billing` 访问入口，并在其顶部增加 Tab 或直接重构为支持平台筛选的订单中心；第二阶段在平台工作区新增 `/billing` 路由并注入 `platformId` 预筛，逐步实现平滑过渡。*
+*当前实现：保留 `/admin/billing` 兼容入口，并以 `/admin/billing/orders` 作为全局订单中心 canonical UI route；平台工作区 `/billing` 复用同一订单工作台并锁定 URL `platformId`。*
 
 ---
 
@@ -290,7 +290,7 @@ Aisenhub
 2. **同源 BFF 边界不可逾越**：
    浏览器端仅通过同源 `/api/v1/...` 调用后端能力，严禁在前端直连数据库、调用外部 Storage 裸链接或分发服务端 Platform Secret。
 3. **敏感操作安全阶梯不可降级**：
-   无论在全局还是单平台，敏感操作（账户强制封停、密钥轮转、删除任务重试、退款执行）必须严格依赖服务端校验近期 MFA（Step-up proof 5 分钟窗口）。UI 上的按钮状态仅做引导，不构成权限防护。
+   无论在全局还是单平台，敏感操作（平台账户状态变更、密钥轮转、Global Delete 启动/重试、Billing requery/resolve）必须严格依赖服务端校验近期 MFA（当前 Admin step-up 最长 30 分钟；60 秒 server-signed attestation 仅用于签发 proof）。UI 上的按钮状态仅做引导，不构成权限防护。
 4. **诚实呈现系统状态**：
    数据源失败、超时或权限不足时，必须明确反馈错误状态，严禁将未确认状态渲染为正常或“零数据”。未知结果（Unknown Outcome）必须保留恢复屏障。
 5. **不随意扩张 Global Sidebar**：

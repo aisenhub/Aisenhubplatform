@@ -216,6 +216,14 @@
     "operations": [
       {
         "method": "GET",
+        "path": "/admin/api/v1/accounts",
+        "operationId": "adminListIdentities",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/admin/api/v1/audit",
         "operationId": "adminListAuditLogs",
         "security": [

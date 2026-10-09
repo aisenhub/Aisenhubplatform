@@ -12,7 +12,7 @@ Aisenhubplatform 为多个自营平台提供共享身份、平台账户、订阅
 | contracts/account/v1、contracts/admin/v1 | 对 Consumer/Admin 稳定的 canonical OpenAPI 3.1 wire contract、兼容规则与变更记录 |
 | packages/domain | 中央内部 DTO、校验、错误、计费/兑换材料及跨运行时工具；不作为 Consumer runtime 依赖发布 |
 | packages/ui、packages/i18n、packages/shared | UI、语言和共享设施 |
-| supabase/functions/account-api | Account 与 Admin HTTP 接口；`index.ts` 仅组合路由/runtime，认证与共享设施在 `core.ts`，Account/Admin/文件处理分别在独立模块；管理端 BFF 使用显式 method/path allowlist 和上游 deadline |
+| supabase/functions/account-api | Account 与 Admin HTTP 接口；`index.ts` 仅组合路由/runtime，认证与共享设施在 `core.ts`，Account/Admin/文件处理分别在独立模块；Global Identity 由 server-only Supabase Auth Admin 读取身份并用 private SQL 聚合平台账户；管理端 BFF 使用显式 method/path allowlist 和上游 deadline |
 | supabase/functions/maintenance | 文件清理、对账、保留清理、身份删除和计费任务 lease/fence 步骤；`index.ts` 按 files/identity/billing capability token 鉴权和路由，alerts/files/identity/billing/retention 分模块维护 |
 | supabase/functions/billing-webhook | Provider webhook 验签、hash-only Inbox 入站和任务入队 |
 | supabase/migrations | 数据表、角色、授权及事务内领域函数 |

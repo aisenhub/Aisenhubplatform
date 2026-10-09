@@ -26,6 +26,8 @@ const serviceKey = status.SERVICE_ROLE_KEY;
 const databaseUrl = status.DB_URL;
 const apiUrl = 'http://127.0.0.1:8788';
 const platformSecret = 't16-local-platform-secret';
+const adminMfaAttestationSecret =
+  't16-admin-mfa-attestation-secret-32-bytes-minimum';
 if (!authUrl || !anonKey || !serviceKey || !databaseUrl)
   throw new Error('T16 Local management probe requires Supabase status values');
 
@@ -98,6 +100,35 @@ function totp(secret) {
   return String(code % 1_000_000).padStart(6, '0');
 }
 
+function jwtSessionId(accessToken) {
+  const parts = accessToken.split('.');
+  assert.equal(parts.length, 3, 'elevated access token must be a JWT');
+  const payload = JSON.parse(
+    Buffer.from(parts[1], 'base64url').toString('utf8'),
+  );
+  assert.match(payload.session_id ?? '', /^[0-9a-f-]{36}$/iu);
+  return payload.session_id;
+}
+
+function adminMfaAttestation({ userId, sessionId, factorId }) {
+  const now = Date.now();
+  const payload = {
+    purpose: 'admin_recent_mfa',
+    user_id: userId.toLowerCase(),
+    session_id: sessionId.toLowerCase(),
+    factor_id: factorId.toLowerCase(),
+    verified_at: new Date(now).toISOString(),
+    expires_at: new Date(now + 60_000).toISOString(),
+    nonce: crypto.randomUUID().toLowerCase(),
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signedValue = `v1.${encoded}`;
+  const signature = createHmac('sha256', adminMfaAttestationSecret)
+    .update(signedValue)
+    .digest('base64url');
+  return `${signedValue}.${signature}`;
+}
+
 async function signup(email) {
   const result = await authRequest('/auth/v1/signup', {
     method: 'POST',
@@ -164,6 +195,8 @@ async function startApi() {
         ...process.env,
         SUPABASE_URL: authUrl,
         SUPABASE_PUBLISHABLE_KEY: status.PUBLISHABLE_KEY,
+        SUPABASE_SERVICE_ROLE_KEY: serviceKey,
+        ADMIN_MFA_ATTESTATION_SECRET: adminMfaAttestationSecret,
         ACCOUNT_API_DB_URL: databaseUrl,
         PLATFORM_KEY_HMAC_SECRET: platformSecret,
         ACCOUNT_API_PORT: '8788',
@@ -244,6 +277,7 @@ try {
   await sql`insert into private.system_admin (user_id) values (${adminId}) on conflict (singleton_id) do update set user_id = excluded.user_id`;
 
   const authHeaders = { Authorization: `Bearer ${elevated.accessToken}` };
+  const elevatedSessionId = jwtSessionId(elevated.accessToken);
   const createPlatform = await apiRequest(
     '/functions/v1/account-api/admin/api/v1/platforms',
     {
@@ -296,7 +330,14 @@ try {
     '/functions/v1/account-api/admin/api/v1/auth/recent-proof',
     {
       method: 'POST',
-      headers: { ...authHeaders, 'X-Mfa-Factor-Id': elevated.factorId },
+      headers: {
+        ...authHeaders,
+        'X-Mfa-Attestation': adminMfaAttestation({
+          userId: adminId,
+          sessionId: elevatedSessionId,
+          factorId: elevated.factorId,
+        }),
+      },
     },
   );
   assertStatus(proof, 201, 'Admin recent proof');
@@ -347,6 +388,22 @@ try {
       (item) => item.platform_account_id === accountId,
     ),
   );
+  const identities = await apiRequest(
+    `/functions/v1/account-api/admin/api/v1/accounts?q=${encodeURIComponent(userEmail)}&platform_id=${platformId}&limit=20`,
+    { headers: authHeaders },
+  );
+  assertStatus(identities, 200, 'Admin global identity search');
+  const identityRows = (await identities.json()).data;
+  assert.equal(identityRows.length, 1);
+  assert.equal(identityRows[0].user_id, userId);
+  assert.equal(identityRows[0].email, userEmail);
+  assert.ok(
+    identityRows[0].accounts.some(
+      (item) =>
+        item.platform_account_id === accountId &&
+        item.platform_id === platformId,
+    ),
+  );
   const suspend = await apiRequest(
     `/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${accountId}/suspend`,
     {
@@ -365,7 +422,17 @@ try {
       body: '{}',
     },
   );
-  assertStatus(restore, 200, 'Admin account restore');
+  assertStatus(restore, 403, 'Admin account restore without recent MFA');
+  assert.equal((await restore.json()).error.code, 'RECENT_MFA_REQUIRED');
+  const restored = await apiRequest(
+    `/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${accountId}/restore`,
+    {
+      method: 'POST',
+      headers: { ...authHeaders, 'X-Recent-Auth-Proof': proofId },
+      body: '{}',
+    },
+  );
+  assertStatus(restored, 200, 'Admin account restore with recent MFA');
   const close = await apiRequest(
     `/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${accountId}/close`,
     {
@@ -383,6 +450,8 @@ try {
       keyIssue: 'PASS',
       keySecretNotListed: 'PASS',
       accountList: 'PASS',
+      identitySearch: 'PASS',
+      recentMfaOnAccountMutation: 'PASS',
       accountSuspendRestoreClose: 'PASS',
     }),
   );

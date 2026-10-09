@@ -74,7 +74,7 @@ describe('admin overview model', () => {
     expect(items[1]?.severity).toBe('critical');
     expect(
       items.find((item) => item.key === 'billing:manual-review')?.href,
-    ).toBe('/admin/billing?status=manual_review');
+    ).toBe('/admin/billing/orders?status=manual_review');
   });
 
   it('does not report healthy when a source is missing or attention exists', () => {

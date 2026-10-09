@@ -35,6 +35,13 @@ export interface Database {
   begin<T>(callback: (transaction: Transaction) => Promise<T>): Promise<T>;
 }
 
+export type AdminAuthIdentity = {
+  readonly id: string;
+  readonly email: string | null;
+  readonly created_at: string | null;
+  readonly last_sign_in_at: string | null;
+};
+
 export interface AccountApiDependencies {
   readonly database?: Database;
   readonly platformKeySecret?: string;
@@ -51,6 +58,15 @@ export interface AccountApiDependencies {
     readonly version: number;
   }[];
   readonly adminMfaAttestationSecret?: string;
+  /** Server-only Supabase Auth Admin adapters, injectable for isolated tests. */
+  readonly listAdminAuthUsers?: (
+    page: number,
+    perPage: number,
+    filter?: string | null,
+  ) => Promise<readonly AdminAuthIdentity[]>;
+  readonly getAdminAuthUserById?: (
+    userId: string,
+  ) => Promise<AdminAuthIdentity | null>;
   /**
    * Verifies a bearer token with Supabase Auth and returns its subject. This
    * is injectable only for isolated Deno tests; production uses Auth's

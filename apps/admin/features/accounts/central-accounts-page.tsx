@@ -9,7 +9,7 @@ import {
   Filter,
   RefreshCw,
   Search,
-  User,
+  UserRound,
   Users,
 } from 'lucide-react';
 
@@ -40,7 +40,12 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
-import { accountStatusLabel, accountTone, type Account } from './account-types';
+import {
+  accountStatusLabel,
+  accountTone,
+  identityTone,
+  type GlobalIdentity,
+} from './account-types';
 
 type PlatformOption = {
   platform_id: string;
@@ -49,11 +54,22 @@ type PlatformOption = {
   status: string;
 };
 
-type AccountRecord = Account & {
-  platform_id: string;
-  platform_code: string;
-  platform_name: string;
-};
+function accountsHref(query: string, platformId: string): string {
+  const params = new URLSearchParams();
+  const committedQuery = query.trim();
+  if (committedQuery) params.set('q', committedQuery);
+  if (platformId && platformId !== 'all') params.set('platform', platformId);
+  const encoded = params.toString();
+  return encoded ? `/admin/accounts?${encoded}` : '/admin/accounts';
+}
+
+function identityStateLabel(state: string): string {
+  return state === 'deleting'
+    ? '全局删除中'
+    : state === 'active'
+      ? '正常'
+      : state;
+}
 
 export function CentralAccountsPage() {
   const router = useRouter();
@@ -70,7 +86,7 @@ export function CentralAccountsPage() {
 
   const [selectedPlatform, setSelectedPlatform] = useState(platformParam);
   const [draftQuery, setDraftQuery] = useState(queryParam);
-  const [accounts, setAccounts] = useState<AccountRecord[]>([]);
+  const [identities, setIdentities] = useState<GlobalIdentity[]>([]);
   const [accountsState, setAccountsState] =
     useState<ResourceLoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -81,13 +97,11 @@ export function CentralAccountsPage() {
 
   const loadGeneration = useRef(0);
 
-  // 同步 URL 参数
   useEffect(() => {
     setDraftQuery(queryParam);
     setSelectedPlatform(platformParam);
   }, [platformParam, queryParam]);
 
-  // 1. 加载所有可用平台列表
   const loadPlatforms = useCallback(async () => {
     setPlatformsState('loading');
     setPlatformsError(null);
@@ -98,7 +112,7 @@ export function CentralAccountsPage() {
       );
       const payload = await readApiPayload<PlatformOption[]>(response);
       if (!response.ok || !Array.isArray(payload?.data)) {
-        setPlatformsError(resourceError(response, payload, '平台列表'));
+        setPlatformsError(resourceError(response, payload, '平台筛选列表'));
         setPlatformsState('error');
         return;
       }
@@ -106,7 +120,7 @@ export function CentralAccountsPage() {
       setPlatformsState('success');
     } catch (caught) {
       setPlatformsError({
-        title: '平台列表读取失败',
+        title: '平台筛选列表读取失败',
         description: sessionErrorMessage(caught),
         requestId: null,
         technicalDetail: null,
@@ -119,96 +133,48 @@ export function CentralAccountsPage() {
     void loadPlatforms();
   }, [loadPlatforms]);
 
-  // 2. 加载账户数据（按所选单平台或全平台并发拉取）
-  const loadAccounts = useCallback(
+  const loadIdentities = useCallback(
     async (background = false) => {
-      if (platforms.length === 0 && platformsState !== 'success') return;
-
       const generation = ++loadGeneration.current;
       const epoch = adminAuthSession.getEpoch();
       setRefreshError(null);
-      setRefreshing(background);
-      if (!background) {
+      if (background) {
+        setRefreshing(true);
+      } else {
+        setRefreshing(false);
         setAccountsState('loading');
         setAccountsError(null);
       }
 
+      const params = new URLSearchParams({ limit: '50' });
+      const committedQuery = queryParam.trim();
+      if (committedQuery) params.set('q', committedQuery);
+      if (platformParam !== 'all') params.set('platform_id', platformParam);
+
       try {
-        const targetPlatforms =
-          selectedPlatform === 'all'
-            ? platforms
-            : platforms.filter((p) => p.platform_id === selectedPlatform);
-
-        if (targetPlatforms.length === 0) {
-          setAccounts([]);
-          setAccountsState('success');
-          return;
-        }
-
-        const q = draftQuery.trim();
-        const search = q ? `?q=${encodeURIComponent(q)}&limit=50` : '?limit=50';
-
-        const results = await Promise.allSettled(
-          targetPlatforms.map(async (plat) => {
-            const url = `/api/v1/admin/api/v1/platforms/${plat.platform_id}/accounts${search}`;
-            const res = await adminAuthSession.request(url, {
-              cache: 'no-store',
-            });
-            const pl = await readApiPayload<Account[]>(res);
-            if (!res.ok || !Array.isArray(pl?.data)) {
-              throw new Error(
-                pl?.error?.message ?? `无法读取平台 ${plat.name} 的账户`,
-              );
-            }
-            return pl.data.map((item) => ({
-              ...item,
-              platform_id: plat.platform_id,
-              platform_code: plat.code,
-              platform_name: plat.name,
-            }));
-          }),
+        const response = await adminAuthSession.request(
+          `/api/v1/admin/api/v1/accounts?${params.toString()}`,
+          { cache: 'no-store' },
         );
-
+        const payload = await readApiPayload<GlobalIdentity[]>(response);
         if (
           generation !== loadGeneration.current ||
           !adminAuthSession.isCurrentEpoch(epoch)
         ) {
           return;
         }
-
-        const aggregated: AccountRecord[] = [];
-        let hasError = false;
-        let lastErrorMessage = '';
-
-        for (const res of results) {
-          if (res.status === 'fulfilled') {
-            aggregated.push(...res.value);
-          } else {
-            hasError = true;
-            lastErrorMessage =
-              res.reason instanceof Error
-                ? res.reason.message
-                : String(res.reason);
-          }
-        }
-
-        setAccounts(aggregated);
-        setAccountsState('success');
-
-        if (hasError && aggregated.length === 0) {
-          const nextError: ResourceError = {
-            title: '账户列表读取受阻',
-            description: lastErrorMessage || '未能成功获取任何平台的账户数据',
-            requestId: null,
-            technicalDetail: null,
-          };
+        if (!response.ok || !Array.isArray(payload?.data)) {
+          const nextError = resourceError(response, payload, '统一身份');
           if (background) {
             setRefreshError(nextError);
           } else {
             setAccountsError(nextError);
             setAccountsState('error');
           }
+          return;
         }
+        setIdentities(payload.data);
+        setAccountsState('success');
       } catch (caught) {
         if (
           generation !== loadGeneration.current ||
@@ -217,7 +183,7 @@ export function CentralAccountsPage() {
           return;
         }
         const nextError: ResourceError = {
-          title: '统一账户检索失败',
+          title: '统一身份检索失败',
           description: sessionErrorMessage(caught),
           requestId: null,
           technicalDetail: null,
@@ -228,83 +194,102 @@ export function CentralAccountsPage() {
           setAccountsError(nextError);
           setAccountsState('error');
         }
+      } finally {
+        if (
+          background &&
+          generation === loadGeneration.current &&
+          adminAuthSession.isCurrentEpoch(epoch)
+        ) {
+          setRefreshing(false);
+        }
       }
     },
-    [draftQuery, platforms, platformsState, selectedPlatform],
+    [platformParam, queryParam],
   );
 
   useEffect(() => {
-    if (platforms.length > 0) {
-      void loadAccounts(false);
+    void loadIdentities(false);
+  }, [loadIdentities]);
+
+  function handleSearchSubmit(event: FormEvent) {
+    event.preventDefault();
+    const nextHref = accountsHref(draftQuery, selectedPlatform);
+    const currentHref = accountsHref(queryParam, platformParam);
+    if (nextHref === currentHref) {
+      void loadIdentities(false);
+      return;
     }
-  }, [loadAccounts, platforms.length]);
+    router.replace(nextHref);
+  }
 
-  const handleSearchSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (draftQuery.trim()) params.set('q', draftQuery.trim());
-    if (selectedPlatform && selectedPlatform !== 'all')
-      params.set('platform', selectedPlatform);
-    router.replace(`/admin/accounts?${params.toString()}`);
-    void loadAccounts(false);
-  };
-
-  const handlePlatformChange = (newPlatformId: string) => {
+  function handlePlatformChange(newPlatformId: string) {
     setSelectedPlatform(newPlatformId);
-    const params = new URLSearchParams();
-    if (draftQuery.trim()) params.set('q', draftQuery.trim());
-    if (newPlatformId !== 'all') params.set('platform', newPlatformId);
-    router.replace(`/admin/accounts?${params.toString()}`);
-  };
+    router.replace(accountsHref(queryParam, newPlatformId));
+  }
 
-  const activeAccountsCount = useMemo(
-    () => accounts.filter((a) => a.status === 'active').length,
-    [accounts],
+  const linkedAccountCount = useMemo(
+    () =>
+      identities.reduce(
+        (total, identity) => total + identity.accounts.length,
+        0,
+      ),
+    [identities],
   );
-  const suspendedAccountsCount = useMemo(
-    () => accounts.filter((a) => a.status === 'suspended').length,
-    [accounts],
+  const suspendedAccountCount = useMemo(
+    () =>
+      identities.reduce(
+        (total, identity) =>
+          total +
+          identity.accounts.filter((account) => account.status === 'suspended')
+            .length,
+        0,
+      ),
+    [identities],
   );
+  const selectedPlatformKnown =
+    selectedPlatform === 'all' ||
+    platforms.some((platform) => platform.platform_id === selectedPlatform);
 
   return (
     <main className="shell wide-shell" data-test="admin-central-accounts">
       <AdminPageHeader
         title="统一用户与身份透视"
-        description="跨平台检索用户账户，透视 Auth UID 分布与状态治理，并直接下钻至单平台工作区。"
+        description="以全局 Auth Identity 为主对象检索用户，并在同一身份下查看跨平台账户关联与状态。"
         actions={
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void loadAccounts(true)}
-              disabled={refreshing || accountsState === 'loading'}
-            >
-              <RefreshCw
-                className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
-              />
-              {refreshing ? '刷新中…' : '刷新数据'}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void loadIdentities(true)}
+            disabled={refreshing || accountsState === 'loading'}
+          >
+            <RefreshCw
+              className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
+            />
+            {refreshing ? '刷新中…' : '刷新数据'}
+          </Button>
         }
       />
 
-      {platformsError && (
+      {platformsError ? (
         <Alert variant="destructive" className="mb-4">
           <AlertTitle>{platformsError.title}</AlertTitle>
           <AlertDescription className="flex items-center justify-between gap-3">
-            <span>{platformsError.description}</span>
+            <span>
+              {platformsError.description} Identity
+              检索仍可继续，平台筛选选项暂不可用。
+            </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => void loadPlatforms()}
             >
-              重试加载平台
+              重试平台列表
             </Button>
           </AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
-      {refreshError && (
+      {refreshError ? (
         <Alert variant="destructive" className="mb-4">
           <AlertTitle>{refreshError.title}</AlertTitle>
           <AlertDescription>
@@ -315,45 +300,52 @@ export function CentralAccountsPage() {
             />
           </AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
-      {/* 筛选与搜索工作栏 */}
       <section className="panel gap-4 p-4">
         <form
           onSubmit={handleSearchSubmit}
           className="flex flex-wrap items-center justify-between gap-4"
         >
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-3 sm:w-auto">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Filter className="h-4 w-4" />
               <span>平台范围：</span>
             </div>
             <select
               value={selectedPlatform}
-              onChange={(e) => handlePlatformChange(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              onChange={(event) => handlePlatformChange(event.target.value)}
+              className="h-9 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring sm:w-auto sm:max-w-96"
               data-test="accounts-platform-selector"
+              aria-label="统一身份平台范围"
             >
               <option value="all">
-                所有平台（{platforms.length} 个已注册平台）
+                所有平台
+                {platformsState === 'success'
+                  ? `（筛选器已加载 ${platforms.length} 个）`
+                  : ''}
               </option>
-              {platforms.map((p) => (
-                <option key={p.platform_id} value={p.platform_id}>
-                  {p.name} ({p.code})
+              {!selectedPlatformKnown ? (
+                <option value={selectedPlatform}>当前 URL 平台筛选</option>
+              ) : null}
+              {platforms.map((platform) => (
+                <option key={platform.platform_id} value={platform.platform_id}>
+                  {platform.name} ({platform.code})
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+            <div className="relative min-w-0 flex-1 sm:flex-none">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <input
                 type="search"
+                aria-label="搜索统一身份"
                 value={draftQuery}
-                onChange={(e) => setDraftQuery(e.target.value)}
-                placeholder="搜索 User ID / 邮箱 / 状态…"
-                className="h-9 w-64 rounded-md border border-input bg-background pl-8 pr-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring sm:w-80"
+                onChange={(event) => setDraftQuery(event.target.value)}
+                placeholder="搜索邮箱 / Auth UID"
+                className="h-9 w-full min-w-0 rounded-md border border-input bg-background pl-8 pr-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring sm:w-80"
                 data-test="accounts-search-input"
               />
             </div>
@@ -366,32 +358,26 @@ export function CentralAccountsPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span>
-              已加载账户：<strong>{accounts.length}</strong> 条
+              Identity：<strong>{identities.length}</strong> 条
             </span>
             <span>
-              正常活跃：
-              <strong className="text-emerald-600">
-                {activeAccountsCount}
-              </strong>
+              关联平台账户：<strong>{linkedAccountCount}</strong> 个
             </span>
-            {suspendedAccountsCount > 0 && (
+            {suspendedAccountCount > 0 ? (
               <span>
-                异常暂停：
+                已暂停账户：
                 <strong className="text-amber-600">
-                  {suspendedAccountsCount}
+                  {suspendedAccountCount}
                 </strong>
               </span>
-            )}
+            ) : null}
           </div>
-          <div>
-            <span>
-              * 检索受后端权威平台范围限制，每平台展示最近窗口最多 50 条记录。
-            </span>
-          </div>
+          <span>
+            * Identity 结果最多 50 条；平台筛选器最多加载最近 100 个平台注册项。
+          </span>
         </div>
       </section>
 
-      {/* 结果表格 */}
       {accountsState === 'loading' ? <AsyncState state="loading" /> : null}
       {accountsState === 'error' && accountsError ? (
         <AsyncState
@@ -400,84 +386,107 @@ export function CentralAccountsPage() {
           description={accountsError.description}
           requestId={accountsError.requestId}
           technicalDetail={accountsError.technicalDetail}
-          onRetry={() => void loadAccounts(false)}
+          onRetry={() => void loadIdentities(false)}
         />
       ) : null}
-      {accountsState === 'success' && accounts.length === 0 ? (
+      {accountsState === 'success' && identities.length === 0 ? (
         <section
           className="panel gap-2 p-12 text-center"
           data-test="accounts-empty"
         >
           <Users className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h3 className="mt-4 text-base font-semibold">未找到匹配的账户</h3>
+          <h3 className="mt-4 text-base font-semibold">未找到匹配的统一身份</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            请尝试更换平台范围或调整搜索关键字。
+            请尝试更换平台范围，或使用完整/部分邮箱与 Auth UID 检索。
           </p>
         </section>
       ) : null}
-      {accountsState === 'success' && accounts.length > 0 ? (
+      {accountsState === 'success' && identities.length > 0 ? (
         <section className="panel gap-4 p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>所属平台</TableHead>
-                <TableHead>Platform Account ID</TableHead>
-                <TableHead>Auth User ID</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>激活时间</TableHead>
-                <TableHead>最后更新</TableHead>
-                <TableHead className="text-right">操作直通</TableHead>
+                <TableHead>全局 Identity</TableHead>
+                <TableHead>身份状态</TableHead>
+                <TableHead>平台账户关联</TableHead>
+                <TableHead>创建时间</TableHead>
+                <TableHead>最近登录</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.map((acc) => (
-                <TableRow key={`${acc.platform_id}-${acc.platform_account_id}`}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/platforms/${acc.platform_id}`}
-                        className="font-medium text-primary underline-offset-4 hover:underline"
-                      >
-                        {acc.platform_name}
-                      </Link>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                        {acc.platform_code}
-                      </span>
+              {identities.map((identity) => (
+                <TableRow key={identity.user_id}>
+                  <TableCell className="align-top">
+                    <div className="flex items-start gap-2">
+                      <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <div className="font-medium">
+                          {identity.email ?? '未设置邮箱'}
+                        </div>
+                        <div className="mt-1">
+                          <ResourceId value={identity.user_id} />
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <ResourceId value={acc.platform_account_id} />
-                  </TableCell>
-                  <TableCell>
-                    {acc.user_id ? (
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <ResourceId value={acc.user_id} />
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">未关联</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
+                  <TableCell className="align-top">
                     <StatusBadge
-                      tone={accountTone(acc.status)}
-                      label={accountStatusLabel(acc.status)}
+                      tone={identityTone(identity.identity_state)}
+                      label={identityStateLabel(identity.identity_state)}
                     />
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatUtc(acc.activated_at ?? acc.created_at)}
+                  <TableCell className="min-w-[22rem] align-top">
+                    {identity.accounts.length === 0 ? (
+                      <span className="text-sm text-muted-foreground">
+                        尚无平台账户
+                      </span>
+                    ) : (
+                      <div className="grid gap-2">
+                        {identity.accounts.map((account) => (
+                          <div
+                            key={`${account.platform_id}-${account.platform_account_id}`}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Link
+                                  href={`/admin/platforms/${account.platform_id}`}
+                                  className="font-medium text-primary underline-offset-4 hover:underline"
+                                >
+                                  {account.platform_name}
+                                </Link>
+                                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.68rem] text-muted-foreground">
+                                  {account.platform_code}
+                                </span>
+                                <StatusBadge
+                                  tone={accountTone(account.status)}
+                                  label={accountStatusLabel(account.status)}
+                                />
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Account{' '}
+                                <ResourceId
+                                  value={account.platform_account_id}
+                                />
+                              </div>
+                            </div>
+                            <Link
+                              href={`/admin/platforms/${account.platform_id}/accounts?selected=${account.platform_account_id}`}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                            >
+                              进入账户
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatUtc(acc.updated_at)}
+                  <TableCell className="align-top text-xs text-muted-foreground">
+                    {formatUtc(identity.created_at)}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/admin/platforms/${acc.platform_id}/accounts?selected=${acc.platform_account_id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      进入平台工作区
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
+                  <TableCell className="align-top text-xs text-muted-foreground">
+                    {formatUtc(identity.last_sign_in_at)}
                   </TableCell>
                 </TableRow>
               ))}

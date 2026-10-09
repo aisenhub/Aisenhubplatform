@@ -471,7 +471,7 @@ export function AdminOverviewPage() {
                 运维中心
               </Link>
               <Link
-                href="/admin/billing"
+                href="/admin/billing/orders"
                 className="text-primary underline-offset-4 hover:underline"
               >
                 计费管理

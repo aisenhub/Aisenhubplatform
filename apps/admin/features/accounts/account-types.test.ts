@@ -4,9 +4,16 @@ import {
   accountActionLabel,
   accountStatusLabel,
   accountTone,
+  identityTone,
 } from './account-types';
 
 describe('account-types utilities', () => {
+  it('maps global identity lifecycle states independently from platform accounts', () => {
+    expect(identityTone('active')).toBe('success');
+    expect(identityTone('deleting')).toBe('danger');
+    expect(identityTone('other')).toBe('unknown');
+  });
+
   it('correctly maps account statuses to tones', () => {
     expect(accountTone('active')).toBe('success');
     expect(accountTone('suspended')).toBe('warning');

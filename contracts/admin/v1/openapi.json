@@ -3,7 +3,7 @@
   "info": {
     "title": "Aisenhub Admin API",
     "version": "1.0.0",
-    "description": "Admin API contract. Ordinary routes require an active administrator session at AAL2. Platform Key create/confirm/revoke and Global Delete start/retry additionally require a server-side recent-MFA proof valid for at most 30 minutes."
+    "description": "Admin API contract. Ordinary routes require an active administrator session at AAL2. Platform Key lifecycle, Global Delete start/retry, platform-account status mutations, and Billing operator actions additionally require a server-side recent-MFA proof valid for at most 30 minutes."
   },
   "servers": [{ "url": "https://admin.example.invalid" }],
   "paths": {
@@ -68,6 +68,28 @@
           "201": { "$ref": "#/components/responses/Object" },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/accounts": {
+      "get": {
+        "operationId": "adminListIdentities",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchQuery" },
+          {
+            "name": "platform_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
         }
       }
     },
@@ -148,6 +170,7 @@
       },
       "patch": {
         "operationId": "adminPatchAccount",
+        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -157,6 +180,7 @@
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
           "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -164,6 +188,7 @@
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/suspend": {
       "post": {
         "operationId": "adminSuspendAccount",
+        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -172,7 +197,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -180,6 +205,7 @@
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/restore": {
       "post": {
         "operationId": "adminRestoreAccount",
+        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -187,6 +213,7 @@
         ],
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -194,6 +221,7 @@
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/close": {
       "post": {
         "operationId": "adminCloseAccount",
+        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/PlatformId" },
@@ -202,7 +230,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
@@ -518,6 +546,7 @@
     "/admin/api/v1/billing/orders/{orderId}/requery": {
       "post": {
         "operationId": "adminRequeryBillingOrder",
+        "x-requires-step-up": true,
         "description": "Queues a provider requery. The resulting job keeps its bounded retry budget and may enter manual_review with a classified failure for operator action.",
         "security": [{ "adminBearer": [] }],
         "parameters": [
@@ -527,7 +556,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
           "412": { "$ref": "#/components/responses/PreconditionFailed" }
         }
       }
@@ -535,6 +564,7 @@
     "/admin/api/v1/billing/orders/{orderId}/resolve": {
       "post": {
         "operationId": "adminResolveBillingOrder",
+        "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/BillingOrderId" },
@@ -543,7 +573,7 @@
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
           "412": { "$ref": "#/components/responses/PreconditionFailed" }
         }
       }

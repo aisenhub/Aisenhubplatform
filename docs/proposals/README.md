@@ -39,7 +39,7 @@ proposals/
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
 - [订阅支付审查修复计划](subscription-billing-centralization/README.md)：[总计划](subscription-billing-centralization/plan.md)，覆盖 F01–F17；TASK-0001 已完成基线冻结，TASK-0002 完成本地静态门槛审查，TASK-0101/0103 及已列 billing repair tasks 已完成本地回归，外部环境仍按记录标注。原订阅集中化方案保留在归档，本活跃目录仅承载本次修复计划。
 - [Admin 2.0 导航与桌面工作区](admin-2-navigation-ia/design.md)：[总计划](admin-2-navigation-ia/plan.md)，按 Global / Platform 双上下文、桌面工作区与 Inspector 分四阶段实施。
-- [Admin 平台中心化与双轨透镜信息架构](admin-platform-centric-information-architecture/design.md)：[总计划](admin-platform-centric-information-architecture/plan.md)，通过全景透镜（Global Scope）与聚焦透镜（Platform Scope）双轨协同模型重构导航与工作区，分为导航与上下文切换、商业化闭环、全局分诊与统一用户三个阶段实施。
+- [Admin 平台中心化与双轨透镜信息架构](admin-platform-centric-information-architecture/design.md)：[总计划](admin-platform-centric-information-architecture/plan.md) · [实施交接](admin-platform-centric-information-architecture/agent-handoff.md)，通过全景透镜（Global Scope）与聚焦透镜（Platform Scope）双轨协同模型重构导航与工作区；当前收口阶段覆盖 Global Identity、recent-MFA、共享 Billing、双透镜路由与 Local E2E。
 - [移除 Consumer SDK 与 Contract-First 接入](remove-sdk-contract-first/design.md)：[总计划](remove-sdk-contract-first/plan.md)，把公共集成边界收敛为 OpenAPI/HTTP，并以 Reference Consumer、兼容检查和真实 HTTP/E2E 替代 SDK 发行体系。
 - [Admin Consumer Lab 与 Consumer Conformance Harness](admin-consumer-lab-harness/design.md)：[总计划](admin-consumer-lab-harness/plan.md)，删除完整 `apps/template-preview` Reference Consumer，把人工检查入口收敛到 Admin Consumer Lab，并以 test-only 极薄 Harness 保留独立外部 Consumer 边界证明。
 

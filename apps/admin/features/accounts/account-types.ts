@@ -14,6 +14,30 @@ export type Account = {
   platform_name?: string;
 };
 
+export type GlobalIdentityAccount = {
+  platform_id: string;
+  platform_code: string;
+  platform_name: string;
+  platform_status: string;
+  platform_account_id: string;
+  status: string;
+  activated_at: string | null;
+  suspended_at: string | null;
+  closed_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type GlobalIdentity = {
+  user_id: string;
+  email: string | null;
+  identity_state: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  account_count: number | string;
+  accounts: GlobalIdentityAccount[];
+};
+
 export type AccountIntent = {
   accountId: string;
   action: 'suspend' | 'restore' | 'close';
@@ -21,6 +45,17 @@ export type AccountIntent = {
   impact: string;
   reversible: boolean;
 };
+
+export function identityTone(state: string | null | undefined): StatusTone {
+  switch (state?.toLowerCase()) {
+    case 'active':
+      return 'success';
+    case 'deleting':
+      return 'danger';
+    default:
+      return 'unknown';
+  }
+}
 
 export function accountTone(status: string | null | undefined): StatusTone {
   switch (status?.toLowerCase()) {

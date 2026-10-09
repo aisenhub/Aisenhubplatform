@@ -6,9 +6,9 @@ Admin 使用深色导航与浅色数据工作区，平台目录提供紧凑的�
 
 平台与账户表的横向滚动由有名称、可聚焦的单一容器承担，窄屏显示滚动提示；Admin 样式让该容器内的上游 Table 包装层不再独立滚动。详情字段按内容高度从顶部排列。设计与产品约束见 [Admin 设计规则](../../../apps/admin/DESIGN.md) 和 [产品背景](../../../apps/admin/PRODUCT.md)。
 
-[apps/admin](../../../apps/admin)使用 Next.js App Router。Admin Shell 按 URL 区分 Global 与 Platform 两种 Sidebar 上下文：Global 工作区组织概览、平台、Billing、Operations、Audit、安全与账户，以及只读 Consumer Lab；进入 `/admin/platforms/:platformId/**` 后，Sidebar 切换为当前平台的概览、账户、商业化、文件与配置导航，并保留返回平台目录和全局管理入口。平台工作区不再维护第二套横向一级导航，Topbar 显示当前平台与资源上下文；Ctrl/Cmd+K 同时提供全局和当前平台的真实路由跳转。
+[apps/admin](../../../apps/admin)使用 Next.js App Router。Admin Shell 按 URL 区分 Global 与 Platform 两种 Sidebar 上下文：Global 工作区组织概览、平台、统一身份、Billing、Operations、Audit、安全与账户，以及只读 Consumer Lab；进入 `/admin/platforms/:platformId/**` 后，Sidebar 切换为当前平台的概览、账户、商业化、文件与配置导航，同时保留 Billing、Operations、Audit、Consumer Lab 等全局治理的一跳直通。PlatformSwitcher 使用同等资源映射在 Global/Platform Accounts 与 Billing 之间切换，并支持平台名称/代码本地搜索与状态表达。平台工作区不再维护第二套横向一级导航，Topbar 显示当前平台与资源上下文；Ctrl/Cmd+K 同时提供全局和当前平台的真实路由跳转。
 
-资源页由 apps/admin/features 实现，通过同源 /api/v1/... 代理访问中央 /admin/api/v1/...。AdminShell 先经 BFF 读取服务端权威 `security/status`，状态确认前不渲染普通管理页面；未登录转登录、AAL1 管理员只进入 `/admin/mfa`、AAL2 管理员继续，非管理员和状态服务故障均 fail closed。BFF 只做同源会话转发，不自行判断 membership/AAL。账户等资源使用紧凑工作区布局；共享 ResourceInspector 使用右侧 Sheet 展示详情，账户选择写入 URL 以保留刷新、返回和深链接语义。平台文件列表的 platform_id 在 SQL 分页前过滤，游标带平台范围。敏感操作仍由服务端认证和近期 MFA 检查决定，页面按钮不构成权限边界；`/admin/mfa` 保持为独立认证流程，不作为普通 Sidebar 页面。
+资源页由 apps/admin/features 实现，通过同源 /api/v1/... 代理访问中央 /admin/api/v1/...。AdminShell 先经 BFF 读取服务端权威 `security/status`，状态确认前不渲染普通管理页面；未登录转登录、AAL1 管理员只进入 `/admin/mfa`、AAL2 管理员继续，非管理员和状态服务故障均 fail closed。BFF 只做同源会话转发，不自行判断 membership/AAL。`/admin/accounts` 以 Supabase Auth Identity 为主对象：中央 Account API 使用 server-only Auth Admin 能力读取身份，再由 `private.admin_identity_accounts` 聚合 AisenHub 平台账户关联；浏览器只发一个 Global Identity 请求，平台目录仅用于筛选选项。Billing 的 Global `/admin/billing/orders` 与 Platform `/admin/platforms/:platformId/billing` 复用同一 `BillingOrderWorkspace`，列表、详情、Evidence Timeline、If-Match、operation_id、Unknown Outcome 与 requery/resolve 只有一套实现；筛选与 selected order 写入 URL，旧 `/admin/billing` 保持兼容。平台文件列表的 platform_id 在 SQL 分页前过滤，游标带平台范围。敏感操作仍由服务端认证和近期 MFA 检查决定，页面按钮不构成权限边界；`/admin/mfa` 保持为独立认证流程，不作为普通 Sidebar 页面。
 
 ## Admin Consumer Lab
 

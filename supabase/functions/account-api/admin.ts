@@ -7,6 +7,7 @@ import {
   type Row,
   type Transaction,
   type AccountApiDependencies,
+  type AdminAuthIdentity,
   type DispatchResult,
   type SessionContext,
   ApiFault,
@@ -52,6 +53,190 @@ export function boundedLimit(value: string | null): number {
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100)
     throw new ApiFault(400, 'INVALID_INPUT');
   return parsed;
+}
+
+const AUTH_ADMIN_PAGE_SIZE = 200;
+const MAX_AUTH_ADMIN_PAGES = 5;
+
+function authIdentity(value: unknown): AdminAuthIdentity | null {
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  const id = uuidValue(row.id);
+  if (!id) return null;
+  return {
+    id,
+    email: typeof row.email === 'string' ? row.email : null,
+    created_at: typeof row.created_at === 'string' ? row.created_at : null,
+    last_sign_in_at:
+      typeof row.last_sign_in_at === 'string' ? row.last_sign_in_at : null,
+  };
+}
+
+function authAdminConfig(): { url: string; key: string } {
+  const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
+  const key =
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ??
+    Deno.env.get('SUPABASE_SECRET_KEY');
+  if (!url || !key) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  return { url, key };
+}
+
+async function listAdminAuthUsers(
+  dependencies: AccountApiDependencies,
+  page: number,
+  perPage: number,
+  filter: string | null,
+): Promise<readonly AdminAuthIdentity[]> {
+  if (dependencies.listAdminAuthUsers)
+    return dependencies.listAdminAuthUsers(page, perPage, filter);
+  const { url, key } = authAdminConfig();
+  const params = new URLSearchParams({
+    page: String(page),
+    per_page: String(perPage),
+  });
+  if (filter) params.set('filter', filter);
+  let response: Response;
+  try {
+    response = await fetch(`${url}/auth/v1/admin/users?${params.toString()}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(4_000),
+    });
+  } catch {
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  }
+  if (!response.ok) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  const payload = (await response.json().catch(() => null)) as {
+    users?: unknown;
+  } | null;
+  if (!Array.isArray(payload?.users))
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  return payload.users
+    .map(authIdentity)
+    .filter((row): row is AdminAuthIdentity => !!row);
+}
+
+async function getAdminAuthUserById(
+  dependencies: AccountApiDependencies,
+  userId: string,
+): Promise<AdminAuthIdentity | null> {
+  if (dependencies.getAdminAuthUserById)
+    return dependencies.getAdminAuthUserById(userId);
+  const { url, key } = authAdminConfig();
+  let response: Response;
+  try {
+    response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(4_000),
+    });
+  } catch {
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  }
+  if (response.status === 404) return null;
+  if (!response.ok) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  const payload = (await response.json().catch(() => null)) as
+    | { user?: unknown }
+    | Record<string, unknown>
+    | null;
+  return authIdentity(
+    payload && typeof payload === 'object' && 'user' in payload
+      ? payload.user
+      : payload,
+  );
+}
+
+async function enrichAdminAuthUsers(
+  transaction: Transaction,
+  context: unknown[],
+  users: readonly AdminAuthIdentity[],
+  platformId: string | null,
+): Promise<Array<Record<string, unknown>>> {
+  if (users.length === 0) return [];
+  const rows = await transaction.unsafe<Row>(
+    'select * from private.admin_identity_accounts(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid[], $5::uuid)',
+    [...context, users.map((user) => user.id), platformId],
+  );
+  const associationByUserId = new Map(
+    rows.map((row) => [String(row.user_id), row] as const),
+  );
+  return users.flatMap((user) => {
+    const association = associationByUserId.get(user.id);
+    if (!association) return [];
+    return [
+      {
+        user_id: user.id,
+        email: user.email,
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at,
+        identity_state: association.identity_state ?? 'active',
+        account_count: association.account_count ?? 0,
+        accounts: Array.isArray(association.accounts)
+          ? association.accounts
+          : [],
+      },
+    ];
+  });
+}
+
+async function searchAdminIdentities(input: {
+  transaction: Transaction;
+  dependencies: AccountApiDependencies;
+  context: unknown[];
+  query: string | null;
+  platformId: string | null;
+  limit: number;
+}): Promise<Array<Record<string, unknown>>> {
+  const { transaction, dependencies, context, query, platformId, limit } =
+    input;
+  if (query && UUID.test(query)) {
+    const user = await getAdminAuthUserById(dependencies, query);
+    return user
+      ? enrichAdminAuthUsers(transaction, context, [user], platformId)
+      : [];
+  }
+
+  const normalizedQuery = query?.toLocaleLowerCase() ?? null;
+  const perPage = query || platformId ? AUTH_ADMIN_PAGE_SIZE : limit;
+  const collected: Array<Record<string, unknown>> = [];
+  let page = 1;
+  let previousPageSignature: string | null = null;
+
+  while (collected.length < limit && page <= MAX_AUTH_ADMIN_PAGES) {
+    const users = await listAdminAuthUsers(dependencies, page, perPage, query);
+    if (users.length === 0) break;
+    const pageSignature = `${users[0]?.id ?? ''}:${users.at(-1)?.id ?? ''}:${users.length}`;
+    if (page > 1 && pageSignature === previousPageSignature)
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    previousPageSignature = pageSignature;
+
+    const matches = normalizedQuery
+      ? users.filter(
+          (user) =>
+            user.id.toLocaleLowerCase().includes(normalizedQuery) ||
+            user.email?.toLocaleLowerCase().includes(normalizedQuery),
+        )
+      : users;
+    const enriched = await enrichAdminAuthUsers(
+      transaction,
+      context,
+      matches,
+      platformId,
+    );
+    collected.push(...enriched.slice(0, limit - collected.length));
+    if (users.length < perPage || (!query && !platformId)) break;
+    page += 1;
+  }
+
+  if (
+    collected.length < limit &&
+    page > MAX_AUTH_ADMIN_PAGES &&
+    (query !== null || platformId !== null)
+  ) {
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  }
+
+  return collected;
 }
 
 function randomBase64Url(bytes: number): string {
@@ -159,6 +344,28 @@ export async function dispatchAdmin(
         boundedLimit(url.searchParams.get('limit')),
       ],
     );
+    return { status: 200, data: rows };
+  }
+
+  if (path === 'admin/api/v1/accounts' && request.method === 'GET') {
+    const platformIdValue = url.searchParams.get('platform_id');
+    const platformId =
+      platformIdValue === null ? null : uuidValue(platformIdValue);
+    const queryValue = url.searchParams.get('q');
+    const query = queryValue?.trim() || null;
+    if (
+      (platformIdValue !== null && !platformId) ||
+      (query !== null && query.length > 128)
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const rows = await searchAdminIdentities({
+      transaction,
+      dependencies,
+      context,
+      query,
+      platformId,
+      limit: boundedLimit(url.searchParams.get('limit')),
+    });
     return { status: 200, data: rows };
   }
 
@@ -326,6 +533,7 @@ export async function dispatchAdmin(
     UUID.test(billingRequeryMatch[1]!) &&
     request.method === 'POST'
   ) {
+    await adminStepUp(transaction, session, request);
     const input = await body(request);
     const operationId = uuidValue(input.operation_id);
     const reason = stringValue(input.reason);
@@ -350,6 +558,7 @@ export async function dispatchAdmin(
     UUID.test(billingResolveMatch[1]!) &&
     request.method === 'POST'
   ) {
+    await adminStepUp(transaction, session, request);
     const input = await body(request);
     const operationId = uuidValue(input.operation_id);
     const decision = stringValue(input.decision);
@@ -608,6 +817,7 @@ export async function dispatchAdmin(
       return { status: 200, data: result };
     }
     if (request.method === 'PATCH') {
+      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const status = stringValue(input.status);
       if (!status) throw new ApiFault(400, 'INVALID_INPUT');
@@ -626,8 +836,10 @@ export async function dispatchAdmin(
   if (
     accountActionMatch &&
     UUID.test(accountActionMatch[1]!) &&
-    UUID.test(accountActionMatch[2]!)
+    UUID.test(accountActionMatch[2]!) &&
+    request.method === 'POST'
   ) {
+    await adminStepUp(transaction, session, request);
     const action = accountActionMatch[3]!;
     const [result] = await transaction.unsafe<Row>(
       'select * from private.admin_account_transition(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',

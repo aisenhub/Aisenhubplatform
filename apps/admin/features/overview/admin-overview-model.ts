@@ -175,7 +175,7 @@ export function buildAttentionItems(
         critical > 0 || high > 0
           ? `Critical ${critical} · High ${high}`
           : '请进入计费管理查看告警指标和处理状态。',
-      href: '/admin/billing',
+      href: '/admin/billing/orders',
       badge: critical > 0 ? '高' : '需关注',
     });
   } else {
@@ -185,7 +185,7 @@ export function buildAttentionItems(
         severity: 'critical',
         title: `${billing.retry_budget_exhausted_count} 个计费重试预算已耗尽`,
         description: '后台处理已不能继续自动重试，需要管理员检查订单状态。',
-        href: '/admin/billing',
+        href: '/admin/billing/orders',
         badge: '高',
       });
     }
@@ -195,7 +195,7 @@ export function buildAttentionItems(
         severity: 'critical',
         title: `${billing.refund_mismatch_count} 笔退款状态不一致`,
         description: 'Provider 与中央结算状态存在差异，需要人工核对。',
-        href: '/admin/billing',
+        href: '/admin/billing/orders',
         badge: '高',
       });
     }
@@ -207,7 +207,7 @@ export function buildAttentionItems(
       severity: 'warning',
       title: `${billing.manual_review_count} 笔订单等待人工复核`,
       description: '订单无法自动收敛，需要管理员确认 Provider 与权益状态。',
-      href: '/admin/billing?status=manual_review',
+      href: '/admin/billing/orders?status=manual_review',
       badge: '需关注',
     });
   }
@@ -218,7 +218,7 @@ export function buildAttentionItems(
       severity: 'warning',
       title: `${billing.pending_alert_delivery_count} 条告警等待投递`,
       description: '告警已产生，但通知投递尚未完成。',
-      href: '/admin/billing',
+      href: '/admin/billing/orders',
       badge: '需关注',
     });
   }

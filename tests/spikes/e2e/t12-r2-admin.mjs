@@ -44,6 +44,7 @@ const sql = postgres(databaseUrl, {
   onnotice: () => undefined,
 });
 const platformId = crypto.randomUUID();
+const platformAccountId = crypto.randomUUID();
 const planId = crypto.randomUUID();
 const platformCode = `t12-r2-browser-${crypto.randomUUID()}`;
 const email = `t12-r2-browser-${crypto.randomUUID()}@example.test`;
@@ -219,6 +220,10 @@ async function createFixtures() {
   await sql`
     insert into public.plans (id, platform_id, code, name, kind, features)
     values (${planId}, ${platformId}, 'free', 'Free', 'free', ${sql.json({})})
+  `;
+  await sql`
+    insert into public.platform_accounts (id, platform_id, user_id, status)
+    values (${platformAccountId}, ${platformId}, ${userId}, 'active')
   `;
   await sql`
     update public.platforms
@@ -581,6 +586,7 @@ async function runBrowserFlow(secret) {
   });
   await page.unroute(plansRoute);
 
+  const architectureBehavior = await runArchitectureBehaviorMatrix();
   const responsiveA11y = await runResponsiveA11yMatrix();
 
   await page.getByRole('button', { name: '退出登录' }).click();
@@ -634,9 +640,202 @@ async function runBrowserFlow(secret) {
     upstreamFailureRetry: 'PASS',
     httpOnlyProof: 'PASS',
     sensitiveWrite: 'PASS',
+    architectureBehavior,
     responsiveA11y,
     logoutOldJwtRejected: 'PASS',
     anonymousShellRedirect: 'PASS',
+  };
+}
+
+async function runArchitectureBehaviorMatrix() {
+  const identityRequests = [];
+  const observeIdentityRequest = (request) => {
+    if (
+      request.method() === 'GET' &&
+      request.url().includes('/api/v1/admin/api/v1/accounts')
+    )
+      identityRequests.push(request.url());
+  };
+  page.on('request', observeIdentityRequest);
+  try {
+    const initialIdentityResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/admin/api/v1/accounts') &&
+        response.request().method() === 'GET',
+    );
+    await page.goto(`${appUrl}/admin/accounts`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator('[data-test="admin-central-accounts"]').waitFor({
+      state: 'visible',
+    });
+    await initialIdentityResponse;
+    const initialRequestCount = identityRequests.length;
+    const search = page.locator('[data-test="accounts-search-input"]');
+    await search.fill('typed-but-not-submitted');
+    await page.waitForTimeout(250);
+    assert.equal(
+      identityRequests.length,
+      initialRequestCount,
+      'typing in global identity search must not issue requests before submit',
+    );
+
+    const committedQuery = email.slice(0, 12);
+    await search.fill(committedQuery);
+    const submitted = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/admin/api/v1/accounts') &&
+        response.url().includes(encodeURIComponent(committedQuery)) &&
+        response.request().method() === 'GET',
+    );
+    await page.getByRole('button', { name: '检索' }).click();
+    await submitted;
+    await page.waitForURL(
+      (url) => url.searchParams.get('q') === committedQuery,
+    );
+    assert.equal(
+      identityRequests.length,
+      initialRequestCount + 1,
+      'one search submit must issue exactly one global identity request',
+    );
+
+    const scoped = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/admin/api/v1/accounts') &&
+        response.url().includes(`platform_id=${platformId}`) &&
+        response.request().method() === 'GET',
+    );
+    await page
+      .locator('[data-test="accounts-platform-selector"]')
+      .selectOption(platformId);
+    await scoped;
+    await page.waitForURL(
+      (url) => url.searchParams.get('platform') === platformId,
+    );
+    assert.equal(
+      identityRequests.length,
+      initialRequestCount + 2,
+      'platform scope change must issue one identity request, not platform fan-out',
+    );
+
+    const uidSearch = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/admin/api/v1/accounts') &&
+        response.url().includes(encodeURIComponent(userId)) &&
+        response.url().includes(`platform_id=${platformId}`) &&
+        response.request().method() === 'GET',
+    );
+    await search.fill(userId);
+    await page.getByRole('button', { name: '检索' }).click();
+    await uidSearch;
+    await page.waitForURL(
+      (url) =>
+        url.searchParams.get('q') === userId &&
+        url.searchParams.get('platform') === platformId,
+    );
+    assert.equal(
+      identityRequests.length,
+      initialRequestCount + 3,
+      'UID search submit must issue exactly one global identity request',
+    );
+    const accountDeepLink = page
+      .getByRole('link', { name: /进入账户/u })
+      .first();
+    await accountDeepLink.waitFor({ state: 'visible' });
+    await accountDeepLink.click();
+    await page.waitForURL(
+      `**/admin/platforms/${platformId}/accounts?selected=${platformAccountId}`,
+    );
+  } finally {
+    page.off('request', observeIdentityRequest);
+  }
+
+  await page.goto(`${appUrl}/admin/billing/orders?status=manual_review`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="central-billing-page"]').waitFor({
+    state: 'visible',
+  });
+  assert.equal(
+    await page.getByLabel('Billing 状态').inputValue(),
+    'manual_review',
+    'Billing deep link must hydrate the status filter from URL',
+  );
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.locator('[data-test="central-billing-page"]').waitFor({
+    state: 'visible',
+  });
+  assert.equal(
+    await page.getByLabel('Billing 状态').inputValue(),
+    'manual_review',
+    'Billing URL filter must survive a full browser refresh',
+  );
+
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page.getByLabel('搜索平台').fill(platformCode);
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole('option')
+    .filter({ hasText: platformCode })
+    .click();
+  await page.waitForURL(`**/admin/platforms/${platformId}/billing`);
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole('button', { name: /所有平台/u })
+    .click();
+  await page.waitForURL('**/admin/billing/orders');
+
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/accounts`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="admin-nav-operations"]').click();
+  await page.waitForURL('**/admin/operations');
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/accounts`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="admin-nav-audit"]').click();
+  await page.waitForURL('**/admin/audit');
+
+  await page.goto(`${appUrl}/admin/accounts`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page.getByLabel('搜索平台').fill(platformCode);
+  const switcherPopover = page.locator('[data-slot="popover-content"]');
+  const scopedPlatformOption = switcherPopover
+    .getByRole('option')
+    .filter({ hasText: platformCode });
+  await scopedPlatformOption.waitFor({ state: 'visible' });
+  await scopedPlatformOption.click();
+  await page.waitForURL(`**/admin/platforms/${platformId}/accounts`);
+
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole('button', { name: /所有平台/u })
+    .click();
+  await page.waitForURL('**/admin/accounts');
+
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/billing`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole('button', { name: /所有平台/u })
+    .click();
+  await page.waitForURL('**/admin/billing/orders');
+
+  return {
+    identitySubmitSingleRequest: 'PASS',
+    identityPlatformScopeSingleRequest: 'PASS',
+    identityUidAccountDeepLink: 'PASS',
+    billingUrlHydration: 'PASS',
+    billingRefreshPersistence: 'PASS',
+    accountsEquivalentScopeSwitch: 'PASS',
+    billingEquivalentScopeSwitch: 'PASS',
+    platformGovernanceOneHop: 'PASS',
   };
 }
 
@@ -644,6 +843,8 @@ async function runResponsiveA11yMatrix() {
   const routes = [
     { label: 'Admin Shell', path: '/admin' },
     { label: 'Platforms', path: '/admin/platforms' },
+    { label: 'Global Identities', path: '/admin/accounts' },
+    { label: 'Global Billing Orders', path: '/admin/billing/orders' },
     {
       label: 'Platform Workspace',
       path: `/admin/platforms/${platformId}`,
@@ -651,6 +852,10 @@ async function runResponsiveA11yMatrix() {
     {
       label: 'Accounts',
       path: `/admin/platforms/${platformId}/accounts`,
+    },
+    {
+      label: 'Platform Billing',
+      path: `/admin/platforms/${platformId}/billing`,
     },
     { label: 'Plans', path: `/admin/platforms/${platformId}/plans` },
     {
@@ -855,6 +1060,9 @@ try {
       () => undefined,
     );
     await sql`delete from public.redemption_code_batches where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_accounts where id = ${platformAccountId}`.catch(
       () => undefined,
     );
     await sql`delete from public.platform_subscription_config where platform_id = ${platformId}`.catch(

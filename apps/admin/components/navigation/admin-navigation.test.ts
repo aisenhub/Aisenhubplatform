@@ -5,6 +5,7 @@ import {
   adminNavigationGroups,
   adminNavigationLabel,
   isAdminNavigationItemActive,
+  mapAdminScopeRoute,
   parseAdminPlatformPath,
   platformNavigationGroups,
 } from './admin-navigation';
@@ -58,6 +59,38 @@ describe('admin navigation model', () => {
         origins!,
       ),
     ).toBe(true);
+  });
+
+  it('maps equivalent resources across Global and Platform lenses', () => {
+    expect(mapAdminScopeRoute('/admin/accounts', 'platform-1')).toBe(
+      '/admin/platforms/platform-1/accounts',
+    );
+    expect(mapAdminScopeRoute('/admin/billing', 'platform-1')).toBe(
+      '/admin/platforms/platform-1/billing',
+    );
+    expect(mapAdminScopeRoute('/admin/billing/orders', 'platform-1')).toBe(
+      '/admin/platforms/platform-1/billing',
+    );
+    expect(
+      mapAdminScopeRoute('/admin/platforms/platform-1/accounts', null),
+    ).toBe('/admin/accounts');
+    expect(
+      mapAdminScopeRoute('/admin/platforms/platform-1/billing', null),
+    ).toBe('/admin/billing/orders');
+    expect(
+      mapAdminScopeRoute('/admin/platforms/platform-1/settings/keys', null),
+    ).toBe('/admin/platforms');
+    expect(
+      mapAdminScopeRoute(
+        '/admin/platforms/platform-1/settings/origins',
+        'platform-2',
+      ),
+    ).toBe('/admin/platforms/platform-2/settings/origins');
+  });
+
+  it('keeps the legacy Billing route active while navigation points at orders', () => {
+    expect(adminNavigationLabel('/admin/billing')).toBe('计费管理');
+    expect(adminNavigationLabel('/admin/billing/orders')).toBe('计费管理');
   });
 
   it('consolidates security navigation away from the MFA flow', () => {

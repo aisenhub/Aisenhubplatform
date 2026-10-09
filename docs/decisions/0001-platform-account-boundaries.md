@@ -17,7 +17,7 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | D03 | V1 保持模块化单体，最多一个运行中 Admin，不包含支付、组织/团队或第三方平台接入 | 不新增微服务、通用 RBAC、Billing 或第三方授权入口 |
 | D04 | Free 是读取时回退；Grant/Event 是权益事实；Projection 由统一数据库领域过程更新 | Account API、Admin 和后台任务不能各自计算权益 |
 | D05 | 私有 SQL 通过 TLS 事务连接和独立 executor 角色调用 | account、admin、job、recovery 权限分离，private schema 不暴露给 Data API |
-| D06 | Admin 敏感动作需要绑定当前 session 的近期 MFA proof，窗口为 5 分钟 | AAL2、JWT `iat` 或客户端布尔值不能代替服务端 proof |
+| D06 | Admin 敏感动作需要绑定当前 session 的近期 MFA proof，当前最长窗口为 30 分钟 | AAL2、JWT `iat` 或客户端布尔值不能代替服务端 proof；账户状态变更、Billing 人工 requery/resolve、关键密钥生命周期与 Global Delete 均进入该边界 |
 | D07 | Storage 写入结果为 unknown 时继续占用预算，不猜测取消成功 | 清理任务必须保留租约和 fencing token，并支持人工恢复 |
 | D08 | 账户关闭和 Global Delete 分离；跨 Auth、数据库、Storage 的删除使用 checkpoint 任务 | 不把外部服务调用包进长数据库事务，失败可以续跑 |
 | D09 | 普通用户近期认证使用独立 email `token_hash` Auth session；proof 绑定原业务 session | 临时 token 不返回浏览器，中央 API 验证两个 session 的用户和有效窗口 |
@@ -40,7 +40,8 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | 单文件上限 | 1 MiB | `platform_file_policies.max_file_bytes` 最大值 |
 | 文件数量/总量 | 10 个 / 10 MiB | 平台账户预算 |
 | Access JWT | 15 分钟 | Auth 配置目标 |
-| Recent proof | 5 分钟 | 普通近期认证和 Admin step-up |
+| 普通用户 recent proof | 5 分钟 | email reauth 事件与原业务 session 绑定 |
+| Admin recent-MFA proof | 最长 30 分钟 | 服务端 MFA attestation 换取并绑定当前 Admin user/session；敏感管理动作使用 |
 | Account API 总预算 | 5 秒 | Consumer BFF 推荐默认请求超时；Harness 用同一边界验证 |
 | 上传接收并发 | 每实例 16、每账户 2 | 进程内 `UploadGate` |
 | 兑换限流 | 每账户 5/分钟、每可信 IP 30/分钟、每平台 300/分钟 | 数据库窗口计数器 |

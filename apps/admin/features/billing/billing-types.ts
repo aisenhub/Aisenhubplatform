@@ -2,6 +2,9 @@ import type { StatusTone } from '@kit/ui/status-badge';
 
 export type BillingOrder = {
   order_id: string;
+  platform_id: string | null;
+  platform_account_id: string | null;
+  checkout_intent_id: string | null;
   provider: string;
   provider_order_no: string;
   provider_status: string;
@@ -77,6 +80,13 @@ export type BillingMetrics = {
   }>;
 };
 
+export type BillingPlatformOption = {
+  platform_id: string;
+  code: string;
+  name: string;
+  status: string;
+};
+
 export type BillingFilters = {
   query: string;
   status: string;
@@ -92,6 +102,71 @@ export const EMPTY_BILLING_FILTERS: BillingFilters = {
   platformAccountId: '',
   providerAccountId: '',
 };
+
+export const BILLING_FILTER_STATUSES = [
+  'pending',
+  'retryable',
+  'manual_review',
+  'finalized',
+  'granted',
+  'rejected',
+  'unlinked',
+] as const;
+
+type SearchParamsReader = {
+  get(name: string): string | null;
+};
+
+export function billingFiltersFromSearchParams(
+  searchParams: SearchParamsReader,
+): BillingFilters {
+  const status = searchParams.get('status') ?? '';
+  return {
+    query: searchParams.get('q') ?? '',
+    status: (BILLING_FILTER_STATUSES as readonly string[]).includes(status)
+      ? status
+      : '',
+    platformId: searchParams.get('platform') ?? '',
+    platformAccountId: searchParams.get('platform_account') ?? '',
+    providerAccountId: searchParams.get('provider_account') ?? '',
+  };
+}
+
+export function billingFiltersToSearchParams(
+  filters: BillingFilters,
+  selectedOrderId?: string | null,
+): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filters.query) params.set('q', filters.query);
+  if (filters.status) params.set('status', filters.status);
+  if (filters.platformId) params.set('platform', filters.platformId);
+  if (filters.platformAccountId)
+    params.set('platform_account', filters.platformAccountId);
+  if (filters.providerAccountId)
+    params.set('provider_account', filters.providerAccountId);
+  if (selectedOrderId) params.set('selected', selectedOrderId);
+  return params;
+}
+
+export function billingOrderApiSearchParams(input: {
+  filters: BillingFilters;
+  lockedPlatformId?: string;
+  cursor?: string | null;
+  limit?: number;
+}): URLSearchParams {
+  const params = new URLSearchParams({ limit: String(input.limit ?? 50) });
+  const { filters } = input;
+  if (filters.query) params.set('q', filters.query);
+  if (filters.status) params.set('status', filters.status);
+  const platformId = input.lockedPlatformId ?? filters.platformId;
+  if (platformId) params.set('platform_id', platformId);
+  if (filters.platformAccountId)
+    params.set('platform_account_id', filters.platformAccountId);
+  if (filters.providerAccountId)
+    params.set('provider_account_id', filters.providerAccountId);
+  if (input.cursor) params.set('cursor', input.cursor);
+  return params;
+}
 
 export type ResolutionDecision =
   | 'refund_confirmed'

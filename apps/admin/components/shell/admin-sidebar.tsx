@@ -21,6 +21,7 @@ import {
 } from '@kit/ui/sidebar';
 
 import {
+  adminGlobalUtilityNavigation,
   adminNavigationGroups,
   isAdminNavigationItemActive,
   parseAdminPlatformPath,
@@ -40,8 +41,20 @@ export function AdminSidebar() {
     platformRoute && platform?.platform_id === platformRoute.platformId
       ? platform
       : null;
+  const platformDirectory = adminNavigationGroups
+    .flatMap((group) => group.items)
+    .find((item) => item.key === 'platforms');
   const groups = platformRoute
-    ? platformNavigationGroups(platformRoute.platformId)
+    ? [
+        ...platformNavigationGroups(platformRoute.platformId),
+        {
+          label: '全局治理',
+          items: [
+            ...(platformDirectory ? [platformDirectory] : []),
+            ...adminGlobalUtilityNavigation,
+          ],
+        },
+      ]
     : adminNavigationGroups;
 
   return (

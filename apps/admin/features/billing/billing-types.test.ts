@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  billingFiltersFromSearchParams,
+  billingFiltersToSearchParams,
+  billingOrderApiSearchParams,
   billingTone,
   formatDate,
   timelineSourceLabel,
@@ -9,6 +12,39 @@ import {
 } from './billing-types';
 
 describe('billing-types utilities', () => {
+  it('maps URL filters to UI state and API wire parameters', () => {
+    const source = new URLSearchParams(
+      'q=provider&status=manual_review&platform=platform-1&platform_account=account-1&provider_account=provider-1&selected=order-1',
+    );
+    const filters = billingFiltersFromSearchParams(source);
+    expect(filters).toEqual({
+      query: 'provider',
+      status: 'manual_review',
+      platformId: 'platform-1',
+      platformAccountId: 'account-1',
+      providerAccountId: 'provider-1',
+    });
+    expect(billingFiltersToSearchParams(filters, 'order-1').toString()).toBe(
+      source.toString(),
+    );
+    expect(
+      billingOrderApiSearchParams({
+        filters,
+        lockedPlatformId: 'locked-platform',
+        cursor: 'cursor-1',
+      }).toString(),
+    ).toBe(
+      'limit=50&q=provider&status=manual_review&platform_id=locked-platform&platform_account_id=account-1&provider_account_id=provider-1&cursor=cursor-1',
+    );
+  });
+
+  it('drops unknown Billing status from copied URL state', () => {
+    expect(
+      billingFiltersFromSearchParams(new URLSearchParams('status=not-real'))
+        .status,
+    ).toBe('');
+  });
+
   it('maps order/settlement statuses to appropriate badge tones', () => {
     expect(billingTone('granted')).toBe('success');
     expect(billingTone('finalized')).toBe('success');
