@@ -137,14 +137,14 @@
 | --- | --- | --- | --- | --- | --- |
 | 01 | 919559107c105c02279f41f68c307115639ffc6d | codex/remove-sdk-contract-first | 已 push | 已核对 | Contract baseline |
 | 02 | 996913275b6c9d8c0e2c2b0692eea227c05ce3fd | codex/remove-sdk-contract-first | 已 push | 已核对 | Reference Consumer HTTP integration |
-| 03 | 2d4eff5 | codex/remove-sdk-contract-first | 失败：网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
-| 04 | c94f5d6 | codex/remove-sdk-contract-first | 未重试：已知网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
-| 05 | b552fe5 | codex/remove-sdk-contract-first | 未重试：已知网络不可达 | 未核对 | 本地 commit 已完成，待网络恢复 push |
-| 06 | 未验证 | codex/remove-sdk-contract-first | 未验证 | 未验证 | - |
+| 03 | 2d4eff5 | codex/remove-sdk-contract-first | 已随 Phase 06 分支 push | 已核对可达 | 当时两次 push 网络失败的历史证据保留在上方验证记录；当前远端分支已包含该 commit |
+| 04 | c94f5d6 | codex/remove-sdk-contract-first | 已随 Phase 06 分支 push | 已核对可达 | 当前远端分支已包含该 commit |
+| 05 | b552fe5 | codex/remove-sdk-contract-first | 已随 Phase 06 分支 push | 已核对可达 | 当前远端分支已包含该 commit |
+| 06 | bd2c564a97d11a19c321c9a79e6485b59530ab67 | codex/remove-sdk-contract-first | 已 push | 已核对 | Contract-First 最终修复与 R3 稳定化；`git ls-remote` 与本地实现提交 SHA 一致 |
 
 ## 交接信息
 
-- Phase 01–06 实施与 R3 验收已完成；最终 `verify:task:0801 --reuse-local` 21 个 executable gates 全部 PASS。Phase 06 当前只剩 commit、push 与远端 SHA 核对，完成前不标“已交付”。
-- Phase 03–05 曾有 GitHub 网络阻塞记录；交付收尾应重新尝试推送当前任务分支，并以远端 branch SHA 是否等于本地 HEAD 为准，不沿用旧网络状态作结论。
+- Phase 01–06 实施、R3 验收与任务分支交付均已完成；最终 `verify:task:0801 --reuse-local` 21 个 executable gates 全部 PASS，实现提交 `bd2c564a97d11a19c321c9a79e6485b59530ab67` 已 push 且远端 SHA 核对一致。
+- Phase 03–05 当时的 GitHub 网络失败记录继续作为历史证据保留；当前远端任务分支已包含这些提交，因此不再构成交付阻塞。
 - 生产部署/真实支付/费用/Secret/数据操作均不在本任务授权范围。
 - main 合并前必须确认生产自动部署绑定；未知时保留在任务分支。

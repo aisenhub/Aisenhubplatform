@@ -1,6 +1,6 @@
 # Phase 06：当前文档同步与 R3 总体验收
 
-状态：R3 验收通过；待 commit/push 与远端 SHA 核对
+状态：已交付；R3 验收通过，任务分支已 push 并核对远端 SHA
 
 ## 目标
 
@@ -69,4 +69,4 @@ git diff --check
 
 中间一次复用本地库的完整验收曾因中断 T16 遗留的 `private.system_admin(singleton_id=1)` 阻塞 pgTAP；该行已确认属于 `t16-r2-admin-* @example.test` 合成 fixture。恢复 Docker Desktop 后没有执行 `db:reset`：条件删除返回 `NO_MATCH_NO_CHANGE`，随后只读查询确认 `private.system_admin` 为空，`pnpm test:db` 重新得到 58 files / 1082 tests PASS。
 
-最终同一候选运行 `pnpm verify:task:0801 --reuse-local` 退出码 0，输出 `TASK-0801 PASS: 21 executable gates passed.`：Edge/API 97/97、DB 58 files / 1082 tests、结算并发、Contract breaking、Registry、Reference Consumer、Node/Deno runtime、T16 20 项 Consumer/Admin 浏览器矩阵、T12 Admin MFA/step-up/responsive-a11y、docs 101 documents、OpenAPI Account 22/Admin 45 operations 与 4 contracts / 39 fields ownership 全部 PASS。R3 验收退出条件已满足；当前只剩 commit/push 与远端 SHA 核对，完成前不标“已交付”。
+最终同一候选运行 `pnpm verify:task:0801 --reuse-local` 退出码 0，输出 `TASK-0801 PASS: 21 executable gates passed.`：Edge/API 97/97、DB 58 files / 1082 tests、结算并发、Contract breaking、Registry、Reference Consumer、Node/Deno runtime、T16 20 项 Consumer/Admin 浏览器矩阵、T12 Admin MFA/step-up/responsive-a11y、docs 101 documents、OpenAPI Account 22/Admin 45 operations 与 4 contracts / 39 fields ownership 全部 PASS。实现提交 `bd2c564a97d11a19c321c9a79e6485b59530ab67` 已 push 到 `origin/codex/remove-sdk-contract-first`，`git ls-remote` 返回相同 SHA。R3 与任务分支交付退出条件均已满足；main 未合并，生产自动部署绑定仍按既定边界保持未知/未触发。
