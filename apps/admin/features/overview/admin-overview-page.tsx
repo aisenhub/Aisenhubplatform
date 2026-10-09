@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowUpRight, Users, Boxes, Files, ShieldCheck } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
@@ -24,34 +31,23 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
-
-type Platform = {
-  platform_id: string;
-  code: string;
-  name: string;
-  status: string;
-  allow_activation: boolean;
-};
-
-type DeletionJob = {
-  job_id: string;
-  request_id: string;
-  state: string;
-  checkpoint: string;
-  retry_count: number;
-  last_error_code?: string | null;
-  created_at?: string | null;
-};
-
-type AuditEntry = {
-  id?: string | null;
-  request_id?: string | null;
-  action?: string | null;
-  target_type?: string | null;
-  target_id?: string | null;
-  outcome?: string | null;
-  created_at?: string | null;
-};
+import {
+  auditActionLabel,
+  auditActorLabel,
+  auditTargetTypeLabel,
+  buildAttentionItems,
+  countFailureSignals,
+  deriveSystemHealth,
+  platformStats,
+  recentChangedPlatforms,
+  type AttentionItem,
+  type AttentionSeverity,
+  type OverviewAuditEntry,
+  type OverviewBillingMetrics,
+  type OverviewDeletionJob,
+  type OverviewPlatform,
+  type OverviewTone,
+} from './admin-overview-model';
 
 type SourceState<T> = {
   data: T[];
@@ -83,6 +79,7 @@ function auditOutcome(value: string | null | undefined) {
       return { label: '成功', tone: 'success' as const };
     case 'failed':
     case 'rejected':
+    case 'revoked':
       return { label: '失败', tone: 'danger' as const };
     case 'pending':
     case 'accepted':
@@ -96,14 +93,31 @@ function auditOutcome(value: string | null | undefined) {
   }
 }
 
+function attentionTone(severity: AttentionSeverity) {
+  return severity === 'critical'
+    ? ('danger' as const)
+    : severity === 'warning'
+      ? ('warning' as const)
+      : ('info' as const);
+}
+
+function platformCount(value: number, saturated: boolean) {
+  return saturated ? `≥${value}` : `${value}`;
+}
+
 export function AdminOverviewPage() {
   const [platforms, setPlatforms] =
-    useState<SourceState<Platform>>(initialSource);
-  const [jobs, setJobs] = useState<SourceState<DeletionJob>>(initialSource);
-  const [audit, setAudit] = useState<SourceState<AuditEntry>>(initialSource);
+    useState<SourceState<OverviewPlatform>>(initialSource);
+  const [jobs, setJobs] =
+    useState<SourceState<OverviewDeletionJob>>(initialSource);
+  const [billing, setBilling] =
+    useState<SourceState<OverviewBillingMetrics>>(initialSource);
+  const [audit, setAudit] =
+    useState<SourceState<OverviewAuditEntry>>(initialSource);
   const [refreshing, setRefreshing] = useState(false);
   const platformGeneration = useRef(0);
   const jobGeneration = useRef(0);
+  const billingGeneration = useRef(0);
   const auditGeneration = useRef(0);
 
   const loadPlatforms = useCallback(async (background: boolean) => {
@@ -123,7 +137,7 @@ export function AdminOverviewPage() {
         '/api/v1/admin/api/v1/platforms?limit=100',
         { cache: 'no-store' },
       );
-      const payload = await readApiPayload<Platform[]>(response);
+      const payload = await readApiPayload<OverviewPlatform[]>(response);
       if (
         generation !== platformGeneration.current ||
         !adminAuthSession.isCurrentEpoch(epoch)
@@ -170,7 +184,7 @@ export function AdminOverviewPage() {
         '/api/v1/admin/api/v1/deletion-jobs?limit=100',
         { cache: 'no-store' },
       );
-      const payload = await readApiPayload<DeletionJob[]>(response);
+      const payload = await readApiPayload<OverviewDeletionJob[]>(response);
       if (
         generation !== jobGeneration.current ||
         !adminAuthSession.isCurrentEpoch(epoch)
@@ -206,6 +220,53 @@ export function AdminOverviewPage() {
     }
   }, []);
 
+  const loadBilling = useCallback(async (background: boolean) => {
+    const generation = ++billingGeneration.current;
+    const epoch = adminAuthSession.getEpoch();
+    if (!background) {
+      setBilling((current) => ({ ...current, state: 'loading', error: null }));
+    } else setBilling((current) => ({ ...current, refreshError: null }));
+    try {
+      const response = await adminAuthSession.request(
+        '/api/v1/admin/api/v1/billing/metrics',
+        { cache: 'no-store' },
+      );
+      const payload = await readApiPayload<OverviewBillingMetrics>(response);
+      if (
+        generation !== billingGeneration.current ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
+      if (!response.ok || !payload?.data) {
+        const nextError = resourceError(response, payload, '计费观测');
+        setBilling((current) =>
+          background
+            ? { ...current, refreshError: nextError }
+            : { ...current, state: 'error', error: nextError },
+        );
+        return;
+      }
+      setBilling({
+        data: [payload.data],
+        state: 'success',
+        error: null,
+        refreshError: null,
+      });
+    } catch (caught) {
+      if (
+        generation !== billingGeneration.current ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
+      const nextError = caughtError('计费观测读取失败', caught);
+      setBilling((current) =>
+        background
+          ? { ...current, refreshError: nextError }
+          : { ...current, state: 'error', error: nextError },
+      );
+    }
+  }, []);
+
   const loadAudit = useCallback(async (background: boolean) => {
     const generation = ++auditGeneration.current;
     const epoch = adminAuthSession.getEpoch();
@@ -214,10 +275,10 @@ export function AdminOverviewPage() {
     } else setAudit((current) => ({ ...current, refreshError: null }));
     try {
       const response = await adminAuthSession.request(
-        '/api/v1/admin/api/v1/audit?limit=5',
+        '/api/v1/admin/api/v1/audit?limit=8',
         { cache: 'no-store' },
       );
-      const payload = await readApiPayload<AuditEntry[]>(response);
+      const payload = await readApiPayload<OverviewAuditEntry[]>(response);
       if (
         generation !== auditGeneration.current ||
         !adminAuthSession.isCurrentEpoch(epoch)
@@ -259,35 +320,59 @@ export function AdminOverviewPage() {
       await Promise.all([
         loadPlatforms(background),
         loadJobs(background),
+        loadBilling(background),
         loadAudit(background),
       ]);
       if (background) setRefreshing(false);
     },
-    [loadAudit, loadJobs, loadPlatforms],
+    [loadAudit, loadBilling, loadJobs, loadPlatforms],
   );
 
   useEffect(() => {
     void loadAll(false);
   }, [loadAll]);
 
-  const disabledPlatforms = useMemo(
-    () => platforms.data.filter((platform) => platform.status === 'disabled'),
-    [platforms.data],
+  const billingMetrics = billing.data[0] ?? null;
+  const attentionItems = useMemo(
+    () => buildAttentionItems(jobs.data, billingMetrics),
+    [billingMetrics, jobs.data],
   );
-  const attentionJobs = useMemo(
-    () => jobs.data.filter((job) => ['blocked', 'retry'].includes(job.state)),
-    [jobs.data],
+  const failures = useMemo(
+    () => countFailureSignals(jobs.data, billingMetrics),
+    [billingMetrics, jobs.data],
   );
-  const runningJobs = useMemo(
-    () => jobs.data.filter((job) => ['pending', 'running'].includes(job.state)),
-    [jobs.data],
+  const health = useMemo(
+    () =>
+      deriveSystemHealth(
+        [platforms.state, jobs.state, billing.state, audit.state],
+        attentionItems.length,
+      ),
+    [
+      attentionItems.length,
+      audit.state,
+      billing.state,
+      jobs.state,
+      platforms.state,
+    ],
   );
+  const stats = useMemo(() => platformStats(platforms.data), [platforms.data]);
+  const recentPlatforms = useMemo(
+    () => recentChangedPlatforms(audit.data, platforms.data),
+    [audit.data, platforms.data],
+  );
+  const platformSaturated = platforms.data.length >= 100;
+  const attentionReady =
+    jobs.state === 'success' && billing.state === 'success';
+  const billingCritical =
+    billingMetrics?.alerts.some(
+      (alert) => alert.status === 'active' && alert.severity === 'critical',
+    ) ?? false;
 
   return (
     <main className="shell wide-shell" data-test="admin-overview">
       <AdminPageHeader
         title="概览"
-        description="进入平台工作区，处理需要关注的事项，查看最近活动。"
+        description="优先查看异常、待处理事项和最近变更，再进入具体管理范围。"
         actions={
           <Button
             variant="outline"
@@ -302,46 +387,114 @@ export function AdminOverviewPage() {
       />
 
       <SourceRefreshErrors
-        sources={[platforms, jobs, audit]}
+        sources={[platforms, jobs, billing, audit]}
         onRetry={() => void loadAll(true)}
       />
 
-      <div
-        className="admin-overview-summary"
-        aria-label="当前返回结果中的关注事项"
-      >
+      <div className="admin-overview-summary" aria-label="管理员概览关键状态">
         <SummaryCard
-          label="停用平台"
-          value={
-            platforms.state === 'success' ? `${disabledPlatforms.length}` : '—'
+          label="系统状态"
+          value={health.label}
+          description={health.description}
+          tone={health.tone}
+        />
+        <SummaryCard
+          label="待处理事项"
+          value={attentionReady ? `${attentionItems.length}` : '—'}
+          description={
+            attentionReady
+              ? '删除任务、计费告警与人工复核'
+              : '正在确认删除任务和计费观测'
           }
-          description="当前返回窗口内；不代表全局总量"
-          tone="danger"
+          tone={
+            attentionReady
+              ? attentionItems.length > 0
+                ? 'warning'
+                : 'success'
+              : 'neutral'
+          }
         />
         <SummaryCard
-          label="需关注的删除任务"
-          value={jobs.state === 'success' ? `${attentionJobs.length}` : '—'}
-          description="已阻塞或等待重试，最多读取 100 条"
-          tone="warning"
+          label="失败 / 阻塞"
+          value={attentionReady ? `${failures}` : '—'}
+          description={
+            attentionReady
+              ? '当前需要人工介入的处理异常'
+              : '数据未确认前不判断为无异常'
+          }
+          tone={
+            attentionReady ? (failures > 0 ? 'danger' : 'success') : 'neutral'
+          }
         />
         <SummaryCard
-          label="正在处理"
-          value={jobs.state === 'success' ? `${runningJobs.length}` : '—'}
-          description="待执行或执行中，最多读取 100 条"
-          tone="info"
+          label="计费告警"
+          value={
+            billing.state === 'success'
+              ? `${billingMetrics?.active_alert_count ?? 0}`
+              : '—'
+          }
+          description={
+            billing.state !== 'success'
+              ? billing.state === 'loading'
+                ? '正在读取计费观测'
+                : '计费观测暂不可用'
+              : (billingMetrics?.active_alert_count ?? 0) > 0
+                ? '活动告警需要进入计费管理检查'
+                : '当前没有活动计费告警'
+          }
+          tone={
+            billing.state !== 'success'
+              ? 'neutral'
+              : (billingMetrics?.active_alert_count ?? 0) === 0
+                ? 'success'
+                : billingCritical
+                  ? 'danger'
+                  : 'warning'
+          }
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-        <section
-          className="panel gap-4"
-          data-test="overview-platform-attention"
-        >
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
+        <section className="panel gap-4" data-test="overview-attention">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2>需要关注</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                这里只放需要管理员判断或处理的异常，不重复普通导航。
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link
+                href="/admin/operations"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                运维中心
+              </Link>
+              <Link
+                href="/admin/billing"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                计费管理
+              </Link>
+            </div>
+          </div>
+
+          <AttentionState
+            jobs={jobs}
+            billing={billing}
+            items={attentionItems}
+            onRetry={() =>
+              void Promise.all([loadJobs(false), loadBilling(false)])
+            }
+          />
+        </section>
+
+        <section className="panel gap-4" data-test="overview-platform-summary">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2>平台关注项</h2>
+              <h2>平台概况</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                检查停用平台的配置，或进入目录管理账户。最多读取 100 个平台。
+                快速确认平台启用状态和激活策略。
               </p>
             </div>
             <Link
@@ -351,183 +504,116 @@ export function AdminOverviewPage() {
               查看平台
             </Link>
           </div>
+
           <SourceStateView
             state={platforms}
             resource="平台列表"
             onRetry={() => void loadPlatforms(false)}
           />
-          {platforms.state === 'success' && disabledPlatforms.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              当前返回窗口内没有停用平台。
-            </p>
+
+          {platforms.state === 'success' ? (
+            <div className="grid grid-cols-2 gap-3">
+              <MetricBlock
+                label="目录平台"
+                value={platformCount(stats.total, platformSaturated)}
+              />
+              <MetricBlock
+                label="活跃"
+                value={platformCount(stats.active, platformSaturated)}
+              />
+              <MetricBlock
+                label="停用"
+                value={platformCount(stats.disabled, platformSaturated)}
+              />
+              <MetricBlock
+                label="暂停新激活"
+                value={platformCount(stats.activationPaused, platformSaturated)}
+              />
+            </div>
           ) : null}
-          {disabledPlatforms.length ? (
-            <div className="grid gap-2">
-              {disabledPlatforms.slice(0, 8).map((platform) => (
-                <Link
-                  key={platform.platform_id}
-                  href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}`}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-card p-3 hover:border-primary/40"
-                  data-test={`overview-disabled-platform-${platform.platform_id}`}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
-                      {platform.name}
-                    </span>
-                    <span className="mt-1 block truncate font-mono text-xs text-muted-foreground">
-                      {platform.code}
-                    </span>
-                  </span>
-                  <StatusBadge
-                    label={statusLabel(platform.status)}
-                    tone={statusTone(platform.status)}
-                    rawValue={platform.status}
-                  />
-                </Link>
-              ))}
+
+          {platforms.state === 'success' ? (
+            <div className="border-t border-border pt-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3>最近变更的平台</h3>
+                <span className="text-xs text-muted-foreground">
+                  来自最近审计活动
+                </span>
+              </div>
+              {recentPlatforms.length ? (
+                <div className="grid gap-2">
+                  {recentPlatforms.map((platform) => (
+                    <Link
+                      key={platform.platform_id}
+                      href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}`}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 hover:border-primary/40"
+                      data-test={`overview-recent-platform-${platform.platform_id}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">
+                          {platform.name}
+                        </span>
+                        <span className="block truncate font-mono text-xs text-muted-foreground">
+                          {platform.code}
+                        </span>
+                      </span>
+                      <StatusBadge
+                        label={statusLabel(platform.status)}
+                        tone={statusTone(platform.status)}
+                        rawValue={platform.status}
+                      />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  最近审计活动里没有平台级变更。
+                </p>
+              )}
             </div>
           ) : null}
         </section>
-
-        <section className="panel gap-4" data-test="overview-file-boundary">
-          <div>
-            <h2>常用管理</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              先选择平台，再查看该平台的账户和资源。
-            </p>
-          </div>
-          <div className="admin-task-links">
-            {[
-              {
-                title: '平台与账户',
-                description: '查找平台，进入账户目录',
-                href: '/admin/platforms',
-                icon: Users,
-              },
-              {
-                title: '平台配置',
-                description: '套餐、接入配置与密钥',
-                href: '/admin/platforms',
-                icon: Boxes,
-              },
-              {
-                title: '文件管理',
-                description: '选择平台，查看文件与存储策略',
-                href: '/admin/platforms',
-                icon: Files,
-              },
-              {
-                title: '安全与账户',
-                description: '检查登录状态与认证器',
-                href: '/admin/security',
-                icon: ShieldCheck,
-              },
-            ].map(({ title, description, href, icon: Icon }) => (
-              <Link
-                key={title}
-                href={href}
-                className="admin-task-link"
-                data-test={`overview-task-${title}`}
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <Icon
-                    className="size-5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    <span className="block text-sm font-medium">{title}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {description}
-                    </span>
-                  </span>
-                </span>
-                <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" />
-              </Link>
-            ))}
-          </div>
-        </section>
       </div>
-
-      <section className="panel gap-4" data-test="overview-job-attention">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2>删除任务关注项</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              查看已阻塞或等待重试的任务，在运维中心检查详情并处理。
-            </p>
-          </div>
-          <Link
-            href="/admin/operations"
-            className="text-sm text-primary underline-offset-4 hover:underline"
-          >
-            打开运维中心
-          </Link>
-        </div>
-        <SourceStateView
-          state={jobs}
-          resource="删除任务"
-          onRetry={() => void loadJobs(false)}
-        />
-        {jobs.state === 'success' && attentionJobs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            当前返回窗口内没有已阻塞或等待重试的任务。
-          </p>
-        ) : null}
-        {attentionJobs.length ? (
-          <div className="grid gap-2">
-            {attentionJobs.slice(0, 8).map((job) => (
-              <Link
-                key={job.job_id}
-                href={`/admin/operations?job_id=${encodeURIComponent(job.job_id)}`}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-card p-3 hover:border-primary/40"
-                data-test={`overview-job-${job.job_id}`}
-              >
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium">
-                    {job.checkpoint}
-                  </span>
-                  <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
-                    {job.job_id}
-                  </span>
-                </span>
-                <StatusBadge
-                  label={job.state === 'blocked' ? '已阻塞' : '等待重试'}
-                  tone={job.state === 'blocked' ? 'danger' : 'warning'}
-                  rawValue={job.state}
-                />
-              </Link>
-            ))}
-          </div>
-        ) : null}
-      </section>
 
       <section className="panel gap-4" data-test="overview-recent-audit">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2>最近审计活动</h2>
+            <h2>最近活动</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              最新 5 条操作记录。完整记录和筛选请进入审计页。
+              关注最近的管理动作、目标和结果；完整检索请进入审计页。
             </p>
           </div>
           <Link
             href="/admin/audit"
             className="text-sm text-primary underline-offset-4 hover:underline"
           >
-            查看审计
+            查看全部审计
           </Link>
         </div>
+
         <SourceStateView
           state={audit}
           resource="最近审计活动"
           onRetry={() => void loadAudit(false)}
         />
+
         {audit.state === 'success' && audit.data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            当前没有返回审计事件。
-          </p>
+          <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+            <Activity
+              className="mt-0.5 size-5 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <div>
+              <p className="text-sm font-medium">暂无最近操作记录</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                新的管理员操作会在这里按时间倒序出现。
+              </p>
+            </div>
+          </div>
         ) : null}
+
         {audit.data.length ? (
-          <div className="grid gap-2">
+          <div className="divide-y divide-border rounded-lg border border-border/70">
             {audit.data.map((entry, index) => {
               const outcome = auditOutcome(entry.outcome);
               const key =
@@ -535,17 +621,24 @@ export function AdminOverviewPage() {
               return (
                 <div
                   key={key}
-                  className="grid gap-2 rounded-lg border border-border/70 bg-card p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                  className="grid gap-3 bg-card px-4 py-3 first:rounded-t-lg last:rounded-b-lg sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {entry.action ?? '未命名动作'}
-                    </p>
-                    <p className="mt-1 break-all text-xs text-muted-foreground">
-                      {entry.target_type ?? '未提供目标'}
-                      {entry.target_id ? ` · ${entry.target_id}` : ''} ·{' '}
-                      {formatUtc(entry.created_at)}
-                    </p>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <Activity
+                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {auditActionLabel(entry.action)}
+                      </p>
+                      <p className="mt-1 break-all text-xs text-muted-foreground">
+                        {auditActorLabel(entry)} ·{' '}
+                        {auditTargetTypeLabel(entry.target_type)}
+                        {entry.target_id ? ` ${entry.target_id}` : ''} ·{' '}
+                        {formatUtc(entry.created_at)}
+                      </p>
+                    </div>
                   </div>
                   <StatusBadge
                     label={outcome.label}
@@ -558,23 +651,129 @@ export function AdminOverviewPage() {
           </div>
         ) : null}
       </section>
+    </main>
+  );
+}
 
-      <section className="panel gap-4">
+function AttentionState({
+  jobs,
+  billing,
+  items,
+  onRetry,
+}: {
+  jobs: SourceState<OverviewDeletionJob>;
+  billing: SourceState<OverviewBillingMetrics>;
+  items: AttentionItem[];
+  onRetry: () => void;
+}) {
+  const loading =
+    (jobs.state === 'loading' || billing.state === 'loading') &&
+    items.length === 0;
+  if (loading) return <AsyncState state="loading" />;
+
+  const errors = [jobs.error, billing.error].filter(
+    (error): error is ResourceError => Boolean(error),
+  );
+  if (errors.length) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>部分关注信号暂不可用</AlertTitle>
+        <AlertDescription>
+          页面不会把读取失败当作“没有异常”。
+          <div className="mt-3 grid gap-2">
+            {errors.map((error) => (
+              <span key={error.title}>
+                {error.title}：{error.description}
+                <SupportErrorId
+                  requestId={error.requestId}
+                  technicalDetail={error.technicalDetail}
+                />
+              </span>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={onRetry}
+            >
+              重试
+            </Button>
+          </div>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (
+    !items.length &&
+    jobs.state === 'success' &&
+    billing.state === 'success'
+  ) {
+    return (
+      <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+        <CheckCircle2
+          className="mt-0.5 size-5 text-success"
+          aria-hidden="true"
+        />
         <div>
-          <h2>快捷入口</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            查看计费订单、后台任务与操作记录。
+          <p className="text-sm font-medium">当前没有需要处理的事项</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            删除任务和计费观测当前没有需要人工介入的信号。
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <QuickLink href="/admin/platforms" label="平台目录" />
-          <QuickLink href="/admin/billing" label="计费管理" />
-          <QuickLink href="/admin/operations" label="运维中心" />
-          <QuickLink href="/admin/audit" label="审计记录" />
-          <QuickLink href="/admin/security" label="安全总览" />
-        </div>
-      </section>
-    </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-2">
+      {items.slice(0, 6).map((item) => (
+        <AttentionRow key={item.key} item={item} />
+      ))}
+      {items.length > 6 ? (
+        <p className="pt-1 text-xs text-muted-foreground">
+          还有 {items.length - 6} 项未展开，请进入对应管理页继续处理。
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AttentionRow({ item }: { item: AttentionItem }) {
+  const Icon =
+    item.severity === 'critical'
+      ? AlertTriangle
+      : item.severity === 'warning'
+        ? Clock3
+        : CreditCard;
+  return (
+    <Link
+      href={item.href}
+      className="grid gap-3 rounded-lg border border-border/70 bg-card p-3 hover:border-primary/40 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+      data-test={`overview-attention-${item.key}`}
+    >
+      <span className="grid size-9 place-items-center rounded-lg bg-muted">
+        <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium">{item.title}</span>
+        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+          {item.description}
+        </span>
+      </span>
+      <span className="flex items-center justify-between gap-2 sm:justify-end">
+        <StatusBadge
+          label={item.badge}
+          tone={attentionTone(item.severity)}
+          rawValue={item.severity}
+        />
+        <ArrowRight
+          className="size-4 text-muted-foreground"
+          aria-hidden="true"
+        />
+      </span>
+    </Link>
   );
 }
 
@@ -656,31 +855,32 @@ function SummaryCard({
   label: string;
   value: string;
   description: string;
-  tone: 'danger' | 'warning' | 'info';
+  tone: OverviewTone;
 }) {
+  const toneClass =
+    tone === 'danger'
+      ? 'text-destructive'
+      : tone === 'warning'
+        ? 'text-warning-foreground'
+        : tone === 'info'
+          ? 'text-info-foreground'
+          : tone === 'success'
+            ? 'text-success'
+            : 'text-foreground';
   return (
-    <section className="grid gap-2">
+    <section className="grid gap-2 bg-card">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={`text-2xl font-semibold ${tone === 'danger' ? 'text-destructive' : tone === 'warning' ? 'text-warning-foreground' : 'text-info-foreground'}`}
-      >
-        {value}
-      </p>
-      <p className="text-xs text-muted-foreground">{description}</p>
+      <p className={`text-2xl font-semibold ${toneClass}`}>{value}</p>
+      <p className="text-xs leading-5 text-muted-foreground">{description}</p>
     </section>
   );
 }
 
-function QuickLink({ href, label }: { href: string; label: string }) {
+function MetricBlock({ label, value }: { label: string; value: string }) {
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      nativeButton={false}
-      render={<Link href={href} />}
-      data-test={`overview-link-${label}`}
-    >
-      {label}
-    </Button>
+    <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+    </div>
   );
 }
