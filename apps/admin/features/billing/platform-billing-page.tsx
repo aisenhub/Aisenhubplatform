@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
-import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
+import { StatusBadge } from '@kit/ui/status-badge';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -17,43 +18,33 @@ import {
   resourceError,
   type ResourceError,
 } from '../resources/admin-resource-utils';
-
 import {
   billingTone,
   formatDate,
   timelineSourceLabel,
   timelineSummary,
-  EMPTY_BILLING_FILTERS,
-  type BillingFilters,
-  type BillingMetrics,
   type BillingOrder,
   type BillingOrderDetail,
   type ResolutionDecision,
 } from './billing-types';
 
-const tone = billingTone;
+type PlatformBillingFilters = {
+  query: string;
+  status: string;
+  platformAccountId: string;
+  providerAccountId: string;
+};
 
-function alertSeverityTone(
-  value: BillingMetrics['alerts'][number]['severity'],
-): StatusTone {
-  return value === 'critical'
-    ? 'danger'
-    : value === 'high'
-      ? 'warning'
-      : 'info';
-}
+const EMPTY_PLATFORM_BILLING_FILTERS: PlatformBillingFilters = {
+  query: '',
+  status: '',
+  platformAccountId: '',
+  providerAccountId: '',
+};
 
-function alertMetric(alert: BillingMetrics['alerts'][number]): string {
-  const metric = alert.details.metric;
-  const value = alert.details.value;
-  const threshold = alert.details.threshold;
-  if (typeof metric !== 'string') return '需查看详情';
-  return `${metric}${typeof value === 'number' ? ` = ${value}` : ''}${typeof threshold === 'number' ? `（阈值 ${threshold}）` : ''}`;
-}
-
-export function CentralBillingPage() {
+export function PlatformBillingPage() {
+  const { platform } = usePlatformContext();
   const [orders, setOrders] = useState<BillingOrder[]>([]);
-  const [metrics, setMetrics] = useState<BillingMetrics | null>(null);
   const [selected, setSelected] = useState<BillingOrderDetail | null>(null);
   const [reason, setReason] = useState('管理员确认后重新查询 Provider 订单');
   const [decision, setDecision] =
@@ -64,10 +55,12 @@ export function CentralBillingPage() {
   const [error, setError] = useState<ResourceError | null>(null);
   const [actionError, setActionError] = useState<ResourceError | null>(null);
   const [busy, setBusy] = useState(false);
-  const [draftFilters, setDraftFilters] = useState<BillingFilters>(
-    EMPTY_BILLING_FILTERS,
+  const [draftFilters, setDraftFilters] = useState<PlatformBillingFilters>(
+    EMPTY_PLATFORM_BILLING_FILTERS,
   );
-  const [filters, setFilters] = useState<BillingFilters>(EMPTY_BILLING_FILTERS);
+  const [filters, setFilters] = useState<PlatformBillingFilters>(
+    EMPTY_PLATFORM_BILLING_FILTERS,
+  );
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const cursorRef = useRef<string | null>(null);
@@ -82,6 +75,7 @@ export function CentralBillingPage() {
 
   const load = useCallback(
     async ({ append = false }: { append?: boolean } = {}) => {
+      if (!platform?.platform_id) return;
       if (append && !cursorRef.current) return;
       if (append) setLoadingMore(true);
       else {
@@ -90,49 +84,42 @@ export function CentralBillingPage() {
         cursorRef.current = null;
         setNextCursor(null);
       }
-      const params = new URLSearchParams({ limit: '50' });
+
+      const params = new URLSearchParams({
+        limit: '50',
+        platform_id: platform.platform_id,
+      });
       if (filters.query) params.set('q', filters.query);
       if (filters.status) params.set('status', filters.status);
-      if (filters.platformId) params.set('platform_id', filters.platformId);
       if (filters.platformAccountId)
         params.set('platform_account_id', filters.platformAccountId);
       if (filters.providerAccountId)
         params.set('provider_account_id', filters.providerAccountId);
       if (append && cursorRef.current) params.set('cursor', cursorRef.current);
+
       try {
-        const [ordersResponse, metricsResponse] = await Promise.all([
-          adminAuthSession.request(
-            `/api/v1/admin/api/v1/billing/orders?${params.toString()}`,
-            { cache: 'no-store' },
-          ),
-          append
-            ? Promise.resolve(null)
-            : adminAuthSession.request('/api/v1/admin/api/v1/billing/metrics', {
-                cache: 'no-store',
-              }),
-        ]);
-        const ordersPayload =
-          await readApiPayload<BillingOrder[]>(ordersResponse);
-        const metricsPayload = metricsResponse
-          ? await readApiPayload<BillingMetrics>(metricsResponse)
-          : null;
-        if (!ordersResponse.ok || !Array.isArray(ordersPayload?.data)) {
+        const response = await adminAuthSession.request(
+          `/api/v1/admin/api/v1/billing/orders?${params.toString()}`,
+          { cache: 'no-store' },
+        );
+        const ordersPayload = await readApiPayload<BillingOrder[]>(response);
+        if (!response.ok || !Array.isArray(ordersPayload?.data)) {
           setError(
-            resourceError(ordersResponse, ordersPayload, 'Billing 订单'),
+            resourceError(response, ordersPayload, '当前平台 Billing 订单'),
           );
           setState('error');
           return;
         }
+
         setOrders((current) =>
           append ? [...current, ...ordersPayload.data!] : ordersPayload.data!,
         );
         cursorRef.current = ordersPayload.next_cursor ?? null;
         setNextCursor(cursorRef.current);
-        if (metricsPayload) setMetrics(metricsPayload.data ?? null);
         setState('success');
       } catch (caught) {
         setError({
-          title: 'Billing 读取失败',
+          title: '当前平台 Billing 读取失败',
           description: sessionErrorMessage(caught),
           requestId: null,
           technicalDetail: null,
@@ -142,7 +129,7 @@ export function CentralBillingPage() {
         if (append) setLoadingMore(false);
       }
     },
-    [filters],
+    [filters, platform?.platform_id],
   );
 
   useEffect(() => {
@@ -153,15 +140,14 @@ export function CentralBillingPage() {
     setFilters({
       query: draftFilters.query.trim(),
       status: draftFilters.status,
-      platformId: draftFilters.platformId.trim(),
       platformAccountId: draftFilters.platformAccountId.trim(),
       providerAccountId: draftFilters.providerAccountId.trim(),
     });
   }
 
   function clearFilters() {
-    setDraftFilters(EMPTY_BILLING_FILTERS);
-    setFilters(EMPTY_BILLING_FILTERS);
+    setDraftFilters(EMPTY_PLATFORM_BILLING_FILTERS);
+    setFilters(EMPTY_PLATFORM_BILLING_FILTERS);
   }
 
   async function inspect(orderId: string) {
@@ -173,7 +159,7 @@ export function CentralBillingPage() {
       );
       const payload = await readApiPayload<BillingOrderDetail>(response);
       if (!response.ok || !payload?.data) {
-        setActionError(resourceError(response, payload, 'Billing 订单详情'));
+        setActionError(resourceError(response, payload, '订单详情'));
         return;
       }
       setSelected(payload.data);
@@ -275,14 +261,19 @@ export function CentralBillingPage() {
     }
   }
 
+  const platformTitle = platform ? `${platform.name} 订单与计费` : '订单与计费';
+  const platformDesc = platform
+    ? `管理 ${platform.name}（${platform.code}）平台的支付订单、结算状态、证据时间线与异常处理。`
+    : '管理当前平台的支付订单与异常处理。';
+
   return (
     <main
       className="shell wide-shell space-y-6"
-      data-test="central-billing-page"
+      data-test="platform-billing-page"
     >
       <AdminPageHeader
-        title="计费管理"
-        description="查看支付渠道订单与结算状态，检查积压并处理异常订单。当前页面操作以 AAL2 管理员会话为授权基线。"
+        title={platformTitle}
+        description={platformDesc}
         actions={<Button onClick={() => void load()}>刷新</Button>}
       />
       {actionError ? (
@@ -296,11 +287,11 @@ export function CentralBillingPage() {
           aria-busy="true"
           className="rounded-xl border border-border bg-card p-8 text-sm text-muted-foreground"
         >
-          正在读取 Billing 状态…
+          正在读取当前平台订单…
         </div>
       ) : state === 'error' ? (
         <Alert variant="destructive">
-          <AlertTitle>{error?.title ?? 'Billing 读取失败'}</AlertTitle>
+          <AlertTitle>{error?.title ?? '订单读取失败'}</AlertTitle>
           <AlertDescription>
             {error?.description ?? '请稍后重试。'}
           </AlertDescription>
@@ -309,14 +300,13 @@ export function CentralBillingPage() {
         <>
           <section
             className="rounded-xl border border-border bg-card p-4"
-            aria-label="Billing 订单筛选"
+            aria-label="订单筛选"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="font-semibold">筛选订单</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  搜索与筛选在服务端执行，分页游标会绑定订单时间和
-                  ID，避免同一时间创建的订单漏读。
+                  已自动锁定当前平台范围，搜索与状态筛选在服务端执行。
                 </p>
               </div>
               <div className="flex gap-2">
@@ -326,7 +316,7 @@ export function CentralBillingPage() {
                 <Button onClick={applyFilters}>应用筛选</Button>
               </div>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="grid gap-1 text-sm">
                 <span>Provider 订单号</span>
                 <Input
@@ -344,7 +334,7 @@ export function CentralBillingPage() {
               <label className="grid gap-1 text-sm">
                 <span>状态</span>
                 <select
-                  aria-label="Billing 状态"
+                  aria-label="订单状态"
                   className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -363,20 +353,6 @@ export function CentralBillingPage() {
                   <option value="rejected">已拒绝</option>
                   <option value="unlinked">未关联</option>
                 </select>
-              </label>
-              <label className="grid gap-1 text-sm">
-                <span>平台 ID</span>
-                <Input
-                  aria-label="平台 ID"
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      platformId: event.target.value,
-                    }))
-                  }
-                  placeholder="UUID"
-                  value={draftFilters.platformId}
-                />
               </label>
               <label className="grid gap-1 text-sm">
                 <span>平台账号 ID</span>
@@ -408,180 +384,21 @@ export function CentralBillingPage() {
               </label>
             </div>
           </section>
-          <section
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-            aria-label="Billing 指标"
-          >
-            {[
-              ['待处理', metrics?.pending_count ?? 0],
-              ['处理中', metrics?.processing_count ?? 0],
-              ['可重试', metrics?.retryable_count ?? 0],
-              ['人工审核', metrics?.manual_review_count ?? 0],
-              ['重复支付', metrics?.duplicate_payment_count ?? 0],
-              ['租约过期', metrics?.expired_lease_count ?? 0],
-              ['退款待补偿', metrics?.refund_mismatch_count ?? 0],
-              ['告警未送达', metrics?.pending_alert_delivery_count ?? 0],
-              [
-                '最老积压秒数',
-                Math.round(metrics?.oldest_pending_age_seconds ?? 0),
-              ],
-            ].map(([label, value]) => (
-              <div
-                className="rounded-xl border border-border bg-card p-4"
-                key={String(label)}
-              >
-                <p className="text-sm text-muted-foreground">{label}</p>
-                <p className="mt-2 text-2xl font-semibold">{value}</p>
-              </div>
-            ))}
-          </section>
-          <section
-            className="grid gap-6 lg:grid-cols-[1fr_1fr]"
-            aria-label="Billing 运行观测"
-          >
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">运行观测</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    最近观测：{formatDate(metrics?.observed_at)} · 阈值来源：
-                    {metrics?.alert_threshold_source === 'configured'
-                      ? '已配置'
-                      : '本地默认值'}
-                  </p>
-                </div>
-                <StatusBadge
-                  label={`${metrics?.active_alert_count ?? 0} 个活跃告警`}
-                  tone={
-                    (metrics?.active_alert_count ?? 0) > 0
-                      ? 'warning'
-                      : 'success'
-                  }
-                />
-              </div>
-              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted-foreground">处理中最久</dt>
-                  <dd className="mt-1 font-medium">
-                    {Math.round(metrics?.oldest_processing_age_seconds ?? 0)} 秒
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">重试总次数</dt>
-                  <dd className="mt-1 font-medium">
-                    {metrics?.retry_attempts_total ?? 0}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Discovery 延迟</dt>
-                  <dd className="mt-1 font-medium">
-                    {Math.round(metrics?.discovery_lag_seconds ?? 0)} 秒
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Processing 延迟</dt>
-                  <dd className="mt-1 font-medium">
-                    {Math.round(metrics?.processing_lag_seconds ?? 0)} 秒
-                  </dd>
-                </div>
-              </dl>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h2 className="font-semibold">调度器健康</h2>
-              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted-foreground">最近接受</dt>
-                  <dd className="mt-1 font-medium">
-                    {formatDate(metrics?.scheduler_last_accepted_at)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">最近完成</dt>
-                  <dd className="mt-1 font-medium">
-                    {formatDate(metrics?.scheduler_last_completed_at)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">调度失败次数</dt>
-                  <dd className="mt-1 font-medium">
-                    {metrics?.scheduler_failure_count ?? 0}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">自动补偿</dt>
-                  <dd className="mt-1 font-medium">不自动退款或撤销权益</dd>
-                </div>
-              </dl>
-            </div>
-          </section>
-          <section
-            className="rounded-xl border border-border bg-card"
-            aria-label="Billing 告警"
-          >
-            <div className="border-b border-border p-4">
-              <h2 className="font-semibold">告警与送达</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                告警会去重并记录恢复；“待送达”表示接收器未配置或最近投递失败。
-              </p>
-            </div>
-            {metrics?.alerts.length ? (
-              <div className="divide-y divide-border">
-                {metrics.alerts.map((alert) => (
-                  <div
-                    className="flex flex-wrap items-start justify-between gap-3 p-4"
-                    key={alert.alert_id}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <code className="text-xs">{alert.alert_key}</code>
-                        <StatusBadge
-                          label={alert.severity}
-                          tone={alertSeverityTone(alert.severity)}
-                        />
-                        <StatusBadge
-                          label={
-                            alert.delivery_status === 'delivered'
-                              ? '已送达'
-                              : alert.delivery_status === 'failed'
-                                ? '送达失败'
-                                : '待送达'
-                          }
-                          tone={
-                            alert.delivery_status === 'delivered'
-                              ? 'success'
-                              : 'warning'
-                          }
-                        />
-                      </div>
-                      <p className="mt-2 text-sm">{alertMetric(alert)}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      发生 {alert.occurrence_count} 次 · 投递{' '}
-                      {alert.delivery_attempts} 次
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="p-4 text-sm text-muted-foreground">
-                当前没有活跃告警。
-              </p>
-            )}
-          </section>
+
           <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               <div className="border-b border-border p-4">
-                <h2 className="font-semibold">订单队列</h2>
+                <h2 className="font-semibold">当前平台订单队列</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Provider 事实只作为观察，最终权益状态以中央结算结果为准。
+                  Provider 事实仅作为观察依据，最终权益状态以中央结算结果为准。
                 </p>
               </div>
               <div className="divide-y divide-border">
                 {orders.length === 0 ? (
                   <p className="p-6 text-sm text-muted-foreground">
                     {Object.values(filters).some(Boolean)
-                      ? '没有匹配当前筛选条件的订单。'
-                      : '暂无订单。'}
+                      ? '当前平台没有匹配筛选条件的订单。'
+                      : '当前平台暂无订单。'}
                   </p>
                 ) : null}
                 {orders.map((order) => (
@@ -599,7 +416,7 @@ export function CentralBillingPage() {
                           order.settlement_state ??
                           order.entitlement_status
                         }
-                        tone={tone(
+                        tone={billingTone(
                           order.settlement_state ?? order.entitlement_status,
                         )}
                       />
@@ -623,9 +440,10 @@ export function CentralBillingPage() {
                 </div>
               ) : null}
             </div>
+
             <aside
               className="rounded-xl border border-border bg-card p-5"
-              aria-label="订单详情"
+              aria-label="订单详情与操作"
             >
               {selected ? (
                 <>
@@ -635,14 +453,14 @@ export function CentralBillingPage() {
                   </h2>
                   <dl className="mt-4 grid gap-3 text-sm">
                     <div>
-                      <dt className="text-muted-foreground">验证</dt>
+                      <dt className="text-muted-foreground">验证状态</dt>
                       <dd>
                         {selected.verification_status} ·{' '}
                         {selected.verification_reason ?? '—'}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">结算</dt>
+                      <dt className="text-muted-foreground">结算状态</dt>
                       <dd>
                         {selected.settlement_kind ?? '—'} /{' '}
                         {selected.settlement_state ?? '—'}
@@ -655,14 +473,15 @@ export function CentralBillingPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">人工版本</dt>
+                      <dt className="text-muted-foreground">人工处理版本</dt>
                       <dd>{selected.admin_version}</dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">待处理任务</dt>
+                      <dt className="text-muted-foreground">待处理后台任务</dt>
                       <dd>{selected.open_job_count}</dd>
                     </div>
                   </dl>
+
                   <section className="mt-6" aria-label="订单证据时间线">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold">证据时间线</h3>
@@ -712,6 +531,7 @@ export function CentralBillingPage() {
                       </ol>
                     )}
                   </section>
+
                   <label
                     className="mt-5 block text-sm font-medium"
                     htmlFor="billing-reason"
@@ -731,6 +551,7 @@ export function CentralBillingPage() {
                   >
                     请求 Provider 重查
                   </Button>
+
                   <label
                     className="mt-4 block text-sm font-medium"
                     htmlFor="billing-decision"
@@ -761,7 +582,8 @@ export function CentralBillingPage() {
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  选择一个订单查看 Provider facts、结算和人工处理信息。
+                  从左侧列表中选择一个订单，查看 Provider
+                  facts、结算与受控结案信息。
                 </p>
               )}
             </aside>

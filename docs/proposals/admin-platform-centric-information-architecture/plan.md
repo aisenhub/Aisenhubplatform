@@ -29,13 +29,42 @@
 
 | 阶段 | 阶段目标 | 分级 | 状态 | 交付内容 |
 | :--- | :--- | :---: | :---: | :--- |
-| **Phase 01** | **导航收敛与上下文切换体验重构** | **R1** | **In Progress** | 1. 导航分组重构（系统治理正名，拒绝伪降级）<br/>2. 上下文切换器（PlatformSwitcher）支持全局与平台双向切换<br/>3. Topbar 面包屑透镜模型对齐<br/>4. Command Menu 与键盘交互同步<br/>5. 全量静态检查与单元测试验证 |
-| **Phase 02** | **单平台商业化闭环与通用订单工作台** | **R1/R2** | Planned | 1. 新增 `/admin/platforms/:platformId/billing` 路由<br/>2. 抽象通用订单列表与 Inspector 抽屉组件<br/>3. 全网订单中心支持平台多选与快速筛选 |
+| **Phase 01** | **导航收敛与上下文切换体验重构** | **R1** | **Completed** | 1. 导航分组重构（系统治理正名，拒绝伪降级）<br/>2. 上下文切换器（PlatformSwitcher）支持全局与平台双向切换<br/>3. Topbar 面包屑透镜模型对齐<br/>4. Command Menu 与键盘交互同步<br/>5. 全量静态检查与单元测试验证（PR #10 合入 main） |
+| **Phase 02** | **单平台商业化闭环与通用订单工作台** | **R1/R2** | **Completed** | 1. 新增 `/admin/platforms/:platformId/billing` 路由与页面<br/>2. 提取共享计费类型与工具模块 `billing-types.ts`<br/>3. 单平台工作区锁定 `platform_id` 过滤与专属工作区视图<br/>4. 商业化导航分组增加“订单与计费”入口<br/>5. 单元测试与全量本地质量检查 |
 | **Phase 03** | **全局待办分诊台与跨平台身份检索** | **R2/R3** | Planned | 1. Overview 异常与待办优先（Triage-First）面板优化<br/>2. 新增 `/admin/accounts` 跨平台身份搜索与状态透视<br/>3. 为未来用户反馈等平台业务建立标准入驻模式 |
 
 ---
 
-## Phase 01 详细实施清单（本轮执行）
+## Phase 02 详细实施清单（本轮执行）
+
+### 1. 商业化导航更新
+- [x] 在 `apps/admin/components/navigation/admin-navigation.ts` 的 `platformNavigationDefinitions` 中，商业化分组新增 `订单与计费` (`suffix: '/billing'`)。
+- [x] 更新 `admin-navigation.test.ts` 覆盖平台 `/billing` 路由标签判定。
+
+### 2. 提取共享数据模型与格式化工具
+- [x] 创建 `apps/admin/features/billing/billing-types.ts`，共享 `BillingOrder`, `BillingOrderDetail`, `BillingTimelineEvent`, `tone`, `timelineSummary`, `timelineSourceLabel`。
+
+### 3. 实现单平台订单与计费工作区
+- [x] 创建 `apps/admin/features/billing/platform-billing-page.tsx`：
+  - 自动读取并锁定当前 `platform.platform_id`；
+  - 呈现当前平台的订单队列、Provider 状态、金额与决策标记；
+  - 右侧面板展示详细元数据与完整的证据时间线（Evidence Timeline）；
+  - 保留订单重查（Requery Provider）与受控结案（Resolve）安全动作；
+  - 筛选器省去手动填写平台 ID，专注当前平台业务。
+- [x] 创建路由入口 `apps/admin/app/admin/platforms/[platformId]/billing/page.tsx`。
+
+### 4. 本地质量与发布验证
+- [x] `pnpm docs:check` / `pnpm contracts:check`
+- [x] `pnpm format:check` / `pnpm lint`
+- [x] `pnpm --filter admin test:unit`
+- [x] `pnpm --filter admin typecheck`
+- [x] `pnpm --filter admin build`
+
+---
+
+## 历史阶段记录
+
+### Phase 01 实施清单（已完成）
 
 ### 1. 导航结构与核心域定义更新
 - [x] 更新 `apps/admin/components/navigation/admin-navigation.ts`：

@@ -9,6 +9,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Package,
+  Receipt,
   ScrollText,
   Settings2,
   ShieldCheck,
@@ -143,6 +144,13 @@ const platformNavigationDefinitions: Array<{
   {
     label: '商业化',
     items: [
+      {
+        key: 'platform-billing',
+        label: '订单与计费',
+        suffix: '/billing',
+        description: '查看当前平台的支付订单、结算状态与处理异常',
+        icon: Receipt,
+      },
       {
         key: 'plans',
         label: '套餐',
