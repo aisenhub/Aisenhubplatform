@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Boxes,
@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@kit/ui/alert';
-import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { Skeleton } from '@kit/ui/skeleton';
 
 import {
@@ -46,6 +45,36 @@ export function PlatformSwitcher({
   const [errorMessage, setErrorMessage] = useState('');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部自动收起下拉面板
+  useEffect(() => {
+    if (!open) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+        setQuery('');
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        setQuery('');
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
   const loadPlatforms = useCallback(async () => {
     const epoch = adminAuthSession.getEpoch();
@@ -102,9 +131,10 @@ export function PlatformSwitcher({
   function changePlatform(nextId: string) {
     if (!nextId) return;
     const targetId = nextId === ALL_PLATFORMS_VALUE ? null : nextId;
+    setOpen(false);
+    setQuery('');
     if (targetId && current?.platform_id === targetId) return;
     const destination = mapAdminScopeRoute(pathname, targetId);
-    setOpen(false);
     if (destination !== pathname) router.push(destination);
   }
 
@@ -113,7 +143,7 @@ export function PlatformSwitcher({
       <Skeleton
         className={
           variant === 'sidebar'
-            ? 'h-12 w-full rounded-lg'
+            ? 'h-11 w-full rounded-lg'
             : 'h-9 w-48 rounded-md'
         }
       />
@@ -122,68 +152,69 @@ export function PlatformSwitcher({
 
   return (
     <div
+      ref={containerRef}
       className={
         variant === 'sidebar'
-          ? 'platform-switcher admin-sidebar-platform-switcher w-full'
-          : 'platform-switcher'
+          ? 'platform-switcher admin-sidebar-platform-switcher relative w-full'
+          : 'platform-switcher relative'
       }
       data-test="platform-switcher"
     >
-      <Popover
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) setQuery('');
+      {/* 触发卡片按钮 */}
+      <button
+        type="button"
+        onClick={() => {
+          if (open) setQuery('');
+          setOpen((prev) => !prev);
         }}
+        aria-label="切换平台工作区"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className={
+          variant === 'sidebar'
+            ? 'flex w-full items-center justify-between gap-2.5 rounded-lg border border-slate-200/90 bg-white p-2 text-left shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-teal-600/30'
+            : 'flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent focus:outline-hidden focus:ring-2 focus:ring-teal-600/30'
+        }
+        data-test="platform-switcher-trigger"
       >
-        <PopoverTrigger
-          render={
-            <button
-              type="button"
-              aria-label="切换平台工作区"
-              data-test="platform-switcher-trigger"
-              className={
-                variant === 'sidebar'
-                  ? 'flex w-full items-center justify-between gap-2.5 rounded-lg border border-slate-200/90 bg-white p-2 text-left shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-teal-600/30'
-                  : 'flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent'
-              }
-            />
-          }
-        >
-          {current ? (
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-teal-200/60 bg-teal-50 font-mono text-xs font-bold text-teal-750">
-                {current.name.slice(0, 1).toUpperCase()}
+        {current ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-teal-50 font-mono text-xs font-bold text-teal-800 border border-teal-200/60">
+              {current.name.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-xs font-semibold text-slate-800">
+                  {current.name}
+                </span>
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDotClass(current.status)}`}
+                  aria-label={
+                    current.status === 'active' ? '平台启用' : '平台停用'
+                  }
+                />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="truncate text-xs font-semibold text-slate-800">
-                    {current.name}
-                  </span>
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDotClass(current.status)}`}
-                    aria-label={
-                      current.status === 'active' ? '平台启用' : '平台停用'
-                    }
-                  />
-                </div>
-                <div className="truncate font-mono text-[0.68rem] text-slate-400">
-                  {current.code}
-                </div>
+              <div className="truncate font-mono text-[0.68rem] text-slate-400">
+                {current.code}
               </div>
             </div>
-          ) : (
-            <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-slate-700">
-              <Globe className="h-4 w-4 shrink-0 text-teal-600" />
-              <span className="truncate">所有平台（全局透镜）</span>
-            </div>
-          )}
-          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        </PopoverTrigger>
+          </div>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-slate-700">
+            <Globe className="h-4 w-4 shrink-0 text-teal-600" />
+            <span className="truncate">所有平台（全局透镜）</span>
+          </div>
+        )}
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+      </button>
 
-        <PopoverContent
-          align="start"
-          className="w-72 max-h-96 gap-0 overflow-y-auto p-1 shadow-lg"
+      {/* 下拉浮层卡片（自主受控，零外部黑盒崩溃风险） */}
+      {open && (
+        <div
+          className="absolute left-0 top-full z-50 mt-1.5 w-72 max-h-96 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
+          role="dialog"
+          aria-label="切换平台工作区"
+          data-test="platform-switcher-dropdown"
         >
           <div className="px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wider text-slate-400">
             切换工作区
@@ -193,13 +224,17 @@ export function PlatformSwitcher({
             type="button"
             aria-pressed={!current}
             onClick={() => changePlatform(ALL_PLATFORMS_VALUE)}
-            className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent focus:bg-accent focus:outline-hidden"
+            className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-slate-100 ${
+              !current
+                ? 'bg-teal-50/80 font-medium text-teal-800'
+                : 'text-slate-700'
+            }`}
           >
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-teal-600" />
               <span className="font-medium">所有平台（全局透镜）</span>
             </div>
-            {!current ? <Check className="h-3.5 w-3.5 text-teal-600" /> : null}
+            {!current && <Check className="h-3.5 w-3.5 text-teal-600" />}
           </button>
 
           <div className="my-1 h-px bg-slate-100" />
@@ -231,13 +266,15 @@ export function PlatformSwitcher({
               const isSelected = current?.platform_id === platform.platform_id;
               return (
                 <button
+                  key={platform.platform_id}
                   type="button"
                   role="option"
                   aria-selected={isSelected}
-                  key={platform.platform_id}
                   onClick={() => changePlatform(platform.platform_id)}
-                  className={`flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent focus:bg-accent focus:outline-hidden ${
-                    isSelected ? 'bg-teal-50 font-medium text-teal-800' : ''
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-slate-100 ${
+                    isSelected
+                      ? 'bg-teal-50 font-medium text-teal-800'
+                      : 'text-slate-700'
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -253,9 +290,9 @@ export function PlatformSwitcher({
                       </span>
                     </div>
                   </div>
-                  {isSelected ? (
+                  {isSelected && (
                     <Check className="h-3.5 w-3.5 shrink-0 text-teal-600" />
-                  ) : null}
+                  )}
                 </button>
               );
             })}
@@ -267,17 +304,18 @@ export function PlatformSwitcher({
             type="button"
             onClick={() => {
               setOpen(false);
+              setQuery('');
               router.push('/admin/platforms');
             }}
-            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-slate-600 hover:bg-accent hover:text-slate-900 focus:bg-accent focus:outline-hidden"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             <Boxes className="h-3.5 w-3.5 text-slate-400" />
             <span>查看完整平台目录 →</span>
           </button>
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
 
-      {state === 'error' ? (
+      {state === 'error' && (
         <Alert className="mt-1 px-2 py-1.5 text-xs" variant="destructive">
           <AlertDescription className="flex items-center justify-between">
             <span>{errorMessage}</span>
@@ -291,7 +329,7 @@ export function PlatformSwitcher({
             </button>
           </AlertDescription>
         </Alert>
-      ) : null}
+      )}
     </div>
   );
 }

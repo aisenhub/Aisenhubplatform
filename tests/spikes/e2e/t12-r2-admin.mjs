@@ -774,14 +774,14 @@ async function runArchitectureBehaviorMatrix() {
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   await page.getByLabel('搜索平台').fill(platformCode);
   await page
-    .locator('[data-slot="popover-content"]')
+    .locator('[data-test="platform-switcher-dropdown"]')
     .getByRole('option')
     .filter({ hasText: platformCode })
     .click();
   await page.waitForURL(`**/admin/platforms/${platformId}/billing`);
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   await page
-    .locator('[data-slot="popover-content"]')
+    .locator('[data-test="platform-switcher-dropdown"]')
     .getByRole('button', { name: /所有平台/u })
     .click();
   await page.waitForURL('**/admin/billing/orders');
@@ -802,8 +802,10 @@ async function runArchitectureBehaviorMatrix() {
   });
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   await page.getByLabel('搜索平台').fill(platformCode);
-  const switcherPopover = page.locator('[data-slot="popover-content"]');
-  const scopedPlatformOption = switcherPopover
+  const switcherDropdown = page.locator(
+    '[data-test="platform-switcher-dropdown"]',
+  );
+  const scopedPlatformOption = switcherDropdown
     .getByRole('option')
     .filter({ hasText: platformCode });
   await scopedPlatformOption.waitFor({ state: 'visible' });
@@ -812,7 +814,7 @@ async function runArchitectureBehaviorMatrix() {
 
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   await page
-    .locator('[data-slot="popover-content"]')
+    .locator('[data-test="platform-switcher-dropdown"]')
     .getByRole('button', { name: /所有平台/u })
     .click();
   await page.waitForURL('**/admin/accounts');
@@ -822,7 +824,7 @@ async function runArchitectureBehaviorMatrix() {
   });
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   await page
-    .locator('[data-slot="popover-content"]')
+    .locator('[data-test="platform-switcher-dropdown"]')
     .getByRole('button', { name: /所有平台/u })
     .click();
   await page.waitForURL('**/admin/billing/orders');
