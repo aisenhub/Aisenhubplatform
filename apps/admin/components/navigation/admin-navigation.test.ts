@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  adminGlobalUtilityNavigation,
+  adminNavigationGroups,
   adminNavigationLabel,
   isAdminNavigationItemActive,
   parseAdminPlatformPath,
@@ -61,5 +63,27 @@ describe('admin navigation model', () => {
   it('exposes the global Consumer Lab without platform context', () => {
     expect(adminNavigationLabel('/admin/consumer-lab')).toBe('Consumer Lab');
     expect(parseAdminPlatformPath('/admin/consumer-lab')).toBeNull();
+  });
+
+  it('verifies refined navigation groups for dual-scope IA', () => {
+    const globalLabels = adminNavigationGroups.map((g) => g.label);
+    expect(globalLabels).toEqual(['工作台', '商业中心', '系统治理', '设置']);
+
+    const platformGroups = platformNavigationGroups('p1');
+    const platformLabels = platformGroups.map((g) => g.label);
+    expect(platformLabels).toEqual([
+      '平台运营',
+      '商业化',
+      '资源与接入',
+      '平台设置',
+    ]);
+
+    const utilityKeys = adminGlobalUtilityNavigation.map((i) => i.key);
+    expect(utilityKeys).toEqual([
+      'billing',
+      'operations',
+      'audit',
+      'consumer-lab',
+    ]);
   });
 });

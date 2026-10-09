@@ -43,11 +43,6 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         icon: LayoutDashboard,
         match: 'exact',
       },
-    ],
-  },
-  {
-    label: '业务管理',
-    items: [
       {
         key: 'platforms',
         label: '平台',
@@ -55,6 +50,11 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         description: '进入平台目录与平台工作区',
         icon: Boxes,
       },
+    ],
+  },
+  {
+    label: '商业中心',
+    items: [
       {
         key: 'billing',
         label: '计费管理',
@@ -65,7 +65,7 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
     ],
   },
   {
-    label: '系统管理',
+    label: '系统治理',
     items: [
       {
         key: 'operations',
@@ -81,11 +81,6 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         description: '只读查看脱敏审计事件',
         icon: ScrollText,
       },
-    ],
-  },
-  {
-    label: '开发与接入',
-    items: [
       {
         key: 'consumer-lab',
         label: 'Consumer Lab',
@@ -96,7 +91,7 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
     ],
   },
   {
-    label: '管理员',
+    label: '设置',
     items: [
       {
         key: 'security',
@@ -126,7 +121,7 @@ const platformNavigationDefinitions: Array<{
   items: PlatformNavigationDefinition[];
 }> = [
   {
-    label: '平台',
+    label: '平台运营',
     items: [
       {
         key: 'platform-overview',
@@ -172,7 +167,7 @@ const platformNavigationDefinitions: Array<{
     ],
   },
   {
-    label: '资源',
+    label: '资源与接入',
     items: [
       {
         key: 'files',
@@ -180,19 +175,6 @@ const platformNavigationDefinitions: Array<{
         suffix: '/files',
         description: '查看当前平台配置文件',
         icon: Files,
-      },
-    ],
-  },
-  {
-    label: '配置',
-    items: [
-      {
-        key: 'settings',
-        label: '基本设置',
-        suffix: '/settings',
-        description: '管理平台状态与基础策略',
-        icon: Settings2,
-        match: 'exact',
       },
       {
         key: 'origins',
@@ -207,6 +189,19 @@ const platformNavigationDefinitions: Array<{
         suffix: '/settings/keys',
         description: '管理服务端 Platform Key',
         icon: KeyRound,
+      },
+    ],
+  },
+  {
+    label: '平台设置',
+    items: [
+      {
+        key: 'settings',
+        label: '基本设置',
+        suffix: '/settings',
+        description: '管理平台状态与基础策略',
+        icon: Settings2,
+        match: 'exact',
       },
     ],
   },
