@@ -28,6 +28,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const isLoginFlow = pathname === '/admin/login';
+  const isMfaFlow = pathname === '/admin/mfa';
   const [retry, setRetry] = useState(0);
   const [securityView, setSecurityView] = useState<
     AdminSecurityView | { kind: 'loading' }
@@ -54,11 +55,11 @@ export function AdminShell({ children }: AdminShellProps) {
           router.replace('/admin/login');
           return;
         }
-        if (view.kind === 'aal1' && pathname !== '/admin/mfa') {
+        if (view.kind === 'aal1' && !isMfaFlow) {
           router.replace('/admin/mfa');
           return;
         }
-        if (view.kind === 'aal2' && pathname === '/admin/mfa') {
+        if (view.kind === 'aal2' && isMfaFlow) {
           router.replace('/admin');
           return;
         }
@@ -83,7 +84,7 @@ export function AdminShell({ children }: AdminShellProps) {
     return () => {
       active = false;
     };
-  }, [isLoginFlow, pathname, retry, router]);
+  }, [isLoginFlow, isMfaFlow, retry, router]);
 
   async function switchAccount() {
     if (switchingAccount) return;
@@ -105,7 +106,7 @@ export function AdminShell({ children }: AdminShellProps) {
 
   if (
     isLoginFlow ||
-    (securityView.kind === 'aal1' && pathname === '/admin/mfa')
+    (securityView.kind === 'aal1' && isMfaFlow)
   ) {
     return <div className="admin-auth-page">{children}</div>;
   }
@@ -166,7 +167,7 @@ export function AdminShell({ children }: AdminShellProps) {
     );
   }
 
-  if (securityView.kind !== 'aal2' || pathname === '/admin/mfa') {
+  if (securityView.kind !== 'aal2' || isMfaFlow) {
     return (
       <div
         className="admin-auth-layout"
