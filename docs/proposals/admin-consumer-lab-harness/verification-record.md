@@ -20,7 +20,7 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Contract foundation | 验收通过待推送 | Account spec 1.0.1 补齐 `purchases_paused`；breaking comparator 可单测并解析 local `$ref`；前序 Proposal 当前状态已收口 | commit/push/远端核对 | 待提交 | 未验证 |
-| 02 | Consumer Conformance Harness | 未开始 | 未验证 | 01 | 未验证 | 未验证 |
+| 02 | Consumer Conformance Harness | 验收通过待推送 | test-only Node Harness、16-operation canonical allowlist、HttpOnly Auth/CSRF/BFF、thin UI、static+process smoke 已实施 | commit/push/远端核对；真实 Local Auth/API/Storage 闭环在 Phase 04 | 待提交 | 未验证 |
 | 03 | Admin Consumer Lab | 未开始 | 未验证 | 01 | 未验证 | 未验证 |
 | 04 | 删除 template-preview 与迁移 gates/E2E | 未开始 | 未验证 | 02、03 | 未验证 | 未验证 |
 | 05 | 文档与 R3 总体验收 | 未开始 | 未验证 | 04 | 未验证 | 未验证 |
@@ -34,8 +34,8 @@
 - 与计划偏差：首次全基线执行暴露 Admin response content 可直接 `$ref` schema，初版 comparator 把其误判为 schema 缺失；新增 `mediaSchema` 兼容和回归测试后 Account/Admin 全基线 PASS。没有放宽 compatibility 规则。
 
 ### Phase 02
-- 实际修改：未验证
-- 与计划偏差：未验证
+- 实际修改：新增 `tests/consumer-harness` 原生 Node server、canonical operation matcher、极薄 HTML/JS、README；新增递归 static boundary probe 和独立进程 smoke；root 新增 `test:consumer-harness`。Harness 不进入 workspace，不依赖 `@kit/*`/Next/React/Domain/Admin。
+- 与计划偏差：本阶段仅完成离线 static/process smoke；真实 Supabase Auth/Account/Storage 行为按计划保留到 Phase 04 迁移现有 T16 fixture 后统一证明。
 
 ### Phase 03
 - 实际修改：未验证
@@ -63,6 +63,14 @@
 | 2026-10-09 | 01 | worktree | `pnpm test:tooling` | Local | 0 | PASS：8 tests，其中 breaking checker 6 tests、Local guard 2 tests |
 | 2026-10-09 | 01 | worktree | `pnpm docs:check` | Local | 0 | PASS：110 documents |
 | 2026-10-09 | 01 | worktree | `git diff --check` | Local | 0 | PASS |
+| 2026-10-09 | 01 | 828132c | `git push -u origin codex/admin-consumer-lab-harness`（两次） | Local/GitHub | 128 | BLOCKED：两次均为 GitHub HTTPS connection reset；本地 commit 完整保留，Phase 01 保持验收通过待推送 |
+| 2026-10-09 | 02 | worktree | `node --check tests/consumer-harness/contract.mjs`（首次） | Local | 1 | FAIL：`.mjs` 误留 TypeScript `as const`；已定位为纯语法错误并修复 |
+| 2026-10-09 | 02 | worktree | Harness 四个 JS/MJS + static probe `node --check` | Local | 0 | PASS：修复后语法全部有效 |
+| 2026-10-09 | 02 | worktree | `pnpm test:consumer-harness` | Local | 0 | PASS：16 canonical operations、dynamic route、workspace isolation、public secret marker；独立 Node process/UI/CSRF/meta/404/wrong-origin smoke 全绿 |
+| 2026-10-09 | 02 | worktree | Harness changed-file `oxfmt --check`（首次） | Local | 1 | FAIL：6 个新文件需格式化；只运行定向 oxfmt 后复测 |
+| 2026-10-09 | 02 | worktree | Harness changed-file `oxfmt --check`（修复后） | Local | 0 | PASS：7 个 Harness/package 文件格式一致 |
+| 2026-10-09 | 02 | worktree | `pnpm lint` | Local | 0 | PASS：342 files，0 warnings / 0 errors |
+| 2026-10-09 | 02 | worktree | `git diff --check` | Local | 0 | PASS |
 
 ## GitHub 交付记录
 

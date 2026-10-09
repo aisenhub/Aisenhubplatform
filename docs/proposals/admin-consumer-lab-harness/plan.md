@@ -21,7 +21,7 @@
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
 | 01 | 修复 canonical contract 漂移并强化 breaking gate；收尾前序 Proposal 状态 | 无 | 验收通过待推送 | [01 Contract foundation](phases/01-contract-foundation.md) |
-| 02 | 建立非 workspace、极薄 Consumer Conformance Harness | 01 | 未开始 | [02 Harness](phases/02-consumer-conformance-harness.md) |
+| 02 | 建立非 workspace、极薄 Consumer Conformance Harness | 01 | 验收通过待推送 | [02 Harness](phases/02-consumer-conformance-harness.md) |
 | 03 | 在 Admin 增加 Consumer Lab | 01，可与 02 部分并行 | 未开始 | [03 Admin Lab](phases/03-admin-consumer-lab.md) |
 | 04 | 迁移 E2E/Registry/TASK-0801 并删除 `apps/template-preview` | 02、03 | 未开始 | [04 Remove preview](phases/04-remove-template-preview.md) |
 | 05 | 同步 active 文档并执行最终 R3 Local 验收 | 04 | 未开始 | [05 Final verification](phases/05-docs-and-r3-verification.md) |

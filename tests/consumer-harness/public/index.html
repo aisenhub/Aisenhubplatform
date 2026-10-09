@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AisenHub Consumer Conformance Harness</title>
+  </head>
+  <body>
+    <main>
+      <h1>Consumer Conformance Harness</h1>
+      <p>
+        Local test-only HTTP consumer. This is not a production starter
+        application.
+      </p>
+      <form data-test="harness-login-form">
+        <label
+          >邮箱
+          <input name="email" type="email" autocomplete="username" required
+        /></label>
+        <label
+          >密码
+          <input
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+        /></label>
+        <button type="submit">登录</button>
+      </form>
+      <nav aria-label="Harness operations">
+        <button type="button" data-action="plans">Plans</button>
+        <button type="button" data-action="principal">Principal</button>
+        <button type="button" data-action="subscription">Subscription</button>
+        <button type="button" data-action="refresh">Refresh session</button>
+        <button type="button" data-action="logout">Logout</button>
+      </nav>
+      <pre data-test="harness-output" aria-live="polite"></pre>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
