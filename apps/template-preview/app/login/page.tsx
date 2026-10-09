@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import {
@@ -10,9 +10,12 @@ import {
 } from '../_lib/auth-session';
 
 export default function ConsumerLoginPage() {
+  const [hydrated, setHydrated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('');
+
+  useEffect(() => setHydrated(true), []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,7 +45,12 @@ export default function ConsumerLoginPage() {
         <h1>登录个人工作区</h1>
         <p>登录后才能读取账户权益、兑换激活码和创建 Checkout。</p>
       </div>
-      <form className="consumer-panel consumer-auth-card" onSubmit={submit}>
+      <form
+        className="consumer-panel consumer-auth-card"
+        onSubmit={submit}
+        data-test="consumer-login-form"
+        data-hydrated={hydrated ? 'true' : 'false'}
+      >
         <label htmlFor="consumer-email">邮箱</label>
         <input
           id="consumer-email"
@@ -64,6 +72,7 @@ export default function ConsumerLoginPage() {
         <button
           className="consumer-button consumer-button-primary"
           type="submit"
+          disabled={!hydrated}
         >
           登录
         </button>

@@ -1,6 +1,6 @@
 # Phase 06：当前文档同步与 R3 总体验收
 
-状态：验证失败
+状态：R3 验收通过；待 commit/push 与远端 SHA 核对
 
 ## 目标
 
@@ -55,6 +55,18 @@ git diff --check
 - commit push 且远端 SHA 核对后才标已交付。
 - main 合并按长期授权及生产自动部署绑定判断；绑定未知时只推任务分支。
 
-## 当前阻塞（2026-10-08）
+## 当前验证状态（2026-10-09）
 
-静态、构建、单元、API、数据库、并发、Contract/Registry/Reference Consumer 与文档检查均已通过。`pnpm verify:task:0801 --reuse-local` 在 T16 浏览器链路的文件内容上传处返回 503（预期 202）；随后单独重跑 T16 已通过该上传点，但在 Admin MFA 验证后的 `/admin` 导航等待超时。两个失败点不同，尚无稳定可复现的单一产品错误，因此当前 Phase 保持“验证失败”，不得标记验收通过或 Completed。下一步应先稳定/诊断 T16，再完整重跑 R3 gate。
+静态、构建、单元、API、数据库、并发、Contract/Registry/Reference Consumer、Runtime、Consumer/Admin 浏览器流与文档检查均已通过。此前 T16 的不一致失败点已完成诊断并收敛：
+
+- `/v1/auth/recent-proof` 的 canonical OpenAPI 要求 `platformKey + bearerAuth`，Reference Consumer reauth BFF 却显式关闭了 Platform Key 注入，同时 `docs/reference/api.md` 仍写“不需要 Platform Key”；现已以 canonical contract 为准修正 BFF 与文档，Platform Key 仍只存在于服务端。
+- Consumer/Admin 登录 E2E 原先可能在 React hydration 前点击 SSR 按钮；登录页现显式暴露 hydrated 状态，T16 等待该状态后再提交。
+- Account Profile/Preferences 的 T16 原先只等待 HTTP response，没有等待前一个 React handler 完成；现等待用户可见成功状态后再执行下一操作。
+- T16 fixture 现在不会把上一次中断留下的 `t16-r2-admin-*` 合成 `system_admin` 当成真实 previous admin 再恢复，避免污染后续 pgTAP。
+- T16 原先把任意 HTTP status 都视为本地服务 ready，并把所有 Playwright locator/action 的全局等待压到 15 秒；现要求 Consumer/Admin 关键页面返回 200 且包含预期 HTML marker，并恢复 Playwright 标准 UI/action timeout。API/browser fetch 仍保留各自显式 deadline，因此未放宽产品授权、HTTP 状态或网络 SLA 断言。
+
+在重新 production build 后，`pnpm test:e2e:t16-r2` 已完整 PASS，包含 `ordinaryProof`、文件上传/下载/删除、Profile/Preferences、Admin MFA、账户 suspend/restore、多 Tab terminal logout 与敏感 mutation unknown-outcome 等 20 项矩阵；`test:api:t12-ordinary-proof` 也通过真实 Local Auth/DB/Account API 的独立 email event session、中央 proof、原 session 绑定与临时 session 撤销。
+
+中间一次复用本地库的完整验收曾因中断 T16 遗留的 `private.system_admin(singleton_id=1)` 阻塞 pgTAP；该行已确认属于 `t16-r2-admin-* @example.test` 合成 fixture。恢复 Docker Desktop 后没有执行 `db:reset`：条件删除返回 `NO_MATCH_NO_CHANGE`，随后只读查询确认 `private.system_admin` 为空，`pnpm test:db` 重新得到 58 files / 1082 tests PASS。
+
+最终同一候选运行 `pnpm verify:task:0801 --reuse-local` 退出码 0，输出 `TASK-0801 PASS: 21 executable gates passed.`：Edge/API 97/97、DB 58 files / 1082 tests、结算并发、Contract breaking、Registry、Reference Consumer、Node/Deno runtime、T16 20 项 Consumer/Admin 浏览器矩阵、T12 Admin MFA/step-up/responsive-a11y、docs 101 documents、OpenAPI Account 22/Admin 45 operations 与 4 contracts / 39 fields ownership 全部 PASS。R3 验收退出条件已满足；当前只剩 commit/push 与远端 SHA 核对，完成前不标“已交付”。

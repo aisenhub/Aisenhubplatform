@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import {
@@ -10,9 +10,12 @@ import {
 } from '../../_lib/auth-session';
 
 export default function AdminLoginPage() {
+  const [hydrated, setHydrated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('');
+
+  useEffect(() => setHydrated(true), []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,6 +55,7 @@ export default function AdminLoginPage() {
         className="panel stack-form admin-auth-card"
         onSubmit={submit}
         data-test="admin-login-form"
+        data-hydrated={hydrated ? 'true' : 'false'}
       >
         <label htmlFor="email">管理员邮箱</label>
         <input
@@ -74,7 +78,11 @@ export default function AdminLoginPage() {
           autoComplete="current-password"
           required
         />
-        <button type="submit" data-test="admin-login-submit">
+        <button
+          type="submit"
+          data-test="admin-login-submit"
+          disabled={!hydrated}
+        >
           登录
         </button>
         <span className="muted" role="status">

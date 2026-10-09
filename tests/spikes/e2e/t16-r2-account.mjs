@@ -182,11 +182,18 @@ async function authRequest(path, options = {}) {
   return { response, body: await response.json().catch(() => null) };
 }
 
-async function waitForUrl(url, label) {
+async function waitForUrl(url, label, { expectedStatus, expectedText } = {}) {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(1000) });
-      if (response.status) return;
+      const statusReady =
+        expectedStatus === undefined
+          ? response.status > 0
+          : response.status === expectedStatus;
+      if (statusReady) {
+        if (!expectedText) return;
+        if ((await response.text()).includes(expectedText)) return;
+      }
     } catch {
       // The process is still starting.
     }
@@ -290,9 +297,26 @@ async function startLocalServices() {
     'Admin',
   );
   await Promise.all([
-    waitForUrl(`${consumerAUrl}/login`, 'Consumer A'),
-    waitForUrl(`${consumerBUrl}/login`, 'Consumer B'),
-    waitForUrl(`${adminUrl}/admin/login`, 'Admin'),
+    waitForUrl(`${consumerAUrl}/login`, 'Consumer A login', {
+      expectedStatus: 200,
+      expectedText: '登录个人工作区',
+    }),
+    waitForUrl(`${consumerAUrl}/files`, 'Consumer A files', {
+      expectedStatus: 200,
+      expectedText: '配置文件',
+    }),
+    waitForUrl(`${consumerBUrl}/login`, 'Consumer B login', {
+      expectedStatus: 200,
+      expectedText: '登录个人工作区',
+    }),
+    waitForUrl(`${consumerBUrl}/files`, 'Consumer B files', {
+      expectedStatus: 200,
+      expectedText: '配置文件',
+    }),
+    waitForUrl(`${adminUrl}/admin/login`, 'Admin', {
+      expectedStatus: 200,
+      expectedText: '登录管理员控制台',
+    }),
   ]);
 }
 
@@ -349,9 +373,16 @@ async function createFixtures() {
   adminId = admin.id;
   const adminTotp = await enrollTotp(admin.accessToken, adminEmail);
   const [systemAdmin] = await sql`
-    select user_id from private.system_admin where singleton_id = 1
+    select s.user_id, u.email
+    from private.system_admin s
+    left join auth.users u on u.id = s.user_id
+    where s.singleton_id = 1
   `;
-  previousSystemAdmin = systemAdmin?.user_id ?? null;
+  previousSystemAdmin =
+    typeof systemAdmin?.email === 'string' &&
+    /^t16-r2-admin-[0-9a-f-]+@example\.test$/u.test(systemAdmin.email)
+      ? null
+      : (systemAdmin?.user_id ?? null);
   await sql`grant account_executor to postgres`;
   await sql`grant admin_executor to postgres`;
   await sql`
@@ -487,6 +518,9 @@ async function browserRequest(page, path, options = {}) {
 
 async function loginConsumer(page, baseUrl, platformId) {
   await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
+  await page
+    .locator('[data-test="consumer-login-form"][data-hydrated="true"]')
+    .waitFor();
   await page.getByLabel('邮箱').fill(userEmail);
   await page.getByLabel('密码').fill(userPassword);
   const [response] = await Promise.all([
@@ -740,7 +774,11 @@ async function exerciseSubscriptionAndFiles(page, baseUrl, redemptionCode) {
     },
     body: content,
   });
-  assertStatus(upload.status, 202, 'file content upload');
+  assert.equal(
+    upload.status,
+    202,
+    `file content upload: expected 202, got ${upload.status}, code=${upload.payload?.error?.code ?? 'unknown'}`,
+  );
   assert.equal(upload.payload?.data?.write_outcome, 'confirmed');
   assert.equal(upload.payload?.data?.status, 'active');
 
@@ -792,6 +830,7 @@ async function exerciseAccount(page, baseUrl) {
     page.getByRole('button', { name: '保存资料' }).click(),
   ]);
   assertStatus(profileResponse.status(), 200, 'browser Profile PATCH');
+  await page.getByText(/^资料已保存/u).waitFor();
 
   await page.getByLabel('JSON Merge Patch').waitFor();
   await page
@@ -802,6 +841,9 @@ async function exerciseAccount(page, baseUrl) {
     page.getByRole('button', { name: '保存偏好' }).click(),
   ]);
   assertStatus(preferencesResponse.status(), 200, 'browser Preferences PATCH');
+  await page
+    .getByText('偏好已保存，服务端版本已更新。', { exact: true })
+    .waitFor();
 
   const csrf = await csrfToken(page);
   const noCsrf = await browserRequest(page, '/api/v1/profile', {
@@ -843,6 +885,15 @@ async function exerciseAccount(page, baseUrl) {
       .click(),
   ]);
   assertStatus(reauthRequested.status(), 200, 'consumer email reauth request');
+  const principalBeforeReauthVerify = await browserRequest(
+    page,
+    '/api/v1/account/principal',
+  );
+  assertStatus(
+    principalBeforeReauthVerify.status,
+    200,
+    'business session before email reauth verify',
+  );
   const tokenHash = await readMailpitToken(userEmail);
   await sensitiveDialog.getByPlaceholder('粘贴 token_hash').fill(tokenHash);
   const [verifiedResponse] = await Promise.all([
@@ -853,7 +904,16 @@ async function exerciseAccount(page, baseUrl) {
       .getByRole('button', { name: '验证并回到确认', exact: true })
       .click(),
   ]);
-  assertStatus(verifiedResponse.status(), 200, 'consumer email reauth verify');
+  const verifiedPayload = await verifiedResponse.json().catch(() => null);
+  const principalAfterReauthVerify =
+    verifiedResponse.status() === 200
+      ? { status: 200 }
+      : await browserRequest(page, '/api/v1/account/principal');
+  assert.equal(
+    verifiedResponse.status(),
+    200,
+    `consumer email reauth verify: expected 200, got ${verifiedResponse.status()}, code=${verifiedPayload?.error?.code ?? 'unknown'}, principal_after_verify=${principalAfterReauthVerify.status}`,
+  );
   const cookies = await page.context().cookies();
   const proof = cookies.find(
     (cookie) => cookie.name === 'aisenhub-consumer-recent-auth-proof',
@@ -919,6 +979,9 @@ async function exerciseAccount(page, baseUrl) {
 
 async function exerciseAdmin(page, adminTotp) {
   await page.goto(`${adminUrl}/admin/login`, { waitUntil: 'domcontentloaded' });
+  await page
+    .locator('[data-test="admin-login-form"][data-hydrated="true"]')
+    .waitFor();
   await page.getByLabel('管理员邮箱').fill(adminEmail);
   await page.getByLabel('密码').fill(adminPassword);
   const [loginResponse] = await Promise.all([
@@ -2871,8 +2934,6 @@ try {
   const pageB = await contextB.newPage();
   const pageC = await contextA.newPage();
   const adminPage = await adminContext.newPage();
-  for (const page of [pageA, pageB, pageC, adminPage])
-    page.setDefaultTimeout(15_000);
 
   await exercisePublicTemplateRoutes(pageA, consumerAUrl);
   await exerciseAuthResponsive(pageA, consumerAUrl, ['/login']);

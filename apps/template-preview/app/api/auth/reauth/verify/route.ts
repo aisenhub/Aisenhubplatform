@@ -106,7 +106,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       method: 'POST',
       accessToken,
       reauthAccessToken: temporarySession.access_token,
-      requirePlatformKey: false,
     });
     const response = responseBody(
       { verified: true, expires_at: proof.expires_at },

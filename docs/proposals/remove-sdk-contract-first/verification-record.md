@@ -52,7 +52,8 @@
 ### Phase 06
 - 实际修改：architecture overview/frontends、API/contracts/configuration/data-model、testing/development/release/operations、Registry 与 AGENTS 导航同步到 Contract-First；平台接入手册重写为“固定 contract major → 配置 Auth/API/Platform Key → 复制并自行拥有 Reference Consumer Auth/BFF/integration → 最小闭环 → 独立验收”；删除 `docs/reference/sdk.md`。历史 archive/review 的过去 SDK 事实保留。
 - 格式收敛：首次最终 `format:check` 报 12 个本次阶段修改文件格式不一致；运行仓库 `format:fix` 后复测通过，因此 Phase 06 包含这些文件的纯格式变更。
-- R3 阻塞：完整 `verify:task:0801 --reuse-local` 在 T16 文件上传得到 503；单独 T16 重跑越过上传后在 Admin MFA 后导航超时。失败点不一致，未通过降低断言、扩大 timeout 或反复碰运气标绿。
+- R3 诊断与修复：canonical OpenAPI 要求 ordinary recent-proof 使用 Platform Key，但 Reference Consumer reauth BFF 曾显式 `requirePlatformKey: false`，且 reference API 文档仍写无需 Key；已改为服务端注入 Key并同步文档。T16 同时补充 Consumer/Admin hydration gate、Profile/Preferences 用户可见完成状态等待、上传/reauth 脱敏错误码，以及中断 T16 合成 `system_admin` 不再被当作 previous admin 恢复的 fixture 防污染逻辑。
+- R3 最终状态：重建后的 T16 20 项浏览器/HTTP 矩阵、T12 ordinary-proof 真实 Local Auth/DB/API probe 已 PASS；进一步把服务 ready gate 收紧为“200 + HTML marker”，并移除 T16 人工压缩到 15 秒的全局 Playwright UI/action timeout。恢复 Docker 后未 reset 数据库，确认 `private.system_admin` 为空，DB 58 files / 1082 tests PASS；最终 `pnpm verify:task:0801 --reuse-local` 退出码 0，21 个 executable gates 全部 PASS。Phase 06 已通过 R3，当前仅待 commit/push 与远端 SHA 核对后标记交付。
 
 ## 验证记录
 
@@ -114,6 +115,21 @@
 | 2026-10-08 | 06 | worktree | `pnpm verify:task:0801 --reuse-local` | Local Supabase | 1 | FAIL：此前 format/lint/typecheck/build/unit/tooling、Edge/API 97 tests、DB 58 files/1082 assertions、结算并发、Contract/Registry/Reference/runtime 均通过；T16 文件内容上传期望 202 实得 503，任务在此停止 |
 | 2026-10-08 | 06 | worktree | `pnpm test:e2e:t16-r2`（诊断重跑） | Local Supabase | 1 | FAIL：已越过前次文件上传点；随后 Admin MFA “验证并继续”后等待 `/admin` 导航 15s 超时，失败点与首轮不同 |
 | 2026-10-08 | 06 | worktree | `pnpm test:e2e:t12-r2`（诊断尝试） | Local | 1 | INVALID INVOCATION：直接命令缺 TASK-0801 注入的 Local Supabase env/T12 fixture 参数；不计作产品回归证据，完整 gate 因 T16 提前失败未运行到 T12 |
+| 2026-10-09 | 06 | worktree | `T12_PLATFORM_KEY_HMAC_SECRET=... pnpm test:api:t12-ordinary-proof` | Local Supabase | 0 | PASS：emailAuthEvent、independentSession、centralProof、originalSessionBinding、pendingGlobalDelete、accountClose、temporarySessionRevoked 全部 PASS |
+| 2026-10-09 | 06 | worktree | `pnpm --filter template-preview typecheck` + `pnpm --filter admin typecheck` | Local | 0 | PASS：reauth/key 与 hydration 修复类型检查通过 |
+| 2026-10-09 | 06 | worktree | `pnpm build` | Local | 0 | PASS：8 workspace scope；Admin + Reference Consumer Next 16 production build 成功，最终 route inventory 正常 |
+| 2026-10-09 | 06 | worktree | `pnpm test:e2e:t16-r2`（完整 fixture env，重新 build 后） | Local Supabase | 0 | PASS：20 项矩阵全绿，含 fileUploadDownloadDelete、profilePreferences、adminAal1AndSuspend、multiTabTerminal、networkUnknownSensitiveMutation、ordinaryProof、closeDelete、browserBundleCredentials |
+| 2026-10-09 | 06 | worktree | `pnpm verify:task:0801 --reuse-local`（首次最终候选） | Local Supabase | 1 | FAIL：仅新改 T16 文件格式不一致，任务在最前面的 format gate 停止；随后单文件 oxfmt + 全仓 `format:check` PASS |
+| 2026-10-09 | 06 | worktree | `pnpm verify:task:0801 --reuse-local`（格式修正后） | Local Supabase | 1 | BLOCKED：format/lint/typecheck/build/unit/tooling 与 Edge/API 97/97 已 PASS；DB pgTAP 6 个文件在 fixture insert 遭 `private.system_admin(singleton_id=1)` duplicate，属复用库状态污染，非断言失败 |
+| 2026-10-09 | 06 | worktree | 查询 `private.system_admin` + `auth.users` | Local Supabase | 0 | PASS（诊断）：现存 singleton 明确指向 `t16-r2-admin-...@example.test` 合成管理员，可安全归因为中断 T16 fixture 残留 |
+| 2026-10-09 | 06 | worktree | `pnpm db:start` | Local | 1 | BLOCKED：恢复会话后 Docker Desktop daemon 不可用，Supabase CLI 无法连接 Docker API；未执行 db reset、未清理其他本地数据 |
+| 2026-10-09 | 06 | worktree | 最终非 Docker 复验：`format:check`、`lint`、`typecheck`、`test:unit`、`test:tooling`、`contracts:check`、`contracts:breaking`、`test:registry`、`test:reference-consumer`、`runtime:probe`、`docs:check`、`git diff --check` | Local | 0 | PASS：401 files 格式一致；lint 0/0；8 workspace / 6 typecheck tasks；unit Domain 13/UI 36/Admin 22/Reference Consumer 44；tooling 2/2；Account 22/Admin 45 与 4 contracts/39 fields；breaking/Registry/Reference/runtime/docs/diff 全绿 |
+| 2026-10-09 | 06 | worktree | 启动 `D:\APP\Base\DockerDesktop\Docker Desktop.exe`；`docker info`；`pnpm db:start` | Local | 0 | PASS：Docker Server 29.7.2；Local Supabase 恢复且复用既有数据，未执行 reset |
+| 2026-10-09 | 06 | worktree | 条件清理 T16 synthetic `system_admin` + 只读复核 | Local Supabase | 0 | PASS：条件删除返回 `NO_MATCH_NO_CHANGE`，未删除任何行；随后查询 `private.system_admin` 返回 `[]` |
+| 2026-10-09 | 06 | worktree | `pnpm test:db` | Local Supabase | 0 | PASS：58 files / 1082 tests，全部成功 |
+| 2026-10-09 | 06 | worktree | `pnpm verify:task:0801 --reuse-local`（readiness 修复前） | Local Supabase | 1 | FAIL：此前 format/lint/typecheck/build/unit/tooling、API 97/97、DB 58/1082、并发、breaking/Registry/Reference/runtime 全部 PASS；T16 在首个公共页面 heading 的固定 15 秒 UI 等待超时，定位为 harness readiness/timeout 不稳定性 |
+| 2026-10-09 | 06 | worktree | T16 readiness/UI harness 修正 | Local | 0 | PASS：服务 ready 必须满足 200 + 预期 HTML marker；Consumer `/files` 纳入启动探针；移除自定义 15 秒全局 Playwright UI/action timeout，保留 API/browser fetch 显式 deadline |
+| 2026-10-09 | 06 | worktree | `pnpm verify:task:0801 --reuse-local`（最终候选） | Local Supabase | 0 | PASS：`TASK-0801 PASS: 21 executable gates passed.`；API 97/97、DB 58/1082、settlement concurrency、breaking/Registry/Reference/runtime、T16 20 项矩阵、T12 Admin MFA/step-up/a11y、docs 101、OpenAPI Account 22/Admin 45 与 4 contracts/39 fields 全部通过 |
 
 ## GitHub 交付记录
 
@@ -128,7 +144,7 @@
 
 ## 交接信息
 
-- Phase 01–05 实施已完成；Phase 06 文档同步已完成，但 R3 浏览器总 gate 验证失败。下一步先诊断/稳定 T16 两个不一致失败点并形成一次完整 `verify:task:0801 --reuse-local` PASS，再允许 Phase 06 标“验收通过”。
-- Phase 03–05 的 GitHub push 仍受当前网络阻塞；Phase 06 尚未提交。
+- Phase 01–06 实施与 R3 验收已完成；最终 `verify:task:0801 --reuse-local` 21 个 executable gates 全部 PASS。Phase 06 当前只剩 commit、push 与远端 SHA 核对，完成前不标“已交付”。
+- Phase 03–05 曾有 GitHub 网络阻塞记录；交付收尾应重新尝试推送当前任务分支，并以远端 branch SHA 是否等于本地 HEAD 为准，不沿用旧网络状态作结论。
 - 生产部署/真实支付/费用/Secret/数据操作均不在本任务授权范围。
 - main 合并前必须确认生产自动部署绑定；未知时保留在任务分支。
