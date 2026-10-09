@@ -4,6 +4,7 @@ import {
   CreditCard,
   FileKey2,
   Files,
+  FlaskConical,
   Globe2,
   KeyRound,
   LayoutDashboard,
@@ -83,6 +84,18 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
     ],
   },
   {
+    label: '开发与接入',
+    items: [
+      {
+        key: 'consumer-lab',
+        label: 'Consumer Lab',
+        href: '/admin/consumer-lab',
+        description: '查看公共 HTTP 合同与 Consumer Conformance Harness 边界',
+        icon: FlaskConical,
+      },
+    ],
+  },
+  {
     label: '管理员',
     items: [
       {
@@ -101,7 +114,7 @@ export const adminNavigation = adminNavigationGroups.flatMap(
 );
 
 export const adminGlobalUtilityNavigation = adminNavigation.filter((item) =>
-  ['billing', 'operations', 'audit'].includes(item.key),
+  ['billing', 'operations', 'audit', 'consumer-lab'].includes(item.key),
 );
 
 type PlatformNavigationDefinition = Omit<AdminNavigationItem, 'href'> & {

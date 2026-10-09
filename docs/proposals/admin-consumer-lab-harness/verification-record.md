@@ -21,7 +21,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Contract foundation | 验收通过待推送 | Account spec 1.0.1 补齐 `purchases_paused`；breaking comparator 可单测并解析 local `$ref`；前序 Proposal 当前状态已收口 | commit/push/远端核对 | 待提交 | 未验证 |
 | 02 | Consumer Conformance Harness | 验收通过待推送 | test-only Node Harness、16-operation canonical allowlist、HttpOnly Auth/CSRF/BFF、thin UI、static+process smoke 已实施 | commit/push/远端核对；真实 Local Auth/API/Storage 闭环在 Phase 04 | 待提交 | 未验证 |
-| 03 | Admin Consumer Lab | 未开始 | 未验证 | 01 | 未验证 | 未验证 |
+| 03 | Admin Consumer Lab | 验收通过待推送 | `/admin/consumer-lab`、canonical contract summary/table、Global 导航与 unit/build 验证已实施 | commit/push/远端核对 | 待提交 | 未验证 |
 | 04 | 删除 template-preview 与迁移 gates/E2E | 未开始 | 未验证 | 02、03 | 未验证 | 未验证 |
 | 05 | 文档与 R3 总体验收 | 未开始 | 未验证 | 04 | 未验证 | 未验证 |
 
@@ -38,8 +38,8 @@
 - 与计划偏差：本阶段仅完成离线 static/process smoke；真实 Supabase Auth/Account/Storage 行为按计划保留到 Phase 04 迁移现有 T16 fixture 后统一证明。
 
 ### Phase 03
-- 实际修改：未验证
-- 与计划偏差：未验证
+- 实际修改：新增 `/admin/consumer-lab`、Global “开发与接入”导航、纯 `contract-summary` helper 与单测；页面 build-time 直接导入根 `contracts/account|admin/v1/openapi.json`，展示 major/version/operation/security 与 Harness 使用边界，不新增 Secret 输入、任意 proxy 或 Admin private API Consumer 模拟。
+- 与计划偏差：首次 unit test 错误假设 principal operationId 为 `getAccountPrincipal`，canonical 实际为 `getPrincipal`；修正测试后全量 Admin unit 复测通过。两次 `run_shell` Admin build 因 120 秒 runner 总预算超时，随后用 900 秒结构化 process 重跑同一 production build，最终 exit 0；没有通过修改 build 配置绕过。
 
 ### Phase 04
 - 实际修改：未验证
@@ -71,6 +71,14 @@
 | 2026-10-09 | 02 | worktree | Harness changed-file `oxfmt --check`（修复后） | Local | 0 | PASS：7 个 Harness/package 文件格式一致 |
 | 2026-10-09 | 02 | worktree | `pnpm lint` | Local | 0 | PASS：342 files，0 warnings / 0 errors |
 | 2026-10-09 | 02 | worktree | `git diff --check` | Local | 0 | PASS |
+| 2026-10-09 | 03 | worktree | `pnpm --filter admin test:unit`（首次） | Local | 1 | FAIL：新增 contract-summary 测试错误假设 principal operationId 为 `getAccountPrincipal`；canonical OpenAPI 实际为 `getPrincipal`，修正测试后复测 |
+| 2026-10-09 | 03 | worktree | `pnpm --filter admin test:unit`（修复后） | Local | 0 | PASS：6 files / 26 tests，包含 contract summary 与 Consumer Lab 导航 |
+| 2026-10-09 | 03 | worktree | `pnpm --filter admin typecheck` | Local | 0 | PASS |
+| 2026-10-09 | 03 | worktree | `pnpm --filter admin build`（两次短预算） | Local | timeout | BLOCKED BY RUNNER BUDGET：均在 Next production build 优化阶段超过 120 秒，无编译错误输出 |
+| 2026-10-09 | 03 | worktree | `pnpm --filter admin build`（900 秒结构化 process） | Local | 0 | PASS：webpack compile、TypeScript、production build 完成；根 canonical JSON 可直接作为 build 输入 |
+| 2026-10-09 | 03 | worktree | changed-file `oxfmt --check`（首次） | Local | 1 | FAIL：`contract-summary.ts` 与 `consumer-lab-page.tsx` 格式不一致；定向格式化后复测 |
+| 2026-10-09 | 03 | worktree | changed-file `oxfmt --check`（修复后） | Local | 0 | PASS：6 个 Consumer Lab/navigation 文件格式一致 |
+| 2026-10-09 | 03 | worktree | `git diff --check` | Local | 0 | PASS |
 
 ## GitHub 交付记录
 
@@ -84,6 +92,6 @@
 
 ## 交接信息
 
-- 下一阶段：Phase 01 Contract foundation。
-- 当前未提交修改：本 Proposal 文档创建，归本任务。
+- 下一阶段：Phase 04 删除 `apps/template-preview` 并迁移 Registry/T16/TASK-0801 到 Harness。
+- 当前未提交修改：Phase 03 Admin Consumer Lab，归本任务。
 - 生产部署/真实支付/费用/Production 数据：未授权且不在范围。
