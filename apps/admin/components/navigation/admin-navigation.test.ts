@@ -13,6 +13,8 @@ describe('admin navigation model', () => {
   it('separates global and platform routes', () => {
     expect(parseAdminPlatformPath('/admin/platforms')).toBeNull();
     expect(parseAdminPlatformPath('/admin/billing')).toBeNull();
+    expect(parseAdminPlatformPath('/admin/accounts')).toBeNull();
+    expect(adminNavigationLabel('/admin/accounts')).toBe('统一用户');
     expect(
       parseAdminPlatformPath('/admin/platforms/platform-1/accounts'),
     ).toEqual({
