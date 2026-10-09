@@ -104,10 +104,7 @@ export function AdminShell({ children }: AdminShellProps) {
     }
   }
 
-  if (
-    isLoginFlow ||
-    (securityView.kind === 'aal1' && isMfaFlow)
-  ) {
+  if (isLoginFlow || (securityView.kind === 'aal1' && isMfaFlow)) {
     return <div className="admin-auth-page">{children}</div>;
   }
 
