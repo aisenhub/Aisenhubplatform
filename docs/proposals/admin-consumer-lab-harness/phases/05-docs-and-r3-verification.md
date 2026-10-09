@@ -1,6 +1,6 @@
 # Phase 05：Active 文档收敛与 R3 总体验收
 
-状态：未开始
+状态：验收通过待推送
 
 关联：[总计划](../plan.md) · [设计](../design.md) · [验证记录](../verification-record.md)
 

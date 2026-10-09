@@ -8,15 +8,14 @@
 pnpm install --frozen-lockfile --store-dir E:\AppData\pnpm
 ```
 
-启动平台参考页面：
+验证 Consumer 公共接入边界：
 
 ```powershell
-pnpm --filter template-preview dev --port 3001
+pnpm test:consumer-harness
+pnpm test:e2e:consumer-harness
 ```
 
-打开 `/subscription` 可使用订阅模板测试入口。登录后从方案卡创建 Checkout，页面会打开服务端生成的爱发电付款地址，并轮询中央 Account API 的订单状态；不要直接把爱发电后台的公共商品链接当作端到端测试入口，因为它没有本次 Checkout 的 `custom_order_id`。
-
-该页面的部署需要设置 `ACCOUNT_API_URL`、服务端 `ACCOUNT_PLATFORM_KEY`、`TEMPLATE_ORIGIN` 以及公开 Supabase 配置；平台 Key 只能存在 Consumer BFF 的服务端环境变量。账户页的可选 Auth 操作需设置[公开配置](../reference/configuration.md)。
+`test:consumer-harness` 运行 test-only static/process boundary；`test:e2e:consumer-harness` 启动本地 Account API、两个独立 Harness 和浏览器 fixture，验证真实 Auth/session/CSRF/platform isolation/subscription/profile/preferences/files。Harness 不是 starter 或产品页面，不能用于演示真实支付 UI。环境变量与边界见[配置参考](../reference/configuration.md)。
 
 启动管理端：
 

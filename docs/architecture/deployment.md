@@ -7,7 +7,7 @@
 | Admin | apps/admin 的 Next.js server | Supabase Auth、中央 API |
 | Account/Admin API | supabase/functions/account-api/index.ts | Auth、PostgreSQL、Storage |
 | Maintenance | supabase/functions/maintenance/index.ts | PostgreSQL、Storage、Auth Admin |
-| 平台端参考页面 | apps/template-preview | 本地状态；账户页可选 Auth |
+| Consumer Conformance Harness | tests/consumer-harness/server.mjs | 仅 Local 测试；Supabase Auth、中央 API；不部署生产 |
 | 本地 Supabase | supabase/config.toml | Docker |
 
 [Account API 源码](../../supabase/functions/account-api/index.ts)直接用 Deno 启动时默认端口 8000；[Maintenance](../../supabase/functions/maintenance/index.ts)默认 8001。本地 Supabase API 为 54321，数据库为 54322，Studio 为 54323。Next.js 端口通过启动参数指定。

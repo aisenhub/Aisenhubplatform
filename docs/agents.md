@@ -4,7 +4,7 @@
 
 所有Agent开始任务必须阅读[开发与发布流程](guides/development-release-workflow.md)，据整次变更选择R0/R1/R2/R3、本地验证及生产门槛。该文件描述已接受的工作规则，不证明环境或自动化已建立；代码当前行为也不能用于豁免发布规则。
 
-[新平台接入手册](guides/platform-onboarding.md)维护当前 Contract-First 接入步骤、参考代码/配置、用户待办与验收。Auth/BFF/HTTP 合同/Registry及参考页面变更时在同一任务检查同步；独立新平台的实际测试记录另存，不能以手册存在证明接入成功。
+[新平台接入手册](guides/platform-onboarding.md)维护当前 Contract-First 接入步骤、Harness/配置、用户待办与验收。Auth/BFF/HTTP 合同/Registry/Consumer Harness/Admin Consumer Lab 变更时在同一任务检查同步；独立新平台的实际测试记录另存，不能以手册存在证明接入成功。
 
 ## 目录职责
 

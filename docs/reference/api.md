@@ -1,6 +1,6 @@
-# HTTP、Reference Consumer 与 API 合同
+# HTTP、Consumer Conformance 与 API 合同
 
-本文件描述当前 API 与 Reference Consumer 合同。整体边界见 [系统架构](../architecture/overview.md)。Canonical OpenAPI 3.1 合同位于 [Account](../../contracts/account/v1/openapi.json) 和 [Admin](../../contracts/admin/v1/openapi.json)；`packages/domain/src/contracts` 是中央内部类型源，不是 Consumer runtime 依赖。Consumer/Admin BFF 必须遵守同一 wire contract，不能各自复制领域规则。
+本文件描述当前 API、Consumer conformance 与 Admin 集成合同。整体边界见 [系统架构](../architecture/overview.md)。Canonical OpenAPI 3.1 合同位于 [Account](../../contracts/account/v1/openapi.json) 和 [Admin](../../contracts/admin/v1/openapi.json)；`packages/domain/src/contracts` 是中央内部类型源，不是 Consumer runtime 依赖。Consumer/Admin BFF 必须遵守同一 wire contract，不能各自复制领域规则。
 
 ## 1. 调用和权限矩阵
 
@@ -100,18 +100,18 @@ V1 Principal、权益、Profile、文件、Auth和Admin响应均private,no-store
 ## 4. Consumer 集成职责
 
 - `contracts/account/v1/openapi.json` 与 `contracts/admin/v1/openapi.json` 是公共 wire contract；兼容规则与 changelog 与合同同目录维护。
-- `apps/template-preview` 是可执行 Reference Consumer。它自行拥有 `app/_lib/auth` 的 Cookie/session/refresh/logout fence、`app/_lib/integration` 的 DTO guard/fail-closed 授权，以及 `/api/v1/[...path]` 的 server-only Platform Key BFF。
+- `tests/consumer-harness` 是 test-only 可执行 conformance Consumer。它用独立 Node server + 极薄 UI 验证 Cookie/session/CSRF、server-only Platform Key BFF、canonical allowlist、binary 与 fail-closed 授权，但不是产品 starter。
 - `apps/admin` 同样自行拥有 Admin Auth adapter；中央业务规则仍只在 PostgreSQL private 领域函数和中央 API 中实现。
 - `packages/domain` 保留为中央内部模块，Consumer 不安装、不 vendor，也不能通过 workspace 引用把内部 DTO/算法重新变成公共 SDK。
 
 Account handler不依赖Consumer浏览器正确判断，服务端再次鉴权。业务保护判断platform/account状态；需付费能力还检查effective_status和features，不能只看Auth成功。Consumer 遇到中央不可用必须 fail closed，不能本地降级成 Free 或授权成功。
 
-## 5. Reference Consumer、Registry 与版本
+## 5. Consumer Harness、Registry 与版本
 
-Registry含auth-login、OAuth callback、pricing-page、profile-settings、preferences-settings、subscription-status、subscription-redeem、config-files-manager、user-menu，并在 `contract_compatibility` 中记录 Account/Admin `v1` canonical contract 与 Reference Consumer。Signup、Forgot Password和Reset Password在当前参考应用未提供，不登记为已实现路由。
+Registry `contract_compatibility` 记录 Account/Admin `v1` canonical contract、Consumer Harness 与 Admin Consumer Lab 路径，并记录静态/Local E2E 验证命令；不再维护页面模板 inventory 或 starter 分发元数据。
 
-新平台不安装 AisenHub runtime SDK。接入时先固定中央 commit 与 contract major，阅读 changelog/compatibility，再从同一审核 commit 复制所需 Auth/BFF/integration 代码并在目标仓库自行拥有。品牌、页面布局和平台业务可以定制；金额、期限、授权、配额、支付进度和错误语义不能随 UI 改写。
+新平台不安装 AisenHub runtime SDK。接入时先固定中央 commit 与 contract major，阅读 changelog/compatibility，再按目标技术栈自行实现并拥有 Auth/BFF/integration，并用 Harness 对照协议/安全行为。品牌、页面布局和平台业务可以定制；金额、期限、授权、配额、支付进度和错误语义不能随 UI 改写。
 
-API保持 `/v1` 向后兼容扩展；破坏字段、鉴权或语义必须进入新 major 或经过明确兼容迁移。`pnpm contracts:breaking` 对基线检查删除 operation、删除 schema 字段、收窄 enum 等破坏性变化；`pnpm test:reference-consumer` 防止已删除的 Account SDK 或中央 `@kit/domain` 重新进入 Reference Consumer。
+API保持 `/v1` 向后兼容扩展；破坏字段、鉴权或语义必须进入新 major 或经过明确兼容迁移。`pnpm contracts:breaking` 对基线检查删除 operation、删除 schema 字段、收窄 enum 等破坏性变化；`pnpm test:consumer-harness` 防止 `@kit/*`、Next/React、Admin/Domain 私有实现或 server credential marker 进入 Harness。
 
-Reference Consumer 的 typecheck/build/unit、Registry/contract gates 与 Local browser/API 链路共同构成集成证据；浏览器 bundle 和源码中禁止 Platform Key、Supabase Secret、SQL/Provider 凭据。Reference Consumer 不是生产部署承诺，新平台仍必须在自己的仓库和环境完成实际验收。
+Harness static/process、Registry/contract gates 与 `test:e2e:consumer-harness` 的 Local browser/Auth/API/DB/Storage 链路共同构成中央 conformance 证据；Harness 浏览器资源中禁止 Platform Key、Supabase Secret、SQL/Provider 凭据。Harness 不是生产部署承诺，新平台仍必须在自己的仓库和环境完成实际验收。

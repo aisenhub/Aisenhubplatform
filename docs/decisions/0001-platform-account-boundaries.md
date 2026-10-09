@@ -41,7 +41,7 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | 文件数量/总量 | 10 个 / 10 MiB | 平台账户预算 |
 | Access JWT | 15 分钟 | Auth 配置目标 |
 | Recent proof | 5 分钟 | 普通近期认证和 Admin step-up |
-| Account API 总预算 | 5 秒 | Reference Consumer BFF 默认请求超时 |
+| Account API 总预算 | 5 秒 | Consumer BFF 推荐默认请求超时；Harness 用同一边界验证 |
 | 上传接收并发 | 每实例 16、每账户 2 | 进程内 `UploadGate` |
 | 兑换限流 | 每账户 5/分钟、每可信 IP 30/分钟、每平台 300/分钟 | 数据库窗口计数器 |
 | 关闭账户清理 | 30 天 | 资料、偏好和文件的默认清理策略 |
@@ -71,7 +71,7 @@ Aisenhubplatform 为多个由同一运营主体控制的平台提供共享身份
 | Account/Admin/BFF 的真实部署 host 和可信代理链 | SSR、上传、Origin 和缓存验证 | 本地 HTTP、CSRF、Storage adapter 测试 |
 | OAuth 测试客户端、回调地址和 SMTP 测试配置 | Provider、邮箱和浏览器 E2E | 密码流程、callback 负向测试和会话单测 |
 | 独立备份目标、加密凭据和告警渠道 | 联合备份、墓碑恢复和 RPO/RTO 演练 | manifest、屏障和隔离恢复模拟 |
-| 新平台仓库访问、contract baseline 与目标运行环境 | Contract-First Consumer 接入验证 | Reference Consumer 差异核对、目标平台构建与本地 HTTP 验收 |
+| 新平台仓库访问、contract baseline 与目标运行环境 | Contract-First Consumer 接入验证 | Harness 对照、目标平台自有 Auth/BFF 实现、构建与本地 HTTP 验收 |
 | 生产区域、预算、平台数量和负载 | 容量、性能和运营阈值 | 默认负载下的 Local 压力探针 |
 
 ## 开发与发布边界

@@ -16,7 +16,7 @@
 
 Supabase操作先核对当前官方文档及固定版本；遵循可用技能要求。共享领域过程是业务规则唯一写入口，Admin、Account API和后台任务不得各自实现权益/配额算法。
 
-新平台接入，或维护Auth适配、BFF、公共合同、Registry、环境配置与参考页面时，必须阅读[新平台接入手册](docs/guides/platform-onboarding.md)，检查并同步受影响的参考代码、配置、用户待办及验收步骤。手册必须与 canonical HTTP contract 和 Reference Consumer 一致，不把未实现能力写成现成用法。
+新平台接入，或维护Auth适配、BFF、公共合同、Registry、Consumer Harness、Admin Consumer Lab 与环境配置时，必须阅读[新平台接入手册](docs/guides/platform-onboarding.md)，检查并同步受影响的合同、conformance fixture、配置、用户待办及验收步骤。手册必须与 canonical HTTP contract 和当前 Harness 边界一致，不把未实现能力写成现成用法。
 
 ## 工程和测试
 

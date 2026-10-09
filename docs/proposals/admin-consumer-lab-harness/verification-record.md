@@ -22,8 +22,8 @@
 | 01 | Contract foundation | 验收通过待推送 | Account spec 1.0.1 补齐 `purchases_paused`；breaking comparator 可单测并解析 local `$ref`；前序 Proposal 当前状态已收口 | push/远端核对 | 828132c | GitHub connection reset，待重试 |
 | 02 | Consumer Conformance Harness | 验收通过待推送 | test-only Node Harness、HttpOnly Auth/CSRF/BFF、thin UI、static+process smoke 已实施 | push/远端核对 | 9299cc5 | 继承 GitHub 网络阻塞 |
 | 03 | Admin Consumer Lab | 验收通过待推送 | `/admin/consumer-lab`、canonical contract summary/table、Global 导航与 unit/build 验证已实施 | push/远端核对 | 34b09e3 | 继承 GitHub 网络阻塞 |
-| 04 | 删除 template-preview 与迁移 gates/E2E | 验收通过待推送 | Harness 扩至 19 canonical operations；真实 Local Auth/API/Storage E2E；Registry/TASK-0801/consumer ownership 已迁移；旧 app/T16/template inventory 已删除；workspace 收敛为 8 projects | commit/push/远端核对 | 待提交 | 未验证 |
-| 05 | 文档与 R3 总体验收 | 未开始 | 未验证 | 04 | 未验证 | 未验证 |
+| 04 | 删除 template-preview 与迁移 gates/E2E | 验收通过待推送 | Harness 扩至 19 canonical operations；真实 Local Auth/API/Storage E2E；Registry/TASK-0801/consumer ownership 已迁移；旧 app/T16/template inventory 已删除；workspace 收敛为 8 projects | push/远端核对 | 47ed9c1 | GitHub connection reset，待重试 |
+| 05 | 文档与 R3 总体验收 | 验收通过待推送 | active architecture/reference/guides 已同步；Admin T12 纳入 Consumer Lab；最终 TASK-0801 20 executable gates PASS | commit/push/远端核对 | 待提交 | 未验证 |
 
 状态只使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
 
@@ -46,8 +46,8 @@
 - 与计划偏差：没有把 3000 行旧 T16 原样“换目录”继续维护，而是按已冻结边界拆掉产品 UI 专属断言，保留并重建协议/安全/领域高价值闭环。新 Local E2E 首次运行因页面尚未导航到 Harness origin 就执行相对 `fetch('/api/v1/plans')` 而失败；前置 `page.goto(baseUrl)` 后同一流程 PASS。Phase 04 全仓 format 首次发现 4 个本阶段文件格式不一致，定向格式化后复测 PASS。
 
 ### Phase 05
-- 实际修改：未验证
-- 与计划偏差：未验证
+- 实际修改：将 root/architecture/reference/guides/Registry 当前说明收敛为 canonical OpenAPI + Consumer-owned Auth/BFF + test-only Harness + read-only Admin Consumer Lab；active grep 已无 `apps/template-preview`、`Reference Consumer`、`test:reference-consumer` 或 `registry/templates.json`。T12 Admin 响应式/无障碍矩阵新增 `/admin/consumer-lab`，最终真实浏览器结果为 15 routes × 5 viewports = 75 observations。
+- 与计划偏差：单独运行 `pnpm test:e2e:t12-r2` 时因未注入测试要求的 `SUPABASE_LOCAL_URL`/`SUPABASE_LOCAL_ANON_KEY`/`SUPABASE_DB_URL` 在浏览器启动前 fail fast；没有放宽守卫。最终使用仓库 canonical `verify:task:0801 --reuse-local` 注入同一 Local env 后，T12 与全部 R3 gate 均 PASS。
 
 ## 验证记录
 
@@ -95,6 +95,13 @@
 | 2026-10-09 | 04 | worktree | `pnpm format:check`（首次） | Local | 1 | FAIL：Consumer matrix、Local E2E、Registry probe、TASK-0801 四个本阶段文件需格式化 |
 | 2026-10-09 | 04 | worktree | `pnpm format:check`（修复后） | Local | 0 | PASS：370 files |
 | 2026-10-09 | 04 | worktree | `pnpm docs:check` | Local | 1 | EXPECTED PHASE BOUNDARY：10 个 active onboarding 链接仍指向已删除的 `apps/template-preview`/`registry/templates.json`；由 Phase 05 文档迁移负责，未将此结果写成 PASS |
+| 2026-10-09 | 04 | 47ed9c1 | `git push -u origin codex/admin-consumer-lab-harness` | Local/GitHub | 128 | BLOCKED：GitHub HTTPS connection reset；Phase 01–04 本地 commits 保留 |
+| 2026-10-09 | 05 | worktree | active docs `git grep`（排除 archive/reviews/proposals） | Local | 0 | PASS：无 `apps/template-preview`、`template-preview`、`Reference Consumer`、`test:reference-consumer`、`registry/templates.json` active 命中 |
+| 2026-10-09 | 05 | worktree | `pnpm docs:check` | Local | 0 | PASS：110 documents，必需入口、相对链接与导航一致 |
+| 2026-10-09 | 05 | worktree | `pnpm contracts:check` | Local | 0 | PASS：Account 22/Admin 45；4 contracts/39 fields |
+| 2026-10-09 | 05 | worktree | `pnpm format:check` | Local | 0 | PASS：370 files |
+| 2026-10-09 | 05 | worktree | `pnpm test:e2e:t12-r2`（直接调用） | Local | 1 | ENV FAIL：缺少 T12 要求的 Local Supabase env，浏览器未启动；保留守卫，改由 TASK-0801 canonical launcher 注入 |
+| 2026-10-09 | 05 | worktree | `pnpm verify:task:0801 --reuse-local` | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：20 executable gates；Deno/API 97 tests、DB 58 files/1082 tests、Harness 9 项 Local E2E、Admin MFA/安全流全 PASS；responsive/a11y 75 route-viewports（含 Consumer Lab） |
 
 ## GitHub 交付记录
 
@@ -103,11 +110,11 @@
 | 01 | 828132c | codex/admin-consumer-lab-harness | 失败 | 未核对 | 两次 GitHub HTTPS connection reset |
 | 02 | 9299cc5 | codex/admin-consumer-lab-harness | 待推送 | 未核对 | 继承网络阻塞 |
 | 03 | 34b09e3 | codex/admin-consumer-lab-harness | 待推送 | 未核对 | 继承网络阻塞 |
-| 04 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
+| 04 | 47ed9c1 | codex/admin-consumer-lab-harness | 失败 | 未核对 | GitHub HTTPS connection reset |
 | 05 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
 
 ## 交接信息
 
-- 下一阶段：Phase 05 同步 active architecture/reference/guides 并执行最终 R3 gate。
-- 当前未提交修改：Phase 04 删除/迁移与 Proposal 验证记录，归本任务。
+- 下一步：仅创建 Phase 05 提交、push 当前任务分支并核对远端 SHA；push 成功后再把 Proposal/各 Phase 标为 Completed/已交付。
+- 当前未提交修改：Phase 05 active docs、T12 Consumer Lab 浏览器覆盖与验证记录，归本任务。
 - 生产部署/真实支付/费用/Production 数据：未授权且不在范围。

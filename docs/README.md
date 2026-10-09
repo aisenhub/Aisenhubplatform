@@ -10,7 +10,7 @@
 - [身份与安全](architecture/modules/identity-security.md)
 - [权益与兑换](architecture/modules/entitlements.md)
 - [文件与任务](architecture/modules/files-jobs.md)
-- [管理端与平台参考页面](architecture/modules/frontends.md)
+- [管理端与 Consumer 接入面](architecture/modules/frontends.md)
 - [本地开发](guides/development.md)
 - [测试](guides/testing.md)
 - [运维操作](guides/operations.md)

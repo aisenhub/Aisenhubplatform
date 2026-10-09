@@ -1,14 +1,14 @@
 # 跨模块合同与所有权
 
-本文件描述当前代码、数据库函数、共享类型、HTTP API、Reference Consumer、Admin 和 Maintenance 之间的所有权与调用边界。详细接口字段见 [API](api.md) 和 [OpenAPI 合同](../../contracts/account/v1/openapi.json)。
+本文件描述当前代码、数据库函数、共享类型、HTTP API、Consumer Harness、Admin 和 Maintenance 之间的所有权与调用边界。详细接口字段见 [API](api.md) 和 [OpenAPI 合同](../../contracts/account/v1/openapi.json)。
 
 ## 1. 目录和唯一维护方
 
 | 目录/产物 | 维护模块 | 限制 |
 |---|---|---|
 | packages/domain/src/contracts | Domain | 中央内部 DTO、错误和校验，不引入React/Next或生产权益计算；不作为 Consumer runtime SDK |
-| apps/template-preview/app/_lib/auth | Reference Consumer | Consumer Cookie/session/refresh/logout fence 与 Supabase adapter；复制后由目标平台自行拥有 |
-| apps/template-preview/app/_lib/integration | Reference Consumer | 公共 DTO guard、bounded input、标准 HTTP 与 fail-closed 授权辅助；不得复制中央领域算法 |
+| tests/consumer-harness | Consumer conformance | test-only Auth/BFF/极薄 UI；验证公共 HTTP/安全边界，不进入 workspace/生产部署、不作为 starter |
+| apps/admin/features/consumer-lab | Admin | build-time 读取 canonical OpenAPI 的只读维护页面；不接受 Consumer Secret，不构成 compatibility PASS |
 | apps/admin/app/_lib/auth | Admin | Admin scoped Auth/session/MFA adapter；中央 Admin 鉴权仍由 API/SQL 再验证 |
 | supabase/functions/account-api | Account/Auth/Entitlements/Files | HTTP路由/认证，不持有另一套业务算法 |
 | supabase/functions/maintenance | Files/Operations | job鉴权、租约与任务分派，不开放用户入口 |
@@ -16,7 +16,7 @@
 | supabase/migrations | 每模块添加，集成人串行排定顺序 | 不多人改同一已提交migration |
 | contracts/account/v1/openapi.json | Account | 用户/平台API canonical `/v1` wire contract，字段和状态码与实际路由同步 |
 | contracts/admin/v1/openapi.json | Admin | 管理API canonical `v1` wire contract，按模块扩展但不生成任意CRUD代理 |
-| registry、apps/template-preview | Consumers | UI复制，业务规则不复制 |
+| registry、tests/consumer-harness | Conformance metadata/tests | 记录 contract major、Harness/Lab 路径及验证入口；不分发 runtime/starter |
 
 packages/domain 使用纯 TypeScript 和显式相对 ESM 导入供 Edge 使用；不依赖 Node 专属 API、路径别名或未发布 workspace 解析。Node 与 Edge 的导入兼容性必须通过实际探针或构建检查确认；若固定工具链不支持，由 ADR 选择可重现构建产物映射，不复制源文件来规避。
 
@@ -92,7 +92,7 @@ Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文�
 
 ## 5. OpenAPI 与 DTO 合同
 
-Account与Admin的OpenAPI 3.1合同维护在`contracts/account/v1/openapi.json`和`contracts/admin/v1/openapi.json`，同目录保存 compatibility/changelog。Account合同当前包含22个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账创建、读取和按 Idempotency-Key 恢复都需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。所有未实现的操作不得暴露成功假数据。数据库到 Registry/Reference Consumer 的字段级生产者、消费者与测试责任见 [消费者兼容清单](contract-consumer-matrix.md)，其机器可读索引由 `contracts:check` 校验。
+Account与Admin的OpenAPI 3.1合同维护在`contracts/account/v1/openapi.json`和`contracts/admin/v1/openapi.json`，同目录保存 compatibility/changelog。Account合同当前包含22个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账创建、读取和按 Idempotency-Key 恢复都需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。所有未实现的操作不得暴露成功假数据。数据库到 Harness/Admin/Registry 的字段级生产者、消费者与测试责任见 [消费者兼容清单](contract-consumer-matrix.md)，其机器可读索引由 `contracts:check` 校验。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证必须使用服务端 session-bound proof；OpenAPI 的存在不代表路由、Provider 或真实会话生命周期已经完成。
 

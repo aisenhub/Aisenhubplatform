@@ -23,11 +23,10 @@ flowchart LR
 | --- | --- | --- |
 | Account 公共合同 | [contracts/account/v1/openapi.json](../../contracts/account/v1/openapi.json) | 唯一公共字段/状态/鉴权来源；保持 `/v1` 兼容 |
 | Admin 公共合同 | [contracts/admin/v1/openapi.json](../../contracts/admin/v1/openapi.json) | 仅 Admin 集成使用 |
-| Reference Consumer | [apps/template-preview](../../apps/template-preview) | 可复制所需 Auth/BFF/integration 代码，复制后由目标平台自行拥有 |
-| Consumer Auth | [app/_lib/auth](../../apps/template-preview/app/_lib/auth) | Cookie/session/refresh/logout fence、Supabase request-scoped adapter |
-| Consumer HTTP integration | [app/_lib/integration](../../apps/template-preview/app/_lib/integration) | DTO guard、bounded input、fail-closed 授权辅助 |
-| Consumer BFF | [api/v1 route](../../apps/template-preview/app/api/v1/%5B...path%5D/route.ts) | server-only Platform Key、allowlist、Origin/CSRF、deadline、no-store |
-| Registry | [manifest](../../registry/manifest.json)、[templates](../../registry/templates.json) | 记录 contract major、Reference Consumer 和真实模板路由；不分发 Account runtime 包 |
+| Consumer Conformance Harness | [tests/consumer-harness](../../tests/consumer-harness) | test-only 独立 HTTP Consumer；验证 Auth Cookie/CSRF、server-only Platform Key、allowlist、deadline、no-store、binary 与 fail-closed，不是 starter |
+| Harness Local E2E | [consumer-harness-local.mjs](../../tests/spikes/e2e/consumer-harness-local.mjs) | 两平台/两 Key 的真实 Local Auth/API/DB/Storage conformance；不替代目标仓库自己的测试 |
+| Admin Consumer Lab | [Consumer Lab](../../apps/admin/app/admin/consumer-lab/page.tsx) | 维护者只读查看 canonical contract；不持有 Consumer Key、不代理目标平台请求、不构成 PASS |
+| Registry | [manifest](../../registry/manifest.json) | 记录 contract major、Harness/Lab 路径与本地验证命令；不分发 runtime 包或页面模板 |
 | `packages/domain` | 中央内部模块 | 不复制到 Consumer，不作为公共 runtime 依赖；领域算法仍由中央 SQL/API 决定 |
 
 同一 Supabase 环境共享身份不等于跨域自动登录。默认各平台保持自己的同源会话；跨域 SSO 不在当前接入承诺内。
@@ -55,7 +54,7 @@ Account contract major / changelog revision：
 ## 3. Contract baseline 与升级规则
 
 1. 固定中央 commit，并读取 Account `v1` OpenAPI、compatibility、changelog。
-2. 记录当前接入接受的 contract major。Registry 的 `contract_compatibility` 只是中央参考应用当前验收信息，不替代目标平台自己的验证。
+2. 记录当前接入接受的 contract major。Registry 的 `contract_compatibility` 只是中央 Harness/Lab 当前验收元数据，不替代目标平台自己的验证。
 3. `/v1` 采用 expand-first：可兼容新增字段/operation；删除 operation、删除 schema 字段、收窄 enum 或改变既有鉴权/语义属于 breaking change，应进入新 major 或完成明确兼容迁移。
 4. 中央仓库使用 `pnpm contracts:check` 与 `pnpm contracts:breaking`。目标平台没有同名脚本时，不伪造通过；至少把目标平台实际 HTTP 调用与当前 OpenAPI 对齐。
 5. 不把 `packages/domain` 类型直接复制成公共协议来源，也不通过 workspace/private package 绕过 HTTP contract。
@@ -64,78 +63,51 @@ Account contract major / changelog revision：
 
 每个环境独立登记 Platform、Origin、Platform Key 和 Auth redirect。Local/Preview 不连接 Production。
 
-新平台服务端至少需要：
+目标平台需要等价的服务端配置；变量名由目标仓库自行定义。下列是语义示例，不要求照抄名称：
 
 ```dotenv
-TEMPLATE_ORIGIN=http://localhost:3001
+CONSUMER_ORIGIN=http://localhost:3001
 ACCOUNT_API_URL=http://127.0.0.1:8000
 ACCOUNT_API_TIMEOUT_MS=5000
 ACCOUNT_PLATFORM_KEY=
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_PUBLISHABLE_KEY=
 ```
 
 | 变量 | 边界 |
 | --- | --- |
-| `TEMPLATE_ORIGIN` | 与浏览器 Origin 精确一致；用于 mutation Origin/CSRF 校验 |
+| `CONSUMER_ORIGIN` | 与浏览器 Origin 精确一致；用于 mutation Origin/CSRF 校验；实际变量名可由目标平台定义 |
 | `ACCOUNT_API_URL` | 服务端中央 API base；Hosted 时包含实际 Edge Function base，不把业务 `/v1` 重复拼接 |
-| `ACCOUNT_API_TIMEOUT_MS` | Reference Consumer 默认 5000ms、最大 30000ms；超时 fail closed |
+| `ACCOUNT_API_TIMEOUT_MS` | 推荐默认 5000ms；目标平台应设置有界 deadline，超时 fail closed |
 | `ACCOUNT_PLATFORM_KEY` | Admin 签发的 server-only Secret；禁止 `NEXT_PUBLIC_`、URL、客户端存储、日志和聊天 |
-| `NEXT_PUBLIC_SUPABASE_URL` | 允许公开；必须与目标中央环境一致 |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 允许公开；不能替换成 secret/service_role |
+| `SUPABASE_URL` | Consumer server/Auth adapter 使用；若浏览器确需公开 URL，由目标框架使用明确 public 配置并保持同一环境 |
+| `SUPABASE_PUBLISHABLE_KEY` | 允许公开的 publishable key；不能替换成 secret/service_role |
 
 Consumer 不需要中央数据库 URL、Supabase secret key、HMAC、Worker token、Provider token 或 webhook secret。
 
 中央维护者在真实 HTTP 前完成：平台登记与 active/allow_activation、Origins、Auth redirect、Platform Key 创建/部署确认、Plan/features/商品映射以及普通测试用户准备。system_admin 不能充当普通 Consumer fixture。
 
-## 5. 从 Reference Consumer 复制并自行拥有集成代码
+## 5. 目标平台自行拥有集成代码，并用 Harness 对照
 
-新平台不安装 AisenHub Account/Auth runtime package。选择同一审核 commit 的 Reference Consumer 作为源码参考，只复制实际需要的文件并在目标仓库中自行维护差异。
+新平台不安装 AisenHub Account/Auth runtime package，也不存在中央维护的可复制 starter。目标仓库按自己的技术栈实现 Auth adapter、同源 BFF、HTTP DTO/错误处理和业务授权，并自行拥有源码与测试。
 
-最小 Next.js 结构：
+中央 Harness 只用于理解和验证最小协议行为：
 
-```text
-app/
-  _lib/
-    auth/
-      core.ts
-      cookie-policy.ts
-      server.ts
-      browser-session.ts
-      browser.ts
-    integration/
-      account-contract.ts
-      authorization.ts
-      bounded-body.ts
-      validation.ts
-  api/auth/_lib.ts
-  api/auth/login/route.ts
-  api/auth/refresh/route.ts
-  api/auth/logout/route.ts
-  api/auth/callback/route.ts
-  api/v1/[...path]/route.ts
-  api/protected/advanced-config/route.ts
-  login/page.tsx
-```
+- [server.mjs](../../tests/consumer-harness/server.mjs)：loopback test server，演示 HttpOnly access/refresh、可读 CSRF Cookie、精确 Origin、server-only Platform Key、canonical allowlist、bounded body、deadline/no-store/request_id、binary 转发和 fail-closed protected route。
+- [contract.mjs](../../tests/consumer-harness/contract.mjs)：直接读取 canonical Account OpenAPI 并限制 Harness 支持的 method/path；不是新的手写公共 DTO 源。
+- [public/index.html](../../tests/consumer-harness/public/index.html) 与 [app.js](../../tests/consumer-harness/public/app.js)：极薄诊断 UI，只证明浏览器不需要持有 Platform Key/access/refresh token，不提供产品页面范式。
+- [Local E2E](../../tests/spikes/e2e/consumer-harness-local.mjs)：证明两个独立 Consumer origin/platform key 的真实本地边界，包括 activate、subscription/redeem、ETag、文件二进制、Suspend、Logout 和 invalid refresh。
 
-关键参考：
-
-- [Consumer Auth server](../../apps/template-preview/app/_lib/auth/server.ts)：HttpOnly access/refresh、CSRF、login acknowledgement、logout fence、request-scoped Supabase。
-- [Browser session](../../apps/template-preview/app/_lib/auth/browser-session.ts)：refresh single-flight、读取可安全重放、mutation 默认不重放、logout epoch、跨 Tab terminal hint。
-- [Auth route helpers](../../apps/template-preview/app/api/auth/_lib.ts)：Origin、CSRF、错误外壳与 no-store。
-- [Consumer BFF](../../apps/template-preview/app/api/v1/%5B...path%5D/route.ts)：method/path allowlist、服务端 Key、可信 Cookie、bounded body、upload admission、deadline。
-- [Protected route](../../apps/template-preview/app/api/protected/advanced-config/route.ts) 与 [authorization helper](../../apps/template-preview/app/_lib/integration/authorization.ts)：中央权益不可用、暂停或缺 feature 时 fail closed。
-
-Auth 路由必须成套移植并保留测试，不要把 refresh/logout/fence/replay 逻辑压缩成“简单 fetch wrapper”。页面可以重写；安全语义改变必须记录并重新验收。
+目标平台可以参考这些**行为**，但不要复制 Harness 作为生产 server。OAuth callback、注册/找回密码、多 Tab 协调、框架 SSR cookie adapter 等目标平台实际需要而 Harness 未实现的能力，必须按 Supabase/目标框架官方能力单独设计、测试和维护。
 
 ## 6. 登录、会话与 BFF 不变量
 
 - 浏览器只向同源 Auth/BFF 发请求；不接触 Platform Key、access token、refresh token。
 - access/refresh 为 HttpOnly Cookie；CSRF 使用可读 Cookie + header；mutation 同时要求精确 Origin。
-- callback 的 `returnTo` 只能是安全相对路径，不能携带 token/proof/password 等敏感 query。
+- 若实现 callback，`returnTo` 只能是安全相对路径，不能携带 token/proof/password 等敏感 query。
 - definitive refresh/session invalid 才进入 expired/logout；中央临时不可用不能被误判为授权成功。
 - GET 等安全读取可在会话恢复后按既定策略重放；mutation 默认要求用户重新提交。只有明确 Idempotency-Key 且 body 可安全重放的操作才可采用受控 replay。
-- logout 后迟到 refresh/login 不能恢复旧 session；跨 Tab 只传播 scoped terminal hint，不传播 token。
+- logout 后迟到 refresh/login 不能恢复旧 session；若实现跨 Tab 协调，只传播 scoped terminal hint，不传播 token。
 - BFF 必须是 allowlist，不代理任意 URL、Admin path 或浏览器指定的 host/platform/user。
 - 上游 `request_id` 应保留用于支持与审计关联。
 
@@ -195,13 +167,14 @@ Consumer 不接 Provider webhook、结算 worker 或中央 SQL。支付成功、
 pnpm contracts:check
 pnpm contracts:breaking
 pnpm test:registry
-pnpm test:reference-consumer
+pnpm test:consumer-harness
+pnpm test:e2e:consumer-harness
 pnpm test:unit
 pnpm typecheck
 pnpm build
 ```
 
-`pnpm test:reference-consumer` 会阻止已删除的 Account SDK 或中央 `@kit/domain` 重新进入 Reference Consumer，并检查必需 Auth/BFF/integration 与 canonical contracts。
+`pnpm test:consumer-harness` 阻止 `@kit/*`、Next/React、Admin/Domain 私有实现或 server credential marker 进入 Harness，并检查 canonical operation 与独立进程边界；`pnpm test:e2e:consumer-harness` 使用真实 Local Supabase/Auth/API/DB/Storage 验证运行行为。
 
 ## 11. 常见问题
 
@@ -218,9 +191,9 @@ pnpm build
 
 ## 12. 持续维护与升级
 
-中央修改 Account/Admin OpenAPI、Auth Cookie/session、Reference Consumer BFF/DTO guard、Registry contract compatibility 或环境配置时，同一任务检查本手册。
+中央修改 Account/Admin OpenAPI、Harness Auth/BFF 行为、Registry contract compatibility、Consumer Lab 或环境配置时，同一任务检查本手册。
 
-升级流程：记录当前 central commit/contract major/本地定制 → 阅读 changelog/compatibility → 比较 Reference Consumer 安全接线差异 → 合并需要的修复 → 目标平台 typecheck/build/unit/Local 回归 → 再进入发布流程。
+升级流程：记录当前 central commit/contract major/本地定制 → 阅读 changelog/compatibility → 比较 Harness conformance 与目标 Consumer 自有实现差异 → 合并需要的修复 → 目标平台 typecheck/build/unit/Local 回归 → 再进入发布流程。
 
 中央 `/v1` 只做兼容扩展；不兼容变更先建立新 major 或迁移窗口，并同步所有受影响 Consumer。Consumer 回退只能回退仍兼容的应用代码，不能随应用回退删除中央迁移或交易数据。
 
@@ -230,7 +203,7 @@ pnpm build
 请按中央 docs/guides/platform-onboarding.md 以 Contract-First HTTP 方式接入当前平台。
 先阅读目标仓库规则，并固定中央 commit、Account contract major、compatibility/changelog。
 不要安装或重新引入 AisenHub Account/Auth runtime SDK，也不要依赖中央 @kit/domain。
-从同一审核 commit 的 apps/template-preview 复制本次需要的 Auth/BFF/integration 代码，复制后由目标仓库自行拥有。
+按目标技术栈自行实现并拥有 Auth/BFF/integration；使用中央 Consumer Harness 对照协议/安全行为，不把 Harness 当生产 starter。
 先完成登录 → principal → activate → 一个服务端 protected route，再接可选资料/订阅/兑换/文件。
 Platform Key 只在服务端；浏览器不得持有 token、Key、SQL/Provider Secret。
 中央不可用或 entitlement 不确定时 fail closed，不自行重算权益/配额/支付状态。

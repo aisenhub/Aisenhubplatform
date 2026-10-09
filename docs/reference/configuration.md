@@ -16,9 +16,19 @@
 | ADMIN_MFA_ATTESTATION_SECRET | Admin BFF 与中央 API 共享的服务端 HMAC Secret，至少 32 bytes；仅用于签发最多 60 秒的近期 MFA attestation，不得进入浏览器或日志 |
 | NODE_ENV | production 时写 Secure Cookie |
 
-## 平台参考页
+## Consumer Conformance Harness
 
-账户页读取 NEXT_PUBLIC_SUPABASE_URL，以及 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY（回退 NEXT_PUBLIC_SUPABASE_ANON_KEY）。这些参数允许公开；SUPABASE_SECRET_KEY、SQL URL、平台 Key 和 HMAC 不得使用 NEXT_PUBLIC 前缀。
+Harness 位于 `tests/consumer-harness`，仅用于 Local conformance，不参与 workspace/生产部署。浏览器资源不读取任何服务端 Secret；Platform Key、access/refresh token 都由 Harness server 边界持有或以 HttpOnly Cookie 保存。
+
+| 变量 | 行为 |
+| --- | --- |
+| `HARNESS_ORIGIN` | 必须是 loopback origin，默认 `http://127.0.0.1:3110`；用于精确 Origin/CSRF 校验 |
+| `HARNESS_PORT` | loopback server 端口；Local E2E 使用 3110/3111 |
+| `SUPABASE_URL` | Local/目标测试 Auth URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Auth publishable key；不是 secret/service_role |
+| `ACCOUNT_API_URL` | Harness server 到中央 Account API 的 base URL |
+| `ACCOUNT_API_TIMEOUT_MS` | 上游请求 deadline，默认 5000ms，最大 30000ms |
+| `ACCOUNT_PLATFORM_KEY` | test process 注入的 server-only Platform Key；禁止进入 HTML/JS/日志/Git |
 
 ## 中央 API
 
@@ -86,18 +96,7 @@ Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 �
 
 维护入口的调用方、批量预算和环境证据见[Maintenance 调用方与环境差异矩阵](maintenance-callers.md)。
 
-## Consumer 模板
-
-`apps/template-preview` 是 `aisentest` 的 Consumer BFF 模板。模板服务端需要配置：
-
-| 变量 | 行为 |
-| --- | --- |
-| `ACCOUNT_API_URL` | 中央 Account API 地址；staging 使用 Supabase Edge Function 的 `/functions/v1/account-api` 地址 |
-| `ACCOUNT_API_TIMEOUT_MS` | Consumer BFF 到中央 Account API 的请求超时，默认 5000ms，最大 30000ms |
-| `ACCOUNT_PLATFORM_KEY` | `aisentest` 对应的服务端 Platform Key；只读服务端环境变量，不能使用 `NEXT_PUBLIC_` 前缀、不能进入浏览器、日志或 Git |
-| `TEMPLATE_ORIGIN` | 模板页面的精确 origin，用于 BFF 的 Origin/CSRF 校验 |
-
-Platform Key 必须通过 Admin 的创建、部署确认流程生成；同一平台可以按环境使用不同 Key。模板页面只调用同源 `/api/v1/*`，不会让浏览器直接提交 Platform Key。
+目标 Consumer 的变量名由其仓库自己定义，但安全语义必须等价：Platform Key 只在可信服务端；浏览器只调用同源 BFF；各环境使用独立 Key、Origin 与 Auth 配置。新平台接入步骤见[接入手册](../guides/platform-onboarding.md)。
 
 Maintenance 调度器应每分钟调用 `/maintenance/v1/billing/jobs/run`，请求体使用 `{ "limit": 5 }`；该路由领取任务并在同一固定 `MAINTENANCE_WORKER_ID` 下分派发现、查询和结算。`schedule.json` 只描述调用元数据，仍需由受控外部调度器实际发起请求。
 

@@ -8,7 +8,7 @@
 
 platform_file_policies 为 typed 表，platform_id PK/FK、enabled、max_file_bytes、max_files、max_total_bytes、updated_at。默认1 MiB/10个/10 MiB；V1 max_file_bytes 可下调但不得超过1 MiB，所有上限为正整数。调大单文件上限必须重新评审后端内存、网关和平台限制。
 
-上传意图声明 size 只用于预约上限；Content-Length、MIME 和文件名都不可信。Reference Consumer BFF 使用 app-local bounded-body 读取器，Account API 使用中央内部的共享有界读取边界：BFF上限为1 MiB，Account API进一步限制为min(requested_size_bytes,max_file_bytes)，发现超出立即终止，不调用Storage。BFF先从中央Principal取得可信账户，再取得每实例16个、每账户2个接收名额；名额覆盖接收及上游请求，并在所有退出路径释放。禁止检查前使用无限制arrayBuffer/formData或直接流式转发；拒绝非identity Content-Encoding。
+上传意图声明 size 只用于预约上限；Content-Length、MIME 和文件名都不可信。Consumer BFF 必须在读取前建立有界输入边界；当前 conformance Harness 上限为1 MiB，Account API进一步限制为min(requested_size_bytes,max_file_bytes)，发现超出立即终止，不调用Storage。中央 Account API 仍独立校验真实大小、配额和可信 Principal；目标 Consumer 不得把浏览器声明的账户/大小当作服务端授权事实。禁止检查前使用无限制arrayBuffer/formData或把私有 Storage 暴露给浏览器；拒绝非identity Content-Encoding。
 
 Account API得到完整有界字节后校验实际大小>0、<=声明、<=当前策略，计算SHA-256，然后重新事务校验Principal、配额及上传租约，最后才上传该不可变缓冲区。BFF与Account API分别限制每实例最多16个并发接收、每账户最多2个接收，在读body前取得接收名额；超过返回429。实际内存须在 Local 以目标并发模型做压力探针，Production 上线后再核对真实限制，不能仅以文件大小推算总实例内存。中央层独立校验，避免BFF配置错误成为绕过入口。
 
@@ -168,4 +168,4 @@ pending 且未写入可取消并释放；receiving/storing 有租约或未知写
 
 Account侧只保留现有六个文件操作：`POST /v1/config-files/upload-intent`、`PUT/GET /v1/config-files/{fileId}/content`、`GET /v1/config-files`、`GET/DELETE /v1/config-files/{fileId}`；不增加浏览器 `complete`、signed-upload或Storage直连路径。Admin侧的file-policy、files、deletion-jobs列表/详情/下载/受控delete/retry均必须调用同一领域入口；页面只能调用这些入口，不能在UI中重算预算或直接写表。
 
-HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。Admin 文件列表支持可选精确 `platform_id`：过滤在服务端游标分页前执行；无效 UUID 返回400、未知平台返回404、与平台范围不一致的 cursor 返回400 `INVALID_INPUT`。不带该参数仍保留全局列表语义。若需要变更字段，必须先同步本节、`docs/reference/contracts.md`、canonical OpenAPI、中央 DTO、Reference Consumer/BFF 和测试，不能静默改名。
+HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。Admin 文件列表支持可选精确 `platform_id`：过滤在服务端游标分页前执行；无效 UUID 返回400、未知平台返回404、与平台范围不一致的 cursor 返回400 `INVALID_INPUT`。不带该参数仍保留全局列表语义。若需要变更字段，必须先同步本节、`docs/reference/contracts.md`、canonical OpenAPI、中央 DTO、Consumer conformance/实际消费者和测试，不能静默改名。
