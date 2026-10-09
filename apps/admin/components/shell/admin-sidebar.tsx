@@ -109,7 +109,11 @@ export function AdminSidebar() {
               </div>
             )}
           </div>
-        ) : null}
+        ) : (
+          <div className="admin-sidebar-platform-context grid gap-1.5 group-data-[collapsible=icon]:hidden">
+            <PlatformSwitcher current={null} variant="sidebar" />
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent>

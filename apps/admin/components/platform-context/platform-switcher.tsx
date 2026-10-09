@@ -15,12 +15,14 @@ import { apiErrorDescription } from '../../features/resources/admin-resource-uti
 import type { Platform, PlatformListResponse } from './platform-types';
 
 type PlatformSwitcherProps = {
-  current: Platform;
+  current?: Platform | null;
   variant?: 'default' | 'sidebar';
 };
 
+const ALL_PLATFORMS_VALUE = '__ALL_PLATFORMS__';
+
 export function PlatformSwitcher({
-  current,
+  current = null,
   variant = 'default',
 }: PlatformSwitcherProps) {
   const pathname = usePathname();
@@ -64,6 +66,9 @@ export function PlatformSwitcher({
   }, [loadPlatforms]);
 
   const options = useMemo(() => {
+    if (!current) {
+      return platforms;
+    }
     const hasCurrent = platforms.some(
       (platform) => platform.platform_id === current.platform_id,
     );
@@ -71,13 +76,33 @@ export function PlatformSwitcher({
   }, [current, platforms]);
 
   function changePlatform(nextId: string) {
-    if (!nextId || nextId === current.platform_id) return;
-    const prefix = `/admin/platforms/${encodeURIComponent(current.platform_id)}`;
-    const suffix = pathname.startsWith(prefix)
-      ? pathname.slice(prefix.length)
-      : '';
-    router.push(`/admin/platforms/${encodeURIComponent(nextId)}${suffix}`);
+    if (!nextId) return;
+
+    if (nextId === ALL_PLATFORMS_VALUE) {
+      if (current) {
+        // Return to global view. If at platform overview, go to global overview; otherwise to directory.
+        const isPlatformOverview =
+          pathname ===
+          `/admin/platforms/${encodeURIComponent(current.platform_id)}`;
+        router.push(isPlatformOverview ? '/admin' : '/admin/platforms');
+      }
+      return;
+    }
+
+    if (current && nextId === current.platform_id) return;
+
+    if (current) {
+      const prefix = `/admin/platforms/${encodeURIComponent(current.platform_id)}`;
+      const suffix = pathname.startsWith(prefix)
+        ? pathname.slice(prefix.length)
+        : '';
+      router.push(`/admin/platforms/${encodeURIComponent(nextId)}${suffix}`);
+    } else {
+      router.push(`/admin/platforms/${encodeURIComponent(nextId)}`);
+    }
   }
+
+  const selectedValue = current ? current.platform_id : ALL_PLATFORMS_VALUE;
 
   return (
     <div
@@ -93,7 +118,7 @@ export function PlatformSwitcher({
           variant === 'sidebar' ? 'sr-only' : 'text-xs text-muted-foreground'
         }
       >
-        当前平台
+        工作区透镜
       </Label>
       {state === 'loading' ? (
         <Skeleton
@@ -102,14 +127,15 @@ export function PlatformSwitcher({
       ) : (
         <select
           id="platform-switcher"
-          value={current.platform_id}
+          value={selectedValue}
           onChange={(event) => changePlatform(event.target.value)}
-          disabled={state === 'error' || options.length < 2}
+          disabled={state === 'error' || (options.length === 0 && !current)}
           data-test="platform-switcher"
           aria-describedby={
             state === 'error' ? 'platform-switcher-error' : undefined
           }
         >
+          <option value={ALL_PLATFORMS_VALUE}>🌐 所有平台（全局透镜）</option>
           {options.map((platform) => (
             <option key={platform.platform_id} value={platform.platform_id}>
               {platform.name} · {platform.code}
