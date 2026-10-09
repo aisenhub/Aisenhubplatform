@@ -20,18 +20,13 @@
       "consumers": [
         {
           "id": "consumer-bff",
-          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
-          "contains": "v1/subscription/products"
+          "path": "tests/consumer-harness/server.mjs",
+          "contains": "publicOperation"
         },
         {
-          "id": "consumer-ui",
-          "path": "apps/template-preview/app/subscription/page.tsx",
-          "contains": "isSubscriptionProductList"
-        },
-        {
-          "id": "registry",
-          "path": "registry/templates.json",
-          "contains": "subscription-status"
+          "id": "consumer-contract",
+          "path": "tests/consumer-harness/contract.mjs",
+          "contains": "/v1/subscription/products"
         }
       ],
       "test_owners": [
@@ -54,7 +49,7 @@
       "fields": [
         {
           "name": "code",
-          "consumers": ["consumer-ui", "registry"],
+          "consumers": ["consumer-contract"],
           "tests": [
             "TASK-0103-NEG",
             "account-api-public-products",
@@ -63,57 +58,57 @@
         },
         {
           "name": "name",
-          "consumers": ["consumer-ui", "registry"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "description",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "price",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "currency",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.kind",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.duration_value",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "term.duration_unit",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "price_version",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "recommended",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "enabled",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG"]
         },
         {
           "name": "purchasable",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": [
             "TASK-0103-NEG",
             "account-api-public-products",
@@ -122,7 +117,7 @@
         },
         {
           "name": "reason",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["TASK-0103-NEG", "account-api-public-products"]
         }
       ]
@@ -144,13 +139,13 @@
       "consumers": [
         {
           "id": "consumer-bff",
-          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
-          "contains": "v1/subscription/checkout"
+          "path": "tests/consumer-harness/server.mjs",
+          "contains": "operationFor"
         },
         {
-          "id": "consumer-ui",
-          "path": "apps/template-preview/app/subscription/page.tsx",
-          "contains": "SubscriptionCheckoutDto"
+          "id": "consumer-contract",
+          "path": "tests/consumer-harness/contract.mjs",
+          "contains": "/v1/subscription/checkout"
         }
       ],
       "test_owners": [
@@ -163,57 +158,57 @@
       "fields": [
         {
           "name": "checkout_id",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "status",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "product_code",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "price",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "currency",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "term",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "expires_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "payment_url",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "paid_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "granted_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },
         {
           "name": "progress",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         }
       ]
@@ -235,13 +230,13 @@
       "consumers": [
         {
           "id": "consumer-bff",
-          "path": "apps/template-preview/app/api/v1/[...path]/route.ts",
-          "contains": "v1/subscription"
+          "path": "tests/consumer-harness/server.mjs",
+          "contains": "protectedFeature"
         },
         {
-          "id": "consumer-ui",
-          "path": "apps/template-preview/app/subscription/page.tsx",
-          "contains": "EntitlementDto"
+          "id": "consumer-contract",
+          "path": "tests/consumer-harness/contract.mjs",
+          "contains": "/v1/subscription"
         }
       ],
       "test_owners": [
@@ -259,47 +254,47 @@
       "fields": [
         {
           "name": "effective_status",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "entitlement_kind",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "plan",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api", "domain-entitlement"]
         },
         {
           "name": "subscription_product",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "features",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api", "domain-entitlement"]
         },
         {
           "name": "started_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "current_period_end",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "evaluated_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },
         {
           "name": "next_transition_at",
-          "consumers": ["consumer-ui"],
+          "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         }
       ]

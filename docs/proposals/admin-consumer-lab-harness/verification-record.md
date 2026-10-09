@@ -19,10 +19,10 @@
 
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | Contract foundation | 验收通过待推送 | Account spec 1.0.1 补齐 `purchases_paused`；breaking comparator 可单测并解析 local `$ref`；前序 Proposal 当前状态已收口 | commit/push/远端核对 | 待提交 | 未验证 |
-| 02 | Consumer Conformance Harness | 验收通过待推送 | test-only Node Harness、16-operation canonical allowlist、HttpOnly Auth/CSRF/BFF、thin UI、static+process smoke 已实施 | commit/push/远端核对；真实 Local Auth/API/Storage 闭环在 Phase 04 | 待提交 | 未验证 |
-| 03 | Admin Consumer Lab | 验收通过待推送 | `/admin/consumer-lab`、canonical contract summary/table、Global 导航与 unit/build 验证已实施 | commit/push/远端核对 | 待提交 | 未验证 |
-| 04 | 删除 template-preview 与迁移 gates/E2E | 未开始 | 未验证 | 02、03 | 未验证 | 未验证 |
+| 01 | Contract foundation | 验收通过待推送 | Account spec 1.0.1 补齐 `purchases_paused`；breaking comparator 可单测并解析 local `$ref`；前序 Proposal 当前状态已收口 | push/远端核对 | 828132c | GitHub connection reset，待重试 |
+| 02 | Consumer Conformance Harness | 验收通过待推送 | test-only Node Harness、HttpOnly Auth/CSRF/BFF、thin UI、static+process smoke 已实施 | push/远端核对 | 9299cc5 | 继承 GitHub 网络阻塞 |
+| 03 | Admin Consumer Lab | 验收通过待推送 | `/admin/consumer-lab`、canonical contract summary/table、Global 导航与 unit/build 验证已实施 | push/远端核对 | 34b09e3 | 继承 GitHub 网络阻塞 |
+| 04 | 删除 template-preview 与迁移 gates/E2E | 验收通过待推送 | Harness 扩至 19 canonical operations；真实 Local Auth/API/Storage E2E；Registry/TASK-0801/consumer ownership 已迁移；旧 app/T16/template inventory 已删除；workspace 收敛为 8 projects | commit/push/远端核对 | 待提交 | 未验证 |
 | 05 | 文档与 R3 总体验收 | 未开始 | 未验证 | 04 | 未验证 | 未验证 |
 
 状态只使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
@@ -42,8 +42,8 @@
 - 与计划偏差：首次 unit test 错误假设 principal operationId 为 `getAccountPrincipal`，canonical 实际为 `getPrincipal`；修正测试后全量 Admin unit 复测通过。两次 `run_shell` Admin build 因 120 秒 runner 总预算超时，随后用 900 秒结构化 process 重跑同一 production build，最终 exit 0；没有通过修改 build 配置绕过。
 
 ### Phase 04
-- 实际修改：未验证
-- 与计划偏差：未验证
+- 实际修改：新增 `tests/spikes/e2e/consumer-harness-local.mjs`，用两个 Harness + 两个平台 Key 在真实 Local Supabase/Auth/DB/Storage 上验证 session/CSRF/platform isolation/activate/subscription/redeem/ETag/files/suspend/logout/invalid refresh；Harness canonical allowlist 扩至 19 operations，覆盖 checkout routes；Registry schema 升为 3.0.0 并改成 Harness + Admin Lab metadata；`contract-consumers.json` 的 Account Consumer owner 改为 Harness contract/BFF；TASK-0801 切到 Harness static + Local E2E；删除 `apps/template-preview`、旧 T16、Reference Consumer probe、`registry/templates.json` 和旧模板 Registry probe；lockfile 重算后为 8 workspace projects。
+- 与计划偏差：没有把 3000 行旧 T16 原样“换目录”继续维护，而是按已冻结边界拆掉产品 UI 专属断言，保留并重建协议/安全/领域高价值闭环。新 Local E2E 首次运行因页面尚未导航到 Harness origin 就执行相对 `fetch('/api/v1/plans')` 而失败；前置 `page.goto(baseUrl)` 后同一流程 PASS。Phase 04 全仓 format 首次发现 4 个本阶段文件格式不一致，定向格式化后复测 PASS。
 
 ### Phase 05
 - 实际修改：未验证
@@ -79,19 +79,35 @@
 | 2026-10-09 | 03 | worktree | changed-file `oxfmt --check`（首次） | Local | 1 | FAIL：`contract-summary.ts` 与 `consumer-lab-page.tsx` 格式不一致；定向格式化后复测 |
 | 2026-10-09 | 03 | worktree | changed-file `oxfmt --check`（修复后） | Local | 0 | PASS：6 个 Consumer Lab/navigation 文件格式一致 |
 | 2026-10-09 | 03 | worktree | `git diff --check` | Local | 0 | PASS |
+| 2026-10-09 | 04 | worktree | `node --check tests/spikes/e2e/consumer-harness-local.mjs` | Local | 0 | PASS：新 Local Harness E2E 语法有效 |
+| 2026-10-09 | 04 | worktree | `pnpm test:e2e:consumer-harness`（首次） | Local Supabase/Auth/DB/Storage/Chrome | 1 | FAIL：初始 page 尚无 base URL，相对 `/api/v1/plans` fetch 无法解析；修复为先导航 Harness origin |
+| 2026-10-09 | 04 | worktree | `pnpm test:e2e:consumer-harness`（修复后、删除前） | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：Harness process、Auth Cookie/CSRF、双平台隔离、activate、redeem、ETag、binary files、suspend fail-closed、logout/invalid refresh 共 9 项 |
+| 2026-10-09 | 04 | worktree | `pnpm contracts:check`（Consumer owner 迁移后） | Local | 0 | PASS：Account 22/Admin 45；4 contracts/39 fields，Consumer owner 已指向 Harness |
+| 2026-10-09 | 04 | worktree | `pnpm test:consumer-harness` | Local | 0 | PASS：19 canonical operations + static/process boundary |
+| 2026-10-09 | 04 | worktree | `pnpm install --lockfile-only --store-dir E:\\AppData\\pnpm` | Local | 0 | PASS：8 workspace projects，旧 template-preview importer 已退出 lockfile |
+| 2026-10-09 | 04 | worktree | `pnpm test:registry` | Local | 0 | PASS：manifest/canonical contracts/Harness/Admin Lab/template retirement/browser secret boundary |
+| 2026-10-09 | 04 | worktree | active code/test/tooling/registry `git grep template-preview` | Local | 0 | PASS：package/lockfile/registry/tests/tooling/apps 无旧 app 引用 |
+| 2026-10-09 | 04 | worktree | `pnpm typecheck` | Local | 0 | PASS：7 typecheck packages scope，无 template-preview |
+| 2026-10-09 | 04 | worktree | `pnpm build` | Local | 0 | PASS：7 workspace packages scope；Admin production build 包含 `/admin/consumer-lab` |
+| 2026-10-09 | 04 | worktree | `pnpm test:unit` | Local | 0 | PASS：Domain 13、UI 36、Admin 26 tests |
+| 2026-10-09 | 04 | worktree | `pnpm test:e2e:consumer-harness`（删除后复测） | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：证明 Harness 不依赖已删除 Reference Consumer 代码/产物 |
+| 2026-10-09 | 04 | worktree | `pnpm lint` | Local | 0 | PASS：306 files，0 warnings / 0 errors |
+| 2026-10-09 | 04 | worktree | `pnpm format:check`（首次） | Local | 1 | FAIL：Consumer matrix、Local E2E、Registry probe、TASK-0801 四个本阶段文件需格式化 |
+| 2026-10-09 | 04 | worktree | `pnpm format:check`（修复后） | Local | 0 | PASS：370 files |
+| 2026-10-09 | 04 | worktree | `pnpm docs:check` | Local | 1 | EXPECTED PHASE BOUNDARY：10 个 active onboarding 链接仍指向已删除的 `apps/template-preview`/`registry/templates.json`；由 Phase 05 文档迁移负责，未将此结果写成 PASS |
 
 ## GitHub 交付记录
 
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| 01 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
-| 02 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
-| 03 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
+| 01 | 828132c | codex/admin-consumer-lab-harness | 失败 | 未核对 | 两次 GitHub HTTPS connection reset |
+| 02 | 9299cc5 | codex/admin-consumer-lab-harness | 待推送 | 未核对 | 继承网络阻塞 |
+| 03 | 34b09e3 | codex/admin-consumer-lab-harness | 待推送 | 未核对 | 继承网络阻塞 |
 | 04 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
 | 05 | 未验证 | codex/admin-consumer-lab-harness | 未验证 | 未验证 | - |
 
 ## 交接信息
 
-- 下一阶段：Phase 04 删除 `apps/template-preview` 并迁移 Registry/T16/TASK-0801 到 Harness。
-- 当前未提交修改：Phase 03 Admin Consumer Lab，归本任务。
+- 下一阶段：Phase 05 同步 active architecture/reference/guides 并执行最终 R3 gate。
+- 当前未提交修改：Phase 04 删除/迁移与 Proposal 验证记录，归本任务。
 - 生产部署/真实支付/费用/Production 数据：未授权且不在范围。

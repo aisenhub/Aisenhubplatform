@@ -23,7 +23,7 @@
 | 01 | 修复 canonical contract 漂移并强化 breaking gate；收尾前序 Proposal 状态 | 无 | 验收通过待推送 | [01 Contract foundation](phases/01-contract-foundation.md) |
 | 02 | 建立非 workspace、极薄 Consumer Conformance Harness | 01 | 验收通过待推送 | [02 Harness](phases/02-consumer-conformance-harness.md) |
 | 03 | 在 Admin 增加 Consumer Lab | 01，可与 02 部分并行 | 验收通过待推送 | [03 Admin Lab](phases/03-admin-consumer-lab.md) |
-| 04 | 迁移 E2E/Registry/TASK-0801 并删除 `apps/template-preview` | 02、03 | 未开始 | [04 Remove preview](phases/04-remove-template-preview.md) |
+| 04 | 迁移 E2E/Registry/TASK-0801 并删除 `apps/template-preview` | 02、03 | 验收通过待推送 | [04 Remove preview](phases/04-remove-template-preview.md) |
 | 05 | 同步 active 文档并执行最终 R3 Local 验收 | 04 | 未开始 | [05 Final verification](phases/05-docs-and-r3-verification.md) |
 
 Phase 02 与 Phase 03 可在 Phase 01 后并行设计，但本次单 Agent 串行实施。Phase 04 是 destructive code removal gate，只有新 Harness 已通过真实 Local 行为且 Admin Lab build/unit 可用时才能进入。
@@ -71,12 +71,12 @@ pnpm verify:task:0801 --reuse-local
 
 ## 总体验收
 
-- [ ] canonical OpenAPI 与真实 `purchases_paused` 行为一致，breaking checker 负向测试通过。
-- [ ] `tests/consumer-harness` 独立且 test-only，无 `@kit/*`/Next/React/Domain/Admin runtime dependency。
-- [ ] `/admin/consumer-lab` 可导航、可读、不会暴露 Secret 或伪造 Harness PASS。
-- [ ] `apps/template-preview` 已删除，root workspace/build/typecheck 不再包含它。
-- [ ] Registry/TASK-0801/E2E 已切到 Harness + Admin Lab 模型。
-- [ ] Consumer platform/session/CSRF/BFF/file/subscription 等适用 Local 行为仍有真实测试证据。
+- [x] canonical OpenAPI 与真实 `purchases_paused` 行为一致，breaking checker 负向测试通过。
+- [x] `tests/consumer-harness` 独立且 test-only，无 `@kit/*`/Next/React/Domain/Admin runtime dependency。
+- [x] `/admin/consumer-lab` 可导航、可读、不会暴露 Secret 或伪造 Harness PASS。
+- [x] `apps/template-preview` 已删除，root workspace/build/typecheck 不再包含它。
+- [x] Registry/TASK-0801/E2E 已切到 Harness + Admin Lab 模型。
+- [x] Consumer platform/session/CSRF/BFF/file/subscription 等适用 Local 行为仍有真实测试证据。
 - [ ] active architecture/reference/guides 不再指导复制 `apps/template-preview`。
 - [ ] 最终 R3 Local Supabase gate 对最终候选 PASS；失败记录保留。
 

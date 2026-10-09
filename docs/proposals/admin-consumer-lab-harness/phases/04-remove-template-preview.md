@@ -1,6 +1,6 @@
 # Phase 04：迁移 Consumer E2E 并删除 `apps/template-preview`
 
-状态：未开始
+状态：验收通过待推送
 
 关联：[总计划](../plan.md) · [设计](../design.md) · [验证记录](../verification-record.md)
 

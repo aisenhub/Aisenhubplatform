@@ -15,6 +15,9 @@ const accountContractPath = path.join(
 export const SUPPORTED_OPERATIONS = [
   ['GET', '/v1/plans'],
   ['GET', '/v1/subscription/products'],
+  ['GET', '/v1/subscription/checkout'],
+  ['POST', '/v1/subscription/checkout'],
+  ['GET', '/v1/subscription/checkout/{checkout_id}'],
   ['GET', '/v1/account/principal'],
   ['POST', '/v1/account/activate'],
   ['GET', '/v1/profile'],
@@ -40,7 +43,12 @@ export function loadAccountContract() {
 
 function templatePattern(template) {
   const escaped = template.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-  return new RegExp(`^${escaped.replace('\\{fileId\\}', UUID)}$`, 'u');
+  return new RegExp(
+    `^${escaped
+      .replace('\\{fileId\\}', UUID)
+      .replace('\\{checkout_id\\}', UUID)}$`,
+    'u',
+  );
 }
 
 export function operationFor(method, pathname) {
