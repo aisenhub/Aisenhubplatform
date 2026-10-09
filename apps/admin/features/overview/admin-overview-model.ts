@@ -207,7 +207,7 @@ export function buildAttentionItems(
       severity: 'warning',
       title: `${billing.manual_review_count} 笔订单等待人工复核`,
       description: '订单无法自动收敛，需要管理员确认 Provider 与权益状态。',
-      href: '/admin/billing',
+      href: '/admin/billing?status=manual_review',
       badge: '需关注',
     });
   }

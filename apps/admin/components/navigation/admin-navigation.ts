@@ -51,6 +51,13 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         description: '进入平台目录与平台工作区',
         icon: Boxes,
       },
+      {
+        key: 'accounts',
+        label: '统一用户',
+        href: '/admin/accounts',
+        description: '跨平台检索用户账户与身份状态透视',
+        icon: Users,
+      },
     ],
   },
   {

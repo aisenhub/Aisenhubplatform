@@ -476,6 +476,12 @@ export function AdminOverviewPage() {
               >
                 计费管理
               </Link>
+              <Link
+                href="/admin/accounts"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                统一用户
+              </Link>
             </div>
           </div>
 

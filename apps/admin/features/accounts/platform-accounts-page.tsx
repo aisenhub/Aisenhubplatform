@@ -41,24 +41,7 @@ import {
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
 
-type Account = {
-  platform_account_id: string;
-  user_id: string | null;
-  status: string;
-  activated_at?: string | null;
-  suspended_at?: string | null;
-  closed_at?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
-
-type AccountIntent = {
-  accountId: string;
-  action: 'suspend' | 'restore' | 'close';
-  title: string;
-  impact: string;
-  reversible: boolean;
-};
+import { type Account, type AccountIntent } from './account-types';
 
 type DetailState = 'idle' | 'loading' | 'success' | 'error';
 

@@ -30,12 +30,50 @@
 | 阶段 | 阶段目标 | 分级 | 状态 | 交付内容 |
 | :--- | :--- | :---: | :---: | :--- |
 | **Phase 01** | **导航收敛与上下文切换体验重构** | **R1** | **Completed** | 1. 导航分组重构（系统治理正名，拒绝伪降级）<br/>2. 上下文切换器（PlatformSwitcher）支持全局与平台双向切换<br/>3. Topbar 面包屑透镜模型对齐<br/>4. Command Menu 与键盘交互同步<br/>5. 全量静态检查与单元测试验证（PR #10 合入 main） |
-| **Phase 02** | **单平台商业化闭环与通用订单工作台** | **R1/R2** | **Completed** | 1. 新增 `/admin/platforms/:platformId/billing` 路由与页面<br/>2. 提取共享计费类型与工具模块 `billing-types.ts`<br/>3. 单平台工作区锁定 `platform_id` 过滤与专属工作区视图<br/>4. 商业化导航分组增加“订单与计费”入口<br/>5. 单元测试与全量本地质量检查 |
-| **Phase 03** | **全局待办分诊台与跨平台身份检索** | **R2/R3** | Planned | 1. Overview 异常与待办优先（Triage-First）面板优化<br/>2. 新增 `/admin/accounts` 跨平台身份搜索与状态透视<br/>3. 为未来用户反馈等平台业务建立标准入驻模式 |
+| **Phase 02** | **单平台商业化闭环与通用订单工作台** | **R1/R2** | **Completed** | 1. 新增 `/admin/platforms/:platformId/billing` 路由与页面<br/>2. 提取共享计费类型与工具模块 `billing-types.ts`<br/>3. 单平台工作区锁定 `platform_id` 过滤与专属工作区视图<br/>4. 商业化导航分组增加“订单与计费”入口<br/>5. 单元测试与全量本地质量检查（PR #11 合入 main） |
+| **Phase 03** | **全局待办分诊台与跨平台身份检索** | **R1/R2** | **Completed** | 1. Overview 异常与待办优先（Triage-First）面板优化与直通跳转<br/>2. 新增 `/admin/accounts` 统一用户与身份透视工作台<br/>3. 提取共享账户模型与工具模块 `account-types.ts`<br/>4. 侧边栏“平台中枢”增加“统一用户”入口<br/>5. 单元测试与全量本地质量检查 |
 
 ---
 
-## Phase 02 详细实施清单（本轮执行）
+## Phase 03 详细实施清单（本轮执行）
+
+### 1. 提取共享账户数据模型与状态工具
+- [x] 创建 `apps/admin/features/accounts/account-types.ts`：
+  - 提取 `Account`, `AccountIntent`, `accountTone`, `accountActionLabel` 等类型与格式化工具；
+  - 提供统一的数据结构支持跨平台账户透视与单平台账户管理。
+
+### 2. 实现全局统一用户与身份检索台 (`/admin/accounts`)
+- [x] 创建 `apps/admin/features/accounts/central-accounts-page.tsx`：
+  - 支持平台选择器（包含“全部平台”与指定单平台）；
+  - 支持按 User ID / 邮箱 / 关键词搜索；
+  - 诚实展示查询范围与统计限制（按所选平台并发拉取，展示实际匹配数量）；
+  - 表格清晰展示：所属平台、Platform Account ID、Auth User ID、状态、激活时间、更新时间；
+  - 提供深链穿透跳转：一键直达对应平台的单平台账户工作区 (`/admin/platforms/:id/accounts?selected=:id`)；
+- [x] 创建路由入口 `apps/admin/app/admin/accounts/page.tsx`。
+
+### 3. 全局 Overview 待办分诊台（Triage-First）优化
+- [x] 在 `apps/admin/features/overview/admin-overview-page.tsx` 强化分诊能力：
+  - 优化待办卡片与异常展示，区分“阻断与严重异常”与“待复核业务”；
+  - 增加“跨平台快捷直通”工作台入口（统一用户 `/admin/accounts`、全网订单 `/admin/billing`、运维任务 `/admin/operations`）；
+  - 支持带过滤参数的深链直通（Drill-Down）。
+
+### 4. 导航配置与单元测试
+- [x] 更新 `apps/admin/components/navigation/admin-navigation.ts`：在“平台中枢”增加 `{ key: 'accounts', label: '统一用户', href: '/admin/accounts' }`；
+- [x] 更新 `apps/admin/components/navigation/admin-navigation.test.ts` 补充对 `/admin/accounts` 路由与分组的测试断言；
+- [x] 编写 `apps/admin/features/accounts/account-types.test.ts` 验证账户模型判定与格式化工具。
+
+### 5. 本地质量与发布验证
+- [x] `pnpm docs:check` / `pnpm contracts:check`
+- [x] `pnpm format:check` / `pnpm lint`
+- [x] `pnpm --filter admin test:unit`
+- [x] `pnpm --filter admin typecheck`
+- [x] `pnpm --filter admin build`
+
+---
+
+## 历史阶段记录
+
+### Phase 02 实施清单（已完成）
 
 ### 1. 商业化导航更新
 - [x] 在 `apps/admin/components/navigation/admin-navigation.ts` 的 `platformNavigationDefinitions` 中，商业化分组新增 `订单与计费` (`suffix: '/billing'`)。
