@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "node ../../tooling/scripts/src/admin-consumer-lab-contracts.mjs --check",
     "build": "next build --webpack",
     "dev": "next dev",
     "start": "next start",

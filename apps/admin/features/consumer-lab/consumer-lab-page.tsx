@@ -11,7 +11,7 @@ function ContractCard({ summary }: { summary: ContractSummary }) {
       <div>
         <h2>{summary.title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Canonical contract metadata，直接来自仓库根 contracts 目录。
+          Canonical contract metadata，由仓库根 contracts 生成并在构建前校验。
         </p>
       </div>
       <dl className="detail-list text-sm">
@@ -90,8 +90,8 @@ export function ConsumerLabPage() {
         <div>
           <h2 id="account-operations-heading">Account v1 operations</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            下表直接从 canonical Account OpenAPI
-            构建；这里不维护第二套路由清单。
+            下表由 canonical Account OpenAPI
+            生成；构建前会校验生成快照没有漂移， 这里不维护第二套手写路由清单。
           </p>
         </div>
         <div

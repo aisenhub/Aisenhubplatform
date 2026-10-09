@@ -1,5 +1,4 @@
-import accountContractJson from '../../../../contracts/account/v1/openapi.json';
-import adminContractJson from '../../../../contracts/admin/v1/openapi.json';
+import generatedContractSummaries from './contract-summaries.generated.json';
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
@@ -74,11 +73,7 @@ export function summarizeContract(
   };
 }
 
-export const accountContractSummary = summarizeContract(
-  accountContractJson as OpenApiDocument,
-  'v1',
-);
-export const adminContractSummary = summarizeContract(
-  adminContractJson as OpenApiDocument,
-  'v1',
-);
+export const accountContractSummary =
+  generatedContractSummaries.account as ContractSummary;
+export const adminContractSummary =
+  generatedContractSummaries.admin as ContractSummary;

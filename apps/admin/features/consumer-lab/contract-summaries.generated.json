@@ -1,0 +1,579 @@
+{
+  "account": {
+    "title": "Aisenhub Account API",
+    "major": "v1",
+    "version": "1.0.1",
+    "securitySchemes": [
+      "bearerAuth",
+      "platformKey"
+    ],
+    "operations": [
+      {
+        "method": "POST",
+        "path": "/v1/account/activate",
+        "operationId": "activateAccount",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/account/close",
+        "operationId": "closeAccount",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/account/principal",
+        "operationId": "getPrincipal",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/auth/recent-proof",
+        "operationId": "issueRecentAuthProof",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/config-files",
+        "operationId": "listConfigFiles",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "DELETE",
+        "path": "/v1/config-files/{fileId}",
+        "operationId": "deleteConfigFile",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/config-files/{fileId}",
+        "operationId": "getConfigFile",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/config-files/{fileId}/content",
+        "operationId": "downloadConfigFileContent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "PUT",
+        "path": "/v1/config-files/{fileId}/content",
+        "operationId": "uploadConfigFileContent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/config-files/upload-intent",
+        "operationId": "createUploadIntent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/identity/delete-request",
+        "operationId": "createIdentityDeleteRequest",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/plans",
+        "operationId": "listPublicPlans",
+        "security": [
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/preferences",
+        "operationId": "getPreferences",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/v1/preferences",
+        "operationId": "patchPreferences",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/profile",
+        "operationId": "getProfile",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/v1/profile",
+        "operationId": "patchProfile",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/subscription",
+        "operationId": "getSubscription",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/subscription/checkout",
+        "operationId": "getSubscriptionCheckoutByIdempotencyKey",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/subscription/checkout",
+        "operationId": "createSubscriptionCheckout",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/subscription/checkout/{checkout_id}",
+        "operationId": "getSubscriptionCheckout",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/subscription/products",
+        "operationId": "listSubscriptionProducts",
+        "security": [
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/subscription/redeem",
+        "operationId": "redeemSubscriptionCode",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      }
+    ]
+  },
+  "admin": {
+    "title": "Aisenhub Admin API",
+    "major": "v1",
+    "version": "1.0.0",
+    "securitySchemes": [
+      "adminBearer"
+    ],
+    "operations": [
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/audit",
+        "operationId": "adminListAuditLogs",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/auth/recent-proof",
+        "operationId": "adminIssueRecentAuthProof",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/billing/metrics",
+        "operationId": "adminGetBillingMetrics",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/billing/orders",
+        "operationId": "adminListBillingOrders",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/billing/orders/{orderId}",
+        "operationId": "adminGetBillingOrder",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/billing/orders/{orderId}/requery",
+        "operationId": "adminRequeryBillingOrder",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/billing/orders/{orderId}/resolve",
+        "operationId": "adminResolveBillingOrder",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/billing/provider-products",
+        "operationId": "adminListBillingProviderProducts",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/config-files",
+        "operationId": "adminListConfigFiles",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "DELETE",
+        "path": "/admin/api/v1/config-files/{fileId}",
+        "operationId": "adminDeleteConfigFile",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/config-files/{fileId}",
+        "operationId": "adminGetConfigFile",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/config-files/{fileId}/content",
+        "operationId": "adminDownloadConfigFileContent",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/deletion-jobs",
+        "operationId": "adminListDeletionJobs",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/deletion-jobs",
+        "operationId": "adminStartDeletionJob",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/deletion-jobs/{jobId}",
+        "operationId": "adminGetDeletionJob",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/deletion-jobs/{jobId}/retry",
+        "operationId": "adminRetryDeletionJob",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms",
+        "operationId": "adminListPlatforms",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms",
+        "operationId": "adminCreatePlatform",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}",
+        "operationId": "adminGetPlatform",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/admin/api/v1/platforms/{platformId}",
+        "operationId": "adminPatchPlatform",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts",
+        "operationId": "adminListAccounts",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}",
+        "operationId": "adminGetAccount",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}",
+        "operationId": "adminPatchAccount",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/close",
+        "operationId": "adminCloseAccount",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/restore",
+        "operationId": "adminRestoreAccount",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/suspend",
+        "operationId": "adminSuspendAccount",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/file-policy",
+        "operationId": "adminGetFilePolicy",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/admin/api/v1/platforms/{platformId}/file-policy",
+        "operationId": "adminUpdateFilePolicy",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/keys",
+        "operationId": "adminListPlatformKeys",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/keys",
+        "operationId": "adminCreatePlatformKey",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/keys/{keyId}/confirm-deployment",
+        "operationId": "adminConfirmPlatformKeyDeployment",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/keys/{keyId}/revoke",
+        "operationId": "adminRevokePlatformKey",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/origins",
+        "operationId": "adminListOrigins",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/origins",
+        "operationId": "adminCreateOrigin",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/plans",
+        "operationId": "adminListPlans",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/plans",
+        "operationId": "adminCreatePlan",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/subscription-config",
+        "operationId": "adminGetSubscriptionConfig",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/admin/api/v1/platforms/{platformId}/subscription-config",
+        "operationId": "adminPatchSubscriptionConfig",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/redemption-batches",
+        "operationId": "adminListRedemptionBatches",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/redemption-batches",
+        "operationId": "adminCreateRedemptionBatch",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/redemption-batches/{batchId}/confirm-delivery",
+        "operationId": "adminConfirmRedemptionDelivery",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/redemption-batches/{batchId}/disable",
+        "operationId": "adminDisableRedemptionBatch",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/security/status",
+        "operationId": "adminGetSecurityStatus",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/subscriptions/{accountId}",
+        "operationId": "adminGetSubscription",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/subscriptions/{accountId}/commands",
+        "operationId": "adminApplySubscriptionCommand",
+        "security": [
+          "adminBearer"
+        ]
+      }
+    ]
+  }
+}
