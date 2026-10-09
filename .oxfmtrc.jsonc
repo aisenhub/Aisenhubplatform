@@ -15,6 +15,7 @@
     "build",
     ".next",
     "artifacts",
+    "apps/admin/features/consumer-lab/contract-summaries.generated.json",
     "next-env.d.ts",
   ],
 }
