@@ -30,6 +30,9 @@ describe('admin navigation model', () => {
     expect(
       adminNavigationLabel('/admin/platforms/platform-1/redemption-batches'),
     ).toBe('兑换码');
+    expect(adminNavigationLabel('/admin/platforms/platform-1/billing')).toBe(
+      '订单与计费',
+    );
   });
 
   it('does not let settings shadow its nested routes', () => {
