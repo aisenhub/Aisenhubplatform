@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  auditActionLabel,
   buildAttentionItems,
   countFailureSignals,
   deriveSystemHealth,
   platformStats,
-  recentChangedPlatforms,
-  type OverviewAuditEntry,
   type OverviewBillingMetrics,
   type OverviewDeletionJob,
   type OverviewPlatform,
@@ -78,22 +75,20 @@ describe('admin overview model', () => {
   });
 
   it('does not report healthy when a source is missing or attention exists', () => {
-    expect(
-      deriveSystemHealth(['success', 'error', 'success', 'success'], 0),
-    ).toEqual({
+    expect(deriveSystemHealth(['success', 'error', 'success'], 0)).toEqual({
       label: '数据不完整',
       description: '1 个管理面数据源暂不可用',
       tone: 'danger',
     });
-    expect(
-      deriveSystemHealth(['success', 'success', 'success', 'success'], 2).label,
-    ).toBe('需关注');
-    expect(
-      deriveSystemHealth(['success', 'success', 'success', 'success'], 0).label,
-    ).toBe('正常');
+    expect(deriveSystemHealth(['success', 'success', 'success'], 2).label).toBe(
+      '需关注',
+    );
+    expect(deriveSystemHealth(['success', 'success', 'success'], 0).label).toBe(
+      '正常',
+    );
   });
 
-  it('derives platform counts and recent changed platforms without inventing history', () => {
+  it('derives platform counts without inventing global totals', () => {
     const platforms: OverviewPlatform[] = [
       {
         platform_id: 'p-1',
@@ -117,30 +112,12 @@ describe('admin overview model', () => {
         allow_activation: false,
       },
     ];
-    const audit: OverviewAuditEntry[] = [
-      { target_type: 'platform', target_id: 'p-2' },
-      { target_type: 'platform', target_id: 'p-2' },
-      { target_type: 'deletion_job', target_id: 'j-1' },
-      { target_type: 'platform', target_id: 'p-1' },
-    ];
-
     expect(platformStats(platforms)).toEqual({
       total: 3,
       active: 2,
       disabled: 1,
       activationPaused: 1,
     });
-    expect(
-      recentChangedPlatforms(audit, platforms).map(
-        (platform) => platform.platform_id,
-      ),
-    ).toEqual(['p-2', 'p-1']);
-  });
-
-  it('keeps current technical event names readable while preserving unknown actions', () => {
-    expect(auditActionLabel('platform.updated')).toBe('更新平台设置');
-    expect(auditActionLabel('custom.event')).toBe('custom.event');
-    expect(auditActionLabel(null)).toBe('未命名操作');
   });
 
   it('counts only current failure signals instead of all in-flight work', () => {

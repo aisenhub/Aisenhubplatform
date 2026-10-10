@@ -34,10 +34,30 @@ const account = {
   updated_at: '2026-10-04T08:00:00Z',
   activated_at: '2026-10-01T08:00:00Z',
 };
+const auditId = '55555555-5555-4555-8555-555555555555';
+const auditRequestId = '66666666-6666-4666-8666-666666666666';
+const auditEntry = {
+  id: auditId,
+  request_id: auditRequestId,
+  platform_id: platformId,
+  platform_name: platform.name,
+  platform_code: platform.code,
+  platform_account_id: accountId,
+  action: 'platform.updated',
+  actor_type: 'admin',
+  actor_id: '77777777-7777-4777-8777-777777777777',
+  actor_display_name: '测试管理员',
+  actor_email: 'admin@example.invalid',
+  target_type: 'platform',
+  target_id: platformId,
+  outcome: null,
+  created_at: '2026-10-10T09:30:00Z',
+};
 let failPlatforms = false;
 let securityUnavailable = false;
 let platformDelay = 0;
 const writes = [];
+const reads = [];
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const context = await browser.newContext({ reducedMotion: 'reduce' });
 const page = await context.newPage();
@@ -58,6 +78,7 @@ await context.route('**/*', async (route) => {
     });
   }
   const path = url.pathname.replace('/api/v1/admin/api/v1', '');
+  reads.push({ path, search: url.search });
   let data;
   if (path === '/security/status') {
     if (securityUnavailable)
@@ -92,9 +113,22 @@ await context.route('**/*', async (route) => {
     data = url.searchParams.get('q') === 'no-match' ? [] : [account];
   else if (path === `/platforms/${platformId}/accounts/${accountId}`)
     data = account;
-  else if (
+  else if (path === '/audit') {
+    const noMatch =
+      url.searchParams.get('q') === 'no-match' ||
+      (url.searchParams.get('actor') &&
+        url.searchParams.get('actor') !== auditEntry.actor_email) ||
+      (url.searchParams.get('platform_id') &&
+        url.searchParams.get('platform_id') !== platformId) ||
+      (url.searchParams.get('action') &&
+        url.searchParams.get('action') !== auditEntry.action) ||
+      (url.searchParams.get('target_type') &&
+        url.searchParams.get('target_type') !== auditEntry.target_type) ||
+      (url.searchParams.get('outcome') &&
+        url.searchParams.get('outcome') !== 'unrecorded');
+    data = noMatch ? [] : [auditEntry];
+  } else if (
     path === '/deletion-jobs' ||
-    path === '/audit' ||
     /\/(plans|keys|origins|redemption-batches)$/u.test(path)
   )
     data = [];
@@ -105,7 +139,14 @@ await context.route('**/*', async (route) => {
     });
   await route.fulfill({
     status: 200,
-    json: { data, request_id: 'synthetic-ui-probe', next_cursor: null },
+    json: {
+      data,
+      request_id: 'synthetic-ui-probe',
+      next_cursor:
+        path === '/audit' && data.length > 0 && !url.searchParams.has('cursor')
+          ? auditId
+          : null,
+    },
   });
 });
 
@@ -174,6 +215,16 @@ async function audit(label) {
 }
 
 try {
+  reads.length = 0;
+  await goto('/admin', 'admin-overview');
+  await page.waitForTimeout(200);
+  assert.equal(
+    reads.filter((read) => read.path === '/audit').length,
+    0,
+    'Overview must not request audit data after audit de-coupling',
+  );
+  console.log('PASS: Overview no longer requests audit data');
+
   const routes = [
     ['/admin', 'admin-overview'],
     ['/admin/platforms', 'platform-directory-table'],
@@ -394,6 +445,92 @@ try {
     .locator('[data-test="platform-directory-background-error"]')
     .waitFor({ state: 'hidden' });
   console.log('PASS: search URL, clear, background refresh failure and retry');
+
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await goto('/admin/audit', 'audit-page');
+  await page.locator('[data-test="audit-row"]').waitFor();
+  const auditTableText = await page
+    .locator('[data-test="audit-table"]')
+    .innerText();
+  assert.match(auditTableText, /测试管理员/u);
+  assert.match(auditTableText, /示例平台 · 产品工作区/u);
+  assert.match(auditTableText, /更新平台设置/u);
+  assert.match(auditTableText, /未记录/u);
+  assert.doesNotMatch(
+    auditTableText,
+    /platform\.updated|55555555-5555-4555-8555-555555555555/u,
+    'Audit primary table keeps raw codes and UUIDs out of first-level reading',
+  );
+
+  await page.locator('[data-test="audit-next-page"]').click();
+  await page.waitForURL((url) => url.searchParams.get('cursor') === auditId);
+  await page
+    .locator('[data-test="audit-actor-filter"]')
+    .fill(auditEntry.actor_email);
+  await page
+    .locator('[data-test="audit-action-filter"]')
+    .selectOption(auditEntry.action);
+  await page
+    .locator('[data-test="audit-target-filter"]')
+    .selectOption('platform');
+  await page
+    .locator('[data-test="audit-outcome-filter"]')
+    .selectOption('unrecorded');
+  await page.locator('[data-test="audit-query-submit"]').click();
+  await page.waitForURL((url) => {
+    return (
+      url.searchParams.get('actor') === auditEntry.actor_email &&
+      url.searchParams.get('action') === auditEntry.action &&
+      url.searchParams.get('target_type') === 'platform' &&
+      url.searchParams.get('outcome') === 'unrecorded' &&
+      !url.searchParams.has('cursor')
+    );
+  });
+  await page.locator('[data-test="audit-row"]').waitFor();
+  const lastAuditRead = reads.filter((read) => read.path === '/audit').at(-1);
+  assert.ok(lastAuditRead, 'Audit filter submission sends a read');
+  const lastAuditParams = new URLSearchParams(lastAuditRead.search);
+  assert.equal(lastAuditParams.get('actor'), auditEntry.actor_email);
+  assert.equal(lastAuditParams.get('action'), auditEntry.action);
+  assert.equal(lastAuditParams.get('target_type'), 'platform');
+  assert.equal(lastAuditParams.get('outcome'), 'unrecorded');
+  assert.equal(lastAuditParams.get('cursor'), null);
+
+  const inspectorTrigger = page.locator('[data-test="audit-open-inspector"]');
+  await inspectorTrigger.focus();
+  await inspectorTrigger.click();
+  await page.locator('[data-test="audit-inspector"]').waitFor();
+  const inspectorText = await page
+    .locator('[data-test="audit-inspector"]')
+    .innerText();
+  assert.match(inspectorText, /测试管理员/u);
+  assert.match(inspectorText, /示例平台 · 产品工作区/u);
+  await page.locator('[data-test="audit-technical-details"]').click();
+  const expandedInspectorText = await page
+    .locator('[data-test="audit-inspector"]')
+    .innerText();
+  assert.match(expandedInspectorText, /platform\.updated/u);
+  assert.match(expandedInspectorText, new RegExp(auditId, 'u'));
+  assert.match(expandedInspectorText, new RegExp(auditRequestId, 'u'));
+  await page.locator('[data-test="audit-inspector-close"]').click();
+  await page
+    .locator('[data-test="audit-inspector"]')
+    .waitFor({ state: 'hidden' });
+  assert.equal(
+    await page.evaluate(() => document.activeElement?.dataset.test),
+    'audit-open-inspector',
+    'Audit inspector restores focus to its trigger',
+  );
+
+  await page.locator('[data-test="audit-query"]').fill('no-match');
+  await page.locator('[data-test="audit-query-submit"]').click();
+  await page.waitForURL((url) => url.searchParams.get('q') === 'no-match');
+  await page.locator('[data-test="audit-empty-filter"]').waitFor();
+  await page.locator('[data-test="audit-empty-clear"]').click();
+  await page.locator('[data-test="audit-row"]').waitFor();
+  console.log(
+    'PASS: Audit business table, URL filters, cursor reset, inspector technical details and empty state',
+  );
 
   await goto(
     `/admin/platforms/${platformId}/accounts`,

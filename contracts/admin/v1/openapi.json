@@ -503,11 +503,17 @@
         "security": [{ "adminBearer": [] }],
         "parameters": [
           { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/AuditActor" },
+          { "$ref": "#/components/parameters/AuditPlatformId" },
+          { "$ref": "#/components/parameters/AuditAction" },
+          { "$ref": "#/components/parameters/AuditTargetType" },
+          { "$ref": "#/components/parameters/AuditOutcome" },
           { "$ref": "#/components/parameters/Limit" },
           { "$ref": "#/components/parameters/Cursor" }
         ],
         "responses": {
           "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
           "403": { "$ref": "#/components/responses/Forbidden" }
         }
       }
@@ -705,6 +711,41 @@
         "in": "query",
         "required": false,
         "schema": { "type": "string", "format": "uuid" }
+      },
+      "AuditActor": {
+        "name": "actor",
+        "in": "query",
+        "required": false,
+        "description": "Matches actor type, actor UUID, trusted platform-profile display name, or current Auth email.",
+        "schema": { "type": "string", "maxLength": 128 }
+      },
+      "AuditPlatformId": {
+        "name": "platform_id",
+        "in": "query",
+        "required": false,
+        "description": "Exact authoritative platform scope recorded on the audit event.",
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "AuditAction": {
+        "name": "action",
+        "in": "query",
+        "required": false,
+        "description": "Exact raw audit event_type filter.",
+        "schema": { "type": "string", "maxLength": 128 }
+      },
+      "AuditTargetType": {
+        "name": "target_type",
+        "in": "query",
+        "required": false,
+        "description": "Exact raw audit target_type filter.",
+        "schema": { "type": "string", "maxLength": 128 }
+      },
+      "AuditOutcome": {
+        "name": "outcome",
+        "in": "query",
+        "required": false,
+        "description": "Exact recorded outcome. The reserved value unrecorded selects events whose audit metadata does not contain an outcome fact.",
+        "schema": { "type": "string", "maxLength": 64 }
       },
       "BillingCursor": {
         "name": "cursor",

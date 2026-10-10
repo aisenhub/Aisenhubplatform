@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  Activity,
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
@@ -23,26 +22,18 @@ import {
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
 import {
-  formatUtc,
   readApiPayload,
   resourceError,
-  statusLabel,
-  statusTone,
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
 import {
-  auditActionLabel,
-  auditActorLabel,
-  auditTargetTypeLabel,
   buildAttentionItems,
   countFailureSignals,
   deriveSystemHealth,
   platformStats,
-  recentChangedPlatforms,
   type AttentionItem,
   type AttentionSeverity,
-  type OverviewAuditEntry,
   type OverviewBillingMetrics,
   type OverviewDeletionJob,
   type OverviewPlatform,
@@ -72,27 +63,6 @@ function caughtError(title: string, error: unknown): ResourceError {
   };
 }
 
-function auditOutcome(value: string | null | undefined) {
-  switch (value?.toLowerCase()) {
-    case 'success':
-    case 'confirmed':
-      return { label: '成功', tone: 'success' as const };
-    case 'failed':
-    case 'rejected':
-    case 'revoked':
-      return { label: '失败', tone: 'danger' as const };
-    case 'pending':
-    case 'accepted':
-    case 'running':
-      return { label: '处理中', tone: 'info' as const };
-    case 'unknown':
-    case 'unknown_outcome':
-      return { label: '结果未确认', tone: 'unknown' as const };
-    default:
-      return { label: value ?? '未提供', tone: 'neutral' as const };
-  }
-}
-
 function attentionTone(severity: AttentionSeverity) {
   return severity === 'critical'
     ? ('danger' as const)
@@ -112,13 +82,10 @@ export function AdminOverviewPage() {
     useState<SourceState<OverviewDeletionJob>>(initialSource);
   const [billing, setBilling] =
     useState<SourceState<OverviewBillingMetrics>>(initialSource);
-  const [audit, setAudit] =
-    useState<SourceState<OverviewAuditEntry>>(initialSource);
   const [refreshing, setRefreshing] = useState(false);
   const platformGeneration = useRef(0);
   const jobGeneration = useRef(0);
   const billingGeneration = useRef(0);
-  const auditGeneration = useRef(0);
 
   const loadPlatforms = useCallback(async (background: boolean) => {
     const generation = ++platformGeneration.current;
@@ -267,53 +234,6 @@ export function AdminOverviewPage() {
     }
   }, []);
 
-  const loadAudit = useCallback(async (background: boolean) => {
-    const generation = ++auditGeneration.current;
-    const epoch = adminAuthSession.getEpoch();
-    if (!background) {
-      setAudit((current) => ({ ...current, state: 'loading', error: null }));
-    } else setAudit((current) => ({ ...current, refreshError: null }));
-    try {
-      const response = await adminAuthSession.request(
-        '/api/v1/admin/api/v1/audit?limit=8',
-        { cache: 'no-store' },
-      );
-      const payload = await readApiPayload<OverviewAuditEntry[]>(response);
-      if (
-        generation !== auditGeneration.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      if (!response.ok || !Array.isArray(payload?.data)) {
-        const nextError = resourceError(response, payload, '最近审计活动');
-        setAudit((current) =>
-          background
-            ? { ...current, refreshError: nextError }
-            : { ...current, state: 'error', error: nextError },
-        );
-        return;
-      }
-      setAudit({
-        data: payload.data,
-        state: 'success',
-        error: null,
-        refreshError: null,
-      });
-    } catch (caught) {
-      if (
-        generation !== auditGeneration.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      const nextError = caughtError('最近审计活动读取失败', caught);
-      setAudit((current) =>
-        background
-          ? { ...current, refreshError: nextError }
-          : { ...current, state: 'error', error: nextError },
-      );
-    }
-  }, []);
-
   const loadAll = useCallback(
     async (background: boolean) => {
       if (background) setRefreshing(true);
@@ -321,11 +241,10 @@ export function AdminOverviewPage() {
         loadPlatforms(background),
         loadJobs(background),
         loadBilling(background),
-        loadAudit(background),
       ]);
       if (background) setRefreshing(false);
     },
-    [loadAudit, loadBilling, loadJobs, loadPlatforms],
+    [loadBilling, loadJobs, loadPlatforms],
   );
 
   useEffect(() => {
@@ -344,22 +263,12 @@ export function AdminOverviewPage() {
   const health = useMemo(
     () =>
       deriveSystemHealth(
-        [platforms.state, jobs.state, billing.state, audit.state],
+        [platforms.state, jobs.state, billing.state],
         attentionItems.length,
       ),
-    [
-      attentionItems.length,
-      audit.state,
-      billing.state,
-      jobs.state,
-      platforms.state,
-    ],
+    [attentionItems.length, billing.state, jobs.state, platforms.state],
   );
   const stats = useMemo(() => platformStats(platforms.data), [platforms.data]);
-  const recentPlatforms = useMemo(
-    () => recentChangedPlatforms(audit.data, platforms.data),
-    [audit.data, platforms.data],
-  );
   const platformSaturated = platforms.data.length >= 100;
   const attentionReady =
     jobs.state === 'success' && billing.state === 'success';
@@ -372,7 +281,7 @@ export function AdminOverviewPage() {
     <main className="shell wide-shell" data-test="admin-overview">
       <AdminPageHeader
         title="概览"
-        description="优先查看异常、待处理事项和最近变更，再进入具体管理范围。"
+        description="优先查看异常、待处理事项和平台运行概况，再进入具体管理范围。"
         actions={
           <Button
             variant="outline"
@@ -387,7 +296,7 @@ export function AdminOverviewPage() {
       />
 
       <SourceRefreshErrors
-        sources={[platforms, jobs, billing, audit]}
+        sources={[platforms, jobs, billing]}
         onRetry={() => void loadAll(true)}
       />
 
@@ -537,126 +446,8 @@ export function AdminOverviewPage() {
               />
             </div>
           ) : null}
-
-          {platforms.state === 'success' ? (
-            <div className="border-t border-border pt-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3>最近变更的平台</h3>
-                <span className="text-xs text-muted-foreground">
-                  来自最近审计活动
-                </span>
-              </div>
-              {recentPlatforms.length ? (
-                <div className="grid gap-2">
-                  {recentPlatforms.map((platform) => (
-                    <Link
-                      key={platform.platform_id}
-                      href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}`}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 hover:border-primary/40"
-                      data-test={`overview-recent-platform-${platform.platform_id}`}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">
-                          {platform.name}
-                        </span>
-                        <span className="block truncate font-mono text-xs text-muted-foreground">
-                          {platform.code}
-                        </span>
-                      </span>
-                      <StatusBadge
-                        label={statusLabel(platform.status)}
-                        tone={statusTone(platform.status)}
-                        rawValue={platform.status}
-                      />
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  最近审计活动里没有平台级变更。
-                </p>
-              )}
-            </div>
-          ) : null}
         </section>
       </div>
-
-      <section className="panel gap-4" data-test="overview-recent-audit">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2>最近活动</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              关注最近的管理动作、目标和结果；完整检索请进入审计页。
-            </p>
-          </div>
-          <Link
-            href="/admin/audit"
-            className="text-sm text-primary underline-offset-4 hover:underline"
-          >
-            查看全部审计
-          </Link>
-        </div>
-
-        <SourceStateView
-          state={audit}
-          resource="最近审计活动"
-          onRetry={() => void loadAudit(false)}
-        />
-
-        {audit.state === 'success' && audit.data.length === 0 ? (
-          <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/20 p-4">
-            <Activity
-              className="mt-0.5 size-5 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <div>
-              <p className="text-sm font-medium">暂无最近操作记录</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                新的管理员操作会在这里按时间倒序出现。
-              </p>
-            </div>
-          </div>
-        ) : null}
-
-        {audit.data.length ? (
-          <div className="divide-y divide-border rounded-lg border border-border/70">
-            {audit.data.map((entry, index) => {
-              const outcome = auditOutcome(entry.outcome);
-              const key =
-                entry.id ?? entry.request_id ?? `${entry.action}-${index}`;
-              return (
-                <div
-                  key={key}
-                  className="grid gap-3 bg-card px-4 py-3 first:rounded-t-lg last:rounded-b-lg sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    <Activity
-                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {auditActionLabel(entry.action)}
-                      </p>
-                      <p className="mt-1 break-all text-xs text-muted-foreground">
-                        {auditActorLabel(entry)} ·{' '}
-                        {auditTargetTypeLabel(entry.target_type)}
-                        {entry.target_id ? ` ${entry.target_id}` : ''} ·{' '}
-                        {formatUtc(entry.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                  <StatusBadge
-                    label={outcome.label}
-                    tone={outcome.tone}
-                    rawValue={entry.outcome}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-      </section>
     </main>
   );
 }

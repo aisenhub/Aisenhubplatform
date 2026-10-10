@@ -38,6 +38,8 @@ proposals/
 
 - [OPT-001 平台切换器下拉浮层优化](admin-platform-switcher-optimization/design.md)：[计划](admin-platform-switcher-optimization/plan.md)，收敛 PlatformSwitcher 为 Global / Platform scope 切换器，优化搜索与浮层比例并移除平台目录快捷入口。
 
+- [OPT-002 全局审计中心与概览去审计化](admin-global-audit-center/design.md)：[计划](admin-global-audit-center/plan.md)，新增权威 Audit v2 结构化查询投影，将全局审计改为业务可读中心，并从 Overview 完整移除审计流水依赖。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。

@@ -16,18 +16,6 @@ export type OverviewDeletionJob = {
   created_at?: string | null;
 };
 
-export type OverviewAuditEntry = {
-  id?: string | null;
-  request_id?: string | null;
-  action?: string | null;
-  actor_type?: string | null;
-  actor_id?: string | null;
-  target_type?: string | null;
-  target_id?: string | null;
-  outcome?: string | null;
-  created_at?: string | null;
-};
-
 export type OverviewBillingAlert = {
   alert_id: string;
   alert_key: string;
@@ -78,27 +66,6 @@ const severityOrder: Record<AttentionSeverity, number> = {
   info: 2,
 };
 
-const auditActionLabels: Record<string, string> = {
-  'platform.created': '创建平台',
-  'platform.updated': '更新平台设置',
-  'platform.origin_created': '新增平台 Origin',
-  'platform.key_created': '创建 Platform Key',
-  'platform.key_revoked': '撤销 Platform Key',
-  'platform.key_deployment_confirmed': '确认 Platform Key 部署',
-  'account.suspended': '暂停账户',
-  'account.restored': '恢复账户',
-  'account.closed': '关闭账户',
-};
-
-const targetTypeLabels: Record<string, string> = {
-  platform: '平台',
-  platform_api_key: 'Platform Key',
-  platform_auth_origin: 'Origin',
-  platform_account: '账户',
-  deletion_job: '删除任务',
-  billing_order: '计费订单',
-};
-
 export function deriveSystemHealth(
   sourceStates: readonly OverviewSourceStatus[],
   attentionCount: number,
@@ -133,7 +100,7 @@ export function deriveSystemHealth(
 
   return {
     label: '正常',
-    description: '平台、任务、计费与审计数据源均可读取',
+    description: '平台、任务与计费数据源均可读取',
     tone: 'success',
   };
 }
@@ -251,47 +218,4 @@ export function platformStats(platforms: readonly OverviewPlatform[]) {
       (platform) => platform.status === 'active' && !platform.allow_activation,
     ).length,
   };
-}
-
-export function recentChangedPlatforms(
-  audit: readonly OverviewAuditEntry[],
-  platforms: readonly OverviewPlatform[],
-): OverviewPlatform[] {
-  const platformById = new Map(
-    platforms.map((platform) => [platform.platform_id, platform] as const),
-  );
-  const seen = new Set<string>();
-  const result: OverviewPlatform[] = [];
-
-  for (const entry of audit) {
-    if (
-      entry.target_type !== 'platform' ||
-      !entry.target_id ||
-      seen.has(entry.target_id)
-    )
-      continue;
-    const platform = platformById.get(entry.target_id);
-    if (!platform) continue;
-    seen.add(entry.target_id);
-    result.push(platform);
-    if (result.length === 4) break;
-  }
-
-  return result;
-}
-
-export function auditActionLabel(action: string | null | undefined): string {
-  if (!action) return '未命名操作';
-  return auditActionLabels[action] ?? action;
-}
-
-export function auditActorLabel(entry: OverviewAuditEntry): string {
-  if (entry.actor_type === 'system') return '系统';
-  if (entry.actor_type === 'admin') return '管理员';
-  return entry.actor_type || '未知主体';
-}
-
-export function auditTargetTypeLabel(value: string | null | undefined): string {
-  if (!value) return '目标';
-  return targetTypeLabels[value] ?? value;
 }

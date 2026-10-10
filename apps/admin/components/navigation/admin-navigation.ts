@@ -41,7 +41,7 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         key: 'overview',
         label: '概览',
         href: '/admin',
-        description: '查看需要关注的管理事项与最近活动',
+        description: '查看需要关注的管理事项与平台运行概况',
         icon: LayoutDashboard,
         match: 'exact',
       },
@@ -86,9 +86,9 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
       },
       {
         key: 'audit',
-        label: '审计记录',
+        label: '审计中心',
         href: '/admin/audit',
-        description: '只读查看脱敏审计事件',
+        description: '按操作者、平台、对象、动作与结果检索审计事件',
         icon: ScrollText,
       },
       {

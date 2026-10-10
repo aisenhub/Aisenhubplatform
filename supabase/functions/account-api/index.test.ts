@@ -494,13 +494,19 @@ function fakeDatabase(
                 replayed: false,
               },
             ] as unknown as R[];
-          if (query.startsWith('select * from private.admin_audit_list')) {
+          if (query.startsWith('select * from private.admin_audit_list_v2')) {
             return [
               {
                 audit_id: keyId,
                 request_id: sessionId,
+                platform_id: platformId,
+                platform_name: 'Example Platform',
+                platform_code: 'example-platform',
+                platform_account_id: null,
                 actor_type: 'admin',
                 actor_id: userId,
+                actor_display_name: null,
+                actor_email: 'admin@example.invalid',
                 event_type: 'platform.updated',
                 target_type: 'platform',
                 target_id: platformId,
@@ -1894,15 +1900,48 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(invalidScopedFiles.status, 400);
 
+  let auditSql = '';
+  let auditValues: readonly unknown[] = [];
   const audit = await handleRequest(
     new Request(
-      'http://local/functions/v1/account-api/admin/api/v1/audit?q=platform&limit=20',
+      'http://local/functions/v1/account-api/admin/api/v1/audit?q=platform&platform_id=00000000-0000-4000-8000-000000000001&actor=admin%40example.invalid&action=platform.updated&target_type=platform&outcome=success&limit=20',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase((query, values) => {
+        if (query.includes('private.admin_audit_list_v2')) {
+          auditSql = query;
+          auditValues = values ?? [];
+        }
+      }),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(audit.status, 200);
+  const auditPayload = await audit.json();
+  assertEquals(auditPayload.data[0].action, 'platform.updated');
+  assertEquals(auditPayload.data[0].platform_name, 'Example Platform');
+  assertEquals(auditPayload.data[0].actor_email, 'admin@example.invalid');
+  assertMatch(auditSql, /private\.admin_audit_list_v2/u);
+  assertEquals(auditValues.slice(3), [
+    null,
+    20,
+    'platform',
+    platformId,
+    'admin@example.invalid',
+    'platform.updated',
+    'platform',
+    'success',
+  ]);
+
+  const invalidAuditPlatform = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/audit?platform_id=not-a-uuid',
       { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
     ),
     { database: fakeDatabase(), verifyAccessToken: async () => userId },
   );
-  assertEquals(audit.status, 200);
-  assertEquals((await audit.json()).data[0].action, 'platform.updated');
+  assertEquals(invalidAuditPlatform.status, 400);
 
   const keys = await handleRequest(
     new Request(

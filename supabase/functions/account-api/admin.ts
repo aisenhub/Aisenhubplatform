@@ -401,24 +401,44 @@ export async function dispatchAdmin(
   if (path === 'admin/api/v1/audit' && request.method === 'GET') {
     const cursorValue = url.searchParams.get('cursor');
     const cursor = cursorValue === null ? null : uuidValue(cursorValue);
-    if (cursorValue !== null && !cursor)
+    const platformIdValue = url.searchParams.get('platform_id');
+    const platformId =
+      platformIdValue === null ? null : uuidValue(platformIdValue);
+    const query = url.searchParams.get('q')?.trim() || null;
+    const actor = url.searchParams.get('actor')?.trim() || null;
+    const action = url.searchParams.get('action')?.trim() || null;
+    const targetType = url.searchParams.get('target_type')?.trim() || null;
+    const outcome = url.searchParams.get('outcome')?.trim() || null;
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    if (
+      (cursorValue !== null && !cursor) ||
+      (platformIdValue !== null && !platformId) ||
+      (query !== null && query.length > 128) ||
+      (actor !== null && actor.length > 128) ||
+      (action !== null && action.length > 128) ||
+      (targetType !== null && targetType.length > 128) ||
+      (outcome !== null && outcome.length > 64)
+    )
       throw new ApiFault(400, 'INVALID_INPUT');
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_audit_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer, $6::text)',
+      'select * from private.admin_audit_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer, $6::text, $7::uuid, $8::text, $9::text, $10::text, $11::text)',
       [
         ...context,
         cursor,
-        boundedLimit(url.searchParams.get('limit')),
-        url.searchParams.get('q'),
+        limit,
+        query,
+        platformId,
+        actor,
+        action,
+        targetType,
+        outcome,
       ],
     );
     return {
       status: 200,
       data: rows.map(adminAuditDto),
       next_cursor:
-        rows.length === boundedLimit(url.searchParams.get('limit'))
-          ? uuidValue(rows.at(-1)?.audit_id)
-          : null,
+        rows.length === limit ? uuidValue(rows.at(-1)?.audit_id) : null,
     };
   }
   if (path === 'admin/api/v1/billing/orders' && request.method === 'GET') {
