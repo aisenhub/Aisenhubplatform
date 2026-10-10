@@ -1,6 +1,6 @@
 # 阶段 02：统一用户生命周期 UI 与 Operations 退场
 
-状态：实施、本地 R3 与 workendstaging 数据库同步完成；Git/main 交付待完成
+状态：实施、本地 R3、workendstaging 与任务分支交付完成；main/分支清理待完成
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 

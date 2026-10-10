@@ -16,7 +16,7 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Identity lifecycle 数据/API 合同 | PASS | migration/API/OpenAPI、Local fresh/upgrade/DB/API/contracts、workendstaging migration/Edge/权限、Git 分支交付 | 无 | `5cd68a5` | PASS |
-| 02 | Unified Users lifecycle UI | READY | Identity detail/deletion-jobs/redirect/deep links、真实 start/retry、DB forward-fix、Local canonical R3、workendstaging DB 同步 | Git 阶段提交/main/分支清理 | 未验证 | 未验证 |
+| 02 | Unified Users lifecycle UI | READY | Identity detail/deletion-jobs/redirect/deep links、真实 start/retry、DB forward-fix、Local canonical R3、workendstaging DB、任务分支交付 | main fast-forward / 分支清理 | `dca2582` | PASS |
 
 ## 阶段实施记录
 
@@ -71,7 +71,7 @@
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 链接 |
 | --- | --- | --- | --- | --- | --- |
 | 01 | `5cd68a597ab9012c138cf9b2585ce5014bc819c3` | `codex/opt-003-identity-lifecycle` | PASS | PASS：`git ls-remote` 与本地 SHA 一致 | GitHub task branch |
-| 02 | 未验证 | `codex/opt-003-identity-lifecycle` | 未验证 | 未验证 | 未验证 |
+| 02 | `dca258284917c03095f65b31c49bd0e5cb2015b2` | `codex/opt-003-identity-lifecycle` | PASS | PASS：`git ls-remote` 与本地 SHA 一致 | GitHub task branch |
 
 ## 交接信息
 
