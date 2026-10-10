@@ -40,6 +40,8 @@ proposals/
 
 - [OPT-002 全局审计中心与概览去审计化](admin-global-audit-center/design.md)：[计划](admin-global-audit-center/plan.md)，新增权威 Audit v2 结构化查询投影，将全局审计改为业务可读中心，并从 Overview 完整移除审计流水依赖。
 
+- [OPT-003 统一用户与身份删除生命周期治理](admin-identity-lifecycle-governance/design.md)：[计划](admin-identity-lifecycle-governance/plan.md)，把 Global Identity、删除请求和 Global Delete 任务收敛到统一用户工作区，保留既有高风险状态机并退出独立运维中心入口。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
