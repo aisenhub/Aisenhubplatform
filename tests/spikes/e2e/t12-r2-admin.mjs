@@ -49,8 +49,12 @@ const planId = crypto.randomUUID();
 const platformCode = `t12-r2-browser-${crypto.randomUUID()}`;
 const email = `t12-r2-browser-${crypto.randomUUID()}@example.test`;
 const password = `T12-R2-${randomBytes(16).toString('hex')}!`;
+const lifecycleEmail = `t12-r2-lifecycle-${crypto.randomUUID()}@example.test`;
 let userId;
 let factorId;
+let lifecycleUserId;
+let lifecycleRequestId;
+let lifecycleJobId;
 let previousSystemAdmin;
 let browser;
 let page;
@@ -229,6 +233,26 @@ async function createFixtures() {
     update public.platforms
     set default_plan_id = ${planId}
     where id = ${platformId}
+  `;
+  const lifecycleSignup = await authRequest('/auth/v1/signup', null, {
+    method: 'POST',
+    body: JSON.stringify({ email: lifecycleEmail, password }),
+  });
+  assertStatus(
+    lifecycleSignup.response.status,
+    200,
+    'Local lifecycle target signup',
+  );
+  lifecycleUserId = lifecycleSignup.body?.user?.id;
+  assert.ok(lifecycleUserId, 'lifecycle target signup must return a user');
+  lifecycleRequestId = crypto.randomUUID();
+  await sql`
+    insert into private.deletion_requests (
+      id, user_id, request_session_id, state, requested_at
+    ) values (
+      ${lifecycleRequestId}, ${lifecycleUserId}, ${crypto.randomUUID()},
+      'pending_admin', now()
+    )
   `;
 }
 
@@ -738,8 +762,17 @@ async function runArchitectureBehaviorMatrix() {
       initialRequestCount + 3,
       'UID search submit must issue exactly one global identity request',
     );
+    const identityDetailLink = page
+      .locator(`[data-test="identity-detail-link-${userId}"]`)
+      .first();
+    await identityDetailLink.waitFor({ state: 'visible' });
+    await identityDetailLink.click();
+    await page.waitForURL(`**/admin/accounts/${userId}`);
+    await page.locator('[data-test="identity-detail-page"]').waitFor({
+      state: 'visible',
+    });
     const accountDeepLink = page
-      .getByRole('link', { name: /进入账户/u })
+      .getByRole('link', { name: /进入平台账户/u })
       .first();
     await accountDeepLink.waitFor({ state: 'visible' });
     await accountDeepLink.click();
@@ -749,6 +782,116 @@ async function runArchitectureBehaviorMatrix() {
   } finally {
     page.off('request', observeIdentityRequest);
   }
+
+  const lifecycleDetail = await browserRequest(
+    `/api/v1/admin/api/v1/accounts/${lifecycleUserId}`,
+  );
+  assertStatus(
+    lifecycleDetail.status,
+    200,
+    `lifecycle target detail (${JSON.stringify(lifecycleDetail.payload?.error ?? null)})`,
+  );
+  assert.equal(
+    lifecycleDetail.payload?.data?.deletion?.request?.state,
+    'pending_admin',
+    'lifecycle target must expose the pending deletion request',
+  );
+  await page.goto(`${appUrl}/admin/accounts/${lifecycleUserId}`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="identity-detail-page"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="identity-detail-start"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="identity-detail-start"]').click();
+  const [startDeletionResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/v1/admin/api/v1/deletion-jobs') &&
+        response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    startDeletionResponse.status(),
+    202,
+    'Identity detail Global Delete start',
+  );
+  const startDeletionPayload = await startDeletionResponse.json();
+  lifecycleJobId = startDeletionPayload?.data?.job_id;
+  assert.ok(lifecycleJobId, 'Global Delete start must return a job ID');
+  await page.locator('[data-test="confirm-action-cancel"]').click();
+  const [startedJob] = await sql`
+    select state, checkpoint, retry_count
+    from private.deletion_jobs
+    where id = ${lifecycleJobId}
+  `;
+  assert.deepEqual(startedJob, {
+    state: 'pending',
+    checkpoint: 'created',
+    retry_count: 0,
+  });
+
+  await sql`
+    update private.deletion_jobs
+    set state = 'blocked', last_error_code = 't12_browser_blocked'
+    where id = ${lifecycleJobId}
+  `;
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.locator('[data-test="identity-detail-retry"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="identity-detail-retry"]').click();
+  const [retryDeletionResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/deletion-jobs/${lifecycleJobId}/retry`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    retryDeletionResponse.status(),
+    202,
+    'Identity detail Global Delete retry',
+  );
+  await page.locator('[data-test="confirm-action-cancel"]').click();
+  const [retriedJob] = await sql`
+    select state, retry_count, last_error_code
+    from private.deletion_jobs
+    where id = ${lifecycleJobId}
+  `;
+  assert.deepEqual(retriedJob, {
+    state: 'retry',
+    retry_count: 1,
+    last_error_code: null,
+  });
+
+  await page.goto(
+    `${appUrl}/admin/operations?job_id=${lifecycleJobId}&q=retry&legacy=drop-me`,
+    { waitUntil: 'domcontentloaded' },
+  );
+  await page.waitForURL((url) => {
+    return (
+      url.pathname === '/admin/accounts/deletion-jobs' &&
+      url.searchParams.get('job_id') === lifecycleJobId &&
+      url.searchParams.get('q') === 'retry' &&
+      url.searchParams.get('legacy') === null
+    );
+  });
+  await page.locator('[data-test="deletion-jobs-page"]').waitFor({
+    state: 'visible',
+  });
+  assert.equal(
+    await page.locator('[data-test="admin-nav-operations"]').count(),
+    0,
+    'Operations must no longer exist as a top-level navigation item',
+  );
 
   await page.goto(`${appUrl}/admin/billing/orders?status=manual_review`, {
     waitUntil: 'domcontentloaded',
@@ -786,11 +929,6 @@ async function runArchitectureBehaviorMatrix() {
     .click();
   await page.waitForURL('**/admin/billing/orders');
 
-  await page.goto(`${appUrl}/admin/platforms/${platformId}/accounts`, {
-    waitUntil: 'domcontentloaded',
-  });
-  await page.locator('[data-test="admin-nav-operations"]').click();
-  await page.waitForURL('**/admin/operations');
   await page.goto(`${appUrl}/admin/platforms/${platformId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
@@ -832,7 +970,10 @@ async function runArchitectureBehaviorMatrix() {
   return {
     identitySubmitSingleRequest: 'PASS',
     identityPlatformScopeSingleRequest: 'PASS',
-    identityUidAccountDeepLink: 'PASS',
+    identityUidDetailAccountDeepLink: 'PASS',
+    identityDeletionStart: 'PASS',
+    identityDeletionRetry: 'PASS',
+    operationsCompatibilityRedirect: 'PASS',
     billingUrlHydration: 'PASS',
     billingRefreshPersistence: 'PASS',
     accountsEquivalentScopeSwitch: 'PASS',
@@ -846,6 +987,8 @@ async function runResponsiveA11yMatrix() {
     { label: 'Admin Shell', path: '/admin' },
     { label: 'Platforms', path: '/admin/platforms' },
     { label: 'Global Identities', path: '/admin/accounts' },
+    { label: 'Identity Detail', path: `/admin/accounts/${userId}` },
+    { label: 'Deletion Jobs', path: '/admin/accounts/deletion-jobs' },
     { label: 'Global Billing Orders', path: '/admin/billing/orders' },
     {
       label: 'Platform Workspace',
@@ -877,7 +1020,6 @@ async function runResponsiveA11yMatrix() {
       label: 'Redemption Batches',
       path: `/admin/platforms/${platformId}/redemption-batches`,
     },
-    { label: 'Operations', path: '/admin/operations' },
     { label: 'Audit', path: '/admin/audit' },
     { label: 'Consumer Lab', path: '/admin/consumer-lab' },
     { label: 'Security', path: '/admin/security' },
@@ -1080,6 +1222,33 @@ try {
       () => undefined,
     );
     await sql`delete from public.platforms where id = ${platformId}`.catch(
+      () => undefined,
+    );
+  }
+  if (lifecycleJobId) {
+    await sql`delete from public.audit_logs where target_id = ${lifecycleJobId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from private.deletion_jobs where id = ${lifecycleJobId}`.catch(
+      () => undefined,
+    );
+  }
+  if (lifecycleRequestId) {
+    await sql`delete from private.deletion_requests where id = ${lifecycleRequestId}`.catch(
+      () => undefined,
+    );
+  }
+  if (lifecycleUserId) {
+    await sql`delete from private.identity_lifecycle where user_id = ${lifecycleUserId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from auth.sessions where user_id = ${lifecycleUserId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from auth.identities where user_id = ${lifecycleUserId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from auth.users where id = ${lifecycleUserId}`.catch(
       () => undefined,
     );
   }

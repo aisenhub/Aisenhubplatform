@@ -941,7 +941,7 @@ export function PlatformFilesPage() {
           打开平台设置
         </Link>
         <Link
-          href="/admin/deletion-jobs"
+          href="/admin/accounts/deletion-jobs"
           className="text-primary underline-offset-4 hover:underline"
         >
           打开 Global Delete 任务

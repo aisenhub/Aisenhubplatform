@@ -374,10 +374,10 @@ export function AdminOverviewPage() {
             </div>
             <div className="flex flex-wrap gap-3 text-sm">
               <Link
-                href="/admin/operations"
+                href="/admin/accounts/deletion-jobs"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                运维中心
+                删除任务
               </Link>
               <Link
                 href="/admin/billing/orders"

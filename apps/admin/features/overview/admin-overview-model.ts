@@ -117,8 +117,8 @@ export function buildAttentionItems(
       title: job.state === 'blocked' ? '删除任务已阻塞' : '删除任务等待重试',
       description:
         [job.checkpoint, job.last_error_code].filter(Boolean).join(' · ') ||
-        '需要在运维中心确认任务状态。',
-      href: `/admin/operations?job_id=${encodeURIComponent(job.job_id)}`,
+        '需要在统一用户的删除任务视图确认状态。',
+      href: `/admin/accounts/deletion-jobs?job_id=${encodeURIComponent(job.job_id)}`,
       badge: job.state === 'blocked' ? '高' : '需关注',
     }));
 

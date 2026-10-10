@@ -117,11 +117,9 @@ describe('admin navigation model', () => {
     ]);
 
     const utilityKeys = adminGlobalUtilityNavigation.map((i) => i.key);
-    expect(utilityKeys).toEqual([
-      'billing',
-      'operations',
-      'audit',
-      'consumer-lab',
-    ]);
+    expect(utilityKeys).toEqual(['billing', 'audit', 'consumer-lab']);
+    expect(adminNavigationLabel('/admin/accounts/deletion-jobs')).toBe(
+      '统一用户',
+    );
   });
 });

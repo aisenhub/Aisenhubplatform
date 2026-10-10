@@ -38,6 +38,47 @@ export type GlobalIdentity = {
   accounts: GlobalIdentityAccount[];
 };
 
+export type IdentityDeletionRequest = {
+  request_id: string;
+  state: 'pending_admin' | 'approved' | 'cancelled' | string;
+  requested_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  cancelled_at: string | null;
+};
+
+export type IdentityDeletionJob = {
+  job_id: string;
+  state: 'pending' | 'running' | 'blocked' | 'retry' | 'completed' | string;
+  checkpoint: string;
+  retry_count: number;
+  next_attempt_at: string | null;
+  last_error_code: string | null;
+  created_at: string | null;
+  completed_at: string | null;
+};
+
+export type GlobalIdentityDetail = GlobalIdentity & {
+  deletion: {
+    request: IdentityDeletionRequest | null;
+    job: IdentityDeletionJob | null;
+  };
+};
+
+export type DeletionJob = {
+  job_id: string;
+  request_id: string;
+  user_id?: string | null;
+  state: string;
+  checkpoint: string;
+  fence?: number | null;
+  retry_count: number;
+  next_attempt_at?: string | null;
+  last_error_code?: string | null;
+  created_at?: string | null;
+  completed_at?: string | null;
+};
+
 export type AccountIntent = {
   accountId: string;
   action: 'suspend' | 'restore' | 'close';

@@ -9,7 +9,7 @@
 - 风险：R3
 - 正式设计：[design.md](design.md)
 - 总计划：[plan.md](plan.md)
-- 当前阶段：[Phase 01](phases/01-identity-lifecycle-contract.md)
+- 当前阶段：[Phase 02](phases/02-unified-identity-lifecycle-ui.md)
 
 ## 必读顺序
 
@@ -26,6 +26,7 @@
 - Identity detail 精确 Auth 身份继续由服务端 Supabase Auth Admin API 获取，数据库不扩大 Auth PII 权限。
 - start/retry 继续调用 existing deletion-job API，并保留 confirm + recent MFA + replay-never + unknown-outcome recovery。
 - `/admin/operations` 是兼容重定向，不保留第二套产品状态。
+- Phase 02 真实浏览器验收发现原 `admin_deletion_job_start` 的 `ON CONFLICT (request_id)` 与 RETURNS TABLE 输出变量同名导致运行时歧义；已用 `20261010145245_fix_admin_deletion_job_start_conflict.sql` forward-fix，并新增真实 `admin_executor` start/retry pgTAP，不能删除该回归覆盖。
 
 ## 执行边界
 
@@ -41,8 +42,8 @@ Phase 01 未通过 fresh/upgrade、executor 权限、API/contract 前不得进�
 
 ## 完成门槛
 
-- [ ] Phase 01 Identity lifecycle data/API contract 已交付。
-- [ ] Phase 02 Unified Users lifecycle UI 与旧 Operations 兼容已交付。
-- [ ] 必需 Local R3 无未解释 FAIL/BLOCKED。
+- [x] Phase 01 Identity lifecycle data/API contract 已交付。
+- [x] Phase 02 Unified Users lifecycle UI 与旧 Operations 兼容实现/验证已完成。
+- [x] 必需 Local R3 无未解释 FAIL/BLOCKED。
 - [ ] GitHub/main 与适用环境状态一致。
 - [ ] 本地/远端任务分支删除后才进入 OPT-004。

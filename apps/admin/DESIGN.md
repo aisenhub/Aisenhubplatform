@@ -157,9 +157,10 @@ components:
 
 - **Buttons:** 主操作为青绿实体；次操作为描边；低强调操作为 ghost；危险操作保留危险文字色。默认高度 2rem，sm 为 1.75rem；40rem 以下按钮最小高度 2.75rem。禁用态降低透明度并阻止操作。共享主按钮的悬停透明色仅用于链接实例，认证按钮另有深青绿悬停。
 - **Search / fields:** 白底、输入色边界、md 圆角，最小高度 2.5rem；搜索有隐藏或可见标签。悬停边界变青绿，键盘焦点显示边界与轮廓；无效、提交中和禁用态保留共享组件语义。
-- **Navigation:** 中文任务分组，Global 与 URL 指定的 Platform 范围使用不同菜单。活动项使用青灰背景、薄荷图标与较重文字，并设置 aria-current；图标折叠模式保留 tooltip。平台切换、返回目录与全局管理入口保留范围线索。
+- **Navigation:** 中文任务分组，Global 与 URL 指定的 Platform 范围使用不同菜单。活动项使用青灰背景、薄荷图标与较重文字，并设置 aria-current；图标折叠模式保留 tooltip。Global 一级导航以“统一用户”承载 Identity 生命周期治理，不再保留独立“运维中心”；旧 `/admin/operations` 仅兼容重定向。平台切换、返回目录与全局管理入口保留范围线索。
 - **Tables / status:** 表头高度 2.75rem，字体较小；单元格纵向留白 0.875rem。行悬停为 muted，详情所选账户行为 primary-soft；状态胶囊有文字、小圆点和色调，unknown 使用更强警告底色。
 - **Audit center:** 全局审计中心的一级表格固定围绕“操作者 / 平台范围 / 对象 / 操作 / 结果 / 时间”组织。已知 event/target code 使用中文业务语义，原始 code、UUID、request_id 只在详情技术区保留；缺失 outcome 明确显示“未记录”，不得默认成功。操作者、平台、动作、对象类型、结果与关键词筛选写入 URL，并由服务端在游标分页前组合执行。
+- **Identity lifecycle:** `/admin/accounts` 仍以 live Auth Identity 为主列表；详情 `/admin/accounts/:userId` 分层展示 Auth 摘要、平台账户与权威 deletion request/job。pending request 的批准与 blocked/retry 的重试复用同一 recent-MFA、确认、幂等、replay-never 与 unknown-outcome 交互；跨用户历史任务集中在 `/admin/accounts/deletion-jobs`，Auth 已删除后的 detached job 不伪造 Identity 详情。
 - **Resource details:** 右侧 Sheet 展示账户状态、标识与时间，窄屏全宽，宽屏最大 28rem。选择写入 URL，列表同步高亮；关闭详情后尝试回到触发按钮焦点。详情列表窄屏由标签和值两列改为单列。
 - **Async / safety:** 加载、空结果、访问失败、读取失败与后台刷新失败分别呈现；后台失败保留已知数据并说明可能过期，附重试与支持 ID。账户操作继续显示目标、影响、理由及近期 MFA；accepted、success、failure 和 unknown_outcome 保持不同文字与恢复入口。
 

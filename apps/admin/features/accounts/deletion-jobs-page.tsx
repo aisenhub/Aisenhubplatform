@@ -5,21 +5,17 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
-import { SessionRetryRequiredError } from '../../app/_lib/auth/browser';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
-import { Button } from '@kit/ui/button';
-import { ConfirmActionDialog } from '@kit/ui/confirm-action-dialog';
+import { Button, buttonVariants } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import type { MutationState } from '@kit/ui/mutation-state';
 import { ResourceId } from '@kit/ui/resource-id';
 import { ResourceInspector } from '@kit/ui/resource-inspector';
 import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
-import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -28,44 +24,16 @@ import {
   formatUtc,
   readApiPayload,
   resourceError,
-  isRecentMfaRequired,
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import type { DeletionJob } from './account-types';
+import {
+  DeletionMutationDialog,
+  type DeletionMutationIntent,
+} from './deletion-mutation-dialog';
 
 const JOB_LIST_PATH = '/api/v1/admin/api/v1/deletion-jobs?limit=100';
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-
-type DeletionJob = {
-  job_id: string;
-  request_id: string;
-  user_id?: string | null;
-  state: string;
-  checkpoint: string;
-  fence?: number | null;
-  retry_count: number;
-  next_attempt_at?: string | null;
-  last_error_code?: string | null;
-  created_at?: string | null;
-  completed_at?: string | null;
-};
-
-type OperationIntent =
-  | {
-      kind: 'start';
-      requestId: string;
-      idempotencyKey: string;
-      title: string;
-      impact: string;
-    }
-  | {
-      kind: 'retry';
-      job: DeletionJob;
-      idempotencyKey: string;
-      title: string;
-      impact: string;
-    };
 
 type InspectorState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -116,7 +84,7 @@ function caughtError(title: string, error: unknown): ResourceError {
   };
 }
 
-export function OperationsCenterPage() {
+export function DeletionJobsPage() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -128,14 +96,7 @@ export function OperationsCenterPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<ResourceError | null>(null);
   const [refreshError, setRefreshError] = useState<ResourceError | null>(null);
-  const [requestIdInput, setRequestIdInput] = useState('');
-  const [requestIdError, setRequestIdError] = useState('');
-  const [intent, setIntent] = useState<OperationIntent | null>(null);
-  const [mutationState, setMutationState] =
-    useState<MutationState>('confirm_required');
-  const [mutationError, setMutationError] = useState<ResourceError | null>(
-    null,
-  );
+  const [intent, setIntent] = useState<DeletionMutationIntent | null>(null);
   const [inspectorJobId, setInspectorJobId] = useState<string | null>(null);
   const [inspectedJob, setInspectedJob] = useState<DeletionJob | null>(null);
   const [inspectorState, setInspectorState] = useState<InspectorState>('idle');
@@ -202,6 +163,30 @@ export function OperationsCenterPage() {
     void load(false);
   }, [load]);
 
+  const openInspector = useCallback(async (jobId: string) => {
+    setInspectorJobId(jobId);
+    setInspectedJob(null);
+    setInspectorError(null);
+    setInspectorState('loading');
+    try {
+      const response = await adminAuthSession.request(
+        `/api/v1/admin/api/v1/deletion-jobs/${encodeURIComponent(jobId)}`,
+        { cache: 'no-store' },
+      );
+      const payload = await readApiPayload<DeletionJob>(response);
+      if (!response.ok || !payload?.data) {
+        setInspectorError(resourceError(response, payload, '删除任务详情'));
+        setInspectorState('error');
+        return;
+      }
+      setInspectedJob(payload.data);
+      setInspectorState('success');
+    } catch (caught) {
+      setInspectorError(caughtError('删除任务详情读取失败', caught));
+      setInspectorState('error');
+    }
+  }, []);
+
   useEffect(() => {
     if (
       requestedJobId &&
@@ -212,7 +197,7 @@ export function OperationsCenterPage() {
       void openInspector(requestedJobId);
     }
     if (!requestedJobId) openedQueryJobRef.current = null;
-  }, [requestedJobId, state]);
+  }, [openInspector, requestedJobId, state]);
 
   const visibleJobs = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -254,199 +239,71 @@ export function OperationsCenterPage() {
     const params = new URLSearchParams(searchParams.toString());
     if (draftQuery.trim()) params.set('q', draftQuery.trim());
     else params.delete('q');
+    params.delete('job_id');
     router.replace(`${pathname}${params.toString() ? `?${params}` : ''}`);
-  }
-
-  function openStart() {
-    const requestId = requestIdInput.trim();
-    if (!UUID.test(requestId)) {
-      setRequestIdError('请输入有效的 deletion request UUID。');
-      return;
-    }
-    setRequestIdError('');
-    setMutationError(null);
-    setMutationState('confirm_required');
-    setIntent({
-      kind: 'start',
-      requestId,
-      idempotencyKey: crypto.randomUUID(),
-      title: '批准并启动删除任务',
-      impact:
-        '服务端会把待审批 deletion request 置为 approved，并创建 worker 可继续处理的删除任务；Auth、Storage 和备份步骤不会在此页面内被假设为完成。',
-    });
   }
 
   function openRetry(job: DeletionJob) {
     if (!['blocked', 'retry'].includes(job.state)) return;
-    setMutationError(null);
-    setMutationState('confirm_required');
     setIntent({
       kind: 'retry',
-      job,
+      jobId: job.job_id,
       idempotencyKey: crypto.randomUUID(),
       title: '重新排队删除任务',
       impact:
-        '仅对服务端报告为 blocked/retry 的任务提交重试。worker 会重新获取租约并回报 checkpoint，页面不改变任务状态。',
+        '仅对服务端报告为 blocked/retry 的任务提交重试。worker 会重新获取租约并继续 checkpoint；页面不会改变任务状态，也不会自动重放不确定结果。',
     });
-  }
-
-  async function submitIntent() {
-    if (!intent) return;
-    setMutationState('pending');
-    setMutationError(null);
-    try {
-      const isStart = intent.kind === 'start';
-      const response = await adminAuthSession.request(
-        isStart
-          ? '/api/v1/admin/api/v1/deletion-jobs'
-          : `/api/v1/admin/api/v1/deletion-jobs/${encodeURIComponent(intent.job.job_id)}/retry`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Idempotency-Key': intent.idempotencyKey,
-          },
-          body: JSON.stringify(isStart ? { request_id: intent.requestId } : {}),
-        },
-        { replay: 'never' },
-      );
-      const payload = await readApiPayload<DeletionJob>(response);
-      if (!response.ok) {
-        if (isRecentMfaRequired(response, payload)) {
-          setMutationState('step_up_required');
-          return;
-        }
-        setMutationState('failure');
-        setMutationError(resourceError(response, payload, '删除任务操作'));
-        return;
-      }
-      setMutationState(response.status === 202 ? 'accepted' : 'success');
-      await load(true);
-    } catch (caught) {
-      if (caught instanceof SessionRetryRequiredError) {
-        setMutationState('failure');
-        setMutationError({
-          title: '会话已恢复，请重新提交',
-          description: '为避免重复提交，本次删除任务操作没有自动重放。',
-          requestId: null,
-          technicalDetail: 'SESSION_RECOVERY_REQUIRED',
-        });
-        return;
-      }
-      setMutationState('unknown_outcome');
-      setMutationError({
-        title: '删除任务结果待确认',
-        description:
-          '网络在服务端响应前中断。请先按 request ID 或 Job ID 检查权威状态，不要立即重新提交。',
-        requestId: null,
-        technicalDetail: null,
-      });
-    }
-  }
-
-  async function checkUnknown() {
-    if (!intent) return;
-    try {
-      if (intent.kind === 'start') {
-        const latestJobs = (await load(true)) ?? jobs;
-        const matched = latestJobs.find(
-          (job) => job.request_id === intent.requestId,
-        );
-        setMutationError({
-          title: matched ? '已找到匹配删除任务' : '尚未找到匹配删除任务',
-          description: matched
-            ? '服务端列表已按 request ID 找到任务；页面不会再次提交原批准请求。'
-            : '当前有界列表没有按 request ID 找到任务；页面不会按时间或状态猜测，也不会自动重发。',
-          requestId: null,
-          technicalDetail: matched?.job_id ?? 'UNKNOWN_OUTCOME',
-        });
-        if (matched) setMutationState('accepted');
-        return;
-      }
-      const response = await adminAuthSession.request(
-        `/api/v1/admin/api/v1/deletion-jobs/${encodeURIComponent(intent.job.job_id)}`,
-        { cache: 'no-store' },
-      );
-      const payload = await readApiPayload<DeletionJob>(response);
-      if (!response.ok || !payload?.data) {
-        setMutationError(resourceError(response, payload, '删除任务状态'));
-        return;
-      }
-      setInspectedJob(payload.data);
-      await load(true);
-      if (!['blocked', 'retry'].includes(payload.data.state)) {
-        setMutationState('accepted');
-        setMutationError({
-          title: '任务状态已收敛',
-          description:
-            '服务端状态已离开可重试集合；页面没有重复提交原重试请求。',
-          requestId: null,
-          technicalDetail: payload.data.state,
-        });
-      } else {
-        setMutationError({
-          title: '当前状态仍不能证明原请求结果',
-          description:
-            '任务仍处于 blocked/retry；请保留原 intent 和 Idempotency-Key，联系支持流程确认后再决定下一步。',
-          requestId: null,
-          technicalDetail: 'UNKNOWN_OUTCOME',
-        });
-      }
-    } catch (caught) {
-      setMutationError(caughtError('删除任务状态检查失败', caught));
-    }
-  }
-
-  async function openInspector(jobId: string) {
-    setInspectorJobId(jobId);
-    setInspectedJob(null);
-    setInspectorError(null);
-    setInspectorState('loading');
-    try {
-      const response = await adminAuthSession.request(
-        `/api/v1/admin/api/v1/deletion-jobs/${encodeURIComponent(jobId)}`,
-        { cache: 'no-store' },
-      );
-      const payload = await readApiPayload<DeletionJob>(response);
-      if (!response.ok || !payload?.data) {
-        setInspectorError(resourceError(response, payload, '删除任务详情'));
-        setInspectorState('error');
-        return;
-      }
-      setInspectedJob(payload.data);
-      setInspectorState('success');
-    } catch (caught) {
-      setInspectorError(caughtError('删除任务详情读取失败', caught));
-      setInspectorState('error');
-    }
   }
 
   function closeInspector() {
     setInspectorJobId(null);
     setInspectedJob(null);
-    if (requestedJobId) router.replace(pathname);
+    setInspectorError(null);
+    setInspectorState('idle');
+    if (requestedJobId) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('job_id');
+      router.replace(`${pathname}${params.toString() ? `?${params}` : ''}`);
+    }
   }
 
   return (
-    <main className="shell wide-shell" data-test="operations-page">
+    <main className="shell wide-shell" data-test="deletion-jobs-page">
       <AdminPageHeader
-        title="运维中心"
-        description="跟踪身份删除任务的执行进度，检查阻塞原因并处理重试。"
+        title="统一用户 · 删除任务"
+        description="跨用户查看 Global Delete 任务、检查阻塞原因并对明确可重试任务执行受控重试。"
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void load(true)}
-            disabled={refreshing}
-            data-test="operations-refresh"
-          >
-            {refreshing ? '刷新中…' : '刷新'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/accounts"
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              返回统一用户
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void load(true)}
+              disabled={refreshing}
+              data-test="deletion-jobs-refresh"
+            >
+              {refreshing ? '刷新中…' : '刷新'}
+            </Button>
+          </div>
         }
       />
 
+      <Alert>
+        <AlertTitle>批准删除请求请从 Identity 详情进入</AlertTitle>
+        <AlertDescription>
+          这里不再接受手工粘贴 request UUID。先在统一用户中打开 live
+          Identity，确认其权威 deletion request，再执行 recent-MFA
+          保护的批准操作。
+        </AlertDescription>
+      </Alert>
+
       {refreshError ? (
-        <Alert variant="destructive" data-test="operations-refresh-error">
+        <Alert variant="destructive" data-test="deletion-jobs-refresh-error">
           <AlertTitle>刷新失败，仍保留已知任务</AlertTitle>
           <AlertDescription>
             {refreshError.description}
@@ -490,82 +347,39 @@ export function OperationsCenterPage() {
         />
       </div>
 
-      <section className="panel gap-4" data-test="operations-start-panel">
-        <div>
-          <h2>批准身份删除请求</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            只提交真实 request ID；审批结果为异步受理，后续 checkpoint 由 worker
-            回报。
-          </p>
-        </div>
-        <form
-          className="flex flex-col gap-3 sm:flex-row sm:items-end"
-          onSubmit={(event) => {
-            event.preventDefault();
-            openStart();
-          }}
-        >
-          <div className="grid min-w-0 flex-1 gap-2">
-            <Label htmlFor="operations-request-id">Deletion request ID</Label>
-            <Input
-              id="operations-request-id"
-              value={requestIdInput}
-              onChange={(event) => {
-                setRequestIdInput(event.target.value);
-                if (requestIdError) setRequestIdError('');
-              }}
-              placeholder="UUID"
-              inputMode="text"
-              aria-invalid={requestIdError ? true : undefined}
-              data-test="operations-request-id"
-            />
-            {requestIdError ? (
-              <p className="text-sm text-destructive" role="alert">
-                {requestIdError}
-              </p>
-            ) : null}
-          </div>
-          <Button type="submit" data-test="operations-start-open">
-            批准并启动
-          </Button>
-        </form>
-      </section>
-
-      <section className="panel gap-4" data-test="operations-list">
+      <section className="panel gap-4" data-test="deletion-jobs-list">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2>删除任务</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              当前只读取服务端返回的最新 100
-              条；筛选不代表全局总量，也不跨平台拼接文件 attention。
+              当前读取服务端最新 100 条；筛选只作用于这组有界结果。历史 detached
+              job 即使 Auth user 已删除，也仍可从这里按 Job ID / request ID
+              追踪。
             </p>
           </div>
           <span className="text-xs text-muted-foreground">
             {refreshing ? '后台刷新中…' : '最多 100 条'}
           </span>
         </div>
+
         <form
           className="flex gap-2"
           onSubmit={applyQuery}
-          data-test="operations-filter-form"
+          data-test="deletion-jobs-filter-form"
         >
-          <Label htmlFor="operations-filter" className="sr-only">
+          <Label htmlFor="deletion-jobs-filter" className="sr-only">
             筛选删除任务
           </Label>
           <Input
-            id="operations-filter"
+            id="deletion-jobs-filter"
             type="search"
             className="min-w-0 flex-1"
             value={draftQuery}
             onChange={(event) => setDraftQuery(event.target.value)}
-            placeholder="state、checkpoint、Job ID 或 request ID"
-            data-test="operations-filter"
+            placeholder="state、checkpoint、User ID、Job ID 或 request ID"
+            data-test="deletion-jobs-filter"
           />
-          <Button
-            type="submit"
-            variant="outline"
-            data-test="operations-filter-submit"
-          >
+          <Button type="submit" variant="outline">
             查询
           </Button>
         </form>
@@ -576,8 +390,8 @@ export function OperationsCenterPage() {
             {query ? '当前有界结果没有匹配任务。' : '当前没有返回删除任务。'}
           </div>
         ) : null}
-        {state === 'success' && visibleJobs.length ? (
-          <div className="grid gap-2" data-test="operations-rows">
+        {state === 'success' && visibleJobs.length > 0 ? (
+          <div className="grid gap-2" data-test="deletion-jobs-rows">
             {visibleJobs.map((job) => {
               const status = operationStatus(job.state);
               const retryable = ['blocked', 'retry'].includes(job.state);
@@ -585,13 +399,13 @@ export function OperationsCenterPage() {
                 <article
                   key={job.job_id}
                   className="grid gap-3 rounded-xl border border-border/70 bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
-                  data-test={`operation-row-${job.job_id}`}
+                  data-test={`deletion-job-row-${job.job_id}`}
                 >
                   <button
                     type="button"
                     className="min-w-0 text-left"
                     onClick={() => void openInspector(job.job_id)}
-                    data-test={`operation-inspect-${job.job_id}`}
+                    data-test={`deletion-job-inspect-${job.job_id}`}
                   >
                     <span className="flex flex-wrap items-center gap-2">
                       <strong className="text-sm text-foreground">
@@ -610,18 +424,29 @@ export function OperationsCenterPage() {
                       retry {job.retry_count}
                       {job.last_error_code
                         ? ` · ${job.last_error_code}`
-                        : ''} ·{' '}
+                        : ''} ·
                       创建于 {formatUtc(job.created_at)}
                     </span>
                   </button>
                   <div className="flex flex-wrap gap-2 sm:justify-end">
+                    {job.user_id ? (
+                      <Link
+                        href={`/admin/accounts/${encodeURIComponent(job.user_id)}`}
+                        className={buttonVariants({
+                          variant: 'ghost',
+                          size: 'sm',
+                        })}
+                      >
+                        查看 Identity
+                      </Link>
+                    ) : null}
                     {retryable ? (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => openRetry(job)}
-                        data-test={`operation-retry-${job.job_id}`}
+                        data-test={`deletion-job-retry-${job.job_id}`}
                       >
                         重试
                       </Button>
@@ -634,50 +459,20 @@ export function OperationsCenterPage() {
         ) : null}
       </section>
 
-      <section className="grid gap-3 rounded-xl border border-dashed border-border/80 bg-muted/20 p-4">
-        <div>
-          <h2 className="text-base">查看文件清理状态</h2>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            在平台的文件页面查看正在删除或结果待确认的文件。文件清理完成前不会释放存储额度。
-          </p>
-        </div>
-        <Link
-          href="/admin/platforms"
-          className="w-fit text-sm text-primary underline-offset-4 hover:underline"
-        >
-          打开平台目录
-        </Link>
-      </section>
-
-      {intent ? (
-        <ConfirmActionDialog
-          open
-          onOpenChange={(open) => {
-            if (!open && mutationState !== 'pending') setIntent(null);
-          }}
-          title={intent.title}
-          targetIdentity={
-            intent.kind === 'start' ? intent.requestId : intent.job.job_id
+      <DeletionMutationDialog
+        intent={intent}
+        onClose={() => setIntent(null)}
+        onRefresh={async () => {
+          const latest = await load(true);
+          if (inspectorJobId) {
+            const matched = latest?.find(
+              (job) => job.job_id === inspectorJobId,
+            );
+            if (matched) setInspectedJob(matched);
+            else await openInspector(inspectorJobId);
           }
-          impact={intent.impact}
-          reversible={false}
-          state={mutationState}
-          error={mutationError}
-          stepUpContent={
-            mutationState === 'step_up_required' ? (
-              <AdminRecentMfaPanel
-                onVerified={() => setMutationState('confirm_required')}
-              />
-            ) : null
-          }
-          onCheckUnknown={
-            mutationState === 'unknown_outcome'
-              ? () => void checkUnknown()
-              : undefined
-          }
-          onConfirm={() => void submitIntent()}
-        />
-      ) : null}
+        }}
+      />
 
       <ResourceInspector
         open={Boolean(inspectorJobId)}
@@ -722,7 +517,8 @@ export function OperationsCenterPage() {
                 {checkpointLabel(inspectedJob.checkpoint)}
               </p>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                此处显示任务目前所在的步骤。
+                此处只展示管理决策所需状态。执行 lease / fence 仍由服务端 worker
+                管理。
               </p>
             </div>
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -730,8 +526,8 @@ export function OperationsCenterPage() {
               <Detail label="Request ID" value={inspectedJob.request_id} mono />
               <Detail
                 label="User ID"
-                value={inspectedJob.user_id ?? '—'}
-                mono
+                value={inspectedJob.user_id ?? '已脱离 live Identity'}
+                mono={Boolean(inspectedJob.user_id)}
               />
               <Detail label="Raw state" value={inspectedJob.state} mono />
               <Detail
@@ -743,7 +539,6 @@ export function OperationsCenterPage() {
                 label="Retry count"
                 value={`${inspectedJob.retry_count}`}
               />
-              <Detail label="Fence" value={`${inspectedJob.fence ?? '—'}`} />
               <Detail
                 label="Next attempt"
                 value={formatUtc(inspectedJob.next_attempt_at)}
@@ -769,13 +564,21 @@ export function OperationsCenterPage() {
               >
                 按 Request ID 打开审计
               </Link>
+              {inspectedJob.user_id ? (
+                <Link
+                  href={`/admin/accounts/${encodeURIComponent(inspectedJob.user_id)}`}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  打开 Identity 详情
+                </Link>
+              ) : null}
               {['blocked', 'retry'].includes(inspectedJob.state) ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => openRetry(inspectedJob)}
-                  data-test="operation-inspector-retry"
+                  data-test="deletion-job-inspector-retry"
                 >
                   重试任务
                 </Button>
@@ -829,7 +632,7 @@ function Detail({
       >
         {value}
       </dd>
-      {mono && value !== '—' ? (
+      {mono && value !== '—' && value !== '已脱离 live Identity' ? (
         <ResourceId value={value} className="mt-2" />
       ) : null}
     </div>

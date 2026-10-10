@@ -1,5 +1,4 @@
 import {
-  Activity,
   Boxes,
   CreditCard,
   FileKey2,
@@ -56,7 +55,7 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         key: 'accounts',
         label: '统一用户',
         href: '/admin/accounts',
-        description: '跨平台检索用户账户与身份状态透视',
+        description: '跨平台检索用户账户、身份状态与删除生命周期',
         icon: Users,
       },
     ],
@@ -77,13 +76,6 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
   {
     label: '系统治理',
     items: [
-      {
-        key: 'operations',
-        label: '运维中心',
-        href: '/admin/operations',
-        description: '查看后台任务、检查点和可控重试',
-        icon: Activity,
-      },
       {
         key: 'audit',
         label: '审计中心',
@@ -119,7 +111,7 @@ export const adminNavigation = adminNavigationGroups.flatMap(
 );
 
 export const adminGlobalUtilityNavigation = adminNavigation.filter((item) =>
-  ['billing', 'operations', 'audit', 'consumer-lab'].includes(item.key),
+  ['billing', 'audit', 'consumer-lab'].includes(item.key),
 );
 
 type PlatformNavigationDefinition = Omit<AdminNavigationItem, 'href'> & {

@@ -238,7 +238,7 @@ try {
     [`/admin/platforms/${platformId}/settings/keys`, 'platform-workspace'],
     [`/admin/platforms/${platformId}/settings/origins`, 'platform-workspace'],
     ['/admin/billing', 'admin-shell'],
-    ['/admin/operations', 'admin-shell'],
+    ['/admin/accounts/deletion-jobs', 'admin-shell'],
     ['/admin/audit', 'admin-shell'],
     ['/admin/security', 'admin-shell'],
   ];

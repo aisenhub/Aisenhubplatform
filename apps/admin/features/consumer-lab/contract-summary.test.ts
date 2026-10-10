@@ -23,7 +23,14 @@ describe('consumer lab contract summaries', () => {
   it('reads the current canonical Admin contract', () => {
     expect(adminContractSummary.major).toBe('v1');
     expect(adminContractSummary.version).toBe('1.0.0');
-    expect(adminContractSummary.operations).toHaveLength(46);
+    expect(adminContractSummary.operations).toHaveLength(47);
+    expect(adminContractSummary.operations).toContainEqual(
+      expect.objectContaining({
+        method: 'GET',
+        path: '/admin/api/v1/accounts/{userId}',
+        operationId: 'adminGetIdentity',
+      }),
+    );
   });
 
   it('derives operation and security names without a handwritten route table', () => {

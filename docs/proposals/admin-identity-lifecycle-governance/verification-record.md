@@ -16,7 +16,7 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Identity lifecycle 数据/API 合同 | PASS | migration/API/OpenAPI、Local fresh/upgrade/DB/API/contracts、workendstaging migration/Edge/权限、Git 分支交付 | 无 | `5cd68a5` | PASS |
-| 02 | Unified Users lifecycle UI | 进行中 | Phase 01 已交付 | Identity detail/deletion-jobs/redirect/deep links/browser/R3 | 未验证 | 未验证 |
+| 02 | Unified Users lifecycle UI | READY | Identity detail/deletion-jobs/redirect/deep links、真实 start/retry、DB forward-fix、Local canonical R3、workendstaging DB 同步 | Git 阶段提交/main/分支清理 | 未验证 | 未验证 |
 
 ## 阶段实施记录
 
@@ -27,7 +27,16 @@
 - 冻结的数据、接口和跨阶段契约：保留 existing deletion-job mutation APIs；新增只读 lifecycle function 与 `GET /accounts/{userId}`；详情不暴露 request session/lease/fence。
 - 与计划的偏差、原因和影响：首次尝试仓库自定义 Supabase wrapper 创建 migration 时发现 wrapper 不支持 `migration new`，无副作用失败；随后按固定 CLI 实际入口 `pnpm exec supabase migration new` 创建 forward migration。`contracts:check` 首次因新增 operation 导致 Consumer Lab 生成快照过期，按仓库生成命令同步后复测通过。format 首次仅 OpenAPI/admin.ts 两文件不一致，定向 oxfmt 后通过。
 - 新增依赖及必要性：无。
-- 未完成或未验证内容：只剩 Phase 01 Git 阶段交付；Phase 02 尚未开始。
+- 未完成或未验证内容：无；Phase 01 已交付并进入 Phase 02。
+
+### 阶段 02：Unified Users lifecycle UI
+
+- 实际修改文件及职责：新增 `/admin/accounts/[userId]` Identity detail 与 `/admin/accounts/deletion-jobs` 子视图；把旧 Operations 高风险 mutation 交互抽为共享 `DeletionMutationDialog`；移除一级“运维中心”；旧 `/admin/operations` 与 `/admin/deletion-jobs` 仅保留服务端兼容 redirect；Overview/Audit/platform files 深链迁移；Admin BFF allowlist 补齐 exact Identity GET；浏览器路由矩阵与 Global Delete 行为覆盖扩展。
+- 高风险语义：start/retry 继续调用既有 deletion-job API，保留 recent-MFA、确认、Idempotency-Key、`replay: never` 与 unknown-outcome 不自动重放；跨用户任务视图不暴露 lease/fence，Auth 已删除后的 detached job 可追踪但不伪造 live Identity。
+- 集成发现与修复：真实浏览器首次真正执行 Global Delete start 时返回 503。新增真实 `admin_executor` pgTAP 后定位为旧 `private.admin_deletion_job_start` 的 `RETURNS TABLE request_id` 与 `ON CONFLICT (request_id)` PL/pgSQL 歧义。新增 forward migration `20261010145245_fix_admin_deletion_job_start_conflict.sql`，仅把 upsert conflict target 绑定到 `deletion_jobs_request_id_key`，不改变状态机/API；新增 start→blocked→retry 行为断言防止回归。
+- 与计划的偏差：Phase 02 原本预计纯 UI/consumer 迁移，但真实浏览器覆盖暴露既有 DB runtime 缺陷，因此新增一笔最小 forward-fix。没有修改任何已应用 migration，也没有重写 worker/checkpoint/lease/fence。
+- 新增依赖：无。
+- 未完成或未验证内容：只剩 Git 阶段提交、main fast-forward/远端核对和任务分支清理。
 
 ## 验证记录
 
@@ -46,6 +55,16 @@
 | 2026-10-10 | 01 | worktree | linked `supabase db push --dry-run` → `db push --linked --yes` | workendstaging | 0/0 | PASS：dry-run 仅列 `20261010134140`；远端成功应用同版本 migration |
 | 2026-10-10 | 01 | worktree | `supabase functions deploy account-api --project-ref ... --no-verify-jwt --use-api` | workendstaging | 0 | PASS：`account-api` 从 v55 升至 ACTIVE v56，保持 `verify_jwt=false` 的现有自定义 Admin/Platform auth 边界 |
 | 2026-10-10 | 01 | worktree | migration/function list + read-only lifecycle SQL probe | workendstaging | 0 | PASS：migration `20261010134140` 存在；admin_executor 可执行、account/job executor 拒绝、search_path 固定；真实活动 Admin context 返回单一合法 lifecycle row |
+| 2026-10-10 | 02 | worktree | Admin typecheck / unit / build（首轮） | Local | 1→0 | 首轮 unit 暴露 Phase 01 集成遗漏：BFF allowlist 未放行 exact Identity GET，Consumer Lab/unit 仍硬编码 46 operations；补齐后 11 files / 51 tests、typecheck、production build 全 PASS |
+| 2026-10-10 | 02 | worktree | `pnpm lint` / `pnpm format:check` | Local | 0/0 | PASS：lint 0 warnings / 0 errors；392 files format PASS |
+| 2026-10-10 | 02 | worktree | canonical R3（前两次诊断） | Local Supabase/Auth/Chrome | 1/1 | FAIL 均属于测试 fixture：直接 SQL 伪造 Auth user 无法被 GoTrue exact Admin API 当作真实身份；改为真实 Local Supabase signup fixture，不放宽产品断言 |
+| 2026-10-10 | 02 | worktree | canonical R3（第三次） | Local Supabase/Auth/Chrome | 1 | FAIL：真实 Auth Identity detail/pending request 已通过，但 Global Delete start 返回 503；证明失败点已收敛到真实 DB mutation |
+| 2026-10-10 | 02 | worktree | 新增真实 `admin_executor` start 行为 pgTAP（修复前） | Local Supabase | 1 | FAIL（预期诊断）：PostgreSQL 原始错误 `column reference "request_id" is ambiguous`，定位旧函数 `ON CONFLICT (request_id)` 与 RETURNS TABLE 输出变量冲突 |
+| 2026-10-10 | 02 | worktree | `20261010145245` migration up + 定向 Global Delete pgTAP | Local Supabase | 0/0 | PASS：forward-fix 成功应用；真实 start/retry 32/32 |
+| 2026-10-10 | 02 | worktree | `pnpm test:db` upgrade → `pnpm db:reset` → `pnpm test:db` fresh | Local Supabase | 0/0/0 | PASS：upgrade/fresh 均 61 files / 1130 tests；fresh 应用至 `20261010145245` |
+| 2026-10-10 | 02 | worktree | `pnpm verify:task:0801 --reuse-local`（最终） | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：20/20 executable gates；API 97/97；DB 1130；start/retry/redirect/deep links；5 viewports × 19 routes = 95 responsive/a11y 组合；docs/contracts 全 PASS |
+| 2026-10-10 | 02 | worktree | linked `supabase db push --dry-run` → `db push --linked --yes` | workendstaging | 0/0 | PASS：dry-run 仅列 `20261010145245`；远端成功应用同版本 forward-fix |
+| 2026-10-10 | 02 | worktree | read-only function/migration privilege probe | workendstaging | 0 | PASS：migration 存在、named conflict target 生效、domain_owner + security-definer + pinned search_path 保持、admin_executor 可执行且 account_executor 拒绝 |
 
 ## GitHub 交付记录
 
@@ -56,9 +75,9 @@
 
 ## 交接信息
 
-- 下一阶段从哪里开始：Phase 02 Identity detail / deletion-jobs UI。
-- 必须先解决的问题：无产品决策阻塞。
+- 下一阶段从哪里开始：完成 OPT-003 Git/main/branch closeout 后，从最新 main 开始 OPT-004。
+- 必须先解决的问题：无产品或验证阻塞；只剩 Git closeout。
 - 可直接复用的接口和能力：`getAdminAuthUserById`、`admin_identity_accounts`、`admin_deletion_job_start/list/read/retry`、Admin recent-MFA/ConfirmActionDialog。
 - 不应重复实施的工作：Global Delete worker、checkpoint、lease/fence、Auth 删除与匿名化算法。
-- 当前未提交修改及归属：Phase 01 已提交并 push；当前仅阶段状态文档待提交，随后归入 Phase 02 起始记录。
+- 当前未提交修改及归属：Phase 02 UI/routes/tests、Global Delete forward-fix/pgTAP、架构与验证文档，全部归属 OPT-003。
 - 需要用户决定的事项：无。

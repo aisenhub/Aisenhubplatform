@@ -15,7 +15,7 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
-import { Button } from '@kit/ui/button';
+import { Button, buttonVariants } from '@kit/ui/button';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
@@ -256,17 +256,25 @@ export function CentralAccountsPage() {
         title="统一用户与身份透视"
         description="以全局 Auth Identity 为主对象检索用户，并在同一身份下查看跨平台账户关联与状态。"
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void loadIdentities(true)}
-            disabled={refreshing || accountsState === 'loading'}
-          >
-            <RefreshCw
-              className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
-            />
-            {refreshing ? '刷新中…' : '刷新数据'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/accounts/deletion-jobs"
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              删除任务
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void loadIdentities(true)}
+              disabled={refreshing || accountsState === 'loading'}
+            >
+              <RefreshCw
+                className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
+              />
+              {refreshing ? '刷新中…' : '刷新数据'}
+            </Button>
+          </div>
         }
       />
 
@@ -420,12 +428,22 @@ export function CentralAccountsPage() {
                     <div className="flex items-start gap-2">
                       <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0">
-                        <div className="font-medium">
+                        <Link
+                          href={`/admin/accounts/${encodeURIComponent(identity.user_id)}`}
+                          className="font-medium text-primary underline-offset-4 hover:underline"
+                          data-test={`identity-detail-link-${identity.user_id}`}
+                        >
                           {identity.email ?? '未设置邮箱'}
-                        </div>
+                        </Link>
                         <div className="mt-1">
                           <ResourceId value={identity.user_id} />
                         </div>
+                        <Link
+                          href={`/admin/accounts/${encodeURIComponent(identity.user_id)}`}
+                          className="mt-2 inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                          查看身份生命周期
+                        </Link>
                       </div>
                     </div>
                   </TableCell>

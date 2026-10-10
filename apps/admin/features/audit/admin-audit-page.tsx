@@ -155,7 +155,7 @@ function supportedTargetHref(entry: AdminAuditEntry): string | null {
     return `/admin/platforms/${encodeURIComponent(entry.target_id)}`;
   }
   if (entry.target_type === 'deletion_job') {
-    return `/admin/operations?job_id=${encodeURIComponent(entry.target_id)}`;
+    return `/admin/accounts/deletion-jobs?job_id=${encodeURIComponent(entry.target_id)}`;
   }
   return null;
 }

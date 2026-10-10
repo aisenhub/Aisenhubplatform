@@ -69,6 +69,9 @@ describe('admin overview model', () => {
     ]);
     expect(items[0]?.severity).toBe('critical');
     expect(items[1]?.severity).toBe('critical');
+    expect(items.find((item) => item.key.startsWith('job:'))?.href).toMatch(
+      /^\/admin\/accounts\/deletion-jobs\?job_id=/u,
+    );
     expect(
       items.find((item) => item.key === 'billing:manual-review')?.href,
     ).toBe('/admin/billing/orders?status=manual_review');

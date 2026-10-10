@@ -6,7 +6,7 @@ Aisenhubplatform 为多个自营平台提供共享身份、平台账户、订阅
 
 | 位置 | 职责 |
 | --- | --- |
-| apps/admin | Next.js 管理控制台与同源认证、资源代理 |
+| apps/admin | Next.js 管理控制台与同源认证、资源代理；统一用户工作区拥有 live Identity 详情、Global Delete 生命周期与跨用户删除任务子视图，旧 Operations 路由仅兼容重定向 |
 | tests/consumer-harness | test-only Consumer Conformance Harness；原生 Node 同源 Auth/BFF + 极薄 UI，用于证明公共 HTTP/OpenAPI 接入边界，不参与 workspace/生产部署 |
 | apps/admin/app/admin/consumer-lab | 维护者只读 Consumer Lab；build-time 读取 canonical OpenAPI，展示 contract major/version/operations 与 Harness 使用边界，不持有 Consumer Platform Key |
 | contracts/account/v1、contracts/admin/v1 | 对 Consumer/Admin 稳定的 canonical OpenAPI 3.1 wire contract、兼容规则与变更记录 |
