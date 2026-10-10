@@ -504,6 +504,14 @@
       },
       {
         "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/overview",
+        "operationId": "adminGetPlatformOverview",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/admin/api/v1/platforms/{platformId}/plans",
         "operationId": "adminListPlans",
         "security": [

@@ -16,8 +16,8 @@
 
 | 阶段 | 目标 | 状态 | 详细计划 |
 | --- | --- | --- | --- |
-| 01 | 聚合 SQL + Admin API/OpenAPI + 权限/合同 | 执行中 | [阶段 01](phases/01-platform-overview-contract.md) |
-| 02 | Overview UI + browser/R3 + Git closeout | 待开始 | [阶段 02](phases/02-platform-overview-ui.md) |
+| 01 | 聚合 SQL + Admin API/OpenAPI + 权限/合同 | 完成 | [阶段 01](phases/01-platform-overview-contract.md) |
+| 02 | Overview UI + browser/R3 + Git closeout | 执行中 | [阶段 02](phases/02-platform-overview-ui.md) |
 
 ## 总体验收
 

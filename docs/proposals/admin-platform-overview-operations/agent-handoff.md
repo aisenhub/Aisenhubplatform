@@ -7,7 +7,7 @@
 - 起始 main：`80a260bc43738b168d6521ccdbe51cb99eef929f`
 - 当前分支：`codex/opt-004-platform-overview`
 - 风险：R3
-- 当前阶段：[Phase 01](phases/01-platform-overview-contract.md)
+- 当前阶段：[Phase 02](phases/02-platform-overview-ui.md)
 
 ## 关键结论
 
@@ -27,7 +27,7 @@
 
 ## 完成门槛
 
-- [ ] Phase 01 数据/API/合同完成。
+- [x] Phase 01 数据/API/合同完成。
 - [ ] Phase 02 UI/browser/R3 完成。
 - [ ] 必需 Local R3 无 FAIL/BLOCKED。
 - [ ] main/远端/分支状态闭环。

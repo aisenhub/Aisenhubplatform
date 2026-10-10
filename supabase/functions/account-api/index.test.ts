@@ -598,6 +598,33 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           }
+          if (
+            query.startsWith('select * from private.admin_platform_overview')
+          ) {
+            return [
+              {
+                platform_id: platformId,
+                period_days: 30,
+                total_accounts: 4,
+                active_accounts: 2,
+                suspended_accounts: 1,
+                closed_accounts: 1,
+                new_accounts: 2,
+                previous_new_accounts: 1,
+                period_closed_accounts: 1,
+                previous_closed_accounts: 0,
+                net_accounts: 1,
+                previous_net_accounts: 1,
+                active_paid_accounts: 1,
+                orders: 3,
+                previous_orders: 2,
+                granted_orders: 2,
+                previous_granted_orders: 1,
+                attention_orders: 1,
+                previous_attention_orders: 0,
+              },
+            ] as unknown as R[];
+          }
           if (query.startsWith('select * from private.admin_platform_update')) {
             return [
               {
@@ -1825,6 +1852,29 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(searchedList.status, 200);
   assertEquals((await searchedList.json()).data[0].code, 'fixture');
+
+  const platformOverview = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/overview?days=30`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(platformOverview.status, 200);
+  const platformOverviewPayload = await platformOverview.json();
+  assertEquals(platformOverviewPayload.data.period_days, 30);
+  assertEquals(platformOverviewPayload.data.total_accounts, 4);
+  assertEquals(platformOverviewPayload.data.active_paid_accounts, 1);
+  assertEquals(platformOverviewPayload.data.attention_orders, 1);
+
+  const invalidPlatformOverview = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/overview?days=14`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(invalidPlatformOverview.status, 400);
 
   let authIdentityFilter: string | null | undefined;
   const identities = await handleRequest(

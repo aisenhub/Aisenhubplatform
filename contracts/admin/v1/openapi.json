@@ -137,6 +137,28 @@
         }
       }
     },
+    "/admin/api/v1/platforms/{platformId}/overview": {
+      "get": {
+        "operationId": "adminGetPlatformOverview",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "enum": [7, 30, 90], "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/PlatformOverview" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/admin/api/v1/platforms/{platformId}/origins": {
       "get": {
         "operationId": "adminListOrigins",
@@ -956,6 +978,24 @@
           }
         }
       },
+      "PlatformOverview": {
+        "description": "Authoritative per-platform operational summary for a fixed 7, 30, or 90 day period and its adjacent previous period.",
+        "headers": {
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["data", "request_id"],
+              "properties": {
+                "data": { "$ref": "#/components/schemas/PlatformOverviewData" },
+                "request_id": { "type": "string", "format": "uuid" }
+              }
+            }
+          }
+        }
+      },
       "Object": {
         "description": "JSON response with data and request_id.",
         "headers": {
@@ -1065,6 +1105,58 @@
             "format": "date-time"
           }
         }
+      },
+      "PlatformOverviewData": {
+        "type": "object",
+        "required": [
+          "platform_id",
+          "period_days",
+          "period_start",
+          "period_end",
+          "previous_start",
+          "total_accounts",
+          "active_accounts",
+          "suspended_accounts",
+          "closed_accounts",
+          "new_accounts",
+          "previous_new_accounts",
+          "period_closed_accounts",
+          "previous_closed_accounts",
+          "net_accounts",
+          "previous_net_accounts",
+          "active_paid_accounts",
+          "orders",
+          "previous_orders",
+          "granted_orders",
+          "previous_granted_orders",
+          "attention_orders",
+          "previous_attention_orders"
+        ],
+        "properties": {
+          "platform_id": { "type": "string", "format": "uuid" },
+          "period_days": { "type": "integer", "enum": [7, 30, 90] },
+          "period_start": { "type": "string", "format": "date-time" },
+          "period_end": { "type": "string", "format": "date-time" },
+          "previous_start": { "type": "string", "format": "date-time" },
+          "total_accounts": { "type": "integer", "minimum": 0 },
+          "active_accounts": { "type": "integer", "minimum": 0 },
+          "suspended_accounts": { "type": "integer", "minimum": 0 },
+          "closed_accounts": { "type": "integer", "minimum": 0 },
+          "new_accounts": { "type": "integer", "minimum": 0 },
+          "previous_new_accounts": { "type": "integer", "minimum": 0 },
+          "period_closed_accounts": { "type": "integer", "minimum": 0 },
+          "previous_closed_accounts": { "type": "integer", "minimum": 0 },
+          "net_accounts": { "type": "integer" },
+          "previous_net_accounts": { "type": "integer" },
+          "active_paid_accounts": { "type": "integer", "minimum": 0 },
+          "orders": { "type": "integer", "minimum": 0 },
+          "previous_orders": { "type": "integer", "minimum": 0 },
+          "granted_orders": { "type": "integer", "minimum": 0 },
+          "previous_granted_orders": { "type": "integer", "minimum": 0 },
+          "attention_orders": { "type": "integer", "minimum": 0 },
+          "previous_attention_orders": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
       },
       "IdentityDetailData": {
         "type": "object",

@@ -24,6 +24,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`accounts/${id}`) ||
       exact('platforms') ||
       matches(`platforms/${id}`) ||
+      matches(`platforms/${id}/overview`) ||
       matches(`platforms/${id}/origins`) ||
       matches(`platforms/${id}/accounts`) ||
       matches(`platforms/${id}/accounts/${id}`) ||

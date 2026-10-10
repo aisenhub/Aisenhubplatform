@@ -802,6 +802,25 @@ export async function dispatchAdmin(
     return { status: 201, data: result };
   }
 
+  const platformOverviewMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/overview$/u.exec(path);
+  if (
+    platformOverviewMatch &&
+    UUID.test(platformOverviewMatch[1]!) &&
+    request.method === 'GET'
+  ) {
+    const daysValue = url.searchParams.get('days');
+    const days = daysValue === null ? 30 : Number(daysValue);
+    if (!Number.isInteger(days) || ![7, 30, 90].includes(days))
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_platform_overview(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::integer)',
+      [...context, platformOverviewMatch[1], days],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
   const platformMatch = /^admin\/api\/v1\/platforms\/([^/]+)$/u.exec(path);
   if (platformMatch && UUID.test(platformMatch[1]!)) {
     const platformId = platformMatch[1]!;
