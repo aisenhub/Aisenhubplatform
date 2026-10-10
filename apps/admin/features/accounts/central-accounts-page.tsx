@@ -315,7 +315,7 @@ export function CentralAccountsPage() {
             <select
               value={selectedPlatform}
               onChange={(event) => handlePlatformChange(event.target.value)}
-              className="h-9 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring sm:w-auto sm:max-w-96"
+              className="h-9 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring sm:w-72 md:w-80"
               data-test="accounts-platform-selector"
               aria-label="统一身份平台范围"
             >
