@@ -1,6 +1,6 @@
 # OPT-003 统一用户与身份删除生命周期治理计划
 
-状态：In Progress
+状态：Complete
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -12,14 +12,14 @@
 
 风险分级：**R3**，因为涉及 security-definer SQL、Admin Auth/Identity API/OpenAPI、Global Delete recent-MFA 消费者与 Admin Browser 路由。
 
-当前分支：`codex/opt-003-identity-lifecycle`。
+最终交付分支：`main`；任务分支 `codex/opt-003-identity-lifecycle` 已在本地与远端删除。
 
 ## 阶段与依赖
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
 | 01 | 建立 Identity lifecycle 权威只读投影、Identity detail Admin API/OpenAPI 与 R3 数据/API 证据 | 最新 main 事实基线、design 冻结 | 完成 | [阶段 01](phases/01-identity-lifecycle-contract.md) |
-| 02 | 重构统一用户生命周期 UI、删除任务子视图、旧 Operations 兼容重定向与所有深链 | Phase 01 合同与本地 R3 通过 | 实施/验证/任务分支交付完成；main 待完成 | [阶段 02](phases/02-unified-identity-lifecycle-ui.md) |
+| 02 | 重构统一用户生命周期 UI、删除任务子视图、旧 Operations 兼容重定向与所有深链 | Phase 01 合同与本地 R3 通过 | 完成 | [阶段 02](phases/02-unified-identity-lifecycle-ui.md) |
 
 ## 总体验收
 
@@ -31,7 +31,7 @@
 - [x] Overview/Audit/文件页 deletion-job 深链迁移完成。
 - [x] Auth 已删除的身份不伪造详情，历史 detached jobs 仍可追踪。
 - [x] migration fresh/upgrade、DB/API/contracts、Admin unit/typecheck/build/browser、lint/format/docs、canonical R3 通过。
-- [ ] 最终 GitHub/main、适用远端状态与分支清理闭环完成。
+- [x] 最终 GitHub/main、适用远端状态与分支清理闭环完成。
 
 ## 风险与阻塞
 

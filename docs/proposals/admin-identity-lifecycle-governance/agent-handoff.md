@@ -5,11 +5,11 @@
 - 项目：`E:\Projects\Aisenhubplatform`
 - 任务：OPT-003 统一用户与身份删除生命周期治理
 - 起始 main：`425173ea70efc19e5410a0a4f0e25e7e30204591`
-- 当前分支：`codex/opt-003-identity-lifecycle`
+- 最终分支：`main`；任务分支已本地/远端删除
 - 风险：R3
 - 正式设计：[design.md](design.md)
 - 总计划：[plan.md](plan.md)
-- 当前阶段：[Phase 02](phases/02-unified-identity-lifecycle-ui.md)
+- 当前阶段：OPT-003 已完成；后续工作从最新 `main` 重新建立独立任务分支
 
 ## 必读顺序
 
@@ -45,5 +45,5 @@ Phase 01 未通过 fresh/upgrade、executor 权限、API/contract 前不得进�
 - [x] Phase 01 Identity lifecycle data/API contract 已交付。
 - [x] Phase 02 Unified Users lifecycle UI 与旧 Operations 兼容实现/验证已完成。
 - [x] 必需 Local R3 无未解释 FAIL/BLOCKED。
-- [ ] GitHub/main 与适用环境状态一致。
-- [ ] 本地/远端任务分支删除后才进入 OPT-004。
+- [x] GitHub/main 与适用 workendstaging 状态一致。
+- [x] 本地/远端任务分支已删除；后续事项必须从最新 main 建立新分支。

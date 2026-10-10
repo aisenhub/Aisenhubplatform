@@ -5,7 +5,7 @@
 - 优化目标：统一 Global Identity 与身份删除生命周期治理入口。
 - 实施范围：Identity lifecycle read/API/OpenAPI、Admin Identity detail、deletion-jobs 子视图、Operations 兼容 redirect、内部深链迁移。
 - GitHub 仓库：`aisenhub/Aisenhubplatform`。
-- 工作分支：`codex/opt-003-identity-lifecycle`。
+- 工作分支：`codex/opt-003-identity-lifecycle`（已在本地与远端删除）；最终交付分支为 `main`。
 - 起始 commit：`425173ea70efc19e5410a0a4f0e25e7e30204591`。
 - 初始工作区状态：clean；`main == origin/main` 后创建任务分支。
 - 运行环境：Local Windows + Docker Desktop + Local Supabase；Production 不在授权范围。
@@ -16,7 +16,7 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Identity lifecycle 数据/API 合同 | PASS | migration/API/OpenAPI、Local fresh/upgrade/DB/API/contracts、workendstaging migration/Edge/权限、Git 分支交付 | 无 | `5cd68a5` | PASS |
-| 02 | Unified Users lifecycle UI | READY | Identity detail/deletion-jobs/redirect/deep links、真实 start/retry、DB forward-fix、Local canonical R3、workendstaging DB、任务分支交付 | main fast-forward / 分支清理 | `dca2582` | PASS |
+| 02 | Unified Users lifecycle UI | PASS | Identity detail/deletion-jobs/redirect/deep links、真实 start/retry、DB forward-fix、Local canonical R3、workendstaging DB、GitHub/main 与分支清理 | 无 | `dca2582` | PASS |
 
 ## 阶段实施记录
 
@@ -36,7 +36,7 @@
 - 集成发现与修复：真实浏览器首次真正执行 Global Delete start 时返回 503。新增真实 `admin_executor` pgTAP 后定位为旧 `private.admin_deletion_job_start` 的 `RETURNS TABLE request_id` 与 `ON CONFLICT (request_id)` PL/pgSQL 歧义。新增 forward migration `20261010145245_fix_admin_deletion_job_start_conflict.sql`，仅把 upsert conflict target 绑定到 `deletion_jobs_request_id_key`，不改变状态机/API；新增 start→blocked→retry 行为断言防止回归。
 - 与计划的偏差：Phase 02 原本预计纯 UI/consumer 迁移，但真实浏览器覆盖暴露既有 DB runtime 缺陷，因此新增一笔最小 forward-fix。没有修改任何已应用 migration，也没有重写 worker/checkpoint/lease/fence。
 - 新增依赖：无。
-- 未完成或未验证内容：只剩 Git 阶段提交、main fast-forward/远端核对和任务分支清理。
+- 未完成或未验证内容：无。
 
 ## 验证记录
 
@@ -65,6 +65,8 @@
 | 2026-10-10 | 02 | worktree | `pnpm verify:task:0801 --reuse-local`（最终） | Local Supabase/Auth/DB/Storage/Chrome | 0 | PASS：20/20 executable gates；API 97/97；DB 1130；start/retry/redirect/deep links；5 viewports × 19 routes = 95 responsive/a11y 组合；docs/contracts 全 PASS |
 | 2026-10-10 | 02 | worktree | linked `supabase db push --dry-run` → `db push --linked --yes` | workendstaging | 0/0 | PASS：dry-run 仅列 `20261010145245`；远端成功应用同版本 forward-fix |
 | 2026-10-10 | 02 | worktree | read-only function/migration privilege probe | workendstaging | 0 | PASS：migration 存在、named conflict target 生效、domain_owner + security-definer + pinned search_path 保持、admin_executor 可执行且 account_executor 拒绝 |
+| 2026-10-10 | closeout | `94f8c7f` | `main` fast-forward + push + `git ls-remote` | GitHub | 0 | PASS：远端 `main` 与任务分支均指向 `94f8c7f343300fe670c20c69eb08f142ff047aed` 后完成合并 |
+| 2026-10-10 | closeout | `94f8c7f` | 删除远端与本地 `codex/opt-003-identity-lifecycle` | Git/GitHub | 0 | PASS：任务分支两端均已清理，产品历史仅保留在 main |
 
 ## GitHub 交付记录
 
@@ -72,12 +74,13 @@
 | --- | --- | --- | --- | --- | --- |
 | 01 | `5cd68a597ab9012c138cf9b2585ce5014bc819c3` | `codex/opt-003-identity-lifecycle` | PASS | PASS：`git ls-remote` 与本地 SHA 一致 | GitHub task branch |
 | 02 | `dca258284917c03095f65b31c49bd0e5cb2015b2` | `codex/opt-003-identity-lifecycle` | PASS | PASS：`git ls-remote` 与本地 SHA 一致 | GitHub task branch |
+| final | `94f8c7f343300fe670c20c69eb08f142ff047aed` | `main` | PASS | PASS：fast-forward 后远端 main 与本地一致；任务分支随后删除 | GitHub main |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：完成 OPT-003 Git/main/branch closeout 后，从最新 main 开始 OPT-004。
-- 必须先解决的问题：无产品或验证阻塞；只剩 Git closeout。
+- 下一阶段从哪里开始：从 OPT-003 最终 closeout 后的最新 main 建立新的独立任务分支。
+- 必须先解决的问题：无。
 - 可直接复用的接口和能力：`getAdminAuthUserById`、`admin_identity_accounts`、`admin_deletion_job_start/list/read/retry`、Admin recent-MFA/ConfirmActionDialog。
 - 不应重复实施的工作：Global Delete worker、checkpoint、lease/fence、Auth 删除与匿名化算法。
-- 当前未提交修改及归属：Phase 02 UI/routes/tests、Global Delete forward-fix/pgTAP、架构与验证文档，全部归属 OPT-003。
+- 当前未提交修改及归属：仅本次最终 closeout 文档，归属 OPT-003；产品代码已在 main。
 - 需要用户决定的事项：无。

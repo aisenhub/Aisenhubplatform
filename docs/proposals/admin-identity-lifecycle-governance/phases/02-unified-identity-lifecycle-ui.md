@@ -1,6 +1,6 @@
 # 阶段 02：统一用户生命周期 UI 与 Operations 退场
 
-状态：实施、本地 R3、workendstaging 与任务分支交付完成；main/分支清理待完成
+状态：完成
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -36,7 +36,7 @@
 - [x] LINK-001：Overview/Audit/platform files 深链全部迁移。
 - [x] TEST-001：unit/browser 覆盖 list→detail、approve、retry、redirect、404/错误/加载/窄屏/键盘焦点。
 - [x] DBFIX-001：真实浏览器 start 暴露旧 `admin_deletion_job_start` 的 PL/pgSQL `request_id` 冲突歧义；新增 forward migration 修复并补真实 start/retry `admin_executor` 行为测试。
-- [ ] REL-001：canonical R3、最终 diff、GitHub/main 与分支清理闭环。
+- [x] REL-001：canonical R3、最终 diff、GitHub/main 与分支清理闭环。
 
 ## 验证方案
 
@@ -60,5 +60,5 @@
 
 - [x] 更新 Admin DESIGN 与当前 identity-security/architecture 描述。
 - [x] verification record 写入真实浏览器和 R3 结果。
-- [ ] 任务分支 push、main 合并与远端核对完成。
-- [ ] 清理本地/远端任务分支后才进入 OPT-004。
+- [x] 任务分支 push、main fast-forward 与远端核对完成。
+- [x] 本地/远端任务分支已清理；OPT-003 不再保留并行工作分支。
