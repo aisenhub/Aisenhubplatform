@@ -1,6 +1,6 @@
 # 阶段 02：全局审计中心 UI 与 Overview 去审计化
 
-状态：实施与验证完成；Git 闭环待完成
+状态：完成
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -36,19 +36,19 @@
 - [x] OVERVIEW-002：同步 Overview/nav/Admin DESIGN 文案。
 - [x] TEST-001：更新 Overview model tests，新增 Audit model tests。
 - [x] TEST-002：浏览器覆盖组合筛选、清除、分页、Inspector、空/错/加载、桌面/窄屏，以及 Overview 不再调用 audit fixture。
-- [ ] REL-001：全量适用验证、最终 diff 审查、Git push/main、Supabase/main 一致性和分支清理。
+- [x] REL-001：全量适用验证、最终 diff 审查、Git push/main、Supabase/main 一致性和分支清理。
 
 ## 验证矩阵
 
 | 检查 | 环境 | 预期 | 实际 |
 | --- | --- | --- | --- |
 | Admin unit/typecheck/build | Local | PASS | PASS：unit 48/48、typecheck、production build |
-| lint/format/diff | Local | PASS | lint/format PASS；final diff 收口中 |
+| lint/format/diff | Local | PASS | PASS：lint/format/diff review/workspace hygiene 均通过 |
 | docs/contracts | Local | PASS | PASS：docs、contracts、breaking check |
 | Admin Browser E2E | Local + synthetic/Local API | 新筛选和 Overview 去审计化均 PASS | PASS：60 个 route/viewport 组合 + Audit v2/Overview 专项断言 |
 | R3 Local Supabase/API | Local | Phase 01 + Admin consumer 最终版本 PASS | PASS：fresh/upgrade、DB 1113、API 97、canonical R3 20/20，真实 Admin T12 全通过 |
-| Remote compatibility | workendstaging | 远端 v2/API 与最终 main 一致 | PASS：migration/function/权限/filter/index 均核对；UI 尚未合并 main |
-| GitHub | Remote | final main SHA 可核对，branch 清理 | 未运行 |
+| Remote compatibility | workendstaging | 远端 v2/API 与最终 main 一致 | PASS：migration/function/权限/filter/index 均核对；最终 main 保持同一 v2/API 合同 |
+| GitHub | Remote | final main SHA 可核对，branch 清理 | PASS：实现/验证提交进入 `main@109bbaf326c8f8e4011121764deb5ce1502f96ed`；任务分支本地/远端均删除 |
 
 ## 退出与恢复
 

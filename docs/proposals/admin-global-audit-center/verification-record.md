@@ -23,7 +23,7 @@
 | 阶段 | 状态 | 已完成 | 剩余 |
 | --- | --- | --- | --- |
 | 01 Audit v2 数据/API/合同 | PASS | migration、v2 SQL/API/OpenAPI、Deno tests、Local fresh/upgrade/SQL、workendstaging migration/Edge/权限/筛选验证 | 无 |
-| 02 Admin Audit UI + Overview | READY | Audit 业务语义表格/URL 筛选/Inspector、Overview 去审计、unit/typecheck/build/browser/docs/lint/format、canonical R3 | final diff、补充提交/push、merge main、branch clean-up |
+| 02 Admin Audit UI + Overview | PASS | Audit 业务语义表格/URL 筛选/Inspector、Overview 去审计、unit/typecheck/build/browser/docs/lint/format、canonical R3、Git/main/branch closeout | 无 |
 
 ## 验证记录
 
@@ -62,8 +62,8 @@
 
 ## GitHub 记录
 
-实施提交 `77639850fad97ebb698661b3cf9671cf52f070bb` 已 push 到 `origin/codex/opt-002-global-audit`。本次 Local R3 测试 harness 修正与验证记录尚待补充提交；main merge 与分支清理在最终 diff 审查后执行。
+实施提交 `77639850fad97ebb698661b3cf9671cf52f070bb` 与 Local R3 收口提交 `109bbaf326c8f8e4011121764deb5ce1502f96ed` 均已 push。`origin/main` 在合并前仍为起始基线 `70beed4db0d7a39c641cb97683272f1730ee6bd5`，最终采用 fast-forward 合并至 `109bbaf326c8f8e4011121764deb5ce1502f96ed` 并成功 push；随后核对远端 `main` 与任务分支同指向 `109bbaf` 后，已删除本地与远端 `codex/opt-002-global-audit`。
 
 ## 当前环境缺口
 
-无环境阻塞。Docker Engine 与 Local Supabase 已恢复，fresh/upgrade、SQL、API 和真实浏览器 R3 均已补齐；Production 仍不在本任务授权范围，且本项不需要 Production Supabase 变更。当前仅剩 Git 闭环，完成后才能顺序进入 OPT-003。
+无环境阻塞。Docker Engine 与 Local Supabase 已恢复，fresh/upgrade、SQL、API 和真实浏览器 R3 均已补齐；Production 仍不在本任务授权范围，且本项不需要 Production Supabase 变更。OPT-002 已完整闭环，可以从最新 `main` 顺序进入 OPT-003。
