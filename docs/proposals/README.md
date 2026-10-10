@@ -34,6 +34,8 @@ proposals/
 
 ## 优化索引
 
+- [项目优化事项总清单](optimization-intake/README.md)：在同一份文档中持续追加尚未提升为正式 Proposal 的多方面优化修改点，收集完成后再统一决定合并、拆分和正式规划。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
