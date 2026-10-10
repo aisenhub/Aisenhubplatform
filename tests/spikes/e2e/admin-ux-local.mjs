@@ -223,6 +223,69 @@ try {
     'PASS: responsive and semantic controls across 60 route/viewport combinations',
   );
 
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await goto('/admin/platforms', 'platform-directory-table');
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  const switcherDropdown = page.locator(
+    '[data-test="platform-switcher-dropdown"]',
+  );
+  await switcherDropdown.waitFor();
+  assert.equal(
+    await switcherDropdown.getByText('查看完整平台目录 →').count(),
+    0,
+    'PlatformSwitcher no longer owns platform-directory navigation',
+  );
+  assert.equal(
+    await switcherDropdown.getByText('所有平台（全局透镜）').count(),
+    1,
+    'Global scope remains available in PlatformSwitcher',
+  );
+  const switcherSearch = page.locator('[data-test="platform-switcher-search"]');
+  await switcherSearch.fill('停用');
+  assert.equal(
+    await switcherDropdown.getByRole('option').count(),
+    1,
+    'PlatformSwitcher filters by platform name',
+  );
+  assert.match(
+    await switcherDropdown.getByRole('option').innerText(),
+    /示例停用平台/u,
+  );
+  await switcherSearch.fill('example-platform');
+  assert.equal(
+    await switcherDropdown.getByRole('option').count(),
+    1,
+    'PlatformSwitcher filters by platform code',
+  );
+  assert.match(
+    await switcherDropdown.getByRole('option').innerText(),
+    /示例平台 · 产品工作区/u,
+  );
+  await switcherSearch.fill('');
+  assert.equal(
+    await switcherDropdown.getByRole('option').count(),
+    2,
+    'Clearing PlatformSwitcher search restores loaded options',
+  );
+  await page.keyboard.press('Escape');
+  await switcherDropdown.waitFor({ state: 'hidden' });
+
+  await page.setViewportSize({ width: 390, height: 960 });
+  await goto('/admin/platforms', 'platform-directory-table');
+  await page.locator('[data-test="admin-sidebar-toggle"]').click();
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await switcherDropdown.waitFor();
+  const switcherBox = await switcherDropdown.boundingBox();
+  assert.ok(switcherBox, 'PlatformSwitcher dropdown has a measurable box');
+  assert.ok(
+    switcherBox.x >= 0 && switcherBox.x + switcherBox.width <= 390,
+    'PlatformSwitcher dropdown stays inside the narrow viewport',
+  );
+  await page.keyboard.press('Escape');
+  console.log(
+    'PASS: PlatformSwitcher scope-only menu, search filtering and narrow viewport bounds',
+  );
+
   await page.setViewportSize({ width: 390, height: 960 });
   for (const [path, test, selector] of [
     [

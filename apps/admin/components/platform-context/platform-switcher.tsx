@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Boxes,
   Check,
   ChevronsUpDown,
   Globe,
@@ -211,7 +210,7 @@ export function PlatformSwitcher({
       {/* 下拉浮层卡片（自主受控，零外部黑盒崩溃风险） */}
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1.5 w-72 max-h-96 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
+          className="absolute left-0 top-full z-50 mt-1.5 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg"
           role="dialog"
           aria-label="切换平台工作区"
           data-test="platform-switcher-dropdown"
@@ -239,13 +238,14 @@ export function PlatformSwitcher({
 
           <div className="my-1 h-px bg-slate-100" />
 
-          <div className="px-1.5 py-1">
+          <div className="px-1 py-1">
             <label className="relative block">
-              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 aria-label="搜索平台"
                 autoComplete="off"
-                className="h-8 w-full rounded-md border border-slate-200 bg-white pl-7 pr-2 text-xs outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-600/20"
+                className="h-9 w-full rounded-md border border-slate-200 bg-white pl-8 pr-3 text-xs shadow-xs outline-none transition-colors focus:border-teal-500 focus:ring-2 focus:ring-teal-600/20"
+                data-test="platform-switcher-search"
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索名称或代码"
                 value={query}
@@ -297,21 +297,6 @@ export function PlatformSwitcher({
               );
             })}
           </div>
-
-          <div className="my-1 h-px bg-slate-100" />
-
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              setQuery('');
-              router.push('/admin/platforms');
-            }}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-          >
-            <Boxes className="h-3.5 w-3.5 text-slate-400" />
-            <span>查看完整平台目录 →</span>
-          </button>
         </div>
       )}
 
