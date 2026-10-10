@@ -1,6 +1,6 @@
 # OPT-001 平台切换器下拉浮层优化
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md)
 

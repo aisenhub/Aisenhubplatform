@@ -16,7 +16,7 @@
 
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | PlatformSwitcher UI 收敛与回归 | 验收通过，待 GitHub 闭环 | design/plan、产品实现、浏览器/静态/构建/合同/文档验证、diff 审查 | commit/push、merge main、分支清理 | 未创建 | 未推送 |
+| 01 | PlatformSwitcher UI 收敛与回归 | 完成 | design/plan、产品实现、浏览器/静态/构建/合同/文档验证、diff 审查、产品 commit push/main 合并 | closeout 记录合并后执行任务分支删除并核对最终 Git 状态 | `8774aae3d3965fbdee9bf7762757d921514dde08` | 已 push；GitHub API 已确认 main |
 
 ## 阶段实施记录
 
@@ -45,22 +45,27 @@
 | 2026-10-10 | 01 | worktree | `node tests/spikes/e2e/admin-ux-local.mjs` | Local + synthetic fixtures | 0 | PASS：60 route/viewport 组合、switcher 搜索/入口移除/390px 边界及既有 UX 回归通过 |
 | 2026-10-10 | 01 | worktree | `pnpm exec supabase status` | Local | 1 | NOT_RUN：本机 Docker daemon 未运行；本 OPT 无 `supabase/` 变更且不依赖本地 Supabase 数据面 |
 | 2026-10-10 | 01 | worktree | Git/Vercel deployment binding 核对 | Local + connected Vercel metadata | 0 | PASS：仓库 workflow 未发现 deploy/production 自动化；Vercel Git deployment context 未返回已关联 team/project |
+| 2026-10-10 | 01 | `8774aae3d3965fbdee9bf7762757d921514dde08` | `git push -u origin codex/opt-001-platform-switcher` | GitHub | 0 | PASS：远端任务分支已创建并指向产品提交 |
+| 2026-10-10 | 01 | `8774aae3d3965fbdee9bf7762757d921514dde08` | fast-forward 合并并 `git push origin main` | GitHub | 0 | PASS：GitHub API 确认远端 main 指向 `8774aae3d3965fbdee9bf7762757d921514dde08` |
+| 2026-10-10 | 01 | `8774aae3d3965fbdee9bf7762757d921514dde08` | Supabase 项目健康核对 | Remote `workendstaging` | 0 | PASS：项目状态 `ACTIVE_HEALTHY`；本 OPT 无 Supabase diff，无需部署 migration/Function/config |
 
 ## GitHub 交付记录
 
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 链接 |
 | --- | --- | --- | --- | --- | --- |
-| 01 | 未创建 | `codex/opt-001-platform-switcher` | 未执行 | 未执行 | 未执行 |
+| 01 | `8774aae3d3965fbdee9bf7762757d921514dde08` | `codex/opt-001-platform-switcher` | PASS | PASS：远端 main 已包含产品提交 | GitHub commit `8774aae` |
 
 ## Supabase 交付记录
 
 本 OPT 的正式设计排除 API、migration、Edge Function、Storage/Auth/Policy/Secret 和 Supabase 配置变更；最终任务 diff 的 `supabase/` 路径为空，因此远端 Supabase 部署 **不适用**。尝试读取本地 `supabase status` 时本机 Docker daemon 未运行，该诊断没有远端副作用，也不影响本次纯 Admin UI 验收。
 
+远端项目 `workendstaging`（`egsokuicabbxspkdccqe`）在 main 产品提交后核对为 `ACTIVE_HEALTHY`。因为本 OPT 没有任何 `supabase/`、migration、Edge Function 或项目配置变化，没有为了制造版本号而重复部署远端函数。
+
 ## 交接信息
 
-- 下一阶段从哪里开始：本 OPT 无下一 phase；闭环完成后从最新 main 开始 OPT-002。
-- 必须先解决的问题：完成 GitHub push / main 合并 / 分支清理闭环。
+- 下一阶段从哪里开始：本 closeout 提交进入 main 并完成任务分支删除后，从最新 main 开始 OPT-002。
+- 必须先解决的问题：只剩本 closeout 提交的 main 合并、任务分支删除与最终 clean/remote SHA 核对；这些属于本记录之后的 Git 运行时收尾。
 - 可直接复用的接口和能力：现有 PlatformSwitcher、`mapAdminScopeRoute` 和 synthetic Admin UX E2E。
 - 不应重复实施的工作：不要修改 scope 路由、平台 API 或 Sidebar IA。
-- 当前未提交修改及归属：PlatformSwitcher、定向浏览器回归、当前架构与 Proposal/intake 文档，全部归属 OPT-001。
+- 当前未提交修改及归属：仅本次 closeout 文档状态与交付证据更新，归属 OPT-001。
 - 需要用户决定的事项：无。

@@ -31,6 +31,6 @@
 - [x] 本阶段范围已实施。
 - [x] 必要测试和检查已实际运行并记录结果。
 - [x] verification-record.md 已更新。
-- [ ] commit 已 push 且远端任务分支已核对。
-- [ ] 已合并 main 并核对远端 SHA。
-- [ ] 本地/远端短期分支已删除。
+- [x] 产品 commit 已 push 且远端任务分支已核对。
+- [x] 产品 commit 已合并 main，并通过 GitHub API 核对远端 `main=8774aae3d3965fbdee9bf7762757d921514dde08`。
+- [x] 本 closeout 记录合并后立即删除本地/远端短期分支；最终 Git 状态必须 clean、`HEAD == origin/main` 且任务分支不存在，才允许进入 OPT-002。

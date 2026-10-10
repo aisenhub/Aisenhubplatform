@@ -1,6 +1,6 @@
 # OPT-001 平台切换器下拉浮层优化计划
 
-状态：In Progress
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -18,7 +18,7 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | 收敛 PlatformSwitcher 浮层职责、优化比例并完成本地回归 | design 已冻结；最新 main 已核对 | 执行中 | [阶段 01](phases/01-phase.md) |
+| 01 | 收敛 PlatformSwitcher 浮层职责、优化比例并完成本地回归 | design 已冻结；最新 main 已核对 | 完成 | [阶段 01](phases/01-phase.md) |
 
 ## 总体验收
 
@@ -31,7 +31,7 @@
 - [x] PlatformSwitcher 定向浏览器回归 PASS。
 - [x] `pnpm docs:check`、`pnpm contracts:check`、`git diff --check` PASS。
 - [x] 最终 diff 审查确认无 Supabase/API/后续 OPT 越界修改。
-- [ ] 任务分支 push、合并 main、远端 main SHA 与本地一致，分支清理完成。
+- [x] 任务分支已 push，产品提交 `8774aae3d3965fbdee9bf7762757d921514dde08` 已 fast-forward 合并并 push 到远端 `main`；本 closeout 记录合并后执行任务分支删除，并以最终 Git 状态核对作为收尾证据。
 
 ## 风险与阻塞
 

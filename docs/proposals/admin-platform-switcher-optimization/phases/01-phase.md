@@ -1,6 +1,6 @@
 # 阶段 01：PlatformSwitcher UI 收敛与回归
 
-状态：执行中
+状态：完成
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -28,7 +28,7 @@
 - [x] UI-002：调整浮层宽度、viewport 限制、内边距、搜索输入高度/图标定位。
 - [x] TEST-001：浏览器回归断言 Global 选项存在、目录入口不存在、搜索名称/code 可过滤、清空后恢复列表、窄屏浮层不溢出。
 - [x] DOC-001：完成 Proposal、验证记录和 intake 状态同步。
-- [ ] REL-001：完成验证、diff 审查、push、merge main、远端 SHA 核对和分支清理。
+- [x] REL-001：产品提交已 push 并合并到远端 main；本 closeout 记录合并后立即完成分支清理并核对最终 Git 状态。
 
 ## 验证方案
 
@@ -51,7 +51,7 @@
 
 ## 文档与交付
 
-- [x] 更新本阶段和总计划状态（GitHub 闭环完成后再置为 Completed）。
+- [x] 更新本阶段和总计划状态为 Completed。
 - [x] 更新 verification-record.md 的实际证据。
-- [ ] OPT-001 完成后把 intake 状态更新为已完成并链接正式 Proposal。
-- [ ] 记录 commit、push、main SHA、分支清理和 Supabase 不适用结论。
+- [x] OPT-001 intake 状态更新为已完成并链接正式 Proposal。
+- [x] 记录产品 commit、push、main SHA 与 Supabase 不适用结论；分支删除在本 closeout 记录合并后执行并以最终 Git 状态核对。
