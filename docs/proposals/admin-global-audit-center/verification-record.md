@@ -8,7 +8,7 @@
 - 初始工作区：clean；`HEAD == origin/main`。
 - 风险：R3（SQL security-definer + API/OpenAPI Contract + Edge + Admin UI）。
 - Supabase：远端已授权开发/预发 `workendstaging`；Production 不在当前授权范围。
-- Local Supabase 基线缺口：上一项结束时本机 Docker daemon 未运行，本项须重新探测/恢复；未恢复前相关验收不得写 PASS。
+- Local Supabase 基线缺口：上一项结束时 Docker daemon 未运行；2026-10-10 用户恢复 Docker 后已重新验证 Engine 与 Local Supabase，并补齐所有缺失 R3 证据。
 
 ## 事实核验
 
@@ -22,8 +22,8 @@
 
 | 阶段 | 状态 | 已完成 | 剩余 |
 | --- | --- | --- | --- |
-| 01 Audit v2 数据/API/合同 | PARTIAL | migration、v2 SQL/API/OpenAPI、Deno tests、workendstaging migration/Edge/权限/筛选验证 | Local Supabase SQL fresh/upgrade/API 验收 BLOCKED |
-| 02 Admin Audit UI + Overview | PARTIAL | Audit 业务语义表格/URL 筛选/Inspector、Overview 去审计、unit/typecheck/build/browser/docs/lint/format | R3 Local Supabase 后 final diff、commit/push/merge/main/branch clean-up |
+| 01 Audit v2 数据/API/合同 | PASS | migration、v2 SQL/API/OpenAPI、Deno tests、Local fresh/upgrade/SQL、workendstaging migration/Edge/权限/筛选验证 | 无 |
+| 02 Admin Audit UI + Overview | READY | Audit 业务语义表格/URL 筛选/Inspector、Overview 去审计、unit/typecheck/build/browser/docs/lint/format、canonical R3 | final diff、补充提交/push、merge main、branch clean-up |
 
 ## 验证记录
 
@@ -42,6 +42,14 @@
 | 2026-10-10 | 02 | `pnpm lint` / `pnpm format:check` | Local | PASS |
 | 2026-10-10 | 02 | `pnpm docs:check` | Local | PASS：137 docs/links/navigation |
 | 2026-10-10 | 02 | `node tests/spikes/e2e/admin-ux-local.mjs` | Local + synthetic HTTP | PASS：Overview 零 audit 请求；60 route/viewport 组合；Audit table/filter/cursor/Inspector/empty state；无 browser runtime exception |
+| 2026-10-10 | 01 | `docker info --format "{{.ServerVersion}}"` + `pnpm exec supabase status` | Local | PASS：Docker Server 29.7.2；Local Supabase/Auth/DB 已运行 |
+| 2026-10-10 | 01 | `pnpm run db:reset` | Local Supabase | PASS：fresh reset 从首条 migration 应用至 `20261010092449_admin_audit_list_v2` |
+| 2026-10-10 | 01 | 完整 DB suite（首次） | Local Supabase | FAIL：`t20_admin_audit_list_v2.sql` 在切换到 `admin_executor` 后直接调用 pgTAP `is()`，测试扩展不可见；其余 59 个 SQL 文件通过，确认是 test harness 角色边界而非 v2 查询失败 |
+| 2026-10-10 | 01 | `t20_admin_audit_list_v2.sql` harness 修正 + 完整 DB suite | Local Supabase | PASS：受限角色执行 v2 查询写入 temp snapshot，切回 postgres 后断言；60 files / 1113 tests |
+| 2026-10-10 | 01 | reset `--version 20261010004924` → `supabase migration up --local` | Local Supabase | PASS：单独前向应用 `20261010092449_admin_audit_list_v2.sql`，验证 upgrade 路径 |
+| 2026-10-10 | 01 | upgrade 后完整 DB suite | Local Supabase | PASS：60 files / 1113 tests |
+| 2026-10-10 | 01/02 | `pnpm test:api` | Local | PASS：97 passed / 0 failed；Account API 45/45 |
+| 2026-10-10 | 01/02 | `pnpm verify:task:0801 --reuse-local` | Local Supabase/Auth/DB/Storage/Chrome | PASS：20 executable gates；API 97、DB 60 files/1113 tests、Consumer Harness、真实 Admin MFA/T12、90 route-viewports、docs/contracts/build/unit/typecheck/lint/format 均通过 |
 
 ## Remote Supabase 记录
 
@@ -54,8 +62,8 @@
 
 ## GitHub 记录
 
-尚未产生实施 commit/push/main merge。
+实施提交 `77639850fad97ebb698661b3cf9671cf52f070bb` 已 push 到 `origin/codex/opt-002-global-audit`。本次 Local R3 测试 harness 修正与验证记录尚待补充提交；main merge 与分支清理在最终 diff 审查后执行。
 
 ## 当前环境缺口
 
-Local Docker/Supabase 仍是唯一合并阻塞。已定位既有 Docker Desktop 到 `D:\APP\Base\DockerDesktop\Docker Desktop.exe` 并启动 GUI，但 `com.docker.service` 处于 stopped，当前 Runner 对该 Windows 服务没有启动权限；`docker info` 因 `dockerDesktopLinuxEngine` named pipe 不存在而失败。远端 staging 验证不能替代开发流程强制的 Local Supabase R3 证据，因此在管理员权限下启动 Docker Engine 并完成 SQL fresh/upgrade + Local API 断言之前，本项不得 merge main，也不得顺序进入 OPT-003。
+无环境阻塞。Docker Engine 与 Local Supabase 已恢复，fresh/upgrade、SQL、API 和真实浏览器 R3 均已补齐；Production 仍不在本任务授权范围，且本项不需要 Production Supabase 变更。当前仅剩 Git 闭环，完成后才能顺序进入 OPT-003。

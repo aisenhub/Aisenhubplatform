@@ -120,88 +120,60 @@ values
   );
 
 set local role admin_executor;
-
-select is(
+create temporary table audit_v2_snapshot on commit drop as
+select
   (select count(*)::integer from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, '00000000-0000-4000-8000-000000002020', null, null, null, null
-  )),
-  2,
-  'platform filter runs before paging and returns only the selected platform'
-);
-select is(
+  )) as platform_count,
   (select count(*)::integer from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, 'audit-user@example.invalid', null, null, null
-  )),
-  1,
-  'actor filter matches Auth email'
-);
-select is(
+  )) as actor_email_count,
   (select count(*)::integer from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, 'Audit Reporter', null, null, null
-  )),
-  1,
-  'actor filter matches a trusted user profile name'
-);
-select is(
+  )) as actor_name_count,
   (select count(*)::integer from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, null, 'account.suspended', 'platform_account', 'failed'
-  )),
-  1,
-  'action target and outcome filters compose'
-);
-select is(
+  )) as composed_count,
   (select count(*)::integer from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, null, null, null, 'unrecorded'
-  )),
-  1,
-  'unrecorded outcome matches only missing outcome facts'
-);
-select is(
+  )) as unrecorded_count,
   (select platform_name from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, null, 'account.activated', null, null
-  )),
-  'Audit Alpha',
-  'audit v2 exposes the authoritative platform name'
-);
-select is(
+  )) as platform_name,
   (select actor_display_name from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, null, 'account.activated', null, null
-  )),
-  'Audit Reporter',
-  'user actor receives its own trusted platform profile name'
-);
-select is(
+  )) as actor_display_name,
   (select actor_email from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, null, 'account.suspended', null, null
-  )),
-  'audit-admin@example.invalid',
-  'admin actor email is resolved from Auth identity'
-);
-select ok(
+  )) as actor_email,
   (select actor_display_name is null from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, null, null, null, 'account.suspended', null, null
-  )),
-  'target account profile is never mislabeled as the admin actor'
-);
-select is(
+  )) as admin_display_name_is_null,
   (select count(*)::integer from private.admin_audit_list_v2(
     row('00000000-0000-4000-8000-000000002010', '00000000-0000-4000-8000-000000002012', gen_random_uuid())::private.admin_context,
     null, 20, 'audit-beta', null, null, null, null, null
-  )),
-  1,
-  'generic query matches platform code/name server-side'
-);
-
+  )) as generic_query_count;
 set local role postgres;
+
+select is((select platform_count from audit_v2_snapshot), 2, 'platform filter runs before paging and returns only the selected platform');
+select is((select actor_email_count from audit_v2_snapshot), 1, 'actor filter matches Auth email');
+select is((select actor_name_count from audit_v2_snapshot), 1, 'actor filter matches a trusted user profile name');
+select is((select composed_count from audit_v2_snapshot), 1, 'action target and outcome filters compose');
+select is((select unrecorded_count from audit_v2_snapshot), 1, 'unrecorded outcome matches only missing outcome facts');
+select is((select platform_name from audit_v2_snapshot), 'Audit Alpha', 'audit v2 exposes the authoritative platform name');
+select is((select actor_display_name from audit_v2_snapshot), 'Audit Reporter', 'user actor receives its own trusted platform profile name');
+select is((select actor_email from audit_v2_snapshot), 'audit-admin@example.invalid', 'admin actor email is resolved from Auth identity');
+select ok((select admin_display_name_is_null from audit_v2_snapshot), 'target account profile is never mislabeled as the admin actor');
+select is((select generic_query_count from audit_v2_snapshot), 1, 'generic query matches platform code/name server-side');
 
 select throws_ok(
   $$select * from private.admin_audit_list_v2(

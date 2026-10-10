@@ -1,6 +1,6 @@
 # OPT-002 全局审计中心与概览去审计化计划
 
-状态：In Progress
+状态：Implementation & R3 Validation Complete / Git Closeout Pending
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -18,8 +18,8 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | 建立权威 Audit v2 只读投影、结构化筛选 API/Contract，并同步已授权远端 Supabase | design 冻结、最新 main 已核对 | 实施完成；Local Supabase 验收 BLOCKED | [阶段 01](phases/01-audit-contract-data.md) |
-| 02 | 重构全局 Audit UI，移除 Overview 审计依赖，完成整体回归与 Git 闭环 | Phase 01 源码/合同/远端兼容已验证 | 实施完成；最终 R3/Git 闭环 BLOCKED | [阶段 02](phases/02-admin-audit-ui-overview.md) |
+| 01 | 建立权威 Audit v2 只读投影、结构化筛选 API/Contract，并同步已授权远端 Supabase | design 冻结、最新 main 已核对 | 完成 | [阶段 01](phases/01-audit-contract-data.md) |
+| 02 | 重构全局 Audit UI，移除 Overview 审计依赖，完成整体回归与 Git 闭环 | Phase 01 源码/合同/远端兼容已验证 | 实施与验证完成；Git 闭环待完成 | [阶段 02](phases/02-admin-audit-ui-overview.md) |
 
 ## 总体验收
 
@@ -29,14 +29,14 @@
 - [x] `/admin/audit` 一级展示业务语义，技术字段只在详情中。
 - [x] Overview 不再发起 audit 请求，不再显示最近活动/最近变更平台。
 - [x] outcome 空值显示“未记录”，没有假成功。
-- [ ] SQL/API/contract/Admin unit/typecheck/build/lint/format/docs/browser 回归通过；若 Local Docker 仍不可用，按开发规则记录 BLOCKED 并不得在缺失必需 Local Supabase 验收时合并 main。
+- [x] SQL/API/contract/Admin unit/typecheck/build/lint/format/docs/browser 回归通过；Local Supabase fresh/upgrade 与真实 Admin HTTP/浏览器 R3 门槛均已验证。
 - [ ] 最终 diff、GitHub/main、Supabase 状态核对完成，任务分支删除。
 
 ## 环境与发布边界
 
 用户已明确要求开发/预发远端 Supabase 随 phase 同步，因此 Phase 01 在本地可完成的验证后，把兼容 migration 与 `account-api` 部署到已连接的 `workendstaging` 并做只读/合成验证。
 
-这不把远端 staging 当作开发流程要求的 Local Supabase 替代品。本次已重新启动现有 Docker Desktop GUI，但 Runner 无权限启动 `com.docker.service`，Docker Engine pipe 仍不可用，因此 SQL fresh/upgrade、Local Supabase/API 等必需 R3 证据当前明确为 `BLOCKED`。在该阻塞解除前不得自动合并 main，也不得进入 OPT-003。
+这不把远端 staging 当作开发流程要求的 Local Supabase 替代品。2026-10-10 Docker Engine 恢复后，已完成 Local Supabase fresh reset、从 `20261010004924` 到 `20261010092449` 的 upgrade、60 个 SQL 文件 / 1113 个断言，以及 canonical `verify:task:0801 --reuse-local` 20 个 executable gates。当前已无 Local R3 环境阻塞，剩余工作仅为最终 Git diff / main / branch 清理闭环。
 
 当前没有证据表明 GitHub `main` push 绑定自动 Production 前端部署；Production Supabase 仍不在当前授权范围。
 

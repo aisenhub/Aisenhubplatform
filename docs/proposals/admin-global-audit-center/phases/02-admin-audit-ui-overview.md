@@ -1,6 +1,6 @@
 # 阶段 02：全局审计中心 UI 与 Overview 去审计化
 
-状态：实施完成；最终 R3/Git 闭环 BLOCKED
+状态：实施与验证完成；Git 闭环待完成
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -46,7 +46,7 @@
 | lint/format/diff | Local | PASS | lint/format PASS；final diff 收口中 |
 | docs/contracts | Local | PASS | PASS：docs、contracts、breaking check |
 | Admin Browser E2E | Local + synthetic/Local API | 新筛选和 Overview 去审计化均 PASS | PASS：60 个 route/viewport 组合 + Audit v2/Overview 专项断言 |
-| R3 Local Supabase/API | Local | Phase 01 + Admin consumer 最终版本 PASS | BLOCKED：Docker Engine 服务权限/pipe 不可用 |
+| R3 Local Supabase/API | Local | Phase 01 + Admin consumer 最终版本 PASS | PASS：fresh/upgrade、DB 1113、API 97、canonical R3 20/20，真实 Admin T12 全通过 |
 | Remote compatibility | workendstaging | 远端 v2/API 与最终 main 一致 | PASS：migration/function/权限/filter/index 均核对；UI 尚未合并 main |
 | GitHub | Remote | final main SHA 可核对，branch 清理 | 未运行 |
 

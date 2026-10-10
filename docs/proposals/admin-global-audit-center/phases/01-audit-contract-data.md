@@ -1,6 +1,6 @@
 # 阶段 01：Audit v2 数据投影、API Contract 与远端同步
 
-状态：实施完成；Local Supabase 验收 BLOCKED
+状态：完成
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -34,18 +34,18 @@
 - [x] API-001：Admin GET `/audit` 解析新参数并调用 v2；非法 platform UUID 等返回 400。
 - [x] API-002：DTO 暴露安全 scope/actor 摘要；不返回 metadata/IP/user-agent。
 - [x] CONTRACT-001：OpenAPI 同步新参数和 400 响应。
-- [ ] TEST-001：Deno fake DB 已通过；SQL v1/v2 测试文件已完成，但 Local Supabase 因 Docker Engine 权限阻塞，fresh/upgrade/权限本地验收为 BLOCKED。
+- [x] TEST-001：Deno fake DB、Local Supabase fresh/upgrade、v1/v2 权限/排序/过滤测试均通过；受限 `admin_executor` 查询先写入临时快照，再切回测试角色执行 pgTAP 断言，避免测试扩展可见性污染真实权限验证。
 - [x] REMOTE-001：核对后确认 migration `20261010092449` 与 `account-api` v55 已在 `workendstaging` 生效；migration history、函数权限、结构化筛选、`unrecorded` 语义和索引已远端验证。
 
 ## 验证矩阵
 
 | 检查 | 环境 | 预期 | 实际 |
 | --- | --- | --- | --- |
-| `pnpm toolchain:check` | Local | PASS | 收口时执行并记录于 verification-record |
+| `pnpm toolchain:check` | Local | PASS | PASS |
 | `pnpm contracts:check` / `contracts:breaking` | Local | PASS | PASS |
 | Account API Deno tests | Local | PASS | PASS：45/45 |
-| SQL audit tests + migrations fresh/upgrade | Local Supabase | PASS | BLOCKED：Docker Desktop GUI 已启动，但 Runner 无权限启动 `com.docker.service`，Engine pipe 不存在 |
-| `pnpm test:api` 或适用定向 Admin Audit HTTP | Local Supabase/Edge | 新旧 query 均兼容、结构化筛选生效 | BLOCKED：同上 |
+| SQL audit tests + migrations fresh/upgrade | Local Supabase | PASS | PASS：fresh reset；从 `20261010004924` 单独 upgrade v2；两次完整 DB suite 均为 60 files / 1113 tests |
+| `pnpm test:api` 或适用定向 Admin Audit HTTP | Local Supabase/Edge | 新旧 query 均兼容、结构化筛选生效 | PASS：API 97/97；canonical R3 启动当前 Account API + Admin 并完成真实 T12 浏览器 HTTP 链路 |
 | Remote migration apply | workendstaging | 只新增兼容 v2/索引 | PASS：migration `20261010092449` 已记录，三个 Audit v2 索引存在 |
 | Remote Edge deploy | workendstaging | account-api active，现有旧 audit query 仍工作 | PASS：`account-api` ACTIVE v55，代码已包含 v2 route/DTO |
 | Remote read-only/synthetic assertions | workendstaging | v2 scope/filter/权限符合设计 | PASS：admin-only execute、组合过滤及 `unrecorded → outcome IS NULL` 已验证 |
