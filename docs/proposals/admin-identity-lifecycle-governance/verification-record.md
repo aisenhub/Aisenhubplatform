@@ -15,8 +15,8 @@
 
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | Identity lifecycle 数据/API 合同 | READY | migration/API/OpenAPI、Local fresh/upgrade/DB/API/contracts、workendstaging migration/Edge/权限核对 | 阶段 commit/push/远端 Git 核对 | 未验证 | 未验证 |
-| 02 | Unified Users lifecycle UI | 未开始 | 无 | Phase 01 已交付 | 未验证 | 未验证 |
+| 01 | Identity lifecycle 数据/API 合同 | PASS | migration/API/OpenAPI、Local fresh/upgrade/DB/API/contracts、workendstaging migration/Edge/权限、Git 分支交付 | 无 | `5cd68a5` | PASS |
+| 02 | Unified Users lifecycle UI | 进行中 | Phase 01 已交付 | Identity detail/deletion-jobs/redirect/deep links/browser/R3 | 未验证 | 未验证 |
 
 ## 阶段实施记录
 
@@ -51,14 +51,14 @@
 
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 链接 |
 | --- | --- | --- | --- | --- | --- |
-| 01 | 未验证 | `codex/opt-003-identity-lifecycle` | 未验证 | 未验证 | 未验证 |
+| 01 | `5cd68a597ab9012c138cf9b2585ce5014bc819c3` | `codex/opt-003-identity-lifecycle` | PASS | PASS：`git ls-remote` 与本地 SHA 一致 | GitHub task branch |
 | 02 | 未验证 | `codex/opt-003-identity-lifecycle` | 未验证 | 未验证 | 未验证 |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：Phase 01 Git 交付完成后进入 Phase 02 Identity detail / deletion-jobs UI。
+- 下一阶段从哪里开始：Phase 02 Identity detail / deletion-jobs UI。
 - 必须先解决的问题：无产品决策阻塞。
 - 可直接复用的接口和能力：`getAdminAuthUserById`、`admin_identity_accounts`、`admin_deletion_job_start/list/read/retry`、Admin recent-MFA/ConfirmActionDialog。
 - 不应重复实施的工作：Global Delete worker、checkpoint、lease/fence、Auth 删除与匿名化算法。
-- 当前未提交修改及归属：Phase 01 migration/API/OpenAPI/tests/generated snapshot/architecture/verification，全部归属 OPT-003。
+- 当前未提交修改及归属：Phase 01 已提交并 push；当前仅阶段状态文档待提交，随后归入 Phase 02 起始记录。
 - 需要用户决定的事项：无。

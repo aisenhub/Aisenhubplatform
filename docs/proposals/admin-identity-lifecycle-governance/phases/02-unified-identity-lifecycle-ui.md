@@ -1,6 +1,6 @@
 # 阶段 02：统一用户生命周期 UI 与 Operations 退场
 
-状态：未开始
+状态：执行中
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 

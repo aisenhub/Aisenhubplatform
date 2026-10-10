@@ -1,6 +1,6 @@
 # 阶段 01：Identity lifecycle 数据投影与 Admin Contract
 
-状态：实施、本地 R3 与 workendstaging 同步完成；Git 交付待完成
+状态：完成
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -60,4 +60,4 @@
 
 - [x] 同步 identity-security / API/reference 中实际新增的 Identity detail 边界。
 - [x] 更新 verification record 与总计划阶段状态。
-- [ ] 创建阶段 commit/push 并核对远端分支。
+- [x] 创建阶段 commit/push 并核对远端分支：`5cd68a597ab9012c138cf9b2585ce5014bc819c3`。

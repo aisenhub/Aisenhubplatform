@@ -18,8 +18,8 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | 建立 Identity lifecycle 权威只读投影、Identity detail Admin API/OpenAPI 与 R3 数据/API 证据 | 最新 main 事实基线、design 冻结 | 实施与验证完成；Git 交付待完成 | [阶段 01](phases/01-identity-lifecycle-contract.md) |
-| 02 | 重构统一用户生命周期 UI、删除任务子视图、旧 Operations 兼容重定向与所有深链 | Phase 01 合同与本地 R3 通过 | 未开始 | [阶段 02](phases/02-unified-identity-lifecycle-ui.md) |
+| 01 | 建立 Identity lifecycle 权威只读投影、Identity detail Admin API/OpenAPI 与 R3 数据/API 证据 | 最新 main 事实基线、design 冻结 | 完成 | [阶段 01](phases/01-identity-lifecycle-contract.md) |
+| 02 | 重构统一用户生命周期 UI、删除任务子视图、旧 Operations 兼容重定向与所有深链 | Phase 01 合同与本地 R3 通过 | 执行中 | [阶段 02](phases/02-unified-identity-lifecycle-ui.md) |
 
 ## 总体验收
 
