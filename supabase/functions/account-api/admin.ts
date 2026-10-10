@@ -120,8 +120,13 @@ async function getAdminAuthUserById(
   dependencies: AccountApiDependencies,
   userId: string,
 ): Promise<AdminAuthIdentity | null> {
-  if (dependencies.getAdminAuthUserById)
-    return dependencies.getAdminAuthUserById(userId);
+  if (dependencies.getAdminAuthUserById) {
+    try {
+      return await dependencies.getAdminAuthUserById(userId);
+    } catch {
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    }
+  }
   const { url, key } = authAdminConfig();
   let response: Response;
   try {
@@ -237,6 +242,36 @@ async function searchAdminIdentities(input: {
   }
 
   return collected;
+}
+
+function identityLifecycleDto(row: Row): Record<string, unknown> {
+  const requestId = uuidValue(row.request_id);
+  const jobId = uuidValue(row.job_id);
+  return {
+    request: requestId
+      ? {
+          request_id: requestId,
+          state: stringValue(row.request_state),
+          requested_at: row.requested_at ?? null,
+          approved_at: row.approved_at ?? null,
+          approved_by: uuidValue(row.approved_by),
+          cancelled_at: row.cancelled_at ?? null,
+        }
+      : null,
+    job: jobId
+      ? {
+          job_id: jobId,
+          state: stringValue(row.job_state),
+          checkpoint: stringValue(row.checkpoint),
+          retry_count:
+            typeof row.retry_count === 'number' ? row.retry_count : 0,
+          next_attempt_at: row.next_attempt_at ?? null,
+          last_error_code: stringValue(row.last_error_code),
+          created_at: row.job_created_at ?? null,
+          completed_at: row.completed_at ?? null,
+        }
+      : null,
+  };
 }
 
 function randomBase64Url(bytes: number): string {
@@ -367,6 +402,41 @@ export async function dispatchAdmin(
       limit: boundedLimit(url.searchParams.get('limit')),
     });
     return { status: 200, data: rows };
+  }
+
+  const identityDetailMatch = path.match(
+    /^admin\/api\/v1\/accounts\/([^/]+)$/u,
+  );
+  if (identityDetailMatch && request.method === 'GET') {
+    const identityUserId = uuidValue(identityDetailMatch[1]);
+    if (!identityUserId) throw new ApiFault(400, 'INVALID_INPUT');
+    const authUser = await getAdminAuthUserById(dependencies, identityUserId);
+    if (!authUser) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    const [identity] = await enrichAdminAuthUsers(
+      transaction,
+      context,
+      [authUser],
+      null,
+    );
+    if (!identity) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    const [lifecycle] = await transaction.unsafe<Row>(
+      'select * from private.admin_identity_lifecycle_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+      [...context, identityUserId],
+    );
+    const lifecycleState = stringValue(lifecycle?.identity_state);
+    if (
+      !lifecycle ||
+      (lifecycleState !== 'active' && lifecycleState !== 'deleting')
+    )
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return {
+      status: 200,
+      data: {
+        ...identity,
+        identity_state: lifecycleState,
+        deletion: identityLifecycleDto(lifecycle),
+      },
+    };
   }
 
   if (path === 'admin/api/v1/config-files' && request.method === 'GET') {

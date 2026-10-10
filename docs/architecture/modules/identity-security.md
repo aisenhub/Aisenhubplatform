@@ -52,6 +52,8 @@ Admin Shell 在渲染普通管理页面前先读取该状态：未登录转登�
 
 普通 Admin 操作以活动管理员会话 + AAL2 为统一授权基线。关键密钥生命周期（Platform Key 创建、部署确认、撤销）、Global Delete 启动/重试、平台账户状态变更（通用 PATCH 以及 suspend/restore/close）、Billing 人工 requery/resolve，以及未来的管理员替换要求近期 step-up；近期 MFA 证明最长有效 30 分钟。Plan 与订阅配置、兑换码批次与交付、配置文件读取/下载/普通删除与文件策略等其他管理操作仍以 AAL2 为边界，不额外要求 recent MFA。管理员替换当前尚无公开 Admin Route；未来实现时必须进入同一 30 分钟 step-up 边界。
 
+全局 Identity 的 Admin 读取继续把 Auth PII 与业务生命周期分层：`GET /admin/api/v1/accounts` 用服务端 Auth Admin API 枚举/精确解析允许的 Auth identity，再由 `private.admin_identity_accounts` 补平台账户关系；`GET /admin/api/v1/accounts/{userId}` 对一个仍存在的 Auth identity 复用同一 Auth 读取，并通过只授予 `admin_executor` 的 `private.admin_identity_lifecycle_read` 补当前/最近删除 request 与关联 job。该只读投影固定 security-definer search_path，只返回 Admin UI 做状态判断所需的 request/job 字段，不返回 request session、job fence 或 lease 等执行内部信息。读取仍只要求普通 Admin AAL2；Global Delete 启动/重试继续走既有 recent-MFA mutation 边界。
+
 Admin Auth adapter完成官方MFA验证后，由Admin BFF使用共享服务端HMAC Secret签发最多60秒的attestation，绑定user_id、session_id、factor_id、verified_at和随机nonce；中央Account API必须验证签名、当前AAL2 bearer的user/session绑定与时效后，才调用private.admin_step_up_issue写入private.admin_step_up。attestation 只负责证明“刚完成 MFA”并保持 60 秒短寿命，真正的 step-up 证明最长有效 30 分钟。证明记录保存user_id、session_id、verified_at、expires_at、factor_id和attestation_nonce；nonce按当前管理员会话唯一消费，重放拒绝。普通token refresh不延长窗口，撤销会话或替换管理员立即使证明不可用。浏览器提交的factor id、挑战完成布尔值或已有AAL2本身都不构成近期MFA证明。
 
 中央 Account API 对普通 Admin Route 统一要求活动管理员会话与 AAL2；私有数据库包装函数继续重新检查管理员成员关系和活动 session。Global Delete 的数据库包装额外校验与当前 user/session 绑定且未过期的 step-up proof；关键密钥生命周期、平台账户状态变更与 Billing requery/resolve 在中央 API 边界执行同一 `adminStepUp` 校验。Account executor无权调用 Admin 包装或记录 step-up。数据库不自行验证 HTTP JWT 签名，由服务器 Auth adapter 验证后传入受控上下文。

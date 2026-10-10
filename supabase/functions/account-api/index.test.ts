@@ -404,6 +404,32 @@ function fakeDatabase(
             ] as unknown as R[];
           }
           if (
+            query.startsWith(
+              'select * from private.admin_identity_lifecycle_read',
+            )
+          ) {
+            return [
+              {
+                user_id: userId,
+                identity_state: 'deleting',
+                request_id: reauthSessionId,
+                request_state: 'approved',
+                requested_at: '2026-09-08T00:00:00.000Z',
+                approved_at: '2026-09-08T00:05:00.000Z',
+                approved_by: userId,
+                cancelled_at: null,
+                job_id: keyId,
+                job_state: 'blocked',
+                checkpoint: 'storage_delete',
+                retry_count: 2,
+                next_attempt_at: '2026-09-08T00:10:00.000Z',
+                last_error_code: 'storage_timeout',
+                job_created_at: '2026-09-08T00:05:00.000Z',
+                completed_at: null,
+              },
+            ] as unknown as R[];
+          }
+          if (
             query.startsWith('select * from private.admin_deletion_job_list')
           ) {
             return [
@@ -1854,6 +1880,67 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(identityByUserId.status, 200);
   assertEquals((await identityByUserId.json()).data[0].user_id, userId);
+
+  const identityDetail = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/accounts/${userId}`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      getAdminAuthUserById: async () => ({
+        id: userId,
+        email: 'identity@example.invalid',
+        created_at: '2026-09-08T00:00:00.000Z',
+        last_sign_in_at: '2026-09-08T01:00:00.000Z',
+      }),
+    },
+  );
+  assertEquals(identityDetail.status, 200);
+  const identityDetailPayload = await identityDetail.json();
+  assertEquals(identityDetailPayload.data.user_id, userId);
+  assertEquals(identityDetailPayload.data.identity_state, 'deleting');
+  assertEquals(identityDetailPayload.data.deletion.request.state, 'approved');
+  assertEquals(identityDetailPayload.data.deletion.job.state, 'blocked');
+  assertEquals(identityDetailPayload.data.deletion.job.retry_count, 2);
+  assertEquals(
+    'request_session_id' in identityDetailPayload.data.deletion.request,
+    false,
+  );
+  assertEquals('fence' in identityDetailPayload.data.deletion.job, false);
+
+  const missingIdentityDetail = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/accounts/${userId}`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      getAdminAuthUserById: async () => null,
+    },
+  );
+  assertEquals(missingIdentityDetail.status, 404);
+
+  const unavailableIdentityDetail = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/accounts/${userId}`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      getAdminAuthUserById: async () => {
+        throw new Error('Auth Admin unavailable');
+      },
+    },
+  );
+  assertEquals(unavailableIdentityDetail.status, 503);
+  assertEquals(
+    (await unavailableIdentityDetail.json()).error.code,
+    'AUTHORIZATION_UNAVAILABLE',
+  );
 
   const invalidIdentityScope = await handleRequest(
     new Request(

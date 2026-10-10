@@ -224,6 +224,14 @@
       },
       {
         "method": "GET",
+        "path": "/admin/api/v1/accounts/{userId}",
+        "operationId": "adminGetIdentity",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/admin/api/v1/audit",
         "operationId": "adminListAuditLogs",
         "security": [

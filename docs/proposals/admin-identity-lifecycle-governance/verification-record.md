@@ -15,25 +15,37 @@
 
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | Identity lifecycle 数据/API 合同 | 进行中 | 最新 main 与现有调用链核对、正式设计冻结 | migration/API/OpenAPI/Local R3/交付 | 未验证 | 未验证 |
+| 01 | Identity lifecycle 数据/API 合同 | READY | migration/API/OpenAPI、Local fresh/upgrade/DB/API/contracts、workendstaging migration/Edge/权限核对 | 阶段 commit/push/远端 Git 核对 | 未验证 | 未验证 |
 | 02 | Unified Users lifecycle UI | 未开始 | 无 | Phase 01 已交付 | 未验证 | 未验证 |
 
 ## 阶段实施记录
 
 ### 阶段 01：Identity lifecycle 数据/API 合同
 
-- 实际修改文件及职责：当前仅 Proposal 文档；产品代码未开始修改。
-- 已实现行为：未开始。
+- 实际修改文件及职责：新增 `20261010134140_admin_identity_lifecycle_read.sql` 与 `t21_admin_identity_lifecycle.sql`；Account API 新增精确 Identity detail；Admin OpenAPI 与 Consumer Lab snapshot 同步；identity-security 当前架构同步。
+- 已实现行为：live Auth Identity 可通过 `GET /admin/api/v1/accounts/{userId}` 读取身份、平台账户与安全的删除 request/job 聚合；缺失 Auth identity 404，Auth 上游故障 503；SQL 只授予 admin_executor 并隐藏 request session/fence/lease。
 - 冻结的数据、接口和跨阶段契约：保留 existing deletion-job mutation APIs；新增只读 lifecycle function 与 `GET /accounts/{userId}`；详情不暴露 request session/lease/fence。
-- 与计划的偏差、原因和影响：无。
+- 与计划的偏差、原因和影响：首次尝试仓库自定义 Supabase wrapper 创建 migration 时发现 wrapper 不支持 `migration new`，无副作用失败；随后按固定 CLI 实际入口 `pnpm exec supabase migration new` 创建 forward migration。`contracts:check` 首次因新增 operation 导致 Consumer Lab 生成快照过期，按仓库生成命令同步后复测通过。format 首次仅 OpenAPI/admin.ts 两文件不一致，定向 oxfmt 后通过。
 - 新增依赖及必要性：无。
-- 未完成或未验证内容：全部 Phase 01 产品实现与 R3。
+- 未完成或未验证内容：只剩 Phase 01 Git 阶段交付；Phase 02 尚未开始。
 
 ## 验证记录
 
 | 日期 | 阶段 | 代码版本 | 命令/操作 | 环境 | 退出码 | 结果 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-10-10 | 计划/01 | `425173ea` + plan-only worktree | 最新 main、Accounts/Operations、Global Delete migrations、Admin API/OpenAPI、architecture/reference 重新核对 | Local | 0 | PASS：确认 Global Delete 状态机可复用；缺口是 Identity lifecycle 聚合读取与 Admin IA |
+| 2026-10-10 | 01 | worktree | `pnpm test:api` | Local | 0 | PASS：97/97；Identity detail 新增 200、404、Auth unavailable 503 与敏感字段负断言 |
+| 2026-10-10 | 01 | worktree | `pnpm contracts:check`（首次） | Local | 1 | FAIL：OpenAPI 本体识别 Admin 47 operations，但 Consumer Lab 生成快照尚未包含新 operation |
+| 2026-10-10 | 01 | worktree | `pnpm consumer-lab:contracts:write` → `pnpm contracts:check` → `pnpm contracts:breaking` | Local | 0/0/0 | PASS：Consumer Lab 快照同步；Admin 47 operations；相对 origin/main 无破坏性合同变更 |
+| 2026-10-10 | 01 | worktree | `pnpm exec supabase migration up --local` | Local Supabase | 0 | PASS：从 OPT-002 当前库仅前向应用 `20261010134140_admin_identity_lifecycle_read.sql` |
+| 2026-10-10 | 01 | worktree | `pnpm exec supabase test db --local supabase/tests/t21_admin_identity_lifecycle.sql` | Local Supabase | 0 | PASS：11/11，含 admin_executor、权限负例、active request 优先、blocked job、无 request 与过期 session |
+| 2026-10-10 | 01 | worktree | `pnpm test:db`（upgrade） | Local Supabase | 0 | PASS：61 files / 1124 tests |
+| 2026-10-10 | 01 | worktree | `pnpm db:reset` + `pnpm test:db` | Local Supabase | 0/0 | PASS：fresh migration 应用至 `20261010134140`；61 files / 1124 tests |
+| 2026-10-10 | 01 | worktree | `pnpm format:check`（首次） | Local | 1 | FAIL：仅 `contracts/admin/v1/openapi.json` 与 `admin.ts` 格式不一致 |
+| 2026-10-10 | 01 | worktree | changed-file `oxfmt` → `pnpm format:check` → `pnpm lint` → `pnpm docs:check` → `git diff --check` | Local | 0/0/0/0/0 | PASS：386 files format；lint 0/0；143 docs；diff clean |
+| 2026-10-10 | 01 | worktree | linked `supabase db push --dry-run` → `db push --linked --yes` | workendstaging | 0/0 | PASS：dry-run 仅列 `20261010134140`；远端成功应用同版本 migration |
+| 2026-10-10 | 01 | worktree | `supabase functions deploy account-api --project-ref ... --no-verify-jwt --use-api` | workendstaging | 0 | PASS：`account-api` 从 v55 升至 ACTIVE v56，保持 `verify_jwt=false` 的现有自定义 Admin/Platform auth 边界 |
+| 2026-10-10 | 01 | worktree | migration/function list + read-only lifecycle SQL probe | workendstaging | 0 | PASS：migration `20261010134140` 存在；admin_executor 可执行、account/job executor 拒绝、search_path 固定；真实活动 Admin context 返回单一合法 lifecycle row |
 
 ## GitHub 交付记录
 
@@ -44,9 +56,9 @@
 
 ## 交接信息
 
-- 下一阶段从哪里开始：Phase 01 新 forward migration。
+- 下一阶段从哪里开始：Phase 01 Git 交付完成后进入 Phase 02 Identity detail / deletion-jobs UI。
 - 必须先解决的问题：无产品决策阻塞。
 - 可直接复用的接口和能力：`getAdminAuthUserById`、`admin_identity_accounts`、`admin_deletion_job_start/list/read/retry`、Admin recent-MFA/ConfirmActionDialog。
 - 不应重复实施的工作：Global Delete worker、checkpoint、lease/fence、Auth 删除与匿名化算法。
-- 当前未提交修改及归属：Proposal 文档，归属 OPT-003。
+- 当前未提交修改及归属：Phase 01 migration/API/OpenAPI/tests/generated snapshot/architecture/verification，全部归属 OPT-003。
 - 需要用户决定的事项：无。

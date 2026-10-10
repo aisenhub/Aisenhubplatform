@@ -18,13 +18,13 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | 建立 Identity lifecycle 权威只读投影、Identity detail Admin API/OpenAPI 与 R3 数据/API 证据 | 最新 main 事实基线、design 冻结 | 执行中 | [阶段 01](phases/01-identity-lifecycle-contract.md) |
+| 01 | 建立 Identity lifecycle 权威只读投影、Identity detail Admin API/OpenAPI 与 R3 数据/API 证据 | 最新 main 事实基线、design 冻结 | 实施与验证完成；Git 交付待完成 | [阶段 01](phases/01-identity-lifecycle-contract.md) |
 | 02 | 重构统一用户生命周期 UI、删除任务子视图、旧 Operations 兼容重定向与所有深链 | Phase 01 合同与本地 R3 通过 | 未开始 | [阶段 02](phases/02-unified-identity-lifecycle-ui.md) |
 
 ## 总体验收
 
-- [ ] Identity detail API 将 Auth Identity、平台账户关系和删除生命周期按权威来源聚合。
-- [ ] lifecycle SQL 不泄漏 request session/lease/fence，且只授予 admin executor。
+- [x] Identity detail API 将 Auth Identity、平台账户关系和删除生命周期按权威来源聚合。
+- [x] lifecycle SQL 不泄漏 request session/lease/fence，且只授予 admin executor。
 - [ ] pending deletion request 可在 Identity 详情直接批准启动，仍复用 existing start API + recent MFA + idempotency。
 - [ ] blocked/retry job 可在 Identity/任务子视图重试，unknown outcome 不自动重放。
 - [ ] `/admin/accounts/deletion-jobs` 替代独立 Operations UI；`/admin/operations` 保留兼容重定向。
