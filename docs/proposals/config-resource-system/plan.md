@@ -16,7 +16,7 @@
 
 | 阶段 | 目标 | 状态 | 详细计划 |
 | --- | --- | --- | --- |
-| 01 | Config/Version/Gallery 领域模型、物理容量与 legacy file 兼容 | 执行中 | [阶段 01](phases/01-domain-storage-compat.md) |
+| 01 | Config/Version/Gallery 领域模型、物理容量与 legacy file 兼容 | 已完成 | [阶段 01](phases/01-domain-storage-compat.md) |
 | 02 | Account v1 增量 API、private Storage 内容流、Consumer contract/Harness | 未开始 | [阶段 02](phases/02-account-consumer-contract.md) |
 | 03 | Admin 审核/资源池/容量治理、Plan 槽位配置与 Overview 聚合 | 未开始 | [阶段 03](phases/03-admin-governance.md) |
 | 04 | Global Delete/retention、备份真值、完整 E2E/R3/Git closeout | 未开始 | [阶段 04](phases/04-lifecycle-release.md) |
