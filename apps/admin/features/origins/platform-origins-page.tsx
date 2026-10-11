@@ -37,7 +37,7 @@ import {
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
 
-type Origin = {
+export type Origin = {
   origin_id: string;
   platform_id?: string;
   environment: string;
@@ -66,12 +66,24 @@ const emptyDraft: OriginDraft = {
   email_confirmation_url: '',
 };
 
+type PlatformOriginsSectionProps = {
+  embedded?: boolean;
+  onFactsChange?: (origins: Origin[]) => void;
+};
+
 export function PlatformOriginsPage() {
+  return <PlatformOriginsSection />;
+}
+
+export function PlatformOriginsSection({
+  embedded = false,
+  onFactsChange,
+}: PlatformOriginsSectionProps = {}) {
   const { platform } = usePlatformContext();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') ?? '';
+  const query = embedded ? '' : (searchParams.get('q') ?? '');
   const [draftQuery, setDraftQuery] = useState(query);
   const [origins, setOrigins] = useState<Origin[]>([]);
   const [state, setState] = useState<ResourceLoadState>('loading');
@@ -118,6 +130,7 @@ export function PlatformOriginsPage() {
           return;
         }
         setOrigins(payload.data);
+        onFactsChange?.(payload.data);
         setState('success');
       } catch (caught) {
         if (
@@ -140,7 +153,7 @@ export function PlatformOriginsPage() {
         if (generation === loadGeneration.current) setRefreshing(false);
       }
     },
-    [platform.platform_id, query],
+    [onFactsChange, platform.platform_id, query],
   );
 
   useEffect(() => {
@@ -223,6 +236,23 @@ export function PlatformOriginsPage() {
   }
 
   if (state === 'loading') {
+    if (embedded) {
+      return (
+        <section
+          id="origins"
+          className="panel gap-4"
+          data-test="platform-origins-section"
+        >
+          <div>
+            <h2>域名与回调</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              登记允许接入的站点 Origin 与登录、密码重置、邮箱确认回调。
+            </p>
+          </div>
+          <AsyncState state="loading" />
+        </section>
+      );
+    }
     return (
       <section className="grid gap-5" data-test="platform-origins-loading">
         <AdminPageHeader
@@ -235,11 +265,22 @@ export function PlatformOriginsPage() {
   }
 
   return (
-    <section className="grid gap-5" data-test="platform-origins-page">
-      <AdminPageHeader
-        title="接入地址"
-        description="登记允许接入的站点来源与登录回调地址。请填写完整、准确的 URL。"
-        actions={
+    <section
+      id={embedded ? 'origins' : undefined}
+      className={embedded ? 'panel gap-4' : 'grid gap-5'}
+      data-test={
+        embedded ? 'platform-origins-section' : 'platform-origins-page'
+      }
+    >
+      {embedded ? (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2>域名与回调</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              登记允许接入的站点 Origin
+              与登录、密码重置、邮箱确认回调。中央准备进度只读取这里的服务端事实。
+            </p>
+          </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -258,8 +299,33 @@ export function PlatformOriginsPage() {
               登记 Origin
             </Button>
           </div>
-        }
-      />
+        </div>
+      ) : (
+        <AdminPageHeader
+          title="接入地址"
+          description="登记允许接入的站点来源与登录回调地址。请填写完整、准确的 URL。"
+          actions={
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void load(true)}
+                disabled={refreshing}
+                data-test="platform-origins-refresh"
+              >
+                {refreshing ? '刷新中…' : '刷新'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={openCreate}
+                data-test="platform-origin-open-create"
+              >
+                登记 Origin
+              </Button>
+            </div>
+          }
+        />
+      )}
       {state === 'error' && error ? (
         <AsyncState
           state="error"
@@ -295,7 +361,7 @@ export function PlatformOriginsPage() {
         </Alert>
       ) : null}
 
-      <section className="panel gap-4">
+      <section className={embedded ? 'grid gap-4' : 'panel gap-4'}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2>已登记地址</h2>
@@ -305,29 +371,31 @@ export function PlatformOriginsPage() {
           </div>
           <ResourceId value={platform.platform_id} />
         </div>
-        <form className="flex gap-2" onSubmit={applyQuery}>
-          <Label htmlFor="platform-origin-query" className="sr-only">
-            搜索 Origin
-          </Label>
-          <Input
-            id="platform-origin-query"
-            type="search"
-            value={draftQuery}
-            onChange={(event) => setDraftQuery(event.target.value)}
-            placeholder="environment、origin 或 status"
-            data-test="platform-origin-query"
-          />
-          <Button
-            type="submit"
-            variant="outline"
-            data-test="platform-origin-query-submit"
-          >
-            查询
-          </Button>
-        </form>
+        {!embedded ? (
+          <form className="flex gap-2" onSubmit={applyQuery}>
+            <Label htmlFor="platform-origin-query" className="sr-only">
+              搜索 Origin
+            </Label>
+            <Input
+              id="platform-origin-query"
+              type="search"
+              value={draftQuery}
+              onChange={(event) => setDraftQuery(event.target.value)}
+              placeholder="environment、origin 或 status"
+              data-test="platform-origin-query"
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              data-test="platform-origin-query-submit"
+            >
+              查询
+            </Button>
+          </form>
+        ) : null}
         {state === 'success' && origins.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
-            {query
+            {!embedded && query
               ? '当前搜索没有匹配 Origin。'
               : '当前平台还没有登记 Origin。'}
           </div>

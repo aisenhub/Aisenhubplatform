@@ -1,5 +1,12 @@
-import { PlatformOriginsPage as PlatformOriginsFeaturePage } from '../../../../../../features/origins/platform-origins-page';
+import { redirect } from 'next/navigation';
 
-export default function PlatformOriginsPage() {
-  return <PlatformOriginsFeaturePage />;
+export default async function PlatformOriginsPage({
+  params,
+}: {
+  params: Promise<{ platformId: string }>;
+}) {
+  const { platformId } = await params;
+  redirect(
+    `/admin/platforms/${encodeURIComponent(platformId)}/settings/integration?section=origins`,
+  );
 }

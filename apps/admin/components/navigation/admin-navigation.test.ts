@@ -27,8 +27,8 @@ describe('admin navigation model', () => {
 
   it('uses the resource label for platform routes', () => {
     expect(
-      adminNavigationLabel('/admin/platforms/platform-1/settings/origins'),
-    ).toBe('接入地址');
+      adminNavigationLabel('/admin/platforms/platform-1/settings/integration'),
+    ).toBe('接入配置');
     expect(
       adminNavigationLabel('/admin/platforms/platform-1/redemption-batches'),
     ).toBe('兑换码');
@@ -42,20 +42,20 @@ describe('admin navigation model', () => {
       (group) => group.items,
     );
     const settings = items.find((item) => item.key === 'settings');
-    const origins = items.find((item) => item.key === 'origins');
+    const integration = items.find((item) => item.key === 'integration');
 
     expect(settings).toBeDefined();
-    expect(origins).toBeDefined();
+    expect(integration).toBeDefined();
     expect(
       isAdminNavigationItemActive(
-        '/admin/platforms/platform-1/settings/origins',
+        '/admin/platforms/platform-1/settings/integration',
         settings!,
       ),
     ).toBe(false);
     expect(
       isAdminNavigationItemActive(
-        '/admin/platforms/platform-1/settings/origins',
-        origins!,
+        '/admin/platforms/platform-1/settings/integration',
+        integration!,
       ),
     ).toBe(true);
   });
@@ -113,6 +113,20 @@ describe('admin navigation model', () => {
       '商业化',
       '资源与接入',
       '平台设置',
+    ]);
+
+    expect(
+      platformGroups.flatMap((group) => group.items.map((item) => item.key)),
+    ).toEqual([
+      'platform-overview',
+      'accounts',
+      'platform-billing',
+      'plans',
+      'subscriptions',
+      'redemption',
+      'files',
+      'integration',
+      'settings',
     ]);
 
     const platformKeys = platformGroups.flatMap((group) =>

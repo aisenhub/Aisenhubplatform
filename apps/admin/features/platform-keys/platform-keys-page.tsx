@@ -37,7 +37,7 @@ import {
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
 
-type PlatformKey = {
+export type PlatformKey = {
   key_id: string;
   platform_id: string;
   name: string;
@@ -68,12 +68,24 @@ type KeyIntent =
       impact: string;
     };
 
+type PlatformKeysSectionProps = {
+  embedded?: boolean;
+  onFactsChange?: (keys: PlatformKey[]) => void;
+};
+
 export function PlatformKeysPage() {
+  return <PlatformKeysSection />;
+}
+
+export function PlatformKeysSection({
+  embedded = false,
+  onFactsChange,
+}: PlatformKeysSectionProps = {}) {
   const { platform } = usePlatformContext();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') ?? '';
+  const query = embedded ? '' : (searchParams.get('q') ?? '');
   const [draftQuery, setDraftQuery] = useState(query);
   const [keys, setKeys] = useState<PlatformKey[]>([]);
   const [state, setState] = useState<ResourceLoadState>('loading');
@@ -130,6 +142,7 @@ export function PlatformKeysPage() {
           return;
         }
         setKeys(payload.data);
+        onFactsChange?.(payload.data);
         setState('success');
         return payload.data;
       } catch (caught) {
@@ -153,7 +166,7 @@ export function PlatformKeysPage() {
         if (generation === loadGeneration.current) setRefreshing(false);
       }
     },
-    [platform.platform_id, query],
+    [onFactsChange, platform.platform_id, query],
   );
 
   useEffect(() => {
@@ -322,6 +335,24 @@ export function PlatformKeysPage() {
   }
 
   if (state === 'loading') {
+    if (embedded) {
+      return (
+        <section
+          id="keys"
+          className="panel gap-4"
+          data-test="platform-keys-section"
+        >
+          <div>
+            <h2>服务端密钥</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Platform Key 明文仅在创建响应中显示一次；部署确认后才能安全轮换旧
+              Key。
+            </p>
+          </div>
+          <AsyncState state="loading" />
+        </section>
+      );
+    }
     return (
       <section className="grid gap-5" data-test="platform-keys-loading">
         <AdminPageHeader
@@ -334,11 +365,20 @@ export function PlatformKeysPage() {
   }
 
   return (
-    <section className="grid gap-5" data-test="platform-keys-page">
-      <AdminPageHeader
-        title="接入密钥"
-        description="创建接入密钥、确认部署与撤销旧密钥。新密钥明文仅显示一次，请及时保存。"
-        actions={
+    <section
+      id={embedded ? 'keys' : undefined}
+      className={embedded ? 'panel gap-4' : 'grid gap-5'}
+      data-test={embedded ? 'platform-keys-section' : 'platform-keys-page'}
+    >
+      {embedded ? (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2>服务端密钥</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              创建 server-only Platform Key、确认目标服务端/BFF
+              已部署，并在轮换完成后撤销旧 Key。
+            </p>
+          </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -357,8 +397,33 @@ export function PlatformKeysPage() {
               创建 Key
             </Button>
           </div>
-        }
-      />
+        </div>
+      ) : (
+        <AdminPageHeader
+          title="接入密钥"
+          description="创建接入密钥、确认部署与撤销旧密钥。新密钥明文仅显示一次，请及时保存。"
+          actions={
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void load(true)}
+                disabled={refreshing}
+                data-test="platform-keys-refresh"
+              >
+                {refreshing ? '刷新中…' : '刷新'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={openCreate}
+                data-test="platform-key-open-create"
+              >
+                创建 Key
+              </Button>
+            </div>
+          }
+        />
+      )}
       {secret ? (
         <OneTimeSecretPanel
           secret={secret}
@@ -389,30 +454,34 @@ export function PlatformKeysPage() {
           </AlertDescription>
         </Alert>
       ) : null}
-      <section className="panel gap-4">
-        <form className="flex gap-2" onSubmit={applyQuery}>
-          <Label htmlFor="platform-key-query" className="sr-only">
-            搜索 Platform Key
-          </Label>
-          <Input
-            id="platform-key-query"
-            type="search"
-            value={draftQuery}
-            onChange={(event) => setDraftQuery(event.target.value)}
-            placeholder="名称、状态、prefix 或 suffix"
-            data-test="platform-key-query"
-          />
-          <Button
-            type="submit"
-            variant="outline"
-            data-test="platform-key-query-submit"
-          >
-            查询
-          </Button>
-        </form>
+      <section className={embedded ? 'grid gap-4' : 'panel gap-4'}>
+        {!embedded ? (
+          <form className="flex gap-2" onSubmit={applyQuery}>
+            <Label htmlFor="platform-key-query" className="sr-only">
+              搜索 Platform Key
+            </Label>
+            <Input
+              id="platform-key-query"
+              type="search"
+              value={draftQuery}
+              onChange={(event) => setDraftQuery(event.target.value)}
+              placeholder="名称、状态、prefix 或 suffix"
+              data-test="platform-key-query"
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              data-test="platform-key-query-submit"
+            >
+              查询
+            </Button>
+          </form>
+        ) : null}
         {state === 'success' && keys.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
-            {query ? '当前搜索没有匹配 Key。' : '当前平台还没有 Platform Key。'}
+            {!embedded && query
+              ? '当前搜索没有匹配 Key。'
+              : '当前平台还没有 Platform Key。'}
           </div>
         ) : null}
         {keys.length ? (

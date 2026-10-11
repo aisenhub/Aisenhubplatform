@@ -7,7 +7,7 @@
 - 起始 main：`018bcaf78797391b9b9080c5cb4be81150d86925`
 - 当前分支：`codex/opt-006-platform-onboarding`
 - 风险：R3
-- 当前阶段：[Phase 01](phases/01-integration-state-navigation.md)
+- 当前阶段：Git closeout；[Phase 01](phases/01-integration-state-navigation.md) 与 [Phase 02](phases/02-integration-workspace.md) 实施/验证均已完成。
 
 ## 冻结结论
 
@@ -21,6 +21,6 @@
 
 ## 完成门槛
 
-- [ ] 两个 phase 完成。
-- [ ] Local R3/canonical gate 无 FAIL/BLOCKED。
+- [x] 两个 phase 实施与验证完成。
+- [x] Local R3/canonical gate 无 FAIL/BLOCKED。
 - [ ] main/远端/分支状态闭环。

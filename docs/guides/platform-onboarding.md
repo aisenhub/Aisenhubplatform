@@ -63,6 +63,8 @@ Account contract major / changelog revision：
 
 每个环境独立登记 Platform、Origin、Platform Key 和 Auth redirect。Local/Preview 不连接 Production。
 
+中央 Admin 的单平台 `平台设置 → 接入配置`（`/admin/platforms/:platformId/settings/integration`）用于完成和维护这些中央事实。它的自动进度只计算四项权威状态：平台 `active + allow_activation`、至少一个带完整回调的 active Origin、至少一个 active Platform Key、至少一个 active Key 的部署确认。四项全部满足只表示**中央准备就绪**，不表示目标平台 Auth/BFF 已联调，更不表示目标平台已通过独立验收；后两类证据必须留在目标平台仓库，中央页面不提供手工“完成”开关。
+
 目标平台需要等价的服务端配置；变量名由目标仓库自行定义。下列是语义示例，不要求照抄名称：
 
 ```dotenv
@@ -85,7 +87,7 @@ SUPABASE_PUBLISHABLE_KEY=
 
 Consumer 不需要中央数据库 URL、Supabase secret key、HMAC、Worker token、Provider token 或 webhook secret。
 
-中央维护者在真实 HTTP 前完成：平台登记与 active/allow_activation、Origins、Auth redirect、Platform Key 创建/部署确认、Plan/features/商品映射以及普通测试用户准备。system_admin 不能充当普通 Consumer fixture。
+中央维护者在真实 HTTP 前完成：平台登记与 active/allow_activation、Origins、Auth redirect、Platform Key 创建/部署确认以及普通测试用户准备；只有实际启用付费/feature 能力时才继续配置对应 Plan/features/商品映射。system_admin 不能充当普通 Consumer fixture。
 
 ## 5. 目标平台自行拥有集成代码，并用 Harness 对照
 

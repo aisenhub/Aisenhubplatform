@@ -1,11 +1,10 @@
 import {
   Boxes,
+  Cable,
   CreditCard,
   FileKey2,
   Files,
   FlaskConical,
-  Globe2,
-  KeyRound,
   LayoutDashboard,
   Package,
   Receipt,
@@ -181,25 +180,18 @@ const platformNavigationDefinitions: Array<{
         description: '查看当前平台配置文件',
         icon: Files,
       },
-      {
-        key: 'origins',
-        label: '接入地址',
-        suffix: '/settings/origins',
-        description: '管理浏览器 Origin allowlist',
-        icon: Globe2,
-      },
-      {
-        key: 'keys',
-        label: '接入密钥',
-        suffix: '/settings/keys',
-        description: '管理服务端 Platform Key',
-        icon: KeyRound,
-      },
     ],
   },
   {
     label: '平台设置',
     items: [
+      {
+        key: 'integration',
+        label: '接入配置',
+        suffix: '/settings/integration',
+        description: '完成平台首次接入并维护 Origin、回调与服务端密钥',
+        icon: Cable,
+      },
       {
         key: 'settings',
         label: '基本设置',

@@ -1,6 +1,6 @@
 # Phase 01：接入状态模型与导航连续性
 
-状态：执行中
+状态：已完成
 
 关联：[设计](../design.md) · [总计划](../plan.md) · [验证记录](../verification-record.md)
 
@@ -10,11 +10,11 @@
 
 ## 任务
 
-- [ ] MODEL-001：新增接入事实/步骤纯模型与 unit tests，覆盖 complete / incomplete / unknown / external。
-- [ ] NAV-001：删除 Platform Sidebar 的 Origins/Keys 独立项，新增 `接入配置`。
-- [ ] ROUTE-001：新增 `/settings/integration` route；旧 Origins/Keys route 定向兼容。
-- [ ] CREATE-001：平台创建响应使用 `PlatformResponse` 校验真实 DTO；成功后跳转首次接入页。
-- [ ] DOC-001：同步 Admin DESIGN / 当前前端 architecture 的导航与接入事实规则。
+- [x] MODEL-001：新增接入事实/步骤纯模型与 unit tests，覆盖 complete / incomplete / unknown / external。
+- [x] NAV-001：删除 Platform Sidebar 的 Origins/Keys 独立项，新增 `接入配置`。
+- [x] ROUTE-001：新增 `/settings/integration` route；旧 Origins/Keys route 定向兼容。
+- [x] CREATE-001：平台创建响应使用 `PlatformResponse` 校验真实 DTO；成功后跳转首次接入页。
+- [x] DOC-001：同步 Admin DESIGN / 当前前端 architecture 的导航与接入事实规则。
 
 ## 验证
 

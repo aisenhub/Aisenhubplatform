@@ -49,6 +49,7 @@ import {
   platformStatus,
   type Platform,
   type PlatformListResponse,
+  type PlatformResponse,
 } from '../../components/platform-context/platform-types';
 
 type LoadError = {
@@ -75,7 +76,7 @@ function responseError(
 function CreatePlatformDialog({
   onCreated,
 }: {
-  onCreated: () => Promise<void>;
+  onCreated: (platform: Platform) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
@@ -132,14 +133,31 @@ function CreatePlatformDialog({
       );
       const payload = (await response
         .json()
-        .catch(() => null)) as PlatformListResponse | null;
+        .catch(() => null)) as PlatformResponse | null;
       if (!response.ok) {
-        setError(responseError(response, payload));
+        setError(resourceError(response, payload, '平台创建'));
         return;
       }
-      await onCreated();
+      const created = payload?.data;
+      if (
+        !created?.platform_id ||
+        !created.code ||
+        !created.name ||
+        typeof created.allow_activation !== 'boolean'
+      ) {
+        setError({
+          title: '平台已受理，但创建结果无法确认',
+          description:
+            '服务端没有返回完整 Platform DTO。请先刷新平台目录核对结果，不要立即重复创建。',
+          requestId:
+            payload?.request_id ?? response.headers.get('x-request-id'),
+          technicalDetail: 'INVALID_PLATFORM_CREATE_RESPONSE',
+        });
+        return;
+      }
       setOpen(false);
       reset();
+      onCreated(created);
     } catch (caught) {
       setError({
         title: '平台创建失败',
@@ -167,7 +185,8 @@ function CreatePlatformDialog({
         <DialogHeader>
           <DialogTitle>创建平台</DialogTitle>
           <DialogDescription>
-            创建后平台配置仍由服务端策略决定，默认启用激活能力；敏感配置请在平台工作区继续完成。
+            创建成功后会直接进入“接入配置”，继续登记 Origin、回调与 server-only
+            Platform Key。目标平台代码联调仍需在目标仓库独立验证。
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-4" onSubmit={submit}>
@@ -392,7 +411,13 @@ function PlatformDirectoryContent() {
             >
               {refreshing ? '刷新中…' : '刷新'}
             </Button>
-            <CreatePlatformDialog onCreated={() => load('refresh')} />
+            <CreatePlatformDialog
+              onCreated={(created) => {
+                router.push(
+                  `/admin/platforms/${encodeURIComponent(created.platform_id)}/settings/integration?welcome=1`,
+                );
+              }}
+            />
           </div>
         }
       />

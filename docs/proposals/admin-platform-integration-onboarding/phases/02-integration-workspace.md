@@ -1,6 +1,6 @@
 # Phase 02：接入配置工作区与 R3 收口
 
-状态：未开始
+状态：验证完成，待 Git closeout
 
 关联：[设计](../design.md) · [总计划](../plan.md) · [验证记录](../verification-record.md)
 
@@ -10,14 +10,14 @@
 
 ## 任务
 
-- [ ] UI-001：实现首次接入/维护两用 `PlatformIntegrationPage`。
-- [ ] ORIGIN-001：提取可嵌入 Origin section；新页可直接登记并刷新权威 facts。
-- [ ] KEY-001：提取可嵌入 Key section；保留 recent-MFA、确认、一次性明文、unknown outcome。
-- [ ] STATUS-001：新页读取 subscription config 并展示非阻塞商业配置状态；外部验证始终明确非自动。
-- [ ] E2E-001：synthetic browser 验证创建→接入页、进度变化、旧 URL、响应式和失败态。
-- [ ] E2E-002：Local Admin T12 覆盖 Key recent-MFA/创建/部署事实在新主入口不回归。
-- [ ] DOC-001：同步 onboarding guide、architecture、Admin DESIGN。
-- [ ] REL-001：canonical R3、final diff/hygiene、GitHub main 与分支清理。
+- [x] UI-001：实现首次接入/维护两用 `PlatformIntegrationPage`。
+- [x] ORIGIN-001：提取可嵌入 Origin section；新页可直接登记并刷新权威 facts。
+- [x] KEY-001：提取可嵌入 Key section；保留 recent-MFA、确认、一次性明文、unknown outcome。
+- [x] STATUS-001：新页读取 subscription config 并展示非阻塞商业配置状态；外部验证始终明确非自动。
+- [x] E2E-001：synthetic browser 验证创建→接入页、进度变化、旧 URL、响应式和失败态。
+- [x] E2E-002：Local Admin T12 覆盖 Key recent-MFA/创建/部署事实在新主入口不回归。
+- [x] DOC-001：同步 onboarding guide、architecture、Admin DESIGN。
+- [ ] REL-001：canonical R3 已通过；待 final diff/hygiene、GitHub main 与分支清理。
 
 ## 验证
 

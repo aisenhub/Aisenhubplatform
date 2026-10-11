@@ -96,14 +96,20 @@ await context.route('**/*', async (route) => {
   const url = new URL(request.url());
   if (url.origin !== new URL(origin).origin) return route.abort();
   if (!url.pathname.startsWith('/api/')) return route.continue();
+  const path = url.pathname.replace('/api/v1/admin/api/v1', '');
   if (request.method() !== 'GET') {
     writes.push({ method: request.method(), path: url.pathname });
+    if (request.method() === 'POST' && path === '/platforms') {
+      return route.fulfill({
+        status: 201,
+        json: { data: platform, request_id: 'synthetic-platform-create' },
+      });
+    }
     return route.fulfill({
       status: 503,
       json: { error: { code: 'AUTHORIZATION_UNAVAILABLE' } },
     });
   }
-  const path = url.pathname.replace('/api/v1/admin/api/v1', '');
   reads.push({ path, search: url.search });
   let data;
   if (path === '/security/status') {
@@ -149,6 +155,14 @@ await context.route('**/*', async (route) => {
     data = url.searchParams.get('q') === 'no-match' ? [] : [account];
   else if (path === `/platforms/${platformId}/accounts/${accountId}`)
     data = account;
+  else if (path === `/platforms/${platformId}/subscription-config`)
+    data = {
+      paid_plan_id: null,
+      paid_plan_status: null,
+      monthly_enabled: false,
+      yearly_enabled: false,
+      lifetime_enabled: false,
+    };
   else if (path === '/audit') {
     const noMatch =
       url.searchParams.get('q') === 'no-match' ||
@@ -325,6 +339,69 @@ try {
     'PASS: Platform Overview authoritative metrics, period switching, planned domains and refresh recovery',
   );
 
+  writes.length = 0;
+  await goto('/admin/platforms', 'platform-directory-table');
+  await page.locator('[data-test="platform-create-open"]').click();
+  await page.locator('[data-test="platform-create-code"]').fill('new-platform');
+  await page.locator('[data-test="platform-create-name"]').fill('新接入平台');
+  await page.locator('[data-test="platform-create-submit"]').click();
+  await page.waitForURL(
+    `${origin}/admin/platforms/${platformId}/settings/integration?welcome=1`,
+  );
+  await page.locator('[data-test="platform-integration-page"]').waitFor();
+  await page.locator('[data-test="platform-integration-welcome"]').waitFor();
+  await page.locator('[data-test="platform-origins-section"]').waitFor();
+  await page.locator('[data-test="platform-keys-section"]').waitFor();
+  assert.equal(
+    await page.locator('[data-test="admin-nav-integration"]').count(),
+    1,
+    'Platform Sidebar exposes one Integration entry',
+  );
+  assert.equal(
+    await page.locator('[data-test="admin-nav-origins"]').count(),
+    0,
+  );
+  assert.equal(await page.locator('[data-test="admin-nav-keys"]').count(), 0);
+  assert.match(
+    await page
+      .locator('[data-test="platform-integration-step-consumer-runtime"]')
+      .innerText(),
+    /需外部验证/u,
+  );
+  assert.match(
+    await page.locator('[data-test="platform-integration-next"]').innerText(),
+    /域名与回调/u,
+  );
+  assert.deepEqual(
+    writes,
+    [
+      {
+        method: 'POST',
+        path: '/api/v1/admin/api/v1/platforms',
+      },
+    ],
+    'Platform creation uses one synthetic POST before entering onboarding',
+  );
+  writes.length = 0;
+
+  await page.goto(`${origin}/admin/platforms/${platformId}/settings/origins`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.waitForURL(
+    `${origin}/admin/platforms/${platformId}/settings/integration?section=origins`,
+  );
+  await page.locator('[data-test="platform-origins-section"]').waitFor();
+  await page.goto(`${origin}/admin/platforms/${platformId}/settings/keys`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.waitForURL(
+    `${origin}/admin/platforms/${platformId}/settings/integration?section=keys`,
+  );
+  await page.locator('[data-test="platform-keys-section"]').waitFor();
+  console.log(
+    'PASS: platform creation enters truthful onboarding and legacy integration routes redirect',
+  );
+
   await goto(`/admin/platforms/${platformId}`, 'platform-overview');
   const platformSidebar = page.locator('[data-test="admin-sidebar"]');
   for (const globalHref of [
@@ -368,8 +445,10 @@ try {
     [`/admin/platforms/${platformId}/subscriptions`, 'platform-workspace'],
     [`/admin/platforms/${platformId}/files`, 'platform-workspace'],
     [`/admin/platforms/${platformId}/redemption-batches`, 'platform-workspace'],
-    [`/admin/platforms/${platformId}/settings/keys`, 'platform-workspace'],
-    [`/admin/platforms/${platformId}/settings/origins`, 'platform-workspace'],
+    [
+      `/admin/platforms/${platformId}/settings/integration`,
+      'platform-integration-page',
+    ],
     ['/admin/billing', 'admin-shell'],
     ['/admin/accounts/deletion-jobs', 'admin-shell'],
     ['/admin/audit', 'admin-shell'],
@@ -404,7 +483,7 @@ try {
     }
   }
   console.log(
-    'PASS: responsive and semantic controls across 60 route/viewport combinations',
+    `PASS: responsive and semantic controls across ${routes.length * 4} route/viewport combinations`,
   );
 
   await page.setViewportSize({ width: 1440, height: 960 });

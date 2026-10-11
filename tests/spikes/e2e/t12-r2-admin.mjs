@@ -396,12 +396,25 @@ async function runBrowserFlow(secret) {
         .endsWith(`/api/v1/admin/api/v1/platforms/${platformId}/keys`) &&
       response.request().method() === 'GET',
   );
-  await page.goto(`${appUrl}/admin/platforms/${platformId}/settings/keys`, {
-    waitUntil: 'domcontentloaded',
-  });
-  await page.locator('[data-test="platform-keys-page"]').waitFor({
+  await page.goto(
+    `${appUrl}/admin/platforms/${platformId}/settings/integration`,
+    {
+      waitUntil: 'domcontentloaded',
+    },
+  );
+  await page.locator('[data-test="platform-integration-page"]').waitFor({
     state: 'visible',
   });
+  await page.locator('[data-test="platform-keys-section"]').waitFor({
+    state: 'visible',
+  });
+  assert.match(
+    await page
+      .locator('[data-test="platform-integration-step-consumer-runtime"]')
+      .innerText(),
+    /需外部验证/u,
+    'target-platform runtime verification must not be auto-completed centrally',
+  );
   const loadKeysResponse = await loadKeysResponsePromise;
   assertStatus(loadKeysResponse.status(), 200, 'browser admin key list');
   await page.locator('[data-test="platform-key-open-create"]').click();
@@ -1024,8 +1037,8 @@ async function runResponsiveA11yMatrix() {
       path: `/admin/platforms/${platformId}/settings`,
     },
     {
-      label: 'Settings Keys',
-      path: `/admin/platforms/${platformId}/settings/keys`,
+      label: 'Integration Settings',
+      path: `/admin/platforms/${platformId}/settings/integration`,
     },
     {
       label: 'Redemption Batches',
