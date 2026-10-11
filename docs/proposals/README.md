@@ -48,6 +48,8 @@ proposals/
 
 - [OPT-006 平台接入配置与首次接入向导](admin-platform-integration-onboarding/design.md)：[计划](admin-platform-integration-onboarding/plan.md)，把 Origin、Platform Key、中央准备进度和目标平台外部验收说明收敛到统一接入配置工作区，并让新建平台直接进入首次接入流程。
 
+- [OPT-007 配置资源系统](config-resource-system/design.md)：[计划](config-resource-system/plan.md)，在保留 canonical `/v1/config-files` 与 private Storage 状态机的前提下新增 Config/Version/Gallery 业务层、套餐槽位、平台容量、Admin 审核治理与 Consumer 配置广场。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
