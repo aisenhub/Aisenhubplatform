@@ -1,6 +1,6 @@
 # OPT-005 平台作用域侧边栏导航收敛计划
 
-状态：In Progress
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -10,13 +10,13 @@
 
 风险分级：**R2**。
 
-当前分支：`codex/opt-005-platform-scope-navigation`。
+当前分支：`main`。
 
 ## 阶段
 
 | 阶段 | 目标 | 状态 | 详细计划 |
 | --- | --- | --- | --- |
-| 01 | Sidebar/navigation 收敛、文档同步、浏览器与 R2/Git closeout | Local R2 完成，待 Git closeout | [阶段 01](phases/01-platform-scope-sidebar.md) |
+| 01 | Sidebar/navigation 收敛、文档同步、浏览器与 R2/Git closeout | 完成 | [阶段 01](phases/01-platform-scope-sidebar.md) |
 
 ## 总体验收
 
@@ -26,7 +26,7 @@
 - [x] PlatformSwitcher 的 Accounts/Billing 对等 scope 映射保持不变。
 - [x] architecture/Admin DESIGN/旧双透镜 Proposal 的 supersede 说明同步。
 - [x] unit/typecheck/build/browser/lint/format/docs 与适用 R2 Local 验证通过。
-- [ ] GitHub/main/远端 SHA/分支清理闭环后再进入 OPT-006。
+- [x] GitHub/main/远端 SHA/分支清理闭环后再进入 OPT-006。
 
 ## 风险与回退
 

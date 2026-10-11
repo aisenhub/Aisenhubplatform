@@ -11,7 +11,7 @@
 
 | 阶段 | 状态 | 已完成 | 剩余 |
 | --- | --- | --- | --- |
-| 01 Sidebar scope | PASS（Git closeout 待完成） | 最新 main 核对、实现、unit/build/browser、canonical R2 | commit/push/main/branch cleanup |
+| 01 Sidebar scope | PASS | 最新 main 核对、实现、unit/build/browser、canonical R2、GitHub/main/branch cleanup | 无 |
 
 ## 验证记录
 
@@ -23,9 +23,10 @@
 | 2026-10-11 | 01 | `pnpm lint` + `pnpm format:check` + `pnpm docs:check` | Local | PASS：lint 0 warnings / 0 errors；format 395 files；docs 154 documents |
 | 2026-10-11 | 01 | 首次 `pnpm verify:task:0801` | Local + Local Supabase | FAIL：fresh reset、API 97/97、62 files / 1146 SQL tests、contracts/Consumer Harness 等均已通过；最终 Admin browser 仍保留旧“平台内 audit 一跳直通”断言而失败，定位为被 OPT-005 替代的历史验收，不是产品回归 |
 | 2026-10-11 | 01 | 更新 `tests/spikes/e2e/t12-r2-admin.mjs` 后 `pnpm verify:task:0801 --reuse-local` | Local + Local Supabase | PASS：20 executable gates；T12 `platformScopeIsolation=PASS`；62 files / 1146 SQL tests、API 97/97、build/unit/contracts/Registry/Harness/runtime、Consumer/Admin E2E、docs/OpenAPI 全 PASS |
+| 2026-10-11 | GitHub | `57c7ae7` + `6e729a1`，任务分支 push，fast-forward main，远端 SHA 核对，任务分支清理 | GitHub | PASS：产品实施提交 `6e729a17faea415b89ae2088dd6535b23d9a3d1e` 已进入远端 main；首次 push/ls-remote 遭遇临时 HTTPS 连接失败，链路恢复后按标准 Git 流程完成；本地/远端任务分支均已删除 |
 
 ## 交接
 
-- 当前无产品决策、Local R2 或远端 Supabase 阻塞；本项无 Supabase 远端变更，部署不适用。
-- 下一步：final diff/hygiene，提交并 push 任务分支，合并 main、核对远端 SHA、完成 closeout 文档与分支清理后进入 OPT-006。
+- OPT-005 已完成，无产品决策、Local R2、GitHub 或远端 Supabase 阻塞；本项无 Supabase 远端变更，部署不适用。
+- 下一步：从完成 closeout 后的最新 `main` 开始 OPT-006，不回补本项已关闭的 Platform Sidebar 全局治理入口。
 

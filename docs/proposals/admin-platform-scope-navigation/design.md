@@ -1,6 +1,6 @@
 # OPT-005 平台作用域侧边栏导航收敛
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md)
 

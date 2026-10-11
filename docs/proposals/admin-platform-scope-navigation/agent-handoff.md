@@ -5,7 +5,7 @@
 - 项目：`E:\Projects\Aisenhubplatform`
 - 任务：OPT-005 平台作用域侧边栏导航收敛
 - 起始 main：`17212999e3eefcba39b755ce9e71555dde91f4f2`
-- 当前分支：`codex/opt-005-platform-scope-navigation`
+- 当前分支：`main`
 - 风险：R2
 - 当前阶段：[Phase 01](phases/01-platform-scope-sidebar.md)
 
@@ -21,5 +21,5 @@
 
 - [x] 代码、测试、当前架构与旧 Proposal supersede 说明一致。
 - [x] R2 本地门槛无 FAIL/BLOCKED。
-- [ ] main/远端/分支状态闭环。
+- [x] main/远端/分支状态闭环。
 
