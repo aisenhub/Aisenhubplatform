@@ -1,6 +1,6 @@
 # Phase 01 — Feedback 领域与 Storage 基础
 
-状态：执行中
+状态：已完成
 
 ## 目标
 
@@ -8,7 +8,9 @@
 
 ## 修改范围
 
-- `supabase/migrations/*feedback*`：必须由固定 Supabase CLI `migration new` 创建。
+- `supabase/migrations/20261011124445_feedback_domain_storage.sql`：Feedback/Attachment/Label/Event 与 private bucket。
+- `supabase/migrations/20261011124739_feedback_domain_functions.sql`：Account primitives、write-attempt/unknown、privacy/delete 与 cleanup primitives。
+- `supabase/migrations/20261011140102_feedback_domain_fk_indexes.sql`：Advisor 指出的 Feedback FK covering indexes。
 - `supabase/tests/t27_feedback_domain.sql`。
 - `supabase/functions/_shared/storage.ts` + test：bucket 类型收敛为受控 union。
 - Proposal verification record。
@@ -43,4 +45,4 @@
 
 ## 退出条件
 
-schema/domain/storage adapter/权限测试 PASS；旧 Config/legacy file pgTAP 全绿；fresh/upgrade 可重复；verification record 更新并形成 Phase 01 checkpoint commit/push。
+schema/domain/storage adapter/权限测试 PASS；旧 Config/legacy file pgTAP 全绿；fresh/upgrade 可重复；Local Security Advisor 0 issues，Feedback FK Advisor 缺口为 0。checkpoint commit/push 后进入 Phase 02。

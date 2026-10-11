@@ -95,12 +95,16 @@ Deno.test('Storage adapter exposes immutable server-only operations', async () =
     assertEquals(
       (
         await adapter.download({
-          bucket: 'platform-config-files',
-          path: 'platform/account/file',
+          bucket: 'platform-feedback-attachments',
+          path: 'platform/account/feedback/attachment',
           timeoutMs: 1000,
         })
       ).status,
       200,
+    );
+    assertEquals(
+      new URL(calls[2]?.url ?? '').pathname,
+      '/storage/v1/object/platform-feedback-attachments/platform/account/feedback/attachment',
     );
     await adapter.remove({
       bucket: 'platform-config-files',

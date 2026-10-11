@@ -14,8 +14,8 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | Feedback/Attachment 数据模型、专用 Storage、领域状态机与权限 | 最新 main / 正式 design | 执行中 | [阶段 01](phases/01-domain-storage.md) |
-| 02 | Account v1 additive API、Auth 邮箱快照、Consumer Harness/E2E | 01 已完成 | 未开始 | [阶段 02](phases/02-account-consumer.md) |
+| 01 | Feedback/Attachment 数据模型、专用 Storage、领域状态机与权限 | 最新 main / 正式 design | 已完成 | [阶段 01](phases/01-domain-storage.md) |
+| 02 | Account v1 additive API、Auth 邮箱快照、Consumer Harness/E2E | 01 已完成 | 执行中 | [阶段 02](phases/02-account-consumer.md) |
 | 03 | Admin API/UI、筛选/治理/CSV/批量删除、Overview 聚合 | 01–02 已完成 | 未开始 | [阶段 03](phases/03-admin-feedback-center.md) |
 | 04 | Maintenance cleanup、Global Delete/retention/backup barrier、完整 R3 与 Git closeout | 01–03 已完成 | 未开始 | [阶段 04](phases/04-lifecycle-release.md) |
 
@@ -33,7 +33,7 @@
 
 ## 总体验收
 
-- [ ] Schema/RLS/grants/索引与 fresh/upgrade 完成。
+- [x] Schema/RLS/grants/索引与 fresh/upgrade 完成。
 - [ ] Account additive contract、Consumer Harness 与真实 Local 图片上传/提交闭环通过。
 - [ ] Admin feedback center 和 Overview 权威聚合完成。
 - [ ] Global Delete/retention/backup barrier/Storage cleanup 失败恢复通过。

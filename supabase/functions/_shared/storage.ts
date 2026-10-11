@@ -3,26 +3,30 @@ export interface StorageObjectInfo {
   readonly etag: string | null;
 }
 
+export type StorageBucket =
+  | 'platform-config-files'
+  | 'platform-feedback-attachments';
+
 export interface StorageAdapter {
   putImmutable(input: {
-    readonly bucket: 'platform-config-files';
+    readonly bucket: StorageBucket;
     readonly path: string;
     readonly body: Uint8Array;
     readonly contentType: string;
     readonly timeoutMs: number;
   }): Promise<{ readonly providerRequestId: string | null }>;
   getInfo(input: {
-    readonly bucket: 'platform-config-files';
+    readonly bucket: StorageBucket;
     readonly path: string;
     readonly timeoutMs: number;
   }): Promise<StorageObjectInfo>;
   download(input: {
-    readonly bucket: 'platform-config-files';
+    readonly bucket: StorageBucket;
     readonly path: string;
     readonly timeoutMs: number;
   }): Promise<Response>;
   remove(input: {
-    readonly bucket: 'platform-config-files';
+    readonly bucket: StorageBucket;
     readonly path: string;
     readonly timeoutMs: number;
   }): Promise<void>;

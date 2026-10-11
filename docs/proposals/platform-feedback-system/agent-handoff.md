@@ -3,7 +3,7 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：OPT-008 平台用户反馈系统
 - 总计划：[plan.md](plan.md)
-- 当前阶段：[Phase 01](phases/01-domain-storage.md)
+- 当前阶段：[Phase 02](phases/02-account-consumer.md)
 - 当前分支：`codex/opt-008-feedback-system`
 - 基线：`main@67620082f43f2e608f24a5d301bb5adacbfc887f`
 - 风险：R3
