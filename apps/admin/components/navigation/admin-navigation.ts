@@ -175,9 +175,9 @@ const platformNavigationDefinitions: Array<{
     items: [
       {
         key: 'files',
-        label: '文件',
+        label: '配置资源',
         suffix: '/files',
-        description: '查看当前平台配置文件',
+        description: '管理 Config、审核队列、Gallery 与 Storage 技术状态',
         icon: Files,
       },
     ],

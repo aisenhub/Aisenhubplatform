@@ -9,8 +9,8 @@ import {
 describe('consumer lab contract summaries', () => {
   it('reads the current canonical Account contract', () => {
     expect(accountContractSummary.major).toBe('v1');
-    expect(accountContractSummary.version).toBe('1.0.1');
-    expect(accountContractSummary.operations).toHaveLength(22);
+    expect(accountContractSummary.version).toBe('1.1.0');
+    expect(accountContractSummary.operations).toHaveLength(38);
     expect(accountContractSummary.operations).toContainEqual(
       expect.objectContaining({
         method: 'GET',
@@ -23,7 +23,7 @@ describe('consumer lab contract summaries', () => {
   it('reads the current canonical Admin contract', () => {
     expect(adminContractSummary.major).toBe('v1');
     expect(adminContractSummary.version).toBe('1.0.0');
-    expect(adminContractSummary.operations).toHaveLength(48);
+    expect(adminContractSummary.operations).toHaveLength(54);
     expect(adminContractSummary.operations).toContainEqual(
       expect.objectContaining({
         method: 'GET',
@@ -36,6 +36,13 @@ describe('consumer lab contract summaries', () => {
         method: 'GET',
         path: '/admin/api/v1/platforms/{platformId}/overview',
         operationId: 'adminGetPlatformOverview',
+      }),
+    );
+    expect(adminContractSummary.operations).toContainEqual(
+      expect.objectContaining({
+        method: 'GET',
+        path: '/admin/api/v1/platforms/{platformId}/config-resources',
+        operationId: 'adminListConfigResources',
       }),
     );
   });

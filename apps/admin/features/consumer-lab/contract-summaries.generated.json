@@ -584,6 +584,54 @@
       },
       {
         "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/config-resources",
+        "operationId": "adminListConfigResources",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/config-resources/{configId}",
+        "operationId": "adminGetConfigResource",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/config-resources/{configId}/gallery-governance",
+        "operationId": "adminGovernConfigGalleryEntry",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/config-resources/{configId}/usage",
+        "operationId": "adminGetConfigUsage",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/config-reviews",
+        "operationId": "adminListConfigReviews",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/config-reviews/{submissionId}/review",
+        "operationId": "adminReviewConfigSubmission",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/admin/api/v1/platforms/{platformId}/file-policy",
         "operationId": "adminGetFilePolicy",
         "security": [

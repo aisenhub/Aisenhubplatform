@@ -8,8 +8,8 @@
 | --- | --- | --- | --- |
 | 01 领域/Storage 兼容 | DONE | 三条 migration、legacy 隔离、Config/Version/Gallery/Like/Usage primitives、fresh+upgrade 63/1209、staging/advisors 已验证 | Phase 02 Account/Consumer |
 | 02 Account/Consumer | DONE | additive Account v1、private Storage Version/Gallery 内容流、OpenAPI 1.1.0、Consumer Harness、Local fresh+upgrade、staging v59 已验证 | Phase 03 Admin 治理 |
-| 03 Admin 治理 | NOT_STARTED | 无 | Phase 02 完成后实施 |
-| 04 Lifecycle/Release | NOT_STARTED | 无 | Phase 03 完成后实施 |
+| 03 Admin 治理 | DONE | Admin Config resource/review/Gallery governance、平台容量、Plan slot、Overview pending review、Local canonical R3、staging v60 已验证 | Phase 04 Lifecycle/Release |
+| 04 Lifecycle/Release | NOT_STARTED | 无 | Phase 03 checkpoint 后实施 |
 
 ## 事实与验证日志
 
@@ -38,6 +38,14 @@
 | 2026-10-11 | Phase 02 staging permissions | Supabase SQL | Staging | PASS：Config Version/Gallery/删除公开 wrapper 对 `account_executor` 可执行；kind helper / Version resolver 不可直接执行；新增函数均 `domain_owner` + security definer + pinned `pg_catalog, private, public` search_path |
 | 2026-10-11 | Phase 02 staging HTTP | `pg_net` staging DB → 同项目 `account-api` Edge | Staging | PASS：`/v1/configs` 与 `/v1/config-gallery` 未认证真实 HTTP 均为 401 `UNAUTHORIZED`、`Cache-Control: no-store`、有效 `X-Request-Id`、无 timeout；未创建业务 fixture。Runner 直连当时为 TLS reset/timeout，未伪记为 PASS |
 | 2026-10-11 | Phase 02 staging advisors | Supabase Security + Performance Advisor | Staging | PASS：Security 仍只有既有 `pg_net` public schema 与 leaked-password protection WARN；Performance 仍为既有 unindexed-FK / fresh-unused-index 信息，无 Phase 02 新安全告警 |
+| 2026-10-11 | Phase 03 DB/Admin | `20261011070729` + Admin API/OpenAPI/UI | Local | PASS：Config resource list/detail、review queue、approve/reject、Gallery remove/restore/block、usage、平台总容量、Plan `config_slot_limit` 与 Overview `pending_config_reviews` 已落地；Admin OpenAPI 54 operations |
+| 2026-10-11 | Phase 03 canonical R3 | canonical `TASK-0801 --reuse-local` | Local Supabase + Browser | PASS：20 executable gates；Edge/API 101/0；65 files / 1260 pgTAP；breaking PASS；Consumer Harness、Admin synthetic 与真实 T12 全绿 |
+| 2026-10-11 | Phase 03 Admin T12 | `tests/spikes/e2e/t12-r2-admin.mjs` | Local Browser + Local Supabase | PASS：`configReviewGovernance`、`globalCapacityStepUp`、`overCapacityNoDelete`；recent-MFA 后显式 resubmit、无自动重放；95 组响应式/可访问性路由矩阵保持通过 |
+| 2026-10-11 | Phase 03 staging migration | `supabase db push --linked --dry-run` → `--yes` | Staging | PASS：dry-run 仅包含 `20261011070729_config_resource_admin_governance.sql`，远端 history 已精确包含该版本 |
+| 2026-10-11 | Phase 03 staging Edge | Supabase Functions deploy / source inspection | Staging | PASS：仅部署 `account-api`，最终 ACTIVE v60、`verify_jwt=false`；远端 source 包含 Config resources/reviews/Gallery governance/file-policy v2/Plan upsert/Overview 路由 |
+| 2026-10-11 | Phase 03 staging permissions | Supabase SQL | Staging | PASS：10 个关键 Phase 03 private functions 均 `domain_owner` + security definer + pinned search_path；`admin_executor` 可执行，`account_executor`/authenticated/anon 不可直接执行 |
+| 2026-10-11 | Phase 03 staging HTTP | `pg_net` staging DB → 同项目 `account-api` Edge | Staging | PASS：Config resources、review queue、Overview、file-policy 未认证真实 HTTP 均 401 `UNAUTHORIZED`、`Cache-Control: no-store`、有效 `X-Request-Id`、无 timeout；Runner 直连为 `ECONNRESET`，未伪记为 PASS |
+| 2026-10-11 | Phase 03 staging advisors | Supabase Security + Performance Advisor | Staging | PASS：Security 仅既有两条 WARN；Performance 为既有 unindexed-FK / fresh-unused-index INFO；无 Phase 03 新安全告警，不基于低流量 unused 统计移除新索引 |
 | 2026-10-11 | Production | 发布边界 | Production | NOT_RUN：OPT-007 未获 Production 授权 |
 
 ## 当前结论
@@ -45,5 +53,5 @@
 - 正式模型已冻结为 Config / immutable Version / Gallery Submission + Entry / Like / Usage Event，并保留 `platform_config_files` 作为唯一物理 ledger。
 - legacy API 采用 additive coexistence，不做 v1 breaking rename/delete。
 - 槽位、平台容量、Gallery admission、删除与 usage 语义已在 design 固化。
-- Phase 01–02 已完成并同步 staging；Account API 最终为 v59，Local R3 fresh/upgrade 与 Consumer Harness 真实 private Storage 链路均已闭环。
-- 下一步进入 Phase 03 Admin 治理；Production 始终 NOT_RUN，除非用户另行明确授权。
+- Phase 01–03 已完成并同步 staging；Account API 最终为 v60，Local canonical R3、真实 Config/Gallery/容量治理链路与 fail-closed staging HTTP 均已闭环。
+- 下一步进入 Phase 04 Lifecycle/Release；Production 始终 NOT_RUN，除非用户另行明确授权。

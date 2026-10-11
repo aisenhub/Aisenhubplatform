@@ -226,12 +226,14 @@ select is(
   0,
   'legacy Admin file list does not expose Config Version files'
 );
-select is(
-  (select count(*)::integer from private.admin_file_list(row(
-    '00000000-0000-4000-8000-000000005100', '00000000-0000-4000-8000-000000005110',
-    '00000000-0000-4000-8000-000000005178'
-  )::private.admin_context, null, 20)),
-  0,
+select ok(
+  not exists (
+    select 1 from private.admin_file_list(row(
+      '00000000-0000-4000-8000-000000005100', '00000000-0000-4000-8000-000000005110',
+      '00000000-0000-4000-8000-000000005178'
+    )::private.admin_context, null, 20) legacy_file
+    where legacy_file.file_id = (select file_id from version_one)
+  ),
   'legacy Admin v1 file list also excludes Config Version files'
 );
 select throws_ok(

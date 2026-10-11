@@ -728,7 +728,7 @@ export async function dispatchAdmin(
     const platformId = policyMatch[1]!;
     if (request.method === 'GET') {
       const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_file_policy_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        'select * from private.admin_file_policy_read_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
         [...context, platformId],
       );
       if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
@@ -740,15 +740,28 @@ export async function dispatchAdmin(
       const maxFileBytes = Number(input.max_file_bytes);
       const maxFiles = Number(input.max_files);
       const maxTotalBytes = Number(input.max_total_bytes);
+      const [current] = await transaction.unsafe<Row>(
+        'select * from private.admin_file_policy_read_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      if (!current) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      const changesPlatformCapacity =
+        input.max_platform_total_bytes !== undefined;
+      const maxPlatformTotalBytes = changesPlatformCapacity
+        ? Number(input.max_platform_total_bytes)
+        : Number(current.max_platform_total_bytes);
       if (
         typeof enabled !== 'boolean' ||
         !Number.isSafeInteger(maxFileBytes) ||
         !Number.isSafeInteger(maxFiles) ||
-        !Number.isSafeInteger(maxTotalBytes)
+        !Number.isSafeInteger(maxTotalBytes) ||
+        !Number.isSafeInteger(maxPlatformTotalBytes)
       )
         throw new ApiFault(400, 'INVALID_INPUT');
+      if (changesPlatformCapacity)
+        await adminStepUp(transaction, session, request);
       const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_file_policy_update(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::boolean, $6::bigint, $7::integer, $8::bigint)',
+        'select * from private.admin_file_policy_update_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::boolean, $6::bigint, $7::integer, $8::bigint, $9::bigint)',
         [
           ...context,
           platformId,
@@ -756,11 +769,162 @@ export async function dispatchAdmin(
           maxFileBytes,
           maxFiles,
           maxTotalBytes,
+          maxPlatformTotalBytes,
         ],
       );
       if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
       return { status: 200, data: result };
     }
+  }
+
+  const configResourcesMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/config-resources$/u.exec(path);
+  if (
+    configResourcesMatch &&
+    UUID.test(configResourcesMatch[1]!) &&
+    request.method === 'GET'
+  ) {
+    const platformId = configResourcesMatch[1]!;
+    const cursor = uuidValue(url.searchParams.get('cursor'));
+    const cursorInput = url.searchParams.get('cursor');
+    if (cursorInput && !cursor) throw new ApiFault(400, 'INVALID_INPUT');
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_config_resource_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::integer, $7::text, $8::text)',
+      [
+        ...context,
+        platformId,
+        cursor ?? null,
+        limit,
+        url.searchParams.get('q'),
+        url.searchParams.get('gallery_status'),
+      ],
+    );
+    return {
+      status: 200,
+      data: rows,
+      next_cursor:
+        rows.length === limit ? uuidValue(rows.at(-1)?.config_id) : null,
+    };
+  }
+
+  const configResourceMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/config-resources\/([^/]+)$/u.exec(
+      path,
+    );
+  if (
+    configResourceMatch &&
+    UUID.test(configResourceMatch[1]!) &&
+    UUID.test(configResourceMatch[2]!) &&
+    request.method === 'GET'
+  ) {
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_config_resource_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+      [...context, configResourceMatch[1], configResourceMatch[2]],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
+  const configUsageMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/config-resources\/([^/]+)\/usage$/u.exec(
+      path,
+    );
+  if (
+    configUsageMatch &&
+    UUID.test(configUsageMatch[1]!) &&
+    UUID.test(configUsageMatch[2]!) &&
+    request.method === 'GET'
+  ) {
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_config_usage_summary(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+      [...context, configUsageMatch[1], configUsageMatch[2]],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
+  const configReviewsMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/config-reviews$/u.exec(path);
+  if (
+    configReviewsMatch &&
+    UUID.test(configReviewsMatch[1]!) &&
+    request.method === 'GET'
+  ) {
+    const cursor = uuidValue(url.searchParams.get('cursor'));
+    const cursorInput = url.searchParams.get('cursor');
+    if (cursorInput && !cursor) throw new ApiFault(400, 'INVALID_INPUT');
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_config_review_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::integer)',
+      [...context, configReviewsMatch[1], cursor ?? null, limit],
+    );
+    return {
+      status: 200,
+      data: rows,
+      next_cursor:
+        rows.length === limit ? uuidValue(rows.at(-1)?.submission_id) : null,
+    };
+  }
+
+  const configReviewActionMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/config-reviews\/([^/]+)\/review$/u.exec(
+      path,
+    );
+  if (
+    configReviewActionMatch &&
+    UUID.test(configReviewActionMatch[1]!) &&
+    UUID.test(configReviewActionMatch[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const action = stringValue(input.action);
+    const reason = stringValue(input.reason);
+    if (!action || !['approve', 'reject'].includes(action) || !reason)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_config_gallery_review_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::text)',
+      [
+        ...context,
+        configReviewActionMatch[1],
+        configReviewActionMatch[2],
+        action,
+        reason,
+      ],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
+  const configGovernanceMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/config-resources\/([^/]+)\/gallery-governance$/u.exec(
+      path,
+    );
+  if (
+    configGovernanceMatch &&
+    UUID.test(configGovernanceMatch[1]!) &&
+    UUID.test(configGovernanceMatch[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const action = stringValue(input.action);
+    const reason = stringValue(input.reason);
+    if (!action || !['remove', 'restore', 'block'].includes(action) || !reason)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_config_gallery_govern(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::text)',
+      [
+        ...context,
+        configGovernanceMatch[1],
+        configGovernanceMatch[2],
+        action,
+        reason,
+      ],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
   }
   const adminFileMatch = /^admin\/api\/v1\/config-files\/([^/]+)$/u.exec(path);
   if (adminFileMatch && request.method === 'GET') {

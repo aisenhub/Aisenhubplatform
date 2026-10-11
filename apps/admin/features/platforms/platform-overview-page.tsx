@@ -39,6 +39,7 @@ const quickLinks = [
   ['billing', '订单与计费', '查看当前平台订单与处理异常。'],
   ['plans', '平台套餐', '管理免费与付费套餐。'],
   ['subscriptions', '平台订阅', '查看账户的订阅与权益。'],
+  ['files', '配置资源', '审核配置、管理 Gallery 可见性与查看 Storage 状态。'],
   ['settings', '平台设置', '调整运行状态与激活策略。'],
 ] as const;
 
@@ -427,9 +428,17 @@ export function PlatformOverviewPage() {
                 href={`${base}/billing`}
                 test="platform-overview-attention-orders"
               />
-              <PlannedCard
-                title="配置广场审核"
-                description="OPT-007 配置资源/审核域落地后接入权威 Pending Review 聚合。"
+              <MetricCard
+                label="待审核配置"
+                value={metricNumber(metrics.pending_config_reviews)}
+                description="进入配置资源审核队列"
+                tone={
+                  metricNumber(metrics.pending_config_reviews) > 0
+                    ? 'warning'
+                    : 'neutral'
+                }
+                href={`${base}/files#config-reviews`}
+                test="platform-overview-pending-config-reviews"
               />
               <PlannedCard
                 title="用户反馈"

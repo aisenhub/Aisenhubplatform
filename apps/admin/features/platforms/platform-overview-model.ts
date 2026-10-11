@@ -25,6 +25,7 @@ export type PlatformOverviewMetrics = {
   previous_granted_orders: number | string;
   attention_orders: number | string;
   previous_attention_orders: number | string;
+  pending_config_reviews: number | string;
 };
 
 export function platformOverviewPeriod(

@@ -80,6 +80,15 @@ type PlanActionIntent = {
   reversible: boolean;
 };
 
+function configSlotLimit(
+  features: Record<string, unknown> | undefined,
+): number {
+  const value = features?.config_slot_limit;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+    ? value
+    : 0;
+}
+
 export function PlatformPlansPage() {
   const { platform } = usePlatformContext();
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -174,7 +183,7 @@ export function PlatformPlansPage() {
       name: '',
       description: null,
       kind: 'paid',
-      features: {},
+      features: { config_slot_limit: 0 },
       status: 'active',
       make_default: false,
       clear_default: false,
@@ -191,7 +200,10 @@ export function PlatformPlansPage() {
       name: plan.name,
       description: plan.description ?? null,
       kind: plan.kind,
-      features: plan.features ?? {},
+      features: {
+        ...(plan.features ?? {}),
+        config_slot_limit: configSlotLimit(plan.features),
+      },
       status: plan.status,
       make_default: false,
       clear_default: false,
@@ -220,6 +232,21 @@ export function PlatformPlansPage() {
       setEditorError({
         title: '请填写 Plan 名称',
         description: '名称用于管理员识别，不能留空。',
+        requestId: null,
+        technicalDetail: 'INVALID_INPUT',
+      });
+      return;
+    }
+    const slotLimit = editorPayload.features.config_slot_limit;
+    if (
+      typeof slotLimit !== 'number' ||
+      !Number.isInteger(slotLimit) ||
+      slotLimit < 0 ||
+      slotLimit > 1000
+    ) {
+      setEditorError({
+        title: '配置槽位上限不正确',
+        description: '请输入 0–1000 的整数。0 表示该套餐不能创建个人 Config。',
         requestId: null,
         technicalDetail: 'INVALID_INPUT',
       });
@@ -496,9 +523,10 @@ export function PlatformPlansPage() {
                       />
                     </TableCell>
                     <TableCell className="break-words text-left text-sm">
+                      配置槽位 {configSlotLimit(plan.features)} ·{' '}
                       {plan.features && Object.keys(plan.features).length > 0
-                        ? `${Object.keys(plan.features).length} 个字段`
-                        : '空对象'}
+                        ? `${Object.keys(plan.features).length} 个 features 字段`
+                        : '无其他字段'}
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="flex flex-wrap justify-end gap-2">
@@ -650,6 +678,34 @@ export function PlatformPlansPage() {
                   maxLength={4096}
                   data-test="plan-editor-description"
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="plan-editor-config-slot-limit">
+                  配置槽位上限
+                </Label>
+                <Input
+                  id="plan-editor-config-slot-limit"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  step={1}
+                  value={configSlotLimit(editorPayload.features)}
+                  onChange={(event) =>
+                    setEditorPayload({
+                      ...editorPayload,
+                      features: {
+                        ...editorPayload.features,
+                        config_slot_limit: Number(event.target.value),
+                      },
+                    })
+                  }
+                  disabled={editorSaving}
+                  data-test="plan-editor-config-slot-limit"
+                />
+                <p className="text-xs text-muted-foreground">
+                  只更新 features.config_slot_limit；其他 feature keys
+                  会原样保留。范围 0–1000。
+                </p>
               </div>
               {editorError ? (
                 <Alert variant="destructive" data-test="plan-editor-error">

@@ -3,7 +3,7 @@
 - 当前分支：`codex/opt-007-config-resource-system`
 - 基线：`main@ec997111969c6abfda42f57abd179e6fc0bdfb8e`
 - 风险：R3
-- 当前阶段：[Phase 01](phases/01-domain-storage-compat.md)
+- 当前阶段：[Phase 04](phases/04-lifecycle-release.md)
 
 ## 不可回退的设计约束
 

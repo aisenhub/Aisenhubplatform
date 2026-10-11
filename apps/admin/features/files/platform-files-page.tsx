@@ -34,6 +34,7 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import { ConfigResourceCenter } from './config-resource-center';
 
 type Policy = {
   enabled: boolean;
@@ -45,6 +46,11 @@ type Policy = {
   available_bytes?: number;
   available_count?: number;
   over_quota?: boolean;
+  max_platform_total_bytes?: number;
+  platform_reserved_bytes?: number;
+  platform_actual_bytes?: number;
+  platform_available_bytes?: number;
+  platform_over_capacity?: boolean;
   updated_at?: string | null;
 };
 
@@ -562,23 +568,11 @@ export function PlatformFilesPage() {
     [files],
   );
 
-  if (fileState === 'loading' && policyState === 'loading') {
-    return (
-      <section className="grid gap-5" data-test="platform-files-loading">
-        <AdminPageHeader
-          title="文件"
-          description="平台范围内的文件状态、策略和受控下载。"
-        />
-        <AsyncState state="loading" />
-      </section>
-    );
-  }
-
   return (
     <section className="grid gap-5" data-test="platform-files-page">
       <AdminPageHeader
-        title="文件"
-        description="查看文件状态、下载文件与管理存储策略。删除后的清理进度以文件状态为准。"
+        title="配置资源"
+        description="管理 Config、审核队列与 Gallery；底层 Storage 状态保留为次级技术诊断，不替代业务资源事实。"
         actions={
           <Button
             variant="outline"
@@ -594,6 +588,24 @@ export function PlatformFilesPage() {
           </Button>
         }
       />
+
+      <ConfigResourceCenter />
+
+      <div
+        className="grid gap-1 border-t border-border/70 pt-5"
+        data-test="storage-technical-status"
+      >
+        <h2>Storage 技术状态</h2>
+        <p className="text-sm text-muted-foreground">
+          以下区域保留 legacy
+          文件策略、物理状态、受控下载与异步删除诊断。平台总容量在此只读，分配只能从
+          Global 平台目录执行。
+        </p>
+      </div>
+
+      {fileState === 'loading' && policyState === 'loading' ? (
+        <AsyncState state="loading" />
+      ) : null}
 
       {fileError && fileState === 'error' ? (
         <AsyncState
@@ -729,7 +741,32 @@ export function PlatformFilesPage() {
                   label="剩余文件"
                   value={`${policy.available_count ?? '—'}`}
                 />
+                <Metric
+                  label="平台总容量（Global 分配）"
+                  value={formatBytes(policy.max_platform_total_bytes)}
+                />
+                <Metric
+                  label="平台已预约"
+                  value={formatBytes(policy.platform_reserved_bytes)}
+                />
+                <Metric
+                  label="平台实际占用"
+                  value={formatBytes(policy.platform_actual_bytes)}
+                />
+                <Metric
+                  label="平台剩余容量"
+                  value={formatBytes(policy.platform_available_bytes)}
+                />
               </div>
+              {policy.platform_over_capacity ? (
+                <Alert data-test="platform-storage-over-capacity">
+                  <AlertTitle>平台总容量已超额</AlertTitle>
+                  <AlertDescription>
+                    既有对象不会被自动删除；服务端会拒绝新的物理预约，直到
+                    Global 管理员提高容量或现有删除完成结算。
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               {policy.over_quota ? (
                 <Alert data-test="platform-file-policy-over-quota">
                   <AlertTitle>当前使用量高于策略</AlertTitle>

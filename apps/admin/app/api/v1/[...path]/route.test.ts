@@ -144,7 +144,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(48);
+    expect(operationCount).toBe(54);
   });
 
   it('preserves the central request ID for response and audit correlation', async () => {

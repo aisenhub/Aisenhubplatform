@@ -19,6 +19,9 @@ mkdirSync(output, { recursive: true });
 
 const platformId = '11111111-1111-4111-8111-111111111111';
 const accountId = '22222222-2222-4222-8222-222222222222';
+const configId = '88888888-8888-4888-8888-888888888888';
+const configVersionId = '99999999-9999-4999-8999-999999999999';
+const configSubmissionId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const platform = {
   platform_id: platformId,
   name: '示例平台 · 产品工作区',
@@ -76,6 +79,62 @@ const platformOverview = {
   previous_granted_orders: 6,
   attention_orders: 2,
   previous_attention_orders: 3,
+  pending_config_reviews: 1,
+};
+const configResource = {
+  config_id: configId,
+  platform_account_id: accountId,
+  author_display_name: 'Harness Author',
+  title: '示例配置作品',
+  description: 'Phase 03 synthetic resource',
+  config_status: 'active',
+  current_version_id: configVersionId,
+  current_version_number: 1,
+  current_schema_key: 'example.config',
+  current_schema_version: '1',
+  gallery_status: 'approved',
+  published_version_id: configVersionId,
+  pending_submission_id: configSubmissionId,
+  pending_version_id: configVersionId,
+  pending_submitted_at: '2026-10-11T05:00:00Z',
+  version_count: 1,
+  like_count: 4,
+  download_count: 9,
+  apply_delivery_count: 3,
+  latest_submission_status: 'pending',
+  created_at: '2026-10-10T05:00:00Z',
+  updated_at: '2026-10-11T05:00:00Z',
+};
+const configReview = {
+  submission_id: configSubmissionId,
+  config_id: configId,
+  version_id: configVersionId,
+  title: configResource.title,
+  author_display_name: configResource.author_display_name,
+  schema_key: 'example.config',
+  schema_version: '1',
+  changelog: 'Synthetic review fixture',
+  version_number: 1,
+  submitted_at: '2026-10-11T05:00:00Z',
+  current_gallery_status: 'approved',
+  current_published_version_id: configVersionId,
+};
+const filePolicy = {
+  platform_id: platformId,
+  enabled: true,
+  max_file_bytes: 1048576,
+  max_files: 10,
+  max_total_bytes: 10485760,
+  reserved_bytes: 0,
+  reserved_count: 0,
+  available_bytes: 10485760,
+  available_count: 10,
+  over_quota: false,
+  max_platform_total_bytes: 1073741824,
+  platform_reserved_bytes: 262144000,
+  platform_actual_bytes: 251658240,
+  platform_available_bytes: 811597824,
+  platform_over_capacity: false,
 };
 let failPlatforms = false;
 let failPlatformOverview = false;
@@ -163,6 +222,12 @@ await context.route('**/*', async (route) => {
       yearly_enabled: false,
       lifetime_enabled: false,
     };
+  else if (path === `/platforms/${platformId}/file-policy`) data = filePolicy;
+  else if (path === `/platforms/${platformId}/config-resources`)
+    data = [configResource];
+  else if (path === `/platforms/${platformId}/config-reviews`)
+    data = [configReview];
+  else if (path === '/config-files') data = [];
   else if (path === '/audit') {
     const noMatch =
       url.searchParams.get('q') === 'no-match' ||
@@ -288,8 +353,21 @@ try {
   );
   assert.equal(
     await page.locator('[data-test="platform-overview-not-connected"]').count(),
-    2,
-    'Unimplemented Feedback/Gallery domains must be explicit rather than fake zeroes',
+    1,
+    'Only the still-unimplemented Feedback domain remains explicit rather than a fake zero',
+  );
+  assert.match(
+    await page
+      .locator('[data-test="platform-overview-pending-config-reviews"]')
+      .innerText(),
+    /1/u,
+  );
+  assert.equal(
+    await page
+      .locator('[data-test="platform-overview-pending-config-reviews"]')
+      .getAttribute('href'),
+    `/admin/platforms/${platformId}/files#config-reviews`,
+    'Pending review metric deep-links to the authoritative review queue',
   );
   assert.ok(
     reads.some(
@@ -336,11 +414,56 @@ try {
     .locator('[data-test="platform-overview-refresh-error"]')
     .waitFor({ state: 'detached' });
   console.log(
-    'PASS: Platform Overview authoritative metrics, period switching, planned domains and refresh recovery',
+    'PASS: Platform Overview authoritative metrics, pending Config reviews, period switching and refresh recovery',
+  );
+
+  await goto(`/admin/platforms/${platformId}/files`, 'platform-files-page');
+  await page.locator('[data-test="config-resource-center"]').waitFor();
+  await page.locator('[data-test="config-resource-table"]').waitFor();
+  await page.locator('[data-test="config-review-queue"]').waitFor();
+  await page.locator('[data-test="storage-technical-status"]').waitFor();
+  assert.match(
+    await page.locator('[data-test="config-resource-table"]').innerText(),
+    /示例配置作品/u,
+  );
+  assert.match(
+    await page.locator('[data-test="config-review-queue"]').innerText(),
+    /1 条待审核/u,
+  );
+  assert.match(
+    await page.locator('[data-test="platform-file-policy"]').innerText(),
+    /平台总容量（Global 分配）/u,
+  );
+  console.log(
+    'PASS: Config resource center is primary while Storage remains a secondary diagnostic surface',
+  );
+
+  await goto(`/admin/platforms/${platformId}/plans`, 'platform-workspace');
+  await page.locator('[data-test="plan-create-open"]').click();
+  await page.locator('[data-test="plan-editor-config-slot-limit"]').waitFor();
+  assert.equal(
+    await page
+      .locator('[data-test="plan-editor-config-slot-limit"]')
+      .inputValue(),
+    '0',
+  );
+  await page.keyboard.press('Escape');
+  console.log(
+    'PASS: Plan editor exposes the dedicated config_slot_limit control',
   );
 
   writes.length = 0;
   await goto('/admin/platforms', 'platform-directory-table');
+  await page.locator('[data-test="platform-capacity-open"]').first().click();
+  await page.locator('[data-test="platform-capacity-dialog"]').waitFor();
+  assert.equal(
+    await page.locator('[data-test="platform-capacity-input"]').inputValue(),
+    '1024',
+  );
+  await page.keyboard.press('Escape');
+  console.log(
+    'PASS: Global platform directory owns platform Storage capacity allocation',
+  );
   await page.locator('[data-test="platform-create-open"]').click();
   await page.locator('[data-test="platform-create-code"]').fill('new-platform');
   await page.locator('[data-test="platform-create-name"]').fill('新接入平台');

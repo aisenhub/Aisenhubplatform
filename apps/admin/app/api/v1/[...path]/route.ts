@@ -31,6 +31,10 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/keys`) ||
       matches(`platforms/${id}/plans`) ||
       matches(`platforms/${id}/subscription-config`) ||
+      matches(`platforms/${id}/config-resources`) ||
+      matches(`platforms/${id}/config-resources/${id}`) ||
+      matches(`platforms/${id}/config-resources/${id}/usage`) ||
+      matches(`platforms/${id}/config-reviews`) ||
       exact('redemption-batches') ||
       matches(`subscriptions/${id}`) ||
       exact('config-files') ||
@@ -55,6 +59,8 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/keys`) ||
       matches(`platforms/${id}/keys/${id}/(?:revoke|confirm-deployment)`) ||
       matches(`platforms/${id}/plans`) ||
+      matches(`platforms/${id}/config-reviews/${id}/review`) ||
+      matches(`platforms/${id}/config-resources/${id}/gallery-governance`) ||
       exact('redemption-batches') ||
       matches(`redemption-batches/${id}/(?:confirm-delivery|disable)`) ||
       matches(`subscriptions/${id}/commands`) ||

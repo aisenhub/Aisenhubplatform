@@ -51,6 +51,7 @@ import {
   type PlatformListResponse,
   type PlatformResponse,
 } from '../../components/platform-context/platform-types';
+import { PlatformCapacityDialog } from './platform-capacity-dialog';
 
 type LoadError = {
   title: string;
@@ -618,15 +619,18 @@ function PlatformDirectoryContent() {
                           <ResourceId value={platform.platform_id} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            nativeButton={false}
-                            render={<Link href={href} />}
-                            data-test="platform-directory-open"
-                          >
-                            打开工作区
-                          </Button>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <PlatformCapacityDialog platform={platform} />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              nativeButton={false}
+                              render={<Link href={href} />}
+                              data-test="platform-directory-open"
+                            >
+                              打开工作区
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

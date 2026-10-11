@@ -45,6 +45,7 @@ const sql = postgres(databaseUrl, {
 });
 const platformId = crypto.randomUUID();
 const platformAccountId = crypto.randomUUID();
+const configPlatformKeyId = crypto.randomUUID();
 const planId = crypto.randomUUID();
 const platformCode = `t12-r2-browser-${crypto.randomUUID()}`;
 const email = `t12-r2-browser-${crypto.randomUUID()}@example.test`;
@@ -55,6 +56,9 @@ let factorId;
 let lifecycleUserId;
 let lifecycleRequestId;
 let lifecycleJobId;
+let configId;
+let configVersionId;
+let configSubmissionId;
 let previousSystemAdmin;
 let browser;
 let page;
@@ -223,7 +227,7 @@ async function createFixtures() {
   `;
   await sql`
     insert into public.plans (id, platform_id, code, name, kind, features)
-    values (${planId}, ${platformId}, 'free', 'Free', 'free', ${sql.json({})})
+    values (${planId}, ${platformId}, 'free', 'Free', 'free', ${sql.json({ config_slot_limit: 3 })})
   `;
   await sql`
     insert into public.platform_accounts (id, platform_id, user_id, status)
@@ -234,6 +238,90 @@ async function createFixtures() {
     set default_plan_id = ${planId}
     where id = ${platformId}
   `;
+
+  const [configSession] = await sql`
+    select id
+    from auth.sessions
+    where user_id = ${userId}
+    order by created_at desc
+    limit 1
+  `;
+  assert.ok(
+    configSession?.id,
+    'Config fixture requires an active Auth session',
+  );
+  await sql`
+    insert into private.platform_api_keys (
+      id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix,
+      creation_operation_id
+    ) values (
+      ${configPlatformKeyId}, ${platformId}, 'T12 Config fixture key',
+      ${'c'.repeat(64)}, 1, 't12-config', 'fixture', ${crypto.randomUUID()}
+    )
+  `;
+
+  const accountContext = [
+    userId,
+    configSession.id,
+    platformId,
+    configPlatformKeyId,
+  ];
+  const [createdConfig] = await sql.unsafe(
+    'select * from private.config_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text, $7::text)',
+    [
+      ...accountContext,
+      crypto.randomUUID(),
+      'T12 Config Resource',
+      'Phase 03 governance fixture',
+    ],
+  );
+  configId = createdConfig?.config_id;
+  assert.ok(configId, 'T12 Config fixture must be created');
+
+  for (const [index, schemaVersion] of [
+    [1, '1'],
+    [2, '2'],
+  ]) {
+    const [version] = await sql.unsafe(
+      'select * from private.config_version_intent_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::bigint, $9::text, $10::text, $11::text, $12::text, $13::text)',
+      [
+        ...accountContext,
+        crypto.randomUUID(),
+        configId,
+        `t12-config-v${index}.json`,
+        700000,
+        'application/json',
+        't12.config',
+        schemaVersion,
+        `T12 Version ${index}`,
+        `t12-version-${index}`,
+      ],
+    );
+    assert.ok(
+      version?.version_id && version?.file_id,
+      `T12 Version ${index} fixture`,
+    );
+    await sql`
+      update public.platform_config_files
+      set status = 'active', write_outcome = 'confirmed', actual_size_bytes = 700000,
+          sha256 = ${String(index).repeat(64)}, uploaded_at = now()
+      where id = ${version.file_id}
+    `;
+    await sql.unsafe(
+      'select * from private.config_version_activate(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid)',
+      [...accountContext, crypto.randomUUID(), configId, version.version_id],
+    );
+    configVersionId = version.version_id;
+  }
+  const [submission] = await sql.unsafe(
+    'select * from private.config_gallery_submission_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid)',
+    [...accountContext, crypto.randomUUID(), configId, configVersionId],
+  );
+  configSubmissionId = submission?.submission_id;
+  assert.ok(
+    configSubmissionId,
+    'T12 Gallery submission fixture must be pending',
+  );
   const lifecycleSignup = await authRequest('/auth/v1/signup', null, {
     method: 'POST',
     body: JSON.stringify({ email: lifecycleEmail, password }),
@@ -357,6 +445,7 @@ async function runBrowserFlow(secret) {
   await page.locator('[data-test="plan-create-open"]').click();
   await page.locator('[data-test="plan-editor-code"]').fill('browser-pro');
   await page.locator('[data-test="plan-editor-name"]').fill('Browser Pro');
+  await page.locator('[data-test="plan-editor-config-slot-limit"]').fill('2');
   const [createPlanResponse] = await Promise.all([
     page.waitForResponse(
       (response) =>
@@ -372,16 +461,15 @@ async function runBrowserFlow(secret) {
     state: 'visible',
   });
   const [createdPlan] = await sql`
-    select code, name, kind, status
+    select code, name, kind, status, features
     from public.plans
     where platform_id = ${platformId} and code = 'browser-pro'
   `;
-  assert.deepEqual(createdPlan, {
-    code: 'browser-pro',
-    name: 'Browser Pro',
-    kind: 'paid',
-    status: 'active',
-  });
+  assert.equal(createdPlan.code, 'browser-pro');
+  assert.equal(createdPlan.name, 'Browser Pro');
+  assert.equal(createdPlan.kind, 'paid');
+  assert.equal(createdPlan.status, 'active');
+  assert.equal(createdPlan.features?.config_slot_limit, 2);
 
   await sql`
     update private.admin_step_up
@@ -417,6 +505,11 @@ async function runBrowserFlow(secret) {
   );
   const loadKeysResponse = await loadKeysResponsePromise;
   assertStatus(loadKeysResponse.status(), 200, 'browser admin key list');
+  const [keyCountBeforeStepUp] = await sql`
+    select count(*)::integer as count
+    from private.platform_api_keys
+    where platform_id = ${platformId}
+  `;
   await page.locator('[data-test="platform-key-open-create"]').click();
   const [expiredProofResponse] = await Promise.all([
     page.waitForResponse(
@@ -456,7 +549,11 @@ async function runBrowserFlow(secret) {
     from private.platform_api_keys
     where platform_id = ${platformId}
   `;
-  assert.equal(notAutoSubmitted.count, 0, 'step-up must not replay the write');
+  assert.equal(
+    notAutoSubmitted.count,
+    keyCountBeforeStepUp.count,
+    'step-up must not replay the write',
+  );
   const [proofKeyResponse] = await Promise.all([
     page.waitForResponse(
       (response) =>
@@ -472,6 +569,174 @@ async function runBrowserFlow(secret) {
     201,
     'explicit post-step-up key submit',
   );
+
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/files`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="config-resource-center"]').waitFor({
+    state: 'visible',
+  });
+  await page
+    .locator('[data-test="config-review-reason"]')
+    .fill('T12 approve fixture');
+  await page.locator('[data-test="config-review-approve"]').click();
+  const [approveResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/config-reviews/${configSubmissionId}/review`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(approveResponse.status(), 200, 'Config Gallery approval');
+  const [approvedEntry] = await sql`
+    select status, published_version_id
+    from public.platform_config_gallery_entries
+    where platform_id = ${platformId} and config_id = ${configId}
+  `;
+  assert.equal(approvedEntry.status, 'approved');
+  assert.equal(approvedEntry.published_version_id, configVersionId);
+  await page.keyboard.press('Escape');
+
+  await page.locator('[data-test="config-resource-open"]').click();
+  await page.locator('[data-test="config-governance-reason"]').waitFor({
+    state: 'visible',
+  });
+
+  async function governConfig(action, buttonTest, expectedStatus) {
+    await page
+      .locator('[data-test="config-governance-reason"]')
+      .fill(`T12 ${action} fixture`);
+    await page.locator(`[data-test="${buttonTest}"]`).click();
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (candidate) =>
+          candidate
+            .url()
+            .endsWith(
+              `/api/v1/admin/api/v1/platforms/${platformId}/config-resources/${configId}/gallery-governance`,
+            ) && candidate.request().method() === 'POST',
+      ),
+      page.locator('[data-test="confirm-action-submit"]').click(),
+    ]);
+    assertStatus(response.status(), 200, `Config Gallery ${action}`);
+    const [entry] = await sql`
+      select status
+      from public.platform_config_gallery_entries
+      where platform_id = ${platformId} and config_id = ${configId}
+    `;
+    assert.equal(entry.status, expectedStatus);
+    await page.keyboard.press('Escape');
+  }
+
+  await governConfig('remove', 'config-governance-remove', 'removed');
+  const [personalConfigAfterRemove] = await sql`
+    select status from public.platform_configs
+    where platform_id = ${platformId} and id = ${configId}
+  `;
+  assert.equal(personalConfigAfterRemove.status, 'active');
+  await governConfig('restore', 'config-governance-restore', 'approved');
+  await governConfig('block', 'config-governance-block', 'blocked');
+
+  await sql`
+    update private.admin_step_up
+    set expires_at = verified_at + interval '1 second'
+    where user_id = ${userId}
+  `;
+  await new Promise((resolve) => setTimeout(resolve, 1_200));
+  await page.goto(`${appUrl}/admin/platforms`, {
+    waitUntil: 'domcontentloaded',
+  });
+  const platformRow = page
+    .locator('[data-test="platform-directory-row"]')
+    .filter({ hasText: platformCode });
+  await platformRow.locator('[data-test="platform-capacity-open"]').click();
+  await page.locator('[data-test="platform-capacity-dialog"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="platform-capacity-input"]').fill('1');
+  await page.locator('[data-test="platform-capacity-save"]').click();
+  const [expiredCapacityResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/file-policy`,
+          ) && response.request().method() === 'PATCH',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(expiredCapacityResponse.status(), 403, 'expired capacity proof');
+  assert.equal(
+    (await expiredCapacityResponse.json()).error?.code,
+    'RECENT_MFA_REQUIRED',
+  );
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
+    state: 'visible',
+  });
+  const waitForNextTotpMs = 31_000 - (Date.now() % 30_000);
+  await new Promise((resolve) => setTimeout(resolve, waitForNextTotpMs));
+  await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
+  const [capacityMfaResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/auth/mfa/verify'),
+    ),
+    page.locator('[data-test="recent-mfa-submit"]').click(),
+  ]);
+  assertStatus(capacityMfaResponse.status(), 200, 'capacity recent MFA');
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
+    state: 'detached',
+  });
+  const [capacityBeforeExplicitResubmit] = await sql`
+    select coalesce(max_platform_total_bytes, 1073741824::bigint) as capacity
+    from public.platform_file_policies where platform_id = ${platformId}
+  `;
+  assert.notEqual(
+    Number(capacityBeforeExplicitResubmit?.capacity ?? 1073741824),
+    1048576,
+    'step-up must not replay the capacity mutation',
+  );
+  const [capacityResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/file-policy`,
+          ) && response.request().method() === 'PATCH',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(capacityResponse.status(), 200, 'explicit capacity resubmit');
+  const [capacityFacts] = await sql`
+    select p.max_platform_total_bytes as capacity,
+      coalesce(sum(f.reserved_bytes) filter (where f.status <> 'deleted'), 0)::bigint as reserved
+    from public.platform_file_policies p
+    left join public.platform_config_files f on f.platform_id = p.platform_id
+    where p.platform_id = ${platformId}
+    group by p.max_platform_total_bytes
+  `;
+  assert.equal(Number(capacityFacts.capacity), 1048576);
+  assert.ok(Number(capacityFacts.reserved) >= 1400000);
+  const [versionHistory] = await sql`
+    select count(*)::integer as count
+    from public.platform_config_versions
+    where platform_id = ${platformId} and config_id = ${configId}
+  `;
+  assert.equal(
+    versionHistory.count,
+    2,
+    'capacity downgrade keeps Version history',
+  );
+  const capacityRead = await browserRequest(
+    `/api/v1/admin/api/v1/platforms/${platformId}/file-policy`,
+  );
+  assertStatus(capacityRead.status, 200, 'capacity read after update');
+  assert.equal(capacityRead.payload?.data?.platform_over_capacity, true);
 
   if (previousSystemAdmin) {
     await sql`
@@ -677,6 +942,9 @@ async function runBrowserFlow(secret) {
     upstreamFailureRetry: 'PASS',
     httpOnlyProof: 'PASS',
     sensitiveWrite: 'PASS',
+    configReviewGovernance: 'PASS',
+    globalCapacityStepUp: 'PASS',
+    overCapacityNoDelete: 'PASS',
     architectureBehavior,
     responsiveA11y,
     logoutOldJwtRejected: 'PASS',
@@ -1228,6 +1496,33 @@ try {
       () => undefined,
     );
     await sql`delete from public.redemption_code_batches where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_config_usage_events where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_config_likes where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_config_gallery_entries where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_config_gallery_submissions where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`update public.platform_configs set current_version_id = null where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_config_versions where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_configs where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_config_files where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_file_policies where platform_id = ${platformId}`.catch(
       () => undefined,
     );
     await sql`delete from public.platform_accounts where id = ${platformAccountId}`.catch(

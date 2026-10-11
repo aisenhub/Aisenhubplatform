@@ -5,21 +5,37 @@
     "version": "1.0.0",
     "description": "Admin API contract. Ordinary routes require an active administrator session at AAL2. Platform Key lifecycle, Global Delete start/retry, platform-account status mutations, and Billing operator actions additionally require a server-side recent-MFA proof valid for at most 30 minutes."
   },
-  "servers": [{ "url": "https://admin.example.invalid" }],
+  "servers": [
+    {
+      "url": "https://admin.example.invalid"
+    }
+  ],
   "paths": {
     "/admin/api/v1/security/status": {
       "get": {
         "operationId": "adminGetSecurityStatus",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/AdminSecurityStatus" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
+          "200": {
+            "$ref": "#/components/responses/AdminSecurityStatus"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "503": {
             "description": "Authorization state is temporarily unavailable.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
               }
             }
           }
@@ -29,17 +45,33 @@
     "/admin/api/v1/auth/recent-proof": {
       "post": {
         "operationId": "adminIssueRecentAuthProof",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/MfaAttestation" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MfaAttestation"
+          }
+        ],
         "responses": {
-          "201": { "$ref": "#/components/responses/Object" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "201": {
+            "$ref": "#/components/responses/Object"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
           "503": {
             "description": "MFA attestation verification is temporarily unavailable.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
               }
             }
           }
@@ -49,66 +81,131 @@
     "/admin/api/v1/platforms": {
       "get": {
         "operationId": "adminListPlatforms",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/SearchQuery" },
-          { "$ref": "#/components/parameters/Limit" }
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       },
       "post": {
         "operationId": "adminCreatePlatform",
-        "security": [{ "adminBearer": [] }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "201": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "201": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/admin/api/v1/accounts": {
       "get": {
         "operationId": "adminListIdentities",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/SearchQuery" },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
           {
             "name": "platform_id",
             "in": "query",
             "required": false,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
-          { "$ref": "#/components/parameters/Limit" }
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       }
     },
     "/admin/api/v1/accounts/{userId}": {
       "get": {
         "operationId": "adminGetIdentity",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/UserId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/IdentityDetail" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
+          "200": {
+            "$ref": "#/components/responses/IdentityDetail"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
           "503": {
             "description": "Identity authorization state is temporarily unavailable.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
               }
             }
           }
@@ -118,114 +215,234 @@
     "/admin/api/v1/platforms/{platformId}": {
       "get": {
         "operationId": "adminGetPlatform",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "patch": {
         "operationId": "adminPatchPlatform",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/overview": {
       "get": {
         "operationId": "adminGetPlatformOverview",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
           {
             "name": "days",
             "in": "query",
             "required": false,
-            "schema": { "type": "integer", "enum": [7, 30, 90], "default": 30 }
+            "schema": {
+              "type": "integer",
+              "enum": [7, 30, 90],
+              "default": 30
+            }
           }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/PlatformOverview" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/PlatformOverview"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/origins": {
       "get": {
         "operationId": "adminListOrigins",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/SearchQuery" }
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "post": {
         "operationId": "adminCreateOrigin",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "201": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "201": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/accounts": {
       "get": {
         "operationId": "adminListAccounts",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/SearchQuery" },
-          { "$ref": "#/components/parameters/Limit" }
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}": {
       "get": {
         "operationId": "adminGetAccount",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/AccountId" }
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "patch": {
         "operationId": "adminPatchAccount",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/AccountId" }
+        "security": [
+          {
+            "adminBearer": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
@@ -233,16 +450,32 @@
       "post": {
         "operationId": "adminSuspendAccount",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/AccountId" }
+        "security": [
+          {
+            "adminBearer": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
@@ -250,15 +483,29 @@
       "post": {
         "operationId": "adminRestoreAccount",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/AccountId" }
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
@@ -266,38 +513,80 @@
       "post": {
         "operationId": "adminCloseAccount",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/AccountId" }
+        "security": [
+          {
+            "adminBearer": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "202": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/keys": {
       "get": {
         "operationId": "adminListPlatformKeys",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/SearchQuery" }
+        "security": [
+          {
+            "adminBearer": []
+          }
         ],
-        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Page"
+          }
+        }
       },
       "post": {
         "operationId": "adminCreatePlatformKey",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "201": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" }
+          "201": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          }
         }
       }
     },
@@ -305,15 +594,29 @@
       "post": {
         "operationId": "adminRevokePlatformKey",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/KeyId" }
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/KeyId"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
@@ -321,142 +624,305 @@
       "post": {
         "operationId": "adminConfirmPlatformKeyDeployment",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/KeyId" }
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/KeyId"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/plans": {
       "get": {
         "operationId": "adminListPlans",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
-        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Page"
+          }
+        }
       },
       "post": {
         "operationId": "adminCreatePlan",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "201": { "$ref": "#/components/responses/Object" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "400": { "$ref": "#/components/responses/BadRequest" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "201": {
+            "$ref": "#/components/responses/Object"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/subscription-config": {
       "get": {
         "operationId": "adminGetSubscriptionConfig",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/SubscriptionConfig" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/SubscriptionConfig"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "patch": {
         "operationId": "adminPatchSubscriptionConfig",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformId" },
-          { "$ref": "#/components/parameters/IfMatch" }
+        "security": [
+          {
+            "adminBearer": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/SubscriptionConfig" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "412": { "$ref": "#/components/responses/PreconditionFailed" },
-          "428": { "$ref": "#/components/responses/PreconditionRequired" }
+          "200": {
+            "$ref": "#/components/responses/SubscriptionConfig"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "428": {
+            "$ref": "#/components/responses/PreconditionRequired"
+          }
         }
       }
     },
     "/admin/api/v1/redemption-batches": {
       "get": {
         "operationId": "adminListRedemptionBatches",
-        "security": [{ "adminBearer": [] }],
-        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Page"
+          }
+        }
       },
       "post": {
         "operationId": "adminCreateRedemptionBatch",
-        "security": [{ "adminBearer": [] }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "201": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" }
+          "201": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
         }
       }
     },
     "/admin/api/v1/redemption-batches/{batchId}/confirm-delivery": {
       "post": {
         "operationId": "adminConfirmRedemptionDelivery",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BatchId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/redemption-batches/{batchId}/disable": {
       "post": {
         "operationId": "adminDisableRedemptionBatch",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/BatchId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BatchId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/subscriptions/{accountId}": {
       "get": {
         "operationId": "adminGetSubscription",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AccountId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/subscriptions/{accountId}/commands": {
       "post": {
         "operationId": "adminApplySubscriptionCommand",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AccountId" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/admin/api/v1/config-files": {
       "get": {
         "operationId": "adminListConfigFiles",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "cursor",
             "in": "query",
             "required": false,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
             "name": "limit",
@@ -474,122 +940,267 @@
             "in": "query",
             "required": false,
             "description": "精确平台范围；过滤在服务端游标分页前执行。提供时 cursor 必须属于同一平台。",
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
-          { "$ref": "#/components/parameters/SearchQuery" }
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/config-files/{fileId}": {
       "get": {
         "operationId": "adminGetConfigFile",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/FileId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FileId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "delete": {
         "operationId": "adminDeleteConfigFile",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/FileId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FileId"
+          }
+        ],
         "responses": {
-          "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "202": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/platforms/{platformId}/file-policy": {
       "get": {
         "operationId": "adminGetFilePolicy",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "patch": {
         "operationId": "adminUpdateFilePolicy",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
-        }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Updates legacy account file policy fields. max_platform_total_bytes is the global platform physical capacity; when supplied it requires Admin step-up.",
+        "x-requires-step-up-when": "max_platform_total_bytes is supplied"
       }
     },
     "/admin/api/v1/config-files/{fileId}/content": {
       "get": {
         "operationId": "adminDownloadConfigFileContent",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/FileId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FileId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Binary" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Binary"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/audit": {
       "get": {
         "operationId": "adminListAuditLogs",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/SearchQuery" },
-          { "$ref": "#/components/parameters/AuditActor" },
-          { "$ref": "#/components/parameters/AuditPlatformId" },
-          { "$ref": "#/components/parameters/AuditAction" },
-          { "$ref": "#/components/parameters/AuditTargetType" },
-          { "$ref": "#/components/parameters/AuditOutcome" },
-          { "$ref": "#/components/parameters/Limit" },
-          { "$ref": "#/components/parameters/Cursor" }
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/AuditActor"
+          },
+          {
+            "$ref": "#/components/parameters/AuditPlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AuditAction"
+          },
+          {
+            "$ref": "#/components/parameters/AuditTargetType"
+          },
+          {
+            "$ref": "#/components/parameters/AuditOutcome"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       }
     },
     "/admin/api/v1/billing/orders": {
       "get": {
         "operationId": "adminListBillingOrders",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/BillingCursor" },
-          { "$ref": "#/components/parameters/Limit" },
-          { "$ref": "#/components/parameters/BillingStatus" },
-          { "$ref": "#/components/parameters/SearchQuery" },
-          { "$ref": "#/components/parameters/BillingPlatformId" },
-          { "$ref": "#/components/parameters/BillingAccountId" },
-          { "$ref": "#/components/parameters/BillingProviderAccountId" }
+          {
+            "$ref": "#/components/parameters/BillingCursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/BillingStatus"
+          },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/BillingPlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/BillingAccountId"
+          },
+          {
+            "$ref": "#/components/parameters/BillingProviderAccountId"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       }
     },
     "/admin/api/v1/billing/orders/{orderId}": {
       "get": {
         "operationId": "adminGetBillingOrder",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/BillingOrderId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BillingOrderId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/BillingOrder" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/BillingOrder"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
@@ -598,16 +1209,32 @@
         "operationId": "adminRequeryBillingOrder",
         "x-requires-step-up": true,
         "description": "Queues a provider requery. The resulting job keeps its bounded retry budget and may enter manual_review with a classified failure for operator action.",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/BillingOrderId" },
-          { "$ref": "#/components/parameters/IfMatch" }
+        "security": [
+          {
+            "adminBearer": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BillingOrderId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "412": { "$ref": "#/components/responses/PreconditionFailed" }
+          "202": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          }
         }
       }
     },
@@ -615,43 +1242,79 @@
       "post": {
         "operationId": "adminResolveBillingOrder",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/BillingOrderId" },
-          { "$ref": "#/components/parameters/IfMatch" }
+        "security": [
+          {
+            "adminBearer": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BillingOrderId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "412": { "$ref": "#/components/responses/PreconditionFailed" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          }
         }
       }
     },
     "/admin/api/v1/billing/metrics": {
       "get": {
         "operationId": "adminGetBillingMetrics",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/BillingObservability" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/BillingObservability"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       }
     },
     "/admin/api/v1/billing/provider-products": {
       "get": {
         "operationId": "adminListBillingProviderProducts",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Page" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       }
     },
     "/admin/api/v1/deletion-jobs": {
       "get": {
         "operationId": "adminListDeletionJobs",
-        "security": [{ "adminBearer": [] }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -665,29 +1328,59 @@
             }
           }
         ],
-        "responses": { "200": { "$ref": "#/components/responses/Page" } }
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Page"
+          }
+        }
       },
       "post": {
         "operationId": "adminStartDeletionJob",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
-        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
         "responses": {
-          "202": { "$ref": "#/components/responses/Object" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "202": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/api/v1/deletion-jobs/{jobId}": {
       "get": {
         "operationId": "adminGetDeletionJob",
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/JobId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Object" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
@@ -695,12 +1388,242 @@
       "post": {
         "operationId": "adminRetryDeletionJob",
         "x-requires-step-up": true,
-        "security": [{ "adminBearer": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/JobId" }],
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
         "responses": {
-          "202": { "$ref": "#/components/responses/Object" },
-          "403": { "$ref": "#/components/responses/StepUpRequired" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "202": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/config-resources": {
+      "get": {
+        "operationId": "adminListConfigResources",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/GalleryStatus"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "description": "Business-readable Config resource pool. Platform filtering and Gallery status filtering are applied server-side before cursor pagination.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/config-resources/{configId}": {
+      "get": {
+        "operationId": "adminGetConfigResource",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/config-resources/{configId}/usage": {
+      "get": {
+        "operationId": "adminGetConfigUsage",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/config-reviews": {
+      "get": {
+        "operationId": "adminListConfigReviews",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "description": "Authoritative pending Config Gallery review queue for one platform.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Page"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/config-reviews/{submissionId}/review": {
+      "post": {
+        "operationId": "adminReviewConfigSubmission",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "x-requires-step-up": true,
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/SubmissionId"
+          }
+        ],
+        "description": "Approve or reject one pending immutable Version. Approval is the only action that switches the Gallery published Version.",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/config-resources/{configId}/gallery-governance": {
+      "post": {
+        "operationId": "adminGovernConfigGalleryEntry",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "x-requires-step-up": true,
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "description": "Remove, restore, or block Gallery visibility without deleting the author-owned Config.",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     }
@@ -719,25 +1642,38 @@
         "in": "header",
         "required": true,
         "description": "Short-lived server-signed attestation created by the Admin BFF only after Supabase MFA verification.",
-        "schema": { "type": "string", "minLength": 32, "maxLength": 4096 }
+        "schema": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 4096
+        }
       },
       "IfMatch": {
         "name": "If-Match",
         "in": "header",
         "required": true,
-        "schema": { "type": "string", "pattern": "^(W/)?\\\"[0-9]+\\\"$" }
+        "schema": {
+          "type": "string",
+          "pattern": "^(W/)?\\\"[0-9]+\\\"$"
+        }
       },
       "PlatformId": {
         "name": "platformId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "SearchQuery": {
         "name": "q",
         "in": "query",
         "required": false,
-        "schema": { "type": "string", "maxLength": 128 }
+        "schema": {
+          "type": "string",
+          "maxLength": 128
+        }
       },
       "Limit": {
         "name": "limit",
@@ -754,49 +1690,71 @@
         "name": "cursor",
         "in": "query",
         "required": false,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "AuditActor": {
         "name": "actor",
         "in": "query",
         "required": false,
         "description": "Matches actor type, actor UUID, trusted platform-profile display name, or current Auth email.",
-        "schema": { "type": "string", "maxLength": 128 }
+        "schema": {
+          "type": "string",
+          "maxLength": 128
+        }
       },
       "AuditPlatformId": {
         "name": "platform_id",
         "in": "query",
         "required": false,
         "description": "Exact authoritative platform scope recorded on the audit event.",
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "AuditAction": {
         "name": "action",
         "in": "query",
         "required": false,
         "description": "Exact raw audit event_type filter.",
-        "schema": { "type": "string", "maxLength": 128 }
+        "schema": {
+          "type": "string",
+          "maxLength": 128
+        }
       },
       "AuditTargetType": {
         "name": "target_type",
         "in": "query",
         "required": false,
         "description": "Exact raw audit target_type filter.",
-        "schema": { "type": "string", "maxLength": 128 }
+        "schema": {
+          "type": "string",
+          "maxLength": 128
+        }
       },
       "AuditOutcome": {
         "name": "outcome",
         "in": "query",
         "required": false,
         "description": "Exact recorded outcome. The reserved value unrecorded selects events whose audit metadata does not contain an outcome fact.",
-        "schema": { "type": "string", "maxLength": 64 }
+        "schema": {
+          "type": "string",
+          "maxLength": 64
+        }
       },
       "BillingCursor": {
         "name": "cursor",
         "in": "query",
         "required": false,
         "description": "Opaque cursor returned by the previous page. It binds created_at and order_id for stable pagination.",
-        "schema": { "type": "string", "minLength": 1, "maxLength": 512 }
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
       },
       "BillingStatus": {
         "name": "status",
@@ -819,61 +1777,118 @@
         "name": "platform_id",
         "in": "query",
         "required": false,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "BillingAccountId": {
         "name": "platform_account_id",
         "in": "query",
         "required": false,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "BillingProviderAccountId": {
         "name": "provider_account_id",
         "in": "query",
         "required": false,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "BillingOrderId": {
         "name": "orderId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "AccountId": {
         "name": "accountId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "UserId": {
         "name": "userId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "KeyId": {
         "name": "keyId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "BatchId": {
         "name": "batchId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "FileId": {
         "name": "fileId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "JobId": {
         "name": "jobId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ConfigId": {
+        "name": "configId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "SubmissionId": {
+        "name": "submissionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "GalleryStatus": {
+        "name": "gallery_status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["approved", "removed", "blocked", "none", "pending"]
+        }
       }
     },
     "requestBodies": {
@@ -894,20 +1909,30 @@
       "SubscriptionConfig": {
         "description": "Platform subscription configuration with an optimistic-concurrency validator.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "ETag": { "$ref": "#/components/headers/ETag" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/SubscriptionConfig" }
+            "schema": {
+              "$ref": "#/components/schemas/SubscriptionConfig"
+            }
           }
         }
       },
       "BillingOrder": {
         "description": "Billing order detail with an ordered, read-only evidence timeline.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "ETag": { "$ref": "#/components/headers/ETag" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
         },
         "content": {
           "application/json": {
@@ -915,8 +1940,13 @@
               "type": "object",
               "required": ["data", "request_id"],
               "properties": {
-                "data": { "$ref": "#/components/schemas/BillingOrderDetail" },
-                "request_id": { "type": "string", "format": "uuid" }
+                "data": {
+                  "$ref": "#/components/schemas/BillingOrderDetail"
+                },
+                "request_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
               }
             }
           }
@@ -925,7 +1955,9 @@
       "BillingObservability": {
         "description": "Read-only Billing queue, reconciliation, scheduler, refund-observation, and alert delivery observability.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
@@ -933,8 +1965,13 @@
               "type": "object",
               "required": ["data", "request_id"],
               "properties": {
-                "data": { "$ref": "#/components/schemas/BillingObservability" },
-                "request_id": { "type": "string", "format": "uuid" }
+                "data": {
+                  "$ref": "#/components/schemas/BillingObservability"
+                },
+                "request_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
               }
             }
           }
@@ -943,7 +1980,9 @@
       "AdminSecurityStatus": {
         "description": "Current Admin assurance and active recent MFA proof.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
@@ -954,7 +1993,10 @@
                 "data": {
                   "$ref": "#/components/schemas/AdminSecurityStatusData"
                 },
-                "request_id": { "type": "string", "format": "uuid" }
+                "request_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
               }
             }
           }
@@ -963,7 +2005,9 @@
       "IdentityDetail": {
         "description": "Live Auth identity with platform associations and the authoritative AisenHub deletion lifecycle projection.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
@@ -971,8 +2015,13 @@
               "type": "object",
               "required": ["data", "request_id"],
               "properties": {
-                "data": { "$ref": "#/components/schemas/IdentityDetailData" },
-                "request_id": { "type": "string", "format": "uuid" }
+                "data": {
+                  "$ref": "#/components/schemas/IdentityDetailData"
+                },
+                "request_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
               }
             }
           }
@@ -981,7 +2030,9 @@
       "PlatformOverview": {
         "description": "Authoritative per-platform operational summary for a fixed 7, 30, or 90 day period and its adjacent previous period.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
@@ -989,8 +2040,13 @@
               "type": "object",
               "required": ["data", "request_id"],
               "properties": {
-                "data": { "$ref": "#/components/schemas/PlatformOverviewData" },
-                "request_id": { "type": "string", "format": "uuid" }
+                "data": {
+                  "$ref": "#/components/schemas/PlatformOverviewData"
+                },
+                "request_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
               }
             }
           }
@@ -999,29 +2055,42 @@
       "Object": {
         "description": "JSON response with data and request_id.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
-          "application/json": { "$ref": "#/components/schemas/Envelope" }
+          "application/json": {
+            "$ref": "#/components/schemas/Envelope"
+          }
         }
       },
       "Page": {
         "description": "Cursor page with data, next_cursor, and request_id.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
-          "application/json": { "$ref": "#/components/schemas/Page" }
+          "application/json": {
+            "$ref": "#/components/schemas/Page"
+          }
         }
       },
       "Binary": {
         "description": "Binary download.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/octet-stream": {
-            "schema": { "type": "string", "format": "binary" }
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
           }
         }
       },
@@ -1029,7 +2098,9 @@
         "description": "Invalid input.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1037,7 +2108,9 @@
         "description": "Missing or invalid admin session.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1045,7 +2118,9 @@
         "description": "Admin authorization denied.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1053,7 +2128,9 @@
         "description": "A server-side recent-MFA proof bound to the current Admin session and valid for at most 30 minutes is required.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1061,7 +2138,9 @@
         "description": "Business conflict.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1069,7 +2148,9 @@
         "description": "The configuration changed after the client read it.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1077,7 +2158,9 @@
         "description": "If-Match is required for this mutation.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1085,21 +2168,36 @@
         "description": "Resource not found.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       }
     },
     "headers": {
-      "NoStore": { "schema": { "type": "string", "const": "no-store" } },
-      "ETag": { "schema": { "type": "string", "minLength": 1 } }
+      "NoStore": {
+        "schema": {
+          "type": "string",
+          "const": "no-store"
+        }
+      },
+      "ETag": {
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "schemas": {
       "AdminSecurityStatusData": {
         "type": "object",
         "required": ["current_aal"],
         "properties": {
-          "current_aal": { "type": "string", "enum": ["aal1", "aal2"] },
+          "current_aal": {
+            "type": "string",
+            "enum": ["aal1", "aal2"]
+          },
           "recent_mfa_expires_at": {
             "type": ["string", "null"],
             "format": "date-time"
@@ -1130,31 +2228,100 @@
           "granted_orders",
           "previous_granted_orders",
           "attention_orders",
-          "previous_attention_orders"
+          "previous_attention_orders",
+          "pending_config_reviews"
         ],
         "properties": {
-          "platform_id": { "type": "string", "format": "uuid" },
-          "period_days": { "type": "integer", "enum": [7, 30, 90] },
-          "period_start": { "type": "string", "format": "date-time" },
-          "period_end": { "type": "string", "format": "date-time" },
-          "previous_start": { "type": "string", "format": "date-time" },
-          "total_accounts": { "type": "integer", "minimum": 0 },
-          "active_accounts": { "type": "integer", "minimum": 0 },
-          "suspended_accounts": { "type": "integer", "minimum": 0 },
-          "closed_accounts": { "type": "integer", "minimum": 0 },
-          "new_accounts": { "type": "integer", "minimum": 0 },
-          "previous_new_accounts": { "type": "integer", "minimum": 0 },
-          "period_closed_accounts": { "type": "integer", "minimum": 0 },
-          "previous_closed_accounts": { "type": "integer", "minimum": 0 },
-          "net_accounts": { "type": "integer" },
-          "previous_net_accounts": { "type": "integer" },
-          "active_paid_accounts": { "type": "integer", "minimum": 0 },
-          "orders": { "type": "integer", "minimum": 0 },
-          "previous_orders": { "type": "integer", "minimum": 0 },
-          "granted_orders": { "type": "integer", "minimum": 0 },
-          "previous_granted_orders": { "type": "integer", "minimum": 0 },
-          "attention_orders": { "type": "integer", "minimum": 0 },
-          "previous_attention_orders": { "type": "integer", "minimum": 0 }
+          "platform_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_days": {
+            "type": "integer",
+            "enum": [7, 30, 90]
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "previous_start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "active_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "suspended_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "closed_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "new_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "previous_new_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "period_closed_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "previous_closed_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "net_accounts": {
+            "type": "integer"
+          },
+          "previous_net_accounts": {
+            "type": "integer"
+          },
+          "active_paid_accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "previous_orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "granted_orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "previous_granted_orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "attention_orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "previous_attention_orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending_config_reviews": {
+            "type": "integer",
+            "minimum": 0
+          }
         },
         "additionalProperties": false
       },
@@ -1171,9 +2338,18 @@
           "deletion"
         ],
         "properties": {
-          "user_id": { "type": "string", "format": "uuid" },
-          "email": { "type": ["string", "null"], "format": "email" },
-          "created_at": { "type": ["string", "null"], "format": "date-time" },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": ["string", "null"],
+            "format": "email"
+          },
+          "created_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "last_sign_in_at": {
             "type": ["string", "null"],
             "format": "date-time"
@@ -1182,10 +2358,16 @@
             "type": "string",
             "enum": ["active", "deleting"]
           },
-          "account_count": { "type": "integer", "minimum": 0 },
+          "account_count": {
+            "type": "integer",
+            "minimum": 0
+          },
           "accounts": {
             "type": "array",
-            "items": { "type": "object", "additionalProperties": true }
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
           },
           "deletion": {
             "type": "object",
@@ -1193,14 +2375,22 @@
             "properties": {
               "request": {
                 "oneOf": [
-                  { "type": "null" },
-                  { "$ref": "#/components/schemas/IdentityDeletionRequest" }
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/IdentityDeletionRequest"
+                  }
                 ]
               },
               "job": {
                 "oneOf": [
-                  { "type": "null" },
-                  { "$ref": "#/components/schemas/IdentityDeletionJob" }
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/IdentityDeletionJob"
+                  }
                 ]
               }
             },
@@ -1220,15 +2410,30 @@
           "cancelled_at"
         ],
         "properties": {
-          "request_id": { "type": "string", "format": "uuid" },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "state": {
             "type": "string",
             "enum": ["pending_admin", "approved", "cancelled"]
           },
-          "requested_at": { "type": ["string", "null"], "format": "date-time" },
-          "approved_at": { "type": ["string", "null"], "format": "date-time" },
-          "approved_by": { "type": ["string", "null"], "format": "uuid" },
-          "cancelled_at": { "type": ["string", "null"], "format": "date-time" }
+          "requested_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "approved_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "approved_by": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "cancelled_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
         },
         "additionalProperties": false
       },
@@ -1245,20 +2450,36 @@
           "completed_at"
         ],
         "properties": {
-          "job_id": { "type": "string", "format": "uuid" },
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "state": {
             "type": "string",
             "enum": ["pending", "running", "blocked", "retry", "completed"]
           },
-          "checkpoint": { "type": "string" },
-          "retry_count": { "type": "integer", "minimum": 0 },
+          "checkpoint": {
+            "type": "string"
+          },
+          "retry_count": {
+            "type": "integer",
+            "minimum": 0
+          },
           "next_attempt_at": {
             "type": ["string", "null"],
             "format": "date-time"
           },
-          "last_error_code": { "type": ["string", "null"] },
-          "created_at": { "type": ["string", "null"], "format": "date-time" },
-          "completed_at": { "type": ["string", "null"], "format": "date-time" }
+          "last_error_code": {
+            "type": ["string", "null"]
+          },
+          "created_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
         },
         "additionalProperties": false
       },
@@ -1267,7 +2488,10 @@
         "required": ["data", "request_id"],
         "properties": {
           "data": {},
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "Page": {
@@ -1276,10 +2500,18 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "type": "object", "additionalProperties": true }
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
           },
-          "next_cursor": { "type": ["string", "null"] },
-          "request_id": { "type": "string", "format": "uuid" }
+          "next_cursor": {
+            "type": ["string", "null"]
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "BillingObservability": {
@@ -1303,12 +2535,30 @@
           "alerts"
         ],
         "properties": {
-          "observed_at": { "type": "string", "format": "date-time" },
-          "pending_count": { "type": "integer", "minimum": 0 },
-          "processing_count": { "type": "integer", "minimum": 0 },
-          "retryable_count": { "type": "integer", "minimum": 0 },
-          "completed_count": { "type": "integer", "minimum": 0 },
-          "manual_review_count": { "type": "integer", "minimum": 0 },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pending_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "processing_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "retryable_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "manual_review_count": {
+            "type": "integer",
+            "minimum": 0
+          },
           "oldest_pending_age_seconds": {
             "type": ["number", "null"],
             "minimum": 0
@@ -1317,11 +2567,26 @@
             "type": ["number", "null"],
             "minimum": 0
           },
-          "expired_lease_count": { "type": "integer", "minimum": 0 },
-          "retry_attempts_total": { "type": "integer", "minimum": 0 },
-          "retry_budget_exhausted_count": { "type": "integer", "minimum": 0 },
-          "duplicate_payment_count": { "type": "integer", "minimum": 0 },
-          "refund_mismatch_count": { "type": "integer", "minimum": 0 },
+          "expired_lease_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "retry_attempts_total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "retry_budget_exhausted_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "duplicate_payment_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "refund_mismatch_count": {
+            "type": "integer",
+            "minimum": 0
+          },
           "discovery_last_success_at": {
             "type": ["string", "null"],
             "format": "date-time"
@@ -1330,7 +2595,10 @@
             "type": ["string", "null"],
             "format": "date-time"
           },
-          "discovery_lag_seconds": { "type": ["number", "null"], "minimum": 0 },
+          "discovery_lag_seconds": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
           "processing_lag_seconds": {
             "type": ["number", "null"],
             "minimum": 0
@@ -1343,12 +2611,24 @@
             "type": ["string", "null"],
             "format": "date-time"
           },
-          "scheduler_failure_count": { "type": "integer", "minimum": 0 },
-          "active_alert_count": { "type": "integer", "minimum": 0 },
-          "pending_alert_delivery_count": { "type": "integer", "minimum": 0 },
+          "scheduler_failure_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "active_alert_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending_alert_delivery_count": {
+            "type": "integer",
+            "minimum": 0
+          },
           "alert_thresholds": {
             "type": "object",
-            "additionalProperties": { "type": "number", "exclusiveMinimum": 0 }
+            "additionalProperties": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
           },
           "alert_threshold_source": {
             "type": "string",
@@ -1367,20 +2647,37 @@
                 "details"
               ],
               "properties": {
-                "alert_id": { "type": "string", "format": "uuid" },
-                "alert_key": { "type": "string" },
+                "alert_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "alert_key": {
+                  "type": "string"
+                },
                 "severity": {
                   "type": "string",
                   "enum": ["warning", "high", "critical"]
                 },
-                "status": { "type": "string", "enum": ["active", "recovered"] },
-                "occurrence_count": { "type": "integer", "minimum": 1 },
+                "status": {
+                  "type": "string",
+                  "enum": ["active", "recovered"]
+                },
+                "occurrence_count": {
+                  "type": "integer",
+                  "minimum": 1
+                },
                 "delivery_status": {
                   "type": "string",
                   "enum": ["pending", "delivered", "failed"]
                 },
-                "delivery_attempts": { "type": "integer", "minimum": 0 },
-                "details": { "type": "object", "additionalProperties": true }
+                "delivery_attempts": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "details": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             }
           }
@@ -1473,23 +2770,56 @@
           "details"
         ],
         "properties": {
-          "source": { "type": "string" },
-          "event_type": { "type": "string" },
-          "event_at": { "type": "string", "format": "date-time" },
+          "source": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "event_at": {
+            "type": "string",
+            "format": "date-time"
+          },
           "provider_event_at": {
             "type": ["string", "null"],
             "format": "date-time"
           },
-          "received_at": { "type": ["string", "null"], "format": "date-time" },
-          "entity_id": { "type": "string", "format": "uuid" },
-          "status": { "type": ["string", "null"] },
-          "state": { "type": ["string", "null"] },
-          "code": { "type": ["string", "null"] },
-          "request_id": { "type": ["string", "null"], "format": "uuid" },
-          "job_id": { "type": ["string", "null"], "format": "uuid" },
-          "actor_type": { "type": ["string", "null"] },
-          "actor_id": { "type": ["string", "null"], "format": "uuid" },
-          "details": { "type": "object", "additionalProperties": true }
+          "received_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": ["string", "null"]
+          },
+          "state": {
+            "type": ["string", "null"]
+          },
+          "code": {
+            "type": ["string", "null"]
+          },
+          "request_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "job_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "actor_type": {
+            "type": ["string", "null"]
+          },
+          "actor_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
         },
         "additionalProperties": false
       },
@@ -1497,9 +2827,18 @@
         "type": "object",
         "required": ["order_id", "admin_version", "timeline"],
         "properties": {
-          "order_id": { "type": "string", "format": "uuid" },
-          "admin_version": { "type": "integer", "minimum": 1 },
-          "provider_facts": { "type": "object", "additionalProperties": true },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "admin_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "provider_facts": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "timeline": {
             "type": "array",
             "items": {
@@ -1517,11 +2856,18 @@
             "type": "object",
             "required": ["code", "message"],
             "properties": {
-              "code": { "type": "string" },
-              "message": { "type": "string" }
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
             }
           },
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "SubscriptionConfig": {
@@ -1542,20 +2888,43 @@
           "preflight_blocking_count"
         ],
         "properties": {
-          "platform_id": { "type": "string", "format": "uuid" },
-          "paid_plan_id": { "type": ["string", "null"], "format": "uuid" },
-          "paid_plan_code": { "type": ["string", "null"] },
-          "paid_plan_name": { "type": ["string", "null"] },
+          "platform_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "paid_plan_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "paid_plan_code": {
+            "type": ["string", "null"]
+          },
+          "paid_plan_name": {
+            "type": ["string", "null"]
+          },
           "paid_plan_status": {
             "type": ["string", "null"],
             "enum": ["active", "archived", null]
           },
-          "purchases_paused": { "type": "boolean" },
-          "monthly_enabled": { "type": "boolean" },
-          "yearly_enabled": { "type": "boolean" },
-          "lifetime_enabled": { "type": "boolean" },
-          "subscription_copy_override": { "type": ["string", "null"] },
-          "row_version": { "type": "integer", "minimum": 1 },
+          "purchases_paused": {
+            "type": "boolean"
+          },
+          "monthly_enabled": {
+            "type": "boolean"
+          },
+          "yearly_enabled": {
+            "type": "boolean"
+          },
+          "lifetime_enabled": {
+            "type": "boolean"
+          },
+          "subscription_copy_override": {
+            "type": ["string", "null"]
+          },
+          "row_version": {
+            "type": "integer",
+            "minimum": 1
+          },
           "preflight_blocked_reason": {
             "type": ["string", "null"],
             "enum": [
@@ -1564,7 +2933,10 @@
               null
             ]
           },
-          "preflight_blocking_count": { "type": "integer", "minimum": 0 }
+          "preflight_blocking_count": {
+            "type": "integer",
+            "minimum": 0
+          }
         },
         "additionalProperties": false
       }
