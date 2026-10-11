@@ -17,16 +17,16 @@
 | 阶段 | 目标 | 状态 | 详细计划 |
 | --- | --- | --- | --- |
 | 01 | 聚合 SQL + Admin API/OpenAPI + 权限/合同 | 完成 | [阶段 01](phases/01-platform-overview-contract.md) |
-| 02 | Overview UI + browser/R3 + Git closeout | 执行中 | [阶段 02](phases/02-platform-overview-ui.md) |
+| 02 | Overview UI + browser/R3 + Git closeout | Local R3 完成，待 Git closeout | [阶段 02](phases/02-platform-overview-ui.md) |
 
 ## 总体验收
 
-- [ ] 服务端权威返回平台账户、增长、有效付费账户和订单摘要。
-- [ ] 7/30/90 天范围与上一周期对比可用。
-- [ ] 收入、Feedback、Gallery 未实现能力不伪造数据。
-- [ ] 平台状态/Code/ID 降级为紧凑元数据。
-- [ ] KPI 下钻到已有账户/订阅/订单视图且保持平台作用域语义。
-- [ ] fresh/upgrade、DB/API/contracts、Admin unit/typecheck/build/browser、lint/format/docs、canonical R3 全通过。
+- [x] 服务端权威返回平台账户、增长、有效付费账户和订单摘要。
+- [x] 7/30/90 天范围与上一周期对比可用。
+- [x] 收入、Feedback、Gallery 未实现能力不伪造数据。
+- [x] 平台状态/Code/ID 降级为紧凑元数据。
+- [x] KPI 下钻到已有账户/订阅/订单视图且保持平台作用域语义。
+- [x] fresh/upgrade、DB/API/contracts、Admin unit/typecheck/build/browser、lint/format/docs、canonical R3 全通过。
 - [ ] GitHub/main/分支清理闭环后再进入 OPT-005。
 
 ## 风险

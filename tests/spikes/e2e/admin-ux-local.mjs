@@ -53,7 +53,32 @@ const auditEntry = {
   outcome: null,
   created_at: '2026-10-10T09:30:00Z',
 };
+const platformOverview = {
+  platform_id: platformId,
+  period_days: 30,
+  period_start: '2026-09-11T08:00:00Z',
+  period_end: '2026-10-11T08:00:00Z',
+  previous_start: '2026-08-12T08:00:00Z',
+  total_accounts: 42,
+  active_accounts: 34,
+  suspended_accounts: 3,
+  closed_accounts: 5,
+  new_accounts: 8,
+  previous_new_accounts: 6,
+  period_closed_accounts: 2,
+  previous_closed_accounts: 1,
+  net_accounts: 6,
+  previous_net_accounts: 5,
+  active_paid_accounts: 12,
+  orders: 9,
+  previous_orders: 7,
+  granted_orders: 7,
+  previous_granted_orders: 6,
+  attention_orders: 2,
+  previous_attention_orders: 3,
+};
 let failPlatforms = false;
+let failPlatformOverview = false;
 let securityUnavailable = false;
 let platformDelay = 0;
 const writes = [];
@@ -62,6 +87,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const context = await browser.newContext({ reducedMotion: 'reduce' });
 const page = await context.newPage();
 page.setDefaultNavigationTimeout(120_000); // Allow a cold local Next.js compilation.
+page.setDefaultTimeout(120_000); // Match locator/action waits to the same cold-compilation budget.
 const pageErrors = [];
 page.on('pageerror', (error) => pageErrors.push(error.message));
 
@@ -109,7 +135,17 @@ await context.route('**/*', async (route) => {
             },
           ];
   } else if (path === `/platforms/${platformId}`) data = platform;
-  else if (path === `/platforms/${platformId}/accounts`)
+  else if (path === `/platforms/${platformId}/overview`) {
+    if (failPlatformOverview)
+      return route.fulfill({
+        status: 503,
+        json: { error: { code: 'AUTHORIZATION_UNAVAILABLE' } },
+      });
+    data = {
+      ...platformOverview,
+      period_days: Number(url.searchParams.get('days') ?? 30),
+    };
+  } else if (path === `/platforms/${platformId}/accounts`)
     data = url.searchParams.get('q') === 'no-match' ? [] : [account];
   else if (path === `/platforms/${platformId}/accounts/${accountId}`)
     data = account;
@@ -224,6 +260,70 @@ try {
     'Overview must not request audit data after audit de-coupling',
   );
   console.log('PASS: Overview no longer requests audit data');
+
+  reads.length = 0;
+  await goto(`/admin/platforms/${platformId}`, 'platform-overview');
+  await page
+    .locator('[data-test="platform-overview-total-accounts"]')
+    .waitFor();
+  assert.match(
+    await page
+      .locator('[data-test="platform-overview-total-accounts"]')
+      .innerText(),
+    /42/u,
+  );
+  assert.equal(
+    await page.locator('[data-test="platform-overview-not-connected"]').count(),
+    2,
+    'Unimplemented Feedback/Gallery domains must be explicit rather than fake zeroes',
+  );
+  assert.ok(
+    reads.some(
+      (read) =>
+        read.path === `/platforms/${platformId}/overview` &&
+        read.search === '?days=30',
+    ),
+    'Platform Overview must request the default 30-day aggregate',
+  );
+  await page.locator('[data-test="platform-overview-period-7"]').click();
+  await page.waitForURL(
+    new RegExp(`/admin/platforms/${platformId}\\?days=7$`, 'u'),
+  );
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-test="platform-overview-period-7"]')
+        ?.getAttribute('aria-pressed') === 'true',
+  );
+  assert.ok(
+    reads.some(
+      (read) =>
+        read.path === `/platforms/${platformId}/overview` &&
+        read.search === '?days=7',
+    ),
+    'Changing period must issue a server-side 7-day aggregate request',
+  );
+  failPlatformOverview = true;
+  await page.locator('[data-test="platform-overview-refresh"]').click();
+  await page.locator('[data-test="platform-overview-refresh-error"]').waitFor();
+  assert.match(
+    await page
+      .locator('[data-test="platform-overview-total-accounts"]')
+      .innerText(),
+    /42/u,
+    'Background refresh failure must retain the last known metrics with a warning',
+  );
+  failPlatformOverview = false;
+  await page
+    .locator('[data-test="platform-overview-refresh-error"]')
+    .getByRole('button', { name: '重试刷新' })
+    .click();
+  await page
+    .locator('[data-test="platform-overview-refresh-error"]')
+    .waitFor({ state: 'detached' });
+  console.log(
+    'PASS: Platform Overview authoritative metrics, period switching, planned domains and refresh recovery',
+  );
 
   const routes = [
     ['/admin', 'admin-overview'],

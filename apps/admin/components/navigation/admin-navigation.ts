@@ -129,7 +129,7 @@ const platformNavigationDefinitions: Array<{
         key: 'platform-overview',
         label: '概览',
         suffix: '',
-        description: '查看当前平台状态与快捷入口',
+        description: '查看当前平台用户、商业摘要与待办',
         icon: LayoutDashboard,
         match: 'exact',
       },

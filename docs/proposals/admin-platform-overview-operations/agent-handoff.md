@@ -28,7 +28,7 @@
 ## 完成门槛
 
 - [x] Phase 01 数据/API/合同完成。
-- [ ] Phase 02 UI/browser/R3 完成。
-- [ ] 必需 Local R3 无 FAIL/BLOCKED。
+- [x] Phase 02 UI/browser/R3 完成。
+- [x] 必需 Local R3 无 FAIL/BLOCKED。
 - [ ] main/远端/分支状态闭环。
 
