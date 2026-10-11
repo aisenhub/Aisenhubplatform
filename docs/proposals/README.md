@@ -44,6 +44,8 @@ proposals/
 
 - [OPT-004 单平台运营概览](admin-platform-overview-operations/design.md)：[计划](admin-platform-overview-operations/plan.md)，新增权威单平台用户/商业聚合边界，将平台首页从技术标识页升级为带周期比较和待办下钻的运营摘要。
 
+- [OPT-005 平台作用域侧边栏导航收敛](admin-platform-scope-navigation/design.md)：[计划](admin-platform-scope-navigation/plan.md)，让 Platform Sidebar 只保留当前平台资源，以 PlatformSwitcher 作为返回 Global scope 的唯一常驻主入口，并移除旧全局治理注入。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
