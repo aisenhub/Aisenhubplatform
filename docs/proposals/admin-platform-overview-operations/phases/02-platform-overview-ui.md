@@ -26,6 +26,7 @@
 - `node tests/spikes/e2e/admin-ux-local.mjs`：OPT-004 KPI/周期切换/未接入域/刷新恢复专项与原 60 route/viewport 响应式语义矩阵全部 PASS。
 - synthetic browser 首次受 stale `.next` 影响使既有账户子路由返回 404；清理 `.next` 并重启后直接 HTTP 为 200，完整 browser 复测 PASS，未修改账户页产品代码。
 - `pnpm verify:task:0801`：21 executable gates PASS；包含 fresh migration、62 files / 1146 SQL tests、API 97/97、build/typecheck/unit、contract breaking、Registry/Consumer Harness、Admin/Consumer browser、docs/OpenAPI 等。
+- staging `workendstaging` 已同步本任务 migration 与 `account-api v57`；只读 SQL 验证函数权限、安全属性、索引与真实 Admin context 聚合均 PASS，advisors 无 OPT-004 新阻塞。
 
 ## 退出条件
 

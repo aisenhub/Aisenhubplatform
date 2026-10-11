@@ -32,10 +32,15 @@
 | 2026-10-11 | 02 | browser 环境诊断 | Local | 首轮长时 dev instance 的 stale `.next` 令既有 accounts 子路由直接 404；清理 `.next` 后该路由 HTTP 200，完整 browser 复测 PASS；不是产品代码失败 |
 | 2026-10-11 | 02 | `pnpm format:check` | Local | PASS：395 files |
 | 2026-10-11 | 02 | `pnpm verify:task:0801` | Local + Local Supabase | PASS：21 executable gates；fresh migration 至本任务 migration；62 files / 1146 SQL tests；API 97/97；contract breaking、Registry/Harness、runtime、Admin/Consumer E2E、docs/OpenAPI 全 PASS |
+| 2026-10-11 | Staging | `supabase db push --linked --dry-run` | workendstaging (`egsokuicabbxspkdccqe`) | PASS：linked project 明确为 workendstaging；dry-run 仅包含 `20261010223414_admin_platform_overview.sql` |
+| 2026-10-11 | Staging | `supabase db push --linked --yes` | workendstaging | PASS：`20261010223414 admin_platform_overview` 已应用且 migration history 可见 |
+| 2026-10-11 | Staging | `supabase functions deploy account-api --project-ref egsokuicabbxspkdccqe --no-verify-jwt --use-api` | workendstaging | PASS：`account-api` ACTIVE v57，`verify_jwt=false` 与现有自定义路由鉴权设计一致；远端代码包含 platform overview route 与 `private.admin_platform_overview(...)` 调用 |
+| 2026-10-11 | Staging | SQL read-only verification | workendstaging | PASS：函数存在；admin_executor 可执行，account/job executor 不可执行；security definer + pinned search_path；5 个 Overview 索引存在；active Admin context 下 30 天聚合返回 1 行且账户/订单基础不变量成立 |
+| 2026-10-11 | Staging | Supabase security/performance advisors | workendstaging | 无 OPT-004 新阻塞：security 仍为既有 `pg_net` public schema 与 leaked-password protection disabled 两项 WARN；performance 为历史 unindexed FK/unused-index INFO，新 Overview 索引因刚部署尚无使用统计，不据此删除 |
 
 ## 交接
 
-- 当前无产品决策或 Local R3 阻塞。
-- 下一步：审查最终 diff/hygiene，提交并 push OPT-004，合并 main、核对远端 SHA、清理任务分支后进入 OPT-005。
+- 当前无产品决策、Local R3 或 staging 同步阻塞。
+- 下一步：提交本次 staging 证据，合并 main、核对远端 SHA、完成 closeout 文档与任务分支清理后进入 OPT-005。
 - 不应重复实施：OPT-003 Identity lifecycle；Global Billing observability；后续 OPT-007/008/009/010 目标域。
 
