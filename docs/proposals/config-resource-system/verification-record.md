@@ -1,6 +1,6 @@
 # OPT-007 验证记录
 
-状态：In Progress
+状态：Completed
 
 ## 阶段状态
 
@@ -9,7 +9,7 @@
 | 01 领域/Storage 兼容 | DONE | 三条 migration、legacy 隔离、Config/Version/Gallery/Like/Usage primitives、fresh+upgrade 63/1209、staging/advisors 已验证 | Phase 02 Account/Consumer |
 | 02 Account/Consumer | DONE | additive Account v1、private Storage Version/Gallery 内容流、OpenAPI 1.1.0、Consumer Harness、Local fresh+upgrade、staging v59 已验证 | Phase 03 Admin 治理 |
 | 03 Admin 治理 | DONE | Admin Config resource/review/Gallery governance、平台容量、Plan slot、Overview pending review、Local canonical R3、staging v60 已验证 | Phase 04 Lifecycle/Release |
-| 04 Lifecycle/Release | IN_PROGRESS | Lifecycle migration + t26、fresh/upgrade、canonical 21 gates、staging migration/functions/triggers/advisors/HTTP smoke 已通过 | Git closeout：final diff/hygiene → commit/push → fast-forward main → SHA 核对 → 分支清理 |
+| 04 Lifecycle/Release | DONE | Lifecycle migration + t26、fresh/upgrade、canonical 21 gates、staging migration/functions/triggers/advisors/HTTP smoke、Git closeout 全部通过 | 无 |
 
 ## 事实与验证日志
 
@@ -58,6 +58,9 @@
 | 2026-10-11 | Phase 04 staging Edge | Supabase Edge Functions | Staging | PASS：Phase 04 无 Edge 源码变更，不 redeploy；`account-api` 保持 ACTIVE v60、`billing-webhook` v31、`maintenance` v39 |
 | 2026-10-11 | Phase 04 staging HTTP | `pg_net` staging DB → 同项目 `account-api /v1/config-gallery` | Staging | PASS：未认证真实 HTTP = 401 `UNAUTHORIZED`、`Cache-Control: no-store`、有效 `X-Request-Id`、`timed_out=false` |
 | 2026-10-11 | Phase 04 staging advisors | Supabase Security + Performance Advisor | Staging | PASS：Security 仍只有既有 `pg_net` public schema 与 leaked-password protection 两条 WARN；Performance 仍为既有 42 个 unindexed FK + 51 个 fresh/低流量 unused-index INFO；无 Phase 04 新安全告警 |
+| 2026-10-11 | Phase 04 Git checkpoint | Git / GitHub | Task branch | PASS：Phase 04 产品提交 `a248d8a07717a9f58c6f34523614114237cc6342`（tree `3bae2b8dbdb2ab587fb891b46a057fa710a96db7`）已 push 到 `codex/opt-007-config-resource-system`；GitHub ref 精确核对为该 SHA |
+| 2026-10-11 | OPT-007 main closeout | `git merge --ff-only` + GitHub ref | Local + GitHub | PASS：`main` 从 `ec997111969c6abfda42f57abd179e6fc0bdfb8e` fast-forward 到 `a248d8a07717a9f58c6f34523614114237cc6342`，无 merge commit；远端 `main` ref 已精确核对为 `a248d8a` |
+| 2026-10-11 | OPT-007 branch cleanup | Git / GitHub | Local + GitHub | PASS：远端 `codex/opt-007-config-resource-system` 已删除；本地同名任务分支已删除，删除前与 `main` 同为 `a248d8a`，无独有提交 |
 | 2026-10-11 | Production | 发布边界 | Production | NOT_RUN：OPT-007 未获 Production 授权 |
 
 ## 当前结论
@@ -67,4 +70,4 @@
 - 槽位、平台容量、Gallery admission、删除与 usage 语义已在 design 固化。
 - Phase 01–04 的产品/数据库实现与 Local/staging 验证均已完成；Account API 保持 v60，Phase 04 没有 Edge 源码变更。
 - Phase 04 新增 lifecycle reconciliation 与统一 privacy cleanup；Global Delete/retention 已覆盖 Config/Gallery/Like/Usage，而 Storage 物理删除仍由原 file state machine + backup barrier 证明。
-- canonical R3 为 21 executable gates PASS；当前唯一剩余步骤是 final diff/hygiene、Git commit/push、fast-forward main、远端 SHA 核对与任务分支清理。Production 始终 NOT_RUN，除非用户另行明确授权。
+- canonical R3 为 21 executable gates PASS；产品提交 `a248d8a` 已进入并核对远端 `main`，任务分支本地/远端均已清理，OPT-007 已闭环。Production 始终 NOT_RUN，除非用户另行明确授权。

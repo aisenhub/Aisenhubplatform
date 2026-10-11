@@ -1,6 +1,6 @@
 # Phase 04 — 删除生命周期、备份真值与发布收口
 
-状态：实现与验证完成，待 Git closeout
+状态：Completed
 
 ## 目标
 
@@ -15,7 +15,7 @@
 - [x] DOC-001：同步 files-jobs、frontends、onboarding guide、Admin DESIGN、Account/Admin contract 文档与 OPT Intake。
 - [x] VERIFY-001：fresh + upgrade Local Supabase、SQL、Account/Admin API、unit/typecheck/build/lint/format/docs、contracts/breaking、Consumer Harness Local E2E、Admin T12/synthetic 全绿。
 - [x] VERIFY-002：授权 staging 已同步最终 lifecycle migration，并完成 function/trigger 权限、Edge 版本、Advisors 与真实 HTTP fail-closed smoke；Production 明确 NOT_RUN。
-- [ ] REL-001：canonical `pnpm verify:task:0801` 已 21 gates PASS；仍待 final diff/hygiene、commit/push、fast-forward main、远端 SHA 核对并清理任务分支。
+- [x] REL-001：canonical `pnpm verify:task:0801` 21 gates PASS；final diff/hygiene 通过；产品提交 `a248d8a` 已 push，并 fast-forward 到远端 `main`；远端 SHA 已核对，任务分支本地/远端均已清理。
 
 ## 完成门槛
 

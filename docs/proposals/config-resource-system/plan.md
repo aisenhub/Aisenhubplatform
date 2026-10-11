@@ -1,6 +1,6 @@
 # OPT-007 配置资源系统计划
 
-状态：In Progress
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -10,7 +10,7 @@
 
 风险分级：**R3**。
 
-当前分支：`codex/opt-007-config-resource-system`。
+最终产品提交：`a248d8a07717a9f58c6f34523614114237cc6342`，已 fast-forward 进入远端 `main`；短期任务分支已清理。
 
 ## 阶段
 
@@ -19,7 +19,7 @@
 | 01 | Config/Version/Gallery 领域模型、物理容量与 legacy file 兼容 | 已完成 | [阶段 01](phases/01-domain-storage-compat.md) |
 | 02 | Account v1 增量 API、private Storage 内容流、Consumer contract/Harness | 已完成 | [阶段 02](phases/02-account-consumer-contract.md) |
 | 03 | Admin 审核/资源池/容量治理、Plan 槽位配置与 Overview 聚合 | 已完成 | [阶段 03](phases/03-admin-governance.md) |
-| 04 | Global Delete/retention、备份真值、完整 E2E/R3/Git closeout | 实现与验证完成，待 Git closeout | [阶段 04](phases/04-lifecycle-release.md) |
+| 04 | Global Delete/retention、备份真值、完整 E2E/R3/Git closeout | 已完成 | [阶段 04](phases/04-lifecycle-release.md) |
 
 ## 阶段发布规则
 
@@ -39,7 +39,7 @@
 - [x] Platform Overview 使用真实 pending review 聚合。
 - [x] Global Delete / retention 能停止公开访问并清理/匿名化新增数据。
 - [x] onboarding / architecture / Admin DESIGN / contracts 文档同步当前事实。
-- [ ] canonical R3 与 staging 已通过；仍待 GitHub/main/分支清理闭环后再进入 OPT-008。
+- [x] canonical R3、staging、GitHub/main 与任务分支清理均已闭环；OPT-007 完成后才可进入 OPT-008。
 
 ## 回退
 

@@ -1,9 +1,9 @@
 # OPT-007 实施交接
 
-- 当前分支：`codex/opt-007-config-resource-system`
+- 当前状态：OPT-007 已完成并进入 `main`
 - 基线：`main@ec997111969c6abfda42f57abd179e6fc0bdfb8e`
 - 风险：R3
-- 当前阶段：[Phase 04](phases/04-lifecycle-release.md)
+- 最终阶段：[Phase 04](phases/04-lifecycle-release.md) 已完成
 
 ## 不可回退的设计约束
 
@@ -29,8 +29,8 @@
 
 ## 最终退出条件
 
-- [ ] 四个 phase 完成。
-- [ ] Local canonical R3 无 FAIL/BLOCKED。
-- [ ] staging 与最终 commit 的 migration/function/Edge 一致。
-- [ ] Account/Admin v1 无 breaking change。
-- [ ] main/远端/分支状态闭环。
+- [x] 四个 phase 完成。
+- [x] Local canonical R3 无 FAIL/BLOCKED。
+- [x] staging 与最终产品提交的 migration/function/Edge 一致。
+- [x] Account/Admin v1 无 breaking change。
+- [x] `a248d8a` 已 fast-forward 到远端 `main`，任务分支本地/远端均已清理。
