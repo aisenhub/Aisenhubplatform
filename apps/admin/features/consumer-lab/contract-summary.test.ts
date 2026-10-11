@@ -9,8 +9,8 @@ import {
 describe('consumer lab contract summaries', () => {
   it('reads the current canonical Account contract', () => {
     expect(accountContractSummary.major).toBe('v1');
-    expect(accountContractSummary.version).toBe('1.1.0');
-    expect(accountContractSummary.operations).toHaveLength(38);
+    expect(accountContractSummary.version).toBe('1.2.0');
+    expect(accountContractSummary.operations).toHaveLength(46);
     expect(accountContractSummary.operations).toContainEqual(
       expect.objectContaining({
         method: 'GET',

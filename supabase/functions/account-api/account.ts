@@ -36,6 +36,7 @@ import {
 } from './core.ts';
 import { boundedLimit } from './admin.ts';
 import { dispatchConfigResources } from './configs.ts';
+import { dispatchFeedback } from './feedback.ts';
 
 export async function dispatchAccount(
   request: Request,
@@ -122,6 +123,17 @@ export async function dispatchAccount(
       contextValues,
     );
     if (configResult) return configResult;
+  }
+  if (path.startsWith('v1/feedback')) {
+    assertAllowed(row);
+    const feedbackResult = await dispatchFeedback(
+      request,
+      transaction,
+      dependencies,
+      session,
+      contextValues,
+    );
+    if (feedbackResult) return feedbackResult;
   }
   if (path === 'v1/subscription/checkout' && request.method === 'GET') {
     assertAllowed(row);

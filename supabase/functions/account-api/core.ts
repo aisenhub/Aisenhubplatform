@@ -42,6 +42,11 @@ export type AdminAuthIdentity = {
   readonly last_sign_in_at: string | null;
 };
 
+export type AuthenticatedUser = {
+  readonly id: string;
+  readonly email: string | null;
+};
+
 export interface AccountApiDependencies {
   readonly database?: Database;
   readonly platformKeySecret?: string;
@@ -73,6 +78,10 @@ export interface AccountApiDependencies {
    * /auth/v1/user endpoint with the publishable key.
    */
   readonly verifyAccessToken?: (accessToken: string) => Promise<string | null>;
+  /** Server-confirmed Auth user lookup for identity snapshots such as Feedback. */
+  readonly getAuthenticatedUser?: (
+    accessToken: string,
+  ) => Promise<AuthenticatedUser | null>;
   readonly storageAdapter?: StorageAdapter;
   readonly uploadGate?: UploadGate;
 }
@@ -381,9 +390,9 @@ async function verifyAccessTokenLocally(
   }
 }
 
-async function verifyAccessTokenWithAuthRemote(
+async function authenticatedUserWithAuthRemote(
   accessToken: string,
-): Promise<string | null> {
+): Promise<AuthenticatedUser | null> {
   const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
   const publishableKey =
     Deno.env.get('SUPABASE_ANON_KEY') ??
@@ -412,7 +421,22 @@ async function verifyAccessTokenWithAuthRemote(
   } catch {
     throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
   }
-  return uuidValue(objectValue(payload.user).id) ?? uuidValue(payload.id);
+  const userPayload =
+    payload.user && typeof payload.user === 'object'
+      ? objectValue(payload.user)
+      : payload;
+  const id = uuidValue(userPayload.id);
+  if (!id) return null;
+  return {
+    id,
+    email: typeof userPayload.email === 'string' ? userPayload.email : null,
+  };
+}
+
+async function verifyAccessTokenWithAuthRemote(
+  accessToken: string,
+): Promise<string | null> {
+  return (await authenticatedUserWithAuthRemote(accessToken))?.id ?? null;
 }
 
 async function verifyAccessTokenWithAuth(
@@ -447,6 +471,24 @@ export async function verifiedSessionFromRequest(
   if (!verifiedUserId || verifiedUserId !== presented.session.userId)
     throw new ApiFault(401, 'UNAUTHORIZED');
   return presented.session;
+}
+
+export async function verifiedAuthUserFromRequest(
+  request: Request,
+  dependencies: AccountApiDependencies,
+): Promise<AuthenticatedUser> {
+  const presented = presentedSession(request);
+  let user: AuthenticatedUser | null;
+  try {
+    user = dependencies.getAuthenticatedUser
+      ? await dependencies.getAuthenticatedUser(presented.accessToken)
+      : await authenticatedUserWithAuthRemote(presented.accessToken);
+  } catch {
+    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  }
+  if (!user || user.id !== presented.session.userId)
+    throw new ApiFault(401, 'UNAUTHORIZED');
+  return user;
 }
 
 export async function verifiedSessionFromAccessToken(
@@ -614,6 +656,14 @@ export function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(409, 'VERSION_NOT_READY');
   if (message.includes('submission_pending'))
     return new ApiFault(409, 'SUBMISSION_PENDING');
+  if (message.includes('feedback_attachment_not_ready'))
+    return new ApiFault(409, 'FEEDBACK_ATTACHMENT_NOT_READY');
+  if (message.includes('feedback_attachment_limit_exceeded'))
+    return new ApiFault(409, 'FEEDBACK_ATTACHMENT_LIMIT_EXCEEDED');
+  if (message.includes('feedback_attachment_bytes_exceeded'))
+    return new ApiFault(409, 'FEEDBACK_ATTACHMENT_BYTES_EXCEEDED');
+  if (message.includes('feedback_not_editable'))
+    return new ApiFault(409, 'FEEDBACK_NOT_EDITABLE');
   if (message.includes('rate_limited'))
     return new ApiFault(429, 'RATE_LIMITED');
   if (message.includes('quota_exceeded'))

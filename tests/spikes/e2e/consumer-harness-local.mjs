@@ -358,6 +358,44 @@ async function mutation(page, baseUrl, path, init = {}) {
   });
 }
 
+async function binaryMutation(page, baseUrl, path, bytes, headers = {}) {
+  const csrf = await csrfFor(page);
+  return page.evaluate(
+    async ({ requestPath, origin, csrfToken, byteValues, requestHeaders }) => {
+      const response = await fetch(requestPath, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: {
+          Origin: origin,
+          'X-CSRF-Token': csrfToken,
+          ...requestHeaders,
+        },
+        body: new Uint8Array(byteValues),
+      });
+      const text = await response.text();
+      let body;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        body = { raw: text };
+      }
+      return {
+        status: response.status,
+        body,
+        headers: Object.fromEntries(response.headers.entries()),
+      };
+    },
+    {
+      requestPath: path,
+      origin: baseUrl,
+      csrfToken: csrf,
+      byteValues: [...bytes],
+      requestHeaders: headers,
+    },
+  );
+}
+
 async function exerciseHarness(
   page,
   context,
@@ -846,6 +884,139 @@ async function exerciseHarness(
     'repeated apply key deduplicates central usage fact',
   );
 
+  const textFeedback = await mutation(page, baseUrl, '/api/v1/feedback', {
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': randomUUID(),
+    },
+    body: JSON.stringify({
+      category: 'idea',
+      title: 'Text-only Harness Feedback',
+      body: 'A text-only feedback submission.',
+      contact_allowed: false,
+      client_context: { route: '/settings', app_version: 'harness' },
+    }),
+  });
+  assert.equal(textFeedback.status, 201, 'text-only Feedback create');
+  const textFeedbackId = textFeedback.body?.data?.feedback_id;
+  assert.ok(textFeedbackId, 'text-only Feedback id');
+  const textSubmit = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/feedback/${textFeedbackId}/submit`,
+    { headers: { 'Content-Type': 'application/json' }, body: '{}' },
+  );
+  assert.equal(textSubmit.status, 200, 'text-only Feedback submit');
+  assert.equal(textSubmit.body?.data?.status, 'new');
+
+  const imageFeedback = await mutation(page, baseUrl, '/api/v1/feedback', {
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': randomUUID(),
+    },
+    body: JSON.stringify({
+      category: 'bug',
+      title: 'Image Harness Feedback',
+      body: 'Feedback with a private PNG attachment.',
+      contact_allowed: true,
+      client_context: {
+        route: '/feedback',
+        app_version: 'harness',
+        browser: 'playwright',
+      },
+    }),
+  });
+  assert.equal(imageFeedback.status, 201, 'image Feedback create');
+  const feedbackId = imageFeedback.body?.data?.feedback_id;
+  assert.ok(feedbackId, 'image Feedback id');
+  const pngBytes = Uint8Array.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3,
+  ]);
+  const attachmentIntent = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/feedback/${feedbackId}/attachments/upload-intent`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': randomUUID(),
+      },
+      body: JSON.stringify({
+        name: 'harness.png',
+        size: pngBytes.length,
+        content_type: 'image/png',
+      }),
+    },
+  );
+  assert.equal(attachmentIntent.status, 201, 'Feedback attachment intent');
+  const attachmentId = attachmentIntent.body?.data?.attachment_id;
+  const attachmentUploadPath = attachmentIntent.body?.data?.upload_path;
+  assert.ok(
+    attachmentId && attachmentUploadPath,
+    'Feedback attachment id/path',
+  );
+  const prematureSubmit = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/feedback/${feedbackId}/submit`,
+    { headers: { 'Content-Type': 'application/json' }, body: '{}' },
+  );
+  assert.equal(
+    prematureSubmit.status,
+    409,
+    'unsettled attachment blocks submit',
+  );
+  assert.equal(
+    prematureSubmit.body?.error?.code,
+    'FEEDBACK_ATTACHMENT_NOT_READY',
+  );
+  const badMagic = await binaryMutation(
+    page,
+    baseUrl,
+    `/api${attachmentUploadPath}`,
+    new Uint8Array(pngBytes.length).fill(0x41),
+    { 'Content-Type': 'image/png', 'Idempotency-Key': randomUUID() },
+  );
+  assert.equal(badMagic.status, 415, 'Feedback image magic mismatch');
+  const uploadedAttachment = await binaryMutation(
+    page,
+    baseUrl,
+    `/api${attachmentUploadPath}`,
+    pngBytes,
+    { 'Content-Type': 'image/png', 'Idempotency-Key': randomUUID() },
+  );
+  assert.equal(uploadedAttachment.status, 202, 'Feedback image upload');
+  assert.equal(uploadedAttachment.body?.data?.status, 'active');
+  const submittedFeedback = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/feedback/${feedbackId}/submit`,
+    { headers: { 'Content-Type': 'application/json' }, body: '{}' },
+  );
+  assert.equal(submittedFeedback.status, 200, 'Feedback submit after upload');
+  assert.equal(submittedFeedback.body?.data?.status, 'new');
+  const feedbackRead = await pageRequest(
+    page,
+    `/api/v1/feedback/${feedbackId}`,
+  );
+  assert.equal(feedbackRead.status, 200, 'submitted Feedback remains readable');
+  assert.equal(feedbackRead.body?.data?.attachments?.length, 1);
+  const [feedbackState] = await sql`
+    select f.status, f.contact_email_snapshot,
+      (select count(*)::integer
+       from public.platform_feedback_attachments a
+       where a.feedback_id = f.id and a.status = 'active') as attachment_count
+    from public.platform_feedback f
+    where f.platform_id = ${expectedPlatformId} and f.id = ${feedbackId}
+  `;
+  assert.equal(feedbackState?.status, 'new');
+  assert.equal(
+    feedbackState?.contact_email_snapshot,
+    userEmail,
+    'Feedback contact email comes from server-confirmed Auth identity',
+  );
+  assert.equal(feedbackState?.attachment_count, 1);
+
   await sql`
     update public.platform_accounts
     set status = 'suspended'
@@ -859,7 +1030,7 @@ async function exerciseHarness(
     set status = 'active'
     where platform_id = ${expectedPlatformId} and user_id = ${userId}
   `;
-  return { configId, versionId, versionFileId };
+  return { configId, versionId, versionFileId, feedbackId };
 }
 
 async function exerciseSessionTerminal(page, context, baseUrl) {
@@ -1044,6 +1215,24 @@ try {
     404,
     'reverse cross-platform Config IDOR fails closed',
   );
+  const crossFeedbackFromB = await pageRequest(
+    pageB,
+    `/api/v1/feedback/${resultA.feedbackId}`,
+  );
+  assert.equal(
+    crossFeedbackFromB.status,
+    404,
+    'cross-platform Feedback IDOR fails closed',
+  );
+  const crossFeedbackFromA = await pageRequest(
+    pageA,
+    `/api/v1/feedback/${resultB.feedbackId}`,
+  );
+  assert.equal(
+    crossFeedbackFromA.status,
+    404,
+    'reverse cross-platform Feedback IDOR fails closed',
+  );
 
   for (const [page, baseUrl, result, platformId] of [
     [pageA, harnessAUrl, resultA, platformAId],
@@ -1099,6 +1288,7 @@ try {
         binaryFiles: 'PASS',
         configResources: 'PASS',
         galleryUsageAndIsolation: 'PASS',
+        feedbackSubmissionAndIsolation: 'PASS',
         suspendedFailClosed: 'PASS',
         logoutAndInvalidRefresh: 'PASS',
       },

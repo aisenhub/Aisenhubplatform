@@ -83,7 +83,7 @@ try {
   assert.equal(meta.status, 200);
   const metaPayload = await meta.json();
   assert.equal(metaPayload.data.major, 'v1');
-  assert.equal(metaPayload.data.version, '1.1.0');
+  assert.equal(metaPayload.data.version, '1.2.0');
 
   const unsupported = await fetch(`${origin}/api/v1/not-a-contract-route`);
   assert.equal(unsupported.status, 404);

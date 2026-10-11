@@ -1,6 +1,6 @@
 # Phase 02 — Account API 与 Consumer Feedback
 
-状态：未开始
+状态：已完成
 
 ## 目标
 
@@ -28,3 +28,5 @@
 ## 退出条件
 
 Account contract、HTTP 与 Harness 一致，Local conformance 全绿，阶段 commit/push/远端核对完成。
+
+实际结果：Account OpenAPI `1.2.0` 新增 8 个 Feedback operations；Account API 使用服务端 Auth 用户读取 contact email，附件 PUT 复用 bounded upload/unknown-write 模式并在写 Storage 前校验 JPEG/PNG/WebP magic 与真实大小；Consumer Harness 已覆盖 text-only、私有 PNG、bad magic、未结算附件阻止 submit、Auth email snapshot 与跨平台 IDOR。Fresh DB 为 68 files / 1368 tests PASS；Phase 01 非空 Feedback/Attachment 数据升级到 `20261011140958` 后保持原样，升级库定向 t27+t28 为 79 tests PASS。

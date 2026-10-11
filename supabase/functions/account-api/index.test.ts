@@ -834,6 +834,59 @@ function fakeDatabase(
               { config_id: keyId, liked: true, like_count: 1 },
             ] as unknown as R[];
           }
+          if (query.startsWith('select * from private.feedback_create')) {
+            return [
+              {
+                feedback_id: keyId,
+                category: 'bug',
+                title: 'Fixture Feedback',
+                status: 'draft',
+                flagged: false,
+                contact_allowed: true,
+                attachment_count: 0,
+                row_version: 1,
+                submitted_at: null,
+                created_at: new Date('2026-10-11T00:00:00Z'),
+                updated_at: new Date('2026-10-11T00:00:00Z'),
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.feedback_list') ||
+            query.startsWith('select * from private.feedback_read')
+          ) {
+            return [
+              {
+                feedback_id: keyId,
+                category: 'bug',
+                title: 'Fixture Feedback',
+                body: 'Feedback API fixture',
+                status: 'draft',
+                contact_allowed: true,
+                client_context: { route: '/settings' },
+                flagged: false,
+                attachment_count: 0,
+                row_version: 1,
+                submitted_at: null,
+                created_at: new Date('2026-10-11T00:00:00Z'),
+                updated_at: new Date('2026-10-11T00:00:00Z'),
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.feedback_attachment_list')
+          )
+            return [] as R[];
+          if (query.startsWith('select * from private.feedback_submit')) {
+            return [
+              {
+                feedback_id: keyId,
+                status: 'new',
+                row_version: 2,
+                submitted_at: new Date('2026-10-11T00:05:00Z'),
+              },
+            ] as unknown as R[];
+          }
           return [] as R[];
         },
       });
@@ -3025,4 +3078,96 @@ Deno.test('Account API requires an Idempotency-Key before Gallery apply delivery
   assertEquals(response.status, 400);
   assertEquals((await response.json()).error.code, 'INVALID_INPUT');
   assertEquals(storageCalls, 0);
+});
+
+Deno.test('Account API creates a Feedback draft on the additive v1 surface', async () => {
+  const response = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/feedback', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${fakeJwt()}`,
+        'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'feedback-create-fixture',
+      },
+      body: JSON.stringify({
+        category: 'bug',
+        title: 'Fixture Feedback',
+        body: 'Feedback API fixture',
+        contact_allowed: true,
+        client_context: { route: '/settings', app_version: '1.2.3' },
+      }),
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 201);
+  assertEquals(response.headers.get('etag'), 'W/"1"');
+  const payload = await response.json();
+  assertEquals(payload.data.feedback_id, keyId);
+  assertEquals(payload.data.status, 'draft');
+});
+
+Deno.test('Account API rejects non-object Feedback client context', async () => {
+  const response = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/feedback', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${fakeJwt()}`,
+        'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'feedback-invalid-context',
+      },
+      body: JSON.stringify({
+        category: 'bug',
+        title: 'Fixture Feedback',
+        body: 'Feedback API fixture',
+        contact_allowed: false,
+        client_context: 'browser-controlled-string',
+      }),
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 400);
+  assertEquals((await response.json()).error.code, 'INVALID_INPUT');
+});
+
+Deno.test('Feedback submit snapshots server-confirmed Auth email instead of request input', async () => {
+  let snapshotEmail: unknown = null;
+  const response = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/v1/feedback/${keyId}/submit`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      },
+    ),
+    {
+      database: fakeDatabase((query, values) => {
+        if (query.startsWith('select * from private.feedback_submit'))
+          snapshotEmail = values?.at(-1);
+      }),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+      getAuthenticatedUser: async () => ({
+        id: userId,
+        email: 'verified-feedback@example.invalid',
+      }),
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(snapshotEmail, 'verified-feedback@example.invalid');
+  assertEquals((await response.json()).data.status, 'new');
 });

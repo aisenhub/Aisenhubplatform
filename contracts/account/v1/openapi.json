@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Aisenhub Account API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Account API contract. Runtime routes are defined in supabase/functions/account-api/index.ts."
   },
   "servers": [
@@ -37,6 +37,9 @@
     },
     {
       "name": "config-gallery"
+    },
+    {
+      "name": "feedback"
     }
   ],
   "paths": {
@@ -1597,6 +1600,430 @@
           }
         }
       }
+    },
+    "/v1/feedback": {
+      "get": {
+        "operationId": "listFeedback",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackCursor"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Feedbacks"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFeedback",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/FeedbackCreate"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/FeedbackSummary"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/feedback/{feedbackId}": {
+      "get": {
+        "operationId": "getFeedback",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Feedback"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchFeedback",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/FeedbackPatch"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Feedback"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "428": {
+            "$ref": "#/components/responses/PreconditionRequired"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/feedback/{feedbackId}/attachments/upload-intent": {
+      "post": {
+        "operationId": "createFeedbackAttachmentIntent",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/FeedbackAttachmentIntent"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/FeedbackAttachmentIntent"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/feedback/{feedbackId}/attachments/{attachmentId}/content": {
+      "put": {
+        "operationId": "uploadFeedbackAttachmentContent",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackId"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackAttachmentId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/FeedbackAttachmentBinary"
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/FeedbackAttachmentUpload"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "description": "Declared image type does not match the uploaded bytes.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/feedback/{feedbackId}/attachments/{attachmentId}": {
+      "delete": {
+        "operationId": "deleteFeedbackAttachment",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackId"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackAttachmentId"
+          }
+        ],
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/FeedbackAttachmentDelete"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/feedback/{feedbackId}/submit": {
+      "post": {
+        "operationId": "submitFeedback",
+        "tags": ["feedback"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FeedbackId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/FeedbackSubmit"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/FeedbackSubmit"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1720,6 +2147,46 @@
         }
       },
       "ConfigLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "FeedbackId": {
+        "name": "feedbackId",
+        "in": "path",
+        "required": true,
+        "description": "Feedback identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "FeedbackAttachmentId": {
+        "name": "attachmentId",
+        "in": "path",
+        "required": true,
+        "description": "Feedback attachment identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "FeedbackCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "FeedbackLimit": {
         "name": "limit",
         "in": "query",
         "required": false,
@@ -1864,6 +2331,71 @@
             }
           }
         }
+      },
+      "FeedbackCreate": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackCreateInput"
+            }
+          }
+        }
+      },
+      "FeedbackPatch": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackPatchInput"
+            }
+          }
+        }
+      },
+      "FeedbackAttachmentIntent": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackAttachmentIntentInput"
+            }
+          }
+        }
+      },
+      "FeedbackSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "maxProperties": 0,
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "FeedbackAttachmentBinary": {
+        "required": true,
+        "content": {
+          "image/jpeg": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "image/png": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "image/webp": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          }
+        }
       }
     },
     "headers": {
@@ -1952,7 +2484,11 @@
           "CONFIG_SLOT_LIMIT_EXCEEDED",
           "PLATFORM_STORAGE_QUOTA_EXCEEDED",
           "VERSION_NOT_READY",
-          "SUBMISSION_PENDING"
+          "SUBMISSION_PENDING",
+          "FEEDBACK_ATTACHMENT_NOT_READY",
+          "FEEDBACK_ATTACHMENT_LIMIT_EXCEEDED",
+          "FEEDBACK_ATTACHMENT_BYTES_EXCEEDED",
+          "FEEDBACK_NOT_EDITABLE"
         ]
       },
       "ErrorEnvelope": {
@@ -3360,6 +3896,571 @@
           }
         },
         "additionalProperties": false
+      },
+      "FeedbackSummary": {
+        "type": "object",
+        "required": [
+          "feedback_id",
+          "category",
+          "title",
+          "status",
+          "flagged",
+          "contact_allowed",
+          "attachment_count",
+          "row_version",
+          "submitted_at",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "feedback_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["bug", "idea", "experience", "other"]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "status": {
+            "type": "string"
+          },
+          "flagged": {
+            "type": "boolean"
+          },
+          "contact_allowed": {
+            "type": "boolean"
+          },
+          "attachment_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "row_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "submitted_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackAttachment": {
+        "type": "object",
+        "required": [
+          "attachment_id",
+          "status",
+          "write_outcome",
+          "original_name",
+          "mime_type",
+          "requested_size_bytes",
+          "actual_size_bytes",
+          "sha256",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "write_outcome": {
+            "type": "string"
+          },
+          "original_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "mime_type": {
+            "type": "string",
+            "enum": ["image/jpeg", "image/png", "image/webp"]
+          },
+          "requested_size_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4194304
+          },
+          "actual_size_bytes": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 4194304
+          },
+          "sha256": {
+            "type": ["string", "null"],
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackDetail": {
+        "type": "object",
+        "required": [
+          "feedback_id",
+          "category",
+          "title",
+          "body",
+          "status",
+          "contact_allowed",
+          "client_context",
+          "flagged",
+          "row_version",
+          "submitted_at",
+          "created_at",
+          "updated_at",
+          "attachments"
+        ],
+        "properties": {
+          "feedback_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "contact_allowed": {
+            "type": "boolean"
+          },
+          "client_context": {
+            "type": "object",
+            "properties": {
+              "app_version": {
+                "type": "string"
+              },
+              "route": {
+                "type": "string"
+              },
+              "locale": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "os": {
+                "type": "string"
+              },
+              "browser": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "flagged": {
+            "type": "boolean"
+          },
+          "row_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "submitted_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attachments": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/FeedbackAttachment"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackCreateInput": {
+        "type": "object",
+        "required": ["category", "title", "body", "contact_allowed"],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": ["bug", "idea", "experience", "other"]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "contact_allowed": {
+            "type": "boolean"
+          },
+          "client_context": {
+            "type": "object",
+            "properties": {
+              "app_version": {
+                "type": "string"
+              },
+              "route": {
+                "type": "string"
+              },
+              "locale": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "os": {
+                "type": "string"
+              },
+              "browser": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackPatchInput": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": ["bug", "idea", "experience", "other"]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "contact_allowed": {
+            "type": "boolean"
+          },
+          "client_context": {
+            "type": "object",
+            "properties": {
+              "app_version": {
+                "type": "string"
+              },
+              "route": {
+                "type": "string"
+              },
+              "locale": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "os": {
+                "type": "string"
+              },
+              "browser": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "minProperties": 1
+      },
+      "FeedbackAttachmentIntentInput": {
+        "type": "object",
+        "required": ["name", "size", "content_type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4194304
+          },
+          "content_type": {
+            "type": "string",
+            "enum": ["image/jpeg", "image/png", "image/webp"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackAttachmentIntent": {
+        "type": "object",
+        "required": [
+          "attachment_id",
+          "feedback_id",
+          "status",
+          "write_outcome",
+          "requested_size_bytes",
+          "intent_expires_at",
+          "upload_path",
+          "upload_method"
+        ],
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "feedback_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "write_outcome": {
+            "type": "string"
+          },
+          "requested_size_bytes": {
+            "type": "integer"
+          },
+          "intent_expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "upload_path": {
+            "type": "string"
+          },
+          "upload_method": {
+            "type": "string",
+            "const": "PUT"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackAttachmentUpload": {
+        "type": "object",
+        "required": [
+          "feedback_id",
+          "attachment_id",
+          "status",
+          "write_outcome",
+          "actual_size_bytes",
+          "sha256",
+          "uploaded_at"
+        ],
+        "properties": {
+          "feedback_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attachment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "write_outcome": {
+            "type": "string"
+          },
+          "actual_size_bytes": {
+            "type": ["integer", "null"]
+          },
+          "sha256": {
+            "type": ["string", "null"]
+          },
+          "uploaded_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackAttachmentDelete": {
+        "type": "object",
+        "required": ["attachment_id", "status", "write_outcome", "deleted_at"],
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "write_outcome": {
+            "type": "string"
+          },
+          "deleted_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackSubmit": {
+        "type": "object",
+        "required": ["feedback_id", "status", "row_version", "submitted_at"],
+        "properties": {
+          "feedback_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FeedbackDetail"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackSummaryEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FeedbackSummary"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackAttachmentIntentEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FeedbackAttachmentIntent"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackAttachmentUploadEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FeedbackAttachmentUpload"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackAttachmentDeleteEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FeedbackAttachmentDelete"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackSubmitEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FeedbackSubmit"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackListEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id", "next_cursor"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["items"],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FeedbackSummary"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "next_cursor": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
       }
     },
     "responses": {
@@ -3872,6 +4973,141 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ConfigDeleteEnvelope"
+            }
+          }
+        }
+      },
+      "Feedback": {
+        "description": "Feedback detail.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackEnvelope"
+            }
+          }
+        }
+      },
+      "FeedbackSummary": {
+        "description": "Feedback draft created.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackSummaryEnvelope"
+            }
+          }
+        }
+      },
+      "Feedbacks": {
+        "description": "Feedback list.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackListEnvelope"
+            }
+          }
+        }
+      },
+      "FeedbackAttachmentIntent": {
+        "description": "Feedback attachment upload intent.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackAttachmentIntentEnvelope"
+            }
+          }
+        }
+      },
+      "FeedbackAttachmentUpload": {
+        "description": "Feedback attachment upload settlement.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackAttachmentUploadEnvelope"
+            }
+          }
+        }
+      },
+      "FeedbackAttachmentDelete": {
+        "description": "Feedback attachment deletion accepted.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackAttachmentDeleteEnvelope"
+            }
+          }
+        }
+      },
+      "FeedbackSubmit": {
+        "description": "Feedback submitted.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FeedbackSubmitEnvelope"
             }
           }
         }

@@ -48,6 +48,14 @@ export const SUPPORTED_OPERATIONS = [
   ['DELETE', '/v1/config-gallery/{configId}/like'],
   ['GET', '/v1/config-gallery/{configId}/content'],
   ['POST', '/v1/config-gallery/{configId}/apply'],
+  ['GET', '/v1/feedback'],
+  ['POST', '/v1/feedback'],
+  ['GET', '/v1/feedback/{feedbackId}'],
+  ['PATCH', '/v1/feedback/{feedbackId}'],
+  ['POST', '/v1/feedback/{feedbackId}/attachments/upload-intent'],
+  ['PUT', '/v1/feedback/{feedbackId}/attachments/{attachmentId}/content'],
+  ['DELETE', '/v1/feedback/{feedbackId}/attachments/{attachmentId}'],
+  ['POST', '/v1/feedback/{feedbackId}/submit'],
 ];
 
 const UUID =
@@ -64,7 +72,9 @@ function templatePattern(template) {
       .replace('\\{fileId\\}', UUID)
       .replace('\\{checkout_id\\}', UUID)
       .replace('\\{configId\\}', UUID)
-      .replace('\\{versionId\\}', UUID)}$`,
+      .replace('\\{versionId\\}', UUID)
+      .replace('\\{feedbackId\\}', UUID)
+      .replace('\\{attachmentId\\}', UUID)}$`,
     'u',
   );
 }

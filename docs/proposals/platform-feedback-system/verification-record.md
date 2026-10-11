@@ -17,9 +17,9 @@
 
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | 领域/Storage | 验收通过待推送 | 3 条 migration、private bucket、Feedback/Attachment/Label/Event、领域 primitives、Storage bucket union、67-file DB 回归 | checkpoint commit/push | 待生成 | 待推送 |
-| 02 | Account/Consumer | 进行中 | - | Account v1/Auth snapshot/Harness | 未验证 | 未验证 |
-| 03 | Admin Feedback Center | 未开始 | - | 依赖 01–02 | 未验证 | 未验证 |
+| 01 | 领域/Storage | 已交付 | 3 条 migration、private bucket、Feedback/Attachment/Label/Event、领域 primitives、Storage bucket union、67-file DB 回归 | 无 | `0d3191e` | 已推送并由当前远端任务分支包含 |
+| 02 | Account/Consumer | 验收通过待推送 | Account v1 1.2.0 / 8 Feedback ops、Auth email snapshot、private image upload、Consumer Harness/E2E、fresh + upgrade | checkpoint commit/push | 待生成 | 待推送 |
+| 03 | Admin Feedback Center | 进行中 | - | 依赖 02 checkpoint | 未验证 | 未验证 |
 | 04 | Lifecycle/Release | 未开始 | - | 依赖 01–03 | 未验证 | 未验证 |
 
 ## 事实与验证日志
@@ -36,9 +36,16 @@
 | 2026-10-11 | API/Storage regression | `pnpm test:api` | Local | PASS：101 passed / 0 failed；Storage adapter 受控 union 测试通过 |
 | 2026-10-11 | Advisors | `supabase db advisors --local` | Local Supabase | PASS：Security WARN/ERROR 0；修复 5 个新 Feedback FK covering-index INFO 后同类告警 0；fresh unused-index INFO 不作为删除依据 |
 | 2026-10-11 | Quality | `pnpm toolchain:check`; `pnpm format:check`; `pnpm lint`; `pnpm docs:check` | Local | PASS：固定 toolchain；402 files format；0 lint errors/warnings；176 docs |
+| 2026-10-11 | Phase 02 Account contract | `pnpm contracts:check`; `pnpm contracts:breaking` | Local | PASS：Account OpenAPI `1.2.0` / 46 operations，Admin 54；Consumer Lab snapshot/compat 同步；相对 origin/main 无 breaking |
+| 2026-10-11 | Phase 02 API | `pnpm test:api` | Local | PASS：104 passed / 0 failed；新增 draft、client context、server-confirmed Auth email snapshot 用例 |
+| 2026-10-11 | Phase 02 DB fresh | `supabase db reset --local --yes`; `pnpm test:db` | Local Supabase | PASS：`20261011140958_feedback_account_content.sql` 从零重放；68 files / 1368 tests |
+| 2026-10-11 | Phase 02 DB non-empty upgrade | reset 至 `20261011140102`，插入 draft Feedback + pending attachment，`migration up --local`，数据查询，t27+t28 | Local Supabase | PASS：历史 title/status/attachment pending 原样保留；升级库 Feedback 定向 79 tests PASS。专用 fixture 会污染无关全局计数，因此未把污染后的全仓计数冒充产品失败 |
+| 2026-10-11 | Phase 02 Consumer static | `pnpm test:consumer-harness` | Local | PASS：43 canonical operations；dynamic route/workspace isolation/process/static UI/CSRF/contract meta 全绿 |
+| 2026-10-11 | Phase 02 Consumer Local E2E | `pnpm test:e2e:consumer-harness` | Local Supabase + Browser | PASS：text-only、private PNG、bad magic 415、unsettled attachment 409、Auth email snapshot、跨平台 Feedback IDOR 全绿 |
+| 2026-10-11 | Phase 02 Admin generated consumer view | `pnpm --filter admin test:unit` | Local | PASS：13 files / 59 tests，Consumer Lab 1.2.0 / 46 ops |
 
 ## 当前交接
 
-- 下一步：提交/push Phase 01 checkpoint，然后进入 Phase 02 Account v1/Auth 邮箱快照/Consumer Harness。
+- 下一步：提交/push Phase 02 checkpoint，然后进入 Phase 03 Admin Feedback Center / Overview 聚合。
 - 需要用户决定：无。
 - Production：NOT_RUN / 未授权。

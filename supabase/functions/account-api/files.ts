@@ -444,6 +444,65 @@ function galleryContentTarget(
   return { configId, delivery: match[2] === 'apply' ? 'apply' : 'download' };
 }
 
+function feedbackAttachmentContentTarget(
+  request: Request,
+): { feedbackId: string; attachmentId: string } | null {
+  const match = /^v1\/feedback\/([^/]+)\/attachments\/([^/]+)\/content$/u.exec(
+    requestPath(request),
+  );
+  const feedbackId = uuidValue(match?.[1]);
+  const attachmentId = uuidValue(match?.[2]);
+  return feedbackId && attachmentId ? { feedbackId, attachmentId } : null;
+}
+
+function feedbackImageMagicMatches(
+  bytes: Uint8Array,
+  mimeType: string,
+): boolean {
+  if (mimeType === 'image/jpeg') {
+    return (
+      bytes.length >= 3 &&
+      bytes[0] === 0xff &&
+      bytes[1] === 0xd8 &&
+      bytes[2] === 0xff
+    );
+  }
+  if (mimeType === 'image/png') {
+    const magic = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    return (
+      bytes.length >= magic.length &&
+      magic.every((value, index) => bytes[index] === value)
+    );
+  }
+  if (mimeType === 'image/webp') {
+    return (
+      bytes.length >= 12 &&
+      String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
+      String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP'
+    );
+  }
+  return false;
+}
+
+function feedbackAttachmentUploadDto(
+  row: Row,
+  feedbackId: string,
+  attachmentId: string,
+): Record<string, unknown> {
+  return {
+    feedback_id: feedbackId,
+    attachment_id: attachmentId,
+    status: stringValue(row.status),
+    write_outcome: stringValue(row.write_outcome),
+    actual_size_bytes:
+      row.actual_size_bytes === null || row.actual_size_bytes === undefined
+        ? null
+        : Number(row.actual_size_bytes),
+    sha256: stringValue(row.sha256),
+    uploaded_at: isoDate(row.uploaded_at),
+  };
+}
+
 function configVersionUploadDto(
   row: Row,
   configId: string,
@@ -629,6 +688,177 @@ export async function handleConfigVersionUploadContent(
         finalized,
         target.configId,
         target.versionId,
+      ),
+    };
+  } catch (error) {
+    if (error instanceof UploadFault)
+      throw new ApiFault(error.status, error.code);
+    throw error;
+  } finally {
+    gate.release(accountId);
+  }
+}
+
+export async function handleFeedbackAttachmentUploadContent(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+): Promise<DispatchResult> {
+  if (request.method !== 'PUT') throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const target = feedbackAttachmentContentTarget(request);
+  if (!target) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const idempotencyKey = request.headers.get('idempotency-key');
+  if (!idempotencyKey || idempotencyKey.length > 128)
+    throw new ApiFault(400, 'INVALID_INPUT');
+
+  const initial = await uploadTransaction(
+    request,
+    dependencies,
+    async (transaction, key) => {
+      const [state] = await transaction.unsafe<Row>(
+        'select * from private.feedback_attachment_upload_state(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid)',
+        [
+          ...accountContextValues(session, key),
+          target.feedbackId,
+          target.attachmentId,
+        ],
+      );
+      if (!state) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return state;
+    },
+  );
+  const accountId = uuidValue(initial.platform_account_id);
+  if (!accountId) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  const gate = dependencies.uploadGate ?? defaultUploadGate;
+  if (!gate.tryAcquire(accountId)) throw new ApiFault(429, 'RATE_LIMITED');
+
+  try {
+    const mimeType = stringValue(initial.mime_type);
+    if (!mimeType) throw new ApiFault(409, 'OPERATION_IN_PROGRESS');
+    const received = await readBoundedBody(
+      request,
+      Math.min(Number(initial.requested_size_bytes), 4_194_304),
+      15_000,
+    );
+    if (received.size !== Number(initial.requested_size_bytes))
+      throw new ApiFault(400, 'UPLOAD_SIZE_MISMATCH');
+    if (!feedbackImageMagicMatches(received.bytes, mimeType))
+      throw new ApiFault(415, 'UNSUPPORTED_MEDIA_TYPE');
+    const hash = await sha256Hex(received.bytes);
+    const stateStatus = stringValue(initial.status);
+    if (stateStatus === 'active') {
+      if (
+        hash !== stringValue(initial.sha256) ||
+        received.size !== Number(initial.actual_size_bytes)
+      )
+        throw new ApiFault(409, 'FILE_CONTENT_CONFLICT');
+      return {
+        status: 202,
+        data: feedbackAttachmentUploadDto(
+          initial,
+          target.feedbackId,
+          target.attachmentId,
+        ),
+      };
+    }
+    if (stateStatus !== 'pending')
+      throw new ApiFault(409, 'OPERATION_IN_PROGRESS');
+
+    await uploadTransaction(request, dependencies, async (transaction, key) => {
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.feedback_attachment_receive_claim(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::integer)',
+        [
+          ...accountContextValues(session, key),
+          target.attachmentId,
+          `account-api:${crypto.randomUUID()}`,
+          15,
+        ],
+      );
+      if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      return result;
+    });
+    const prepared = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.feedback_attachment_prepare_store(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::bigint, $8::text, $9::text)',
+          [
+            ...accountContextValues(session, key),
+            target.attachmentId,
+            received.size,
+            hash,
+            idempotencyKey,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    const adapter =
+      dependencies.storageAdapter ?? createSupabaseStorageAdapter();
+    let providerRequestId: string | null = null;
+    try {
+      const putResult = await adapter.putImmutable({
+        bucket: 'platform-feedback-attachments',
+        path: String(prepared.storage_path),
+        body: received.bytes,
+        contentType: mimeType,
+        timeoutMs: 30_000,
+      });
+      providerRequestId = putResult.providerRequestId;
+      const info = await adapter.getInfo({
+        bucket: 'platform-feedback-attachments',
+        path: String(prepared.storage_path),
+        timeoutMs: 30_000,
+      });
+      if (info.size !== received.size) throw new Error('STORAGE_SIZE_MISMATCH');
+    } catch (error) {
+      await uploadTransaction(
+        request,
+        dependencies,
+        async (transaction, key) => {
+          await transaction.unsafe(
+            'select * from private.feedback_attachment_mark_unknown(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::text)',
+            [
+              ...accountContextValues(session, key),
+              target.attachmentId,
+              prepared.write_attempt_id,
+              error instanceof Error
+                ? error.message.slice(0, 128)
+                : 'storage_error',
+            ],
+          );
+          return undefined;
+        },
+      ).catch(() => undefined);
+      throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+    }
+    const finalized = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.feedback_attachment_finalize(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::bigint, $9::text, $10::text)',
+          [
+            ...accountContextValues(session, key),
+            target.attachmentId,
+            prepared.write_attempt_id,
+            received.size,
+            hash,
+            providerRequestId,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    return {
+      status: 202,
+      data: feedbackAttachmentUploadDto(
+        finalized,
+        target.feedbackId,
+        target.attachmentId,
       ),
     };
   } catch (error) {

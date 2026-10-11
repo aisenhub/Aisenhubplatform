@@ -17,6 +17,7 @@ import { dispatchAdmin } from './admin.ts';
 import {
   handleConfigResourceDownload,
   handleConfigVersionUploadContent,
+  handleFeedbackAttachmentUploadContent,
   handleDownload,
   handleUploadContent,
 } from './files.ts';
@@ -75,6 +76,23 @@ export async function handleRequest(
     ) {
       if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
       const upload = await handleConfigVersionUploadContent(
+        request,
+        dependencies,
+        session,
+      );
+      return response(
+        { data: upload.data, request_id: id },
+        upload.status,
+        id,
+        upload.headers,
+      );
+    }
+    if (
+      /^v1\/feedback\/[^/]+\/attachments\/[^/]+\/content$/u.test(path) &&
+      request.method === 'PUT'
+    ) {
+      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+      const upload = await handleFeedbackAttachmentUploadContent(
         request,
         dependencies,
         session,
