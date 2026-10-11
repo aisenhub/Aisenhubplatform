@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  adminGlobalUtilityNavigation,
   adminNavigationGroups,
   adminNavigationLabel,
   isAdminNavigationItemActive,
@@ -116,8 +115,13 @@ describe('admin navigation model', () => {
       '平台设置',
     ]);
 
-    const utilityKeys = adminGlobalUtilityNavigation.map((i) => i.key);
-    expect(utilityKeys).toEqual(['billing', 'audit', 'consumer-lab']);
+    const platformKeys = platformGroups.flatMap((group) =>
+      group.items.map((item) => item.key),
+    );
+    expect(platformKeys).not.toContain('billing');
+    expect(platformKeys).not.toContain('audit');
+    expect(platformKeys).not.toContain('consumer-lab');
+    expect(platformKeys).not.toContain('platforms');
     expect(adminNavigationLabel('/admin/accounts/deletion-jobs')).toBe(
       '统一用户',
     );

@@ -36,7 +36,7 @@
 | **Phase 05** | **近期 MFA 安全边界收敛** | **R3** | **Completed** | 账户状态变更与 Billing 人工动作统一依赖服务端 recent-MFA；OpenAPI 明示 step-up；统一当前 30 分钟 Admin policy 文档。详见 [Phase 05](phases/05-recent-mfa-boundary.md)。 |
 | **Phase 06** | **Accounts 请求与失败状态收敛** | **R2/R3** | **Completed** | 消除按键请求、重复提交、刷新状态悬挂与 partial failure 隐藏；URL 作为已提交查询唯一来源。详见 [Phase 06](phases/06-accounts-request-state.md)。 |
 | **Phase 07** | **共享 Billing Workspace** | **R3** | **Completed** | 唯一订单列表/详情/Timeline/requery/resolve 实现；Global/Platform 页面只提供 scope 与附加观测。详见 [Phase 07](phases/07-shared-billing-workspace.md)。 |
-| **Phase 08** | **Sidebar / Switcher 双透镜语义修复** | **R2** | **Completed** | 恢复平台视角系统治理直通、同等路由映射、平台搜索与状态表达；URL 仍是 scope SSOT。详见 [Phase 08](phases/08-dual-lens-navigation.md)。 |
+| **Phase 08** | **Sidebar / Switcher 双透镜语义修复** | **R2** | **Completed** | 历史交付包含平台视角系统治理直通、同等路由映射、平台搜索与状态表达；其中常驻治理直通已由 OPT-005 替代，route mapper / Switcher 能力继续保留。详见 [Phase 08](phases/08-dual-lens-navigation.md)。 |
 | **Phase 09** | **Billing URL 与平台上下文闭环** | **R2/R3** | **Completed** | 全局 Billing 读取 URL filter、显示真实/未关联平台信息、使用平台选择器，补 `/admin/billing/orders` canonical 入口与兼容旧路由。详见 [Phase 09](phases/09-billing-url-platform-context.md)。 |
 | **Phase 10** | **行为 / Local E2E 与 R3 验收** | **R3** | **Completed** | Identity UID 深链、Billing 刷新/双向 scope、治理一跳、recent-MFA 与响应式/可访问性已进入真实 Local Admin E2E；最终 20-gate R3 验收 PASS。详见 [Phase 10](phases/10-behavior-local-e2e.md)。 |
 | **Phase 11** | **架构与 Proposal 收口** | **R0（随整次 R3 候选验收）** | **Completed** | architecture/ADR/Proposal/verification record 已与实现和最终 Local 证据同步。详见 [Phase 11](phases/11-documentation-closeout.md)。 |
@@ -51,7 +51,7 @@
 | Global/Platform Billing 复制订单工作台 | P1/P2 | 07 | 列表、详情、Timeline、If-Match、operation_id、Unknown Outcome 逻辑只有一个实现 |
 | Global Billing 缺平台字段/平台选择器/目标订单入口 | P2 | 09 | 类型保留 `platform_id/platform_account_id`；全局队列展示平台；平台筛选不要求手输 UUID；旧 `/admin/billing` 兼容 |
 | Overview `?status=manual_review` 深链不生效 | P2 | 09 | Billing 首次状态来自 URL，Apply/Clear 反写 URL，刷新/后退/复制链接确定 |
-| 平台 Sidebar 最新视觉重构移除全局治理直通 | P2 | 08 | Platform Scope 一跳可达 Operations/Audit/Consumer Lab/全局 Billing，不破坏主导航收敛 |
+| 平台 Sidebar 最新视觉重构移除全局治理直通 | P2 | 08 | 历史 Phase 08 曾恢复常驻治理直通；该完成判定已由 OPT-005 后续设计替代，当前以 PlatformSwitcher 返回 Global scope |
 | PlatformSwitcher 不支持同等路由、搜索和完整状态表达 | P2 | 08 | scope route mapper 有纯函数测试；Accounts/Billing 双向同等映射；可本地筛选平台；状态点语义完整 |
 | 静态绿但缺行为/Local Supabase/R3 证据 | P2/P3 | 10 | 新行为测试实际执行；Local Supabase、权限、实际 HTTP、Admin E2E 适用项有 PASS 或明确 BLOCKED |
 | Proposal/architecture/ADR 与当前代码、风险等级、验证命令不一致 | P3 | 11 | 状态、30 分钟 Admin recent-MFA、真实命令、当前架构与验证记录一致 |

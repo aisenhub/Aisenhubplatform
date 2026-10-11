@@ -325,6 +325,39 @@ try {
     'PASS: Platform Overview authoritative metrics, period switching, planned domains and refresh recovery',
   );
 
+  await goto(`/admin/platforms/${platformId}`, 'platform-overview');
+  const platformSidebar = page.locator('[data-test="admin-sidebar"]');
+  for (const globalHref of [
+    '/admin/platforms',
+    '/admin/accounts',
+    '/admin/billing/orders',
+    '/admin/audit',
+    '/admin/consumer-lab',
+    '/admin/security',
+  ]) {
+    assert.equal(
+      await platformSidebar.locator(`a[href="${globalHref}"]`).count(),
+      0,
+      `Platform Sidebar must not keep Global navigation ${globalHref}`,
+    );
+  }
+  await page.locator('[data-test="platform-switcher-trigger"]').waitFor();
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page
+    .locator('[data-test="platform-switcher-dropdown"]')
+    .getByRole('button', { name: '所有平台（全局透镜）' })
+    .click();
+  await page.waitForURL(`${origin}/admin`);
+  await page.locator('[data-test="admin-overview"]').waitFor();
+  assert.equal(
+    await page.locator('[data-test="admin-nav-audit"]').count(),
+    1,
+    'Global Sidebar must restore global governance after switching scope',
+  );
+  console.log(
+    'PASS: Platform Sidebar contains only platform resources and PlatformSwitcher returns to Global scope',
+  );
+
   const routes = [
     ['/admin', 'admin-overview'],
     ['/admin/platforms', 'platform-directory-table'],

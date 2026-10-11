@@ -16,16 +16,16 @@
 
 | 阶段 | 目标 | 状态 | 详细计划 |
 | --- | --- | --- | --- |
-| 01 | Sidebar/navigation 收敛、文档同步、浏览器与 R2/Git closeout | 执行中 | [阶段 01](phases/01-platform-scope-sidebar.md) |
+| 01 | Sidebar/navigation 收敛、文档同步、浏览器与 R2/Git closeout | Local R2 完成，待 Git closeout | [阶段 01](phases/01-platform-scope-sidebar.md) |
 
 ## 总体验收
 
-- [ ] Platform Sidebar 仅包含平台资源分组。
-- [ ] Global Sidebar 能力与 URL 保持不变。
-- [ ] `adminGlobalUtilityNavigation` 与 Platform Sidebar 的平台目录注入删除。
-- [ ] PlatformSwitcher 的 Accounts/Billing 对等 scope 映射保持不变。
-- [ ] architecture/Admin DESIGN/旧双透镜 Proposal 的 supersede 说明同步。
-- [ ] unit/typecheck/build/browser/lint/format/docs 与适用 R2 Local 验证通过。
+- [x] Platform Sidebar 仅包含平台资源分组。
+- [x] Global Sidebar 能力与 URL 保持不变。
+- [x] `adminGlobalUtilityNavigation` 与 Platform Sidebar 的平台目录注入删除。
+- [x] PlatformSwitcher 的 Accounts/Billing 对等 scope 映射保持不变。
+- [x] architecture/Admin DESIGN/旧双透镜 Proposal 的 supersede 说明同步。
+- [x] unit/typecheck/build/browser/lint/format/docs 与适用 R2 Local 验证通过。
 - [ ] GitHub/main/远端 SHA/分支清理闭环后再进入 OPT-006。
 
 ## 风险与回退

@@ -4,6 +4,8 @@
 
 文档性质：已落地核心目标架构。本文件冻结信息架构、职责边界、双轨透镜模型（Dual-Scope Lens Model）与平滑迁移原则；Global Identity、共享 Billing Workspace、双透镜导航与 URL 驱动筛选已经实现。独立 Settlement UI、全局 Identity 写操作等未有既有领域合同支撑的能力仍属于后续范围，不因本状态而视为已实现。
 
+后续演进：本文件原先要求 Platform Sidebar 常驻“系统治理快捷直通”的条款已由 [OPT-005 平台作用域侧边栏导航收敛](../admin-platform-scope-navigation/design.md) 替代。当前实现以 PlatformSwitcher 作为返回 Global scope 的唯一常驻主入口；本文件其余 Global/Platform 领域分层、route mapper 与对象级深链原则继续有效。
+
 关联：[当前 Admin 架构](../../architecture/modules/frontends.md) · [系统概览](../../architecture/overview.md) · [ADR-0001 自营平台统一账户与安全边界](../../decisions/0001-platform-account-boundaries.md) · [Admin 2.0 导航与桌面工作区](../admin-2-navigation-ia/design.md) · [Admin 操作体验改进](../admin-ux-review/design.md) · [Admin 设计系统](../../../apps/admin/DESIGN.md)
 
 ---
@@ -153,7 +155,7 @@ Aisenhub
   └── 基本设置        /admin/platforms/:id/settings  (平台元数据、激活开关、状态停用)
 ```
 
-*在平台视口下，侧边栏底部或 Topbar 保留系统治理的快捷跳转直通链接，确保在单平台排查问题时，无需退出即可快速定位关联的运维任务与审计日志。*
+*历史说明：本段最初要求平台视口常驻系统治理快捷入口；该导航条款已由 OPT-005 替代。当前 Platform Sidebar 只显示平台资源，管理员通过 PlatformSwitcher 切回“所有平台”进入 Global 导航；对象级审计等显式深链仍可保留。*
 
 ---
 

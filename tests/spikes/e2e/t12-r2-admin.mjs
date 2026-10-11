@@ -932,6 +932,17 @@ async function runArchitectureBehaviorMatrix() {
   await page.goto(`${appUrl}/admin/platforms/${platformId}/accounts`, {
     waitUntil: 'domcontentloaded',
   });
+  assert.equal(
+    await page.locator('[data-test="admin-nav-audit"]').count(),
+    0,
+    'Platform scope must not expose the Global audit navigation item',
+  );
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page
+    .locator('[data-test="platform-switcher-dropdown"]')
+    .getByRole('button', { name: /所有平台/u })
+    .click();
+  await page.waitForURL('**/admin/accounts');
   await page.locator('[data-test="admin-nav-audit"]').click();
   await page.waitForURL('**/admin/audit');
 
@@ -978,7 +989,7 @@ async function runArchitectureBehaviorMatrix() {
     billingRefreshPersistence: 'PASS',
     accountsEquivalentScopeSwitch: 'PASS',
     billingEquivalentScopeSwitch: 'PASS',
-    platformGovernanceOneHop: 'PASS',
+    platformScopeIsolation: 'PASS',
   };
 }
 

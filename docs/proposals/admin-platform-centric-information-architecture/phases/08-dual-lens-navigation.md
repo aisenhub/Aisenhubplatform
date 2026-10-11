@@ -4,6 +4,8 @@
 
 关联：[总计划](../plan.md) · [设计 §2/§5.1](../design.md) · [验证记录](../verification-record.md)
 
+后续替代说明：本阶段 2026-10-09 完成时要求 Platform Sidebar 保留全局治理直通；该常驻导航决策已由 OPT-005 替代。route mapper、PlatformSwitcher 搜索/状态表达及当时验证证据仍属历史有效记录。
+
 ## 阶段目标
 
 在 PR #13 的轻量 Sidebar 视觉基础上恢复双轨透镜语义：进入平台后不失去系统治理入口；从 Global/Platform 切换 scope 时优先落到同等业务路由；平台切换器支持本地搜索与明确状态表达。

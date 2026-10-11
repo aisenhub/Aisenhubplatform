@@ -110,10 +110,6 @@ export const adminNavigation = adminNavigationGroups.flatMap(
   (group) => group.items,
 );
 
-export const adminGlobalUtilityNavigation = adminNavigation.filter((item) =>
-  ['billing', 'audit', 'consumer-lab'].includes(item.key),
-);
-
 type PlatformNavigationDefinition = Omit<AdminNavigationItem, 'href'> & {
   suffix: string;
 };

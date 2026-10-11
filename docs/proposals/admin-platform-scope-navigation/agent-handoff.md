@@ -19,7 +19,7 @@
 
 ## 完成门槛
 
-- [ ] 代码、测试、当前架构与旧 Proposal supersede 说明一致。
-- [ ] R2 本地门槛无 FAIL/BLOCKED。
+- [x] 代码、测试、当前架构与旧 Proposal supersede 说明一致。
+- [x] R2 本地门槛无 FAIL/BLOCKED。
 - [ ] main/远端/分支状态闭环。
 
