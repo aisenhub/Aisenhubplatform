@@ -1,6 +1,6 @@
 # 阶段 02：平台运营 Overview UI
 
-状态：实现与 Local R3 完成，待 Git closeout
+状态：Complete
 
 关联：[总计划](../plan.md) · [设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -16,7 +16,7 @@
 - [x] UI-004：Feedback/Gallery 明确“尚未接入”，不显示假 `0`。
 - [x] UI-005：平台 status/code/id 收敛为紧凑元数据。
 - [x] TEST-001：unit/browser/窄屏/加载/错误/重试/范围切换。
-- [ ] REL-001：canonical R3、最终 diff、main、分支清理。
+- [x] REL-001：canonical R3、最终 diff、main、分支清理。
 
 ## 已完成证据
 

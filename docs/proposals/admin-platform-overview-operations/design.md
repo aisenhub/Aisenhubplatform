@@ -1,6 +1,6 @@
 # OPT-004 单平台运营概览
 
-状态：In Progress
+状态：Complete
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md)
 

@@ -1,6 +1,6 @@
 # OPT-004 单平台运营概览计划
 
-状态：In Progress
+状态：Complete
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -10,14 +10,14 @@
 
 风险分级：**R3**。
 
-当前分支：`codex/opt-004-platform-overview`。
+最终交付分支：`main`；任务分支 `codex/opt-004-platform-overview` 在远端 main 核对完成后清理。
 
 ## 阶段
 
 | 阶段 | 目标 | 状态 | 详细计划 |
 | --- | --- | --- | --- |
 | 01 | 聚合 SQL + Admin API/OpenAPI + 权限/合同 | 完成 | [阶段 01](phases/01-platform-overview-contract.md) |
-| 02 | Overview UI + browser/R3 + Git closeout | Local R3 完成，待 Git closeout | [阶段 02](phases/02-platform-overview-ui.md) |
+| 02 | Overview UI + browser/R3 + Git closeout | 完成 | [阶段 02](phases/02-platform-overview-ui.md) |
 
 ## 总体验收
 
@@ -27,7 +27,7 @@
 - [x] 平台状态/Code/ID 降级为紧凑元数据。
 - [x] KPI 下钻到已有账户/订阅/订单视图且保持平台作用域语义。
 - [x] fresh/upgrade、DB/API/contracts、Admin unit/typecheck/build/browser、lint/format/docs、canonical R3 全通过。
-- [ ] GitHub/main/分支清理闭环后再进入 OPT-005。
+- [x] GitHub/main/分支清理闭环后再进入 OPT-005。
 
 ## 风险
 

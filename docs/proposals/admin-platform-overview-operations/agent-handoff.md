@@ -5,7 +5,7 @@
 - 项目：`E:\Projects\Aisenhubplatform`
 - 任务：OPT-004 单平台运营概览
 - 起始 main：`80a260bc43738b168d6521ccdbe51cb99eef929f`
-- 当前分支：`codex/opt-004-platform-overview`
+- 最终分支：`main`
 - 风险：R3
 - 当前阶段：[Phase 02](phases/02-platform-overview-ui.md)
 
@@ -30,5 +30,5 @@
 - [x] Phase 01 数据/API/合同完成。
 - [x] Phase 02 UI/browser/R3 完成。
 - [x] 必需 Local R3 无 FAIL/BLOCKED。
-- [ ] main/远端/分支状态闭环。
+- [x] main/远端/分支状态闭环。
 

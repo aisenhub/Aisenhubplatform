@@ -13,7 +13,7 @@
 | 阶段 | 状态 | 已完成 | 剩余 |
 | --- | --- | --- | --- |
 | 01 聚合合同 | PASS | migration/API/OpenAPI、权限、upgrade/fresh、DB/API/contracts、Admin BFF/unit | 无 |
-| 02 Admin UI | PASS（Git closeout 待完成） | Overview UI、unit/typecheck/build、synthetic browser、canonical R3 | commit/push/main/branch cleanup |
+| 02 Admin UI | PASS | Overview UI、unit/typecheck/build、synthetic browser、canonical R3、staging、Git/main | 无 |
 
 ## 验证记录
 
@@ -37,10 +37,12 @@
 | 2026-10-11 | Staging | `supabase functions deploy account-api --project-ref egsokuicabbxspkdccqe --no-verify-jwt --use-api` | workendstaging | PASS：`account-api` ACTIVE v57，`verify_jwt=false` 与现有自定义路由鉴权设计一致；远端代码包含 platform overview route 与 `private.admin_platform_overview(...)` 调用 |
 | 2026-10-11 | Staging | SQL read-only verification | workendstaging | PASS：函数存在；admin_executor 可执行，account/job executor 不可执行；security definer + pinned search_path；5 个 Overview 索引存在；active Admin context 下 30 天聚合返回 1 行且账户/订单基础不变量成立 |
 | 2026-10-11 | Staging | Supabase security/performance advisors | workendstaging | 无 OPT-004 新阻塞：security 仍为既有 `pg_net` public schema 与 leaked-password protection disabled 两项 WARN；performance 为历史 unindexed FK/unused-index INFO，新 Overview 索引因刚部署尚无使用统计，不据此删除 |
+| 2026-10-11 | Git | task branch commits/push | GitHub | PASS：`caaa433` Proposal、`fee9ac1` 聚合合同、`1580d36` Overview UI、`c73b2c6` staging 验证均已 push 到 `origin/codex/opt-004-platform-overview` |
+| 2026-10-11 | Git | `git merge --ff-only codex/opt-004-platform-overview` + `git push origin main` | GitHub | PASS：`main` fast-forward 到 `c73b2c6`，远端 main 已包含全部产品、migration/API、测试与 staging 证据提交 |
 
 ## 交接
 
-- 当前无产品决策、Local R3 或 staging 同步阻塞。
-- 下一步：提交本次 staging 证据，合并 main、核对远端 SHA、完成 closeout 文档与任务分支清理后进入 OPT-005。
+- OPT-004 已完成设计、实施、Local R3、staging 同步、GitHub main 合并与远端核对。
+- closeout 文档提交并清理已合并任务分支后，从最新 main 开始 OPT-005。
 - 不应重复实施：OPT-003 Identity lifecycle；Global Billing observability；后续 OPT-007/008/009/010 目标域。
 
