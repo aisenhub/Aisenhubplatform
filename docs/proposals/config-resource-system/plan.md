@@ -19,7 +19,7 @@
 | 01 | Config/Version/Gallery 领域模型、物理容量与 legacy file 兼容 | 已完成 | [阶段 01](phases/01-domain-storage-compat.md) |
 | 02 | Account v1 增量 API、private Storage 内容流、Consumer contract/Harness | 已完成 | [阶段 02](phases/02-account-consumer-contract.md) |
 | 03 | Admin 审核/资源池/容量治理、Plan 槽位配置与 Overview 聚合 | 已完成 | [阶段 03](phases/03-admin-governance.md) |
-| 04 | Global Delete/retention、备份真值、完整 E2E/R3/Git closeout | 未开始 | [阶段 04](phases/04-lifecycle-release.md) |
+| 04 | Global Delete/retention、备份真值、完整 E2E/R3/Git closeout | 实现与验证完成，待 Git closeout | [阶段 04](phases/04-lifecycle-release.md) |
 
 ## 阶段发布规则
 
@@ -37,9 +37,9 @@
 - [x] Account 新 API/OpenAPI/Harness 提供“我的配置 + 配置广场 + 一键应用交付”。
 - [x] Admin 可审核、移出/恢复/阻断 Gallery，且这些动作不删除个人 Config。
 - [x] Platform Overview 使用真实 pending review 聚合。
-- [ ] Global Delete / retention 能停止公开访问并清理/匿名化新增数据。
-- [ ] onboarding / architecture / Admin DESIGN / contracts 文档同步当前事实。
-- [ ] canonical R3、staging、GitHub/main/分支清理闭环后再进入 OPT-008。
+- [x] Global Delete / retention 能停止公开访问并清理/匿名化新增数据。
+- [x] onboarding / architecture / Admin DESIGN / contracts 文档同步当前事实。
+- [ ] canonical R3 与 staging 已通过；仍待 GitHub/main/分支清理闭环后再进入 OPT-008。
 
 ## 回退
 

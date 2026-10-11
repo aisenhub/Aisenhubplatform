@@ -39,7 +39,7 @@ flowchart LR
 新平台名称 / platform code：
 目标仓库、分支、当前 commit：
 技术栈 / 运行时 / 已有 Auth：
-需要功能：登录 / 激活 / 权益授权 / 资料 / 订阅 / 兑换 / 文件
+需要功能：登录 / 激活 / 权益授权 / 资料 / 订阅 / 兑换 / legacy 文件 / Config / 配置广场
 Local origin / Production origin：
 中央 Account API 与 Supabase Auth 环境：
 首个受保护业务接口与 feature 名称：
@@ -49,7 +49,7 @@ Account contract major / changelog revision：
 阻塞、用户待办、Agent 待办：
 ```
 
-按最小闭环实施：**合同冻结 → 环境与平台配置 → Auth 会话 → principal → activate → 一个服务端 protected route → 再接可选资料/订阅/文件能力 → 独立平台验收**。不要在登录和 principal 尚未跑通时同时复制全部页面。
+按最小闭环实施：**合同冻结 → 环境与平台配置 → Auth 会话 → principal → activate → 一个服务端 protected route → 再接可选资料/订阅/legacy 文件/Config 能力 → 独立平台验收**。不要在登录和 principal 尚未跑通时同时复制全部页面。
 
 ## 3. Contract baseline 与升级规则
 
@@ -98,7 +98,7 @@ Consumer 不需要中央数据库 URL、Supabase secret key、HMAC、Worker toke
 - [server.mjs](../../tests/consumer-harness/server.mjs)：loopback test server，演示 HttpOnly access/refresh、可读 CSRF Cookie、精确 Origin、server-only Platform Key、canonical allowlist、bounded body、deadline/no-store/request_id、binary 转发和 fail-closed protected route。
 - [contract.mjs](../../tests/consumer-harness/contract.mjs)：直接读取 canonical Account OpenAPI 并限制 Harness 支持的 method/path；不是新的手写公共 DTO 源。
 - [public/index.html](../../tests/consumer-harness/public/index.html) 与 [app.js](../../tests/consumer-harness/public/app.js)：极薄诊断 UI，只证明浏览器不需要持有 Platform Key/access/refresh token，不提供产品页面范式。
-- [Local E2E](../../tests/spikes/e2e/consumer-harness-local.mjs)：证明两个独立 Consumer origin/platform key 的真实本地边界，包括 activate、subscription/redeem、ETag、文件二进制、Suspend、Logout 和 invalid refresh。
+- [Local E2E](../../tests/spikes/e2e/consumer-harness-local.mjs)：证明两个独立 Consumer origin/platform key 的真实本地边界，包括 activate、subscription/redeem、ETag、legacy 文件二进制、Config/Version/Gallery/Like/Usage、Suspend、Logout 和 invalid refresh。
 
 目标平台可以参考这些**行为**，但不要复制 Harness 作为生产 server。OAuth callback、注册/找回密码、多 Tab 协调、框架 SSR cookie adapter 等目标平台实际需要而 Harness 未实现的能力，必须按 Supabase/目标框架官方能力单独设计、测试和维护。
 
@@ -134,7 +134,8 @@ Auth 登录成功不等于平台账户已激活，也不等于拥有付费能力
 | 商品/权益 | `/v1/plans`、`/v1/subscription/products`、`/v1/subscription` | 目录不是用户授权；金额/期限/`purchasable` 只信中央 |
 | Checkout | `/v1/subscription/checkout` | 创建保留同一 Idempotency-Key；断响应优先按合同恢复，不重复付款 |
 | 兑换 | `/v1/subscription/redeem` | code 不进日志/URL/持久存储；同意图保留 key |
-| 文件 | upload-intent、content PUT、list/read/download/delete | 原始字节有界、不得直连 Storage；二进制不经过 text 转码；删除跟踪中央状态 |
+| legacy 文件 | `/v1/config-files` upload-intent、content PUT、list/read/download/delete | v1 兼容面；原始字节有界、不得直连 Storage；二进制不经过 text 转码；删除跟踪中央状态 |
+| Config / 配置广场 | `/v1/configs`、Version content、gallery submission、`/v1/config-gallery`、like/download/apply | Config slot 与平台总容量由中央强约束；Gallery 只暴露 Admin-approved immutable Version；apply count 只证明中央交付，不代表目标业务应用成功 |
 | 关闭/身份删除 | close、delete-request + recent-auth | 区分平台关闭与全局删除；敏感认证不自动重放 |
 | OAuth/注册/找回密码 | 当前只有部分 callback/底层能力 | 缺失页面与发起流程必须单独实现和验收，不能因为 callback 存在就宣称完整支持 |
 
@@ -159,7 +160,7 @@ Consumer 不接 Provider webhook、结算 worker 或中央 SQL。支付成功、
 | Auth | 登录、刷新、过期、退出、迟到请求、跨 Tab、callback/邮件适用项 |
 | BFF | 匿名/已登录、Origin/CSRF、错误 Key/JWT、allowlist、deadline、no-store、无浏览器 Secret |
 | Account | principal、激活、跨用户/平台拒绝、目标 feature 允许/拒绝、中央不可用 fail closed |
-| 可选领域 | Profile 并发、Checkout/兑换幂等、文件二进制/配额/删除等实际启用项 |
+| 可选领域 | Profile 并发、Checkout/兑换幂等、legacy 文件或 Config/Version/Gallery 二进制、slot/容量、审核可见性、删除等实际启用项 |
 | Local Supabase | 按[开发发布流程](development-release-workflow.md)运行适用本地 Auth/API/DB/Storage/E2E |
 | Production | 与本地验收分开；按实际目标、配置、迁移、恢复和已有授权执行 |
 

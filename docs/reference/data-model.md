@@ -146,7 +146,17 @@ Audit的平台账户引用使用(platform_id,platform_account_id) → platform_a
 
 actor_scope 对用户操作固定 user:账户ID，对 Admin 操作固定 admin:管理员ID；不能由客户端自行提供。目标账户仍在幂等 scope 中，避免管理员对两个账户使用相同 key 时冲突。没有目标账户的批次/密钥操作使用独立 private.admin_idempotency，unique(admin_user_id,platform_id,operation,key)，避免 NULL 破坏唯一性；全局 Admin 操作使用固定 scope 字符串而不是 nullable platform 唯一键。
 
-## 4. 通用约束与维护
+## 4. Config / Version / Gallery
+
+`public.platform_configs` 是账户拥有的业务 Config 根，`public.platform_config_versions` 是 immutable Version 元数据，并通过 `file_id` 唯一引用 `public.platform_config_files` 中 `resource_kind='config_version'` 的物理 ledger 行。`platform_config_files` 继续承担 reserved bytes/count、write outcome、unknown recovery、delete/backup barrier；Config 业务状态不能替代物理删除证据。
+
+`public.platform_config_gallery_submissions` 保存 pending/approved/rejected/cancelled 审核事实；`public.platform_config_gallery_entries` 只指向管理员批准的 immutable Version，governance 状态为 approved/removed/blocked。新的 pending Version 不覆盖上一个 approved entry。Gallery list/read 还要求作者 `platform_accounts.status='active'`，因此 Close/Global Delete 可在对象清理完成前立即停止公开访问。
+
+`public.platform_config_likes` 保存同平台账户 Like 关系；`public.platform_config_usage_events` 记录 completed download/apply-delivery 事实并按 event key 去重。Global Delete/retention 删除目标账户作为 liker 的关系并把 Usage actor 置空，但保留非个人 usage 事实；同时最小化 authored Config/Version 用户文本并把相关 Config/Version file 纳入原删除状态机。
+
+Config delete 进入 `deleting` 时立即移出 Gallery、取消 pending submission，并把 Version files 标记 deleting。数据库 reconciliation trigger 只在所有 Version file 已被 file cleanup 证明为 `deleted` 后把 Config 收敛为 `deleted`；零 Version Config 可立即收敛。恢复数据集包含 Config/Version/Gallery/Like/Usage 数据库行与 file metadata，但 Storage object bytes 不在数据库备份中，未存在外部对象恢复介质时不得宣称“已备份”。
+
+## 5. 通用约束与维护
 
 - 所有跨租户敏感关系使用复合 FK；同账户关系进一步包含 platform_account_id。事件中的非空 code/subscription/grant 引用必须能由数据库验证。
 - Platform、Plan、Account、Code 不物理删除；Global Purge 留墓碑账户并脱离身份，文件内容按保留策略实际清除。

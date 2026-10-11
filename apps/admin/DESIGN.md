@@ -162,7 +162,8 @@ components:
 - **Tables / status:** 表头高度 2.75rem，字体较小；单元格纵向留白 0.875rem。行悬停为 muted，详情所选账户行为 primary-soft；状态胶囊有文字、小圆点和色调，unknown 使用更强警告底色。
 - **Audit center:** 全局审计中心的一级表格固定围绕“操作者 / 平台范围 / 对象 / 操作 / 结果 / 时间”组织。已知 event/target code 使用中文业务语义，原始 code、UUID、request_id 只在详情技术区保留；缺失 outcome 明确显示“未记录”，不得默认成功。操作者、平台、动作、对象类型、结果与关键词筛选写入 URL，并由服务端在游标分页前组合执行。
 - **Identity lifecycle:** `/admin/accounts` 仍以 live Auth Identity 为主列表；详情 `/admin/accounts/:userId` 分层展示 Auth 摘要、平台账户与权威 deletion request/job。pending request 的批准与 blocked/retry 的重试复用同一 recent-MFA、确认、幂等、replay-never 与 unknown-outcome 交互；跨用户历史任务集中在 `/admin/accounts/deletion-jobs`，Auth 已删除后的 detached job 不伪造 Identity 详情。
-- **Platform overview:** 单平台首页以服务端权威聚合展示账户总量/状态、7/30/90 天新增与关闭/净变化、有效付费账户和订单摘要，并与紧邻上一周期比较。不得从 `limit=100` 等有界列表计算全量 KPI；收入、Feedback、Config Gallery 等尚未冻结或未实现的数据源必须明确显示“不展示/尚未接入”，不得用假 `0` 填充。平台状态、Code、ID 降级到紧凑元数据区。
+- **Platform overview:** 单平台首页以服务端权威聚合展示账户总量/状态、7/30/90 天新增与关闭/净变化、有效付费账户、订单摘要与 pending Config review，并与紧邻上一周期比较。不得从 `limit=100` 等有界列表计算全量 KPI；Config review 使用数据库权威聚合并深链到配置资源审核队列。收入、Feedback 等尚未冻结或未实现的数据源必须明确显示“不展示/尚未接入”，不得用假 `0` 填充。平台状态、Code、ID 降级到紧凑元数据区。
+- **Config resources:** 单平台配置资源中心的一级信息使用 Config 标题、Gallery 状态、审核状态和 usage；raw file UUID、write outcome、reserved bytes 等保留在“Storage 技术状态”次级诊断区。Gallery remove/block/restore 与个人 Config delete 必须视觉和 API 分离；未存在可证明的外部 Storage object backup/manifest 时不得展示“已备份”。
 - **Resource details:** 右侧 Sheet 展示账户状态、标识与时间，窄屏全宽，宽屏最大 28rem。选择写入 URL，列表同步高亮；关闭详情后尝试回到触发按钮焦点。详情列表窄屏由标签和值两列改为单列。
 - **Async / safety:** 加载、空结果、访问失败、读取失败与后台刷新失败分别呈现；后台失败保留已知数据并说明可能过期，附重试与支持 ID。账户操作继续显示目标、影响、理由及近期 MFA；accepted、success、failure 和 unknown_outcome 保持不同文字与恢复入口。
 

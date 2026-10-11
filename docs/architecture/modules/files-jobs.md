@@ -169,3 +169,11 @@ pending 且未写入可取消并释放；receiving/storing 有租约或未知写
 Account侧只保留现有六个文件操作：`POST /v1/config-files/upload-intent`、`PUT/GET /v1/config-files/{fileId}/content`、`GET /v1/config-files`、`GET/DELETE /v1/config-files/{fileId}`；不增加浏览器 `complete`、signed-upload或Storage直连路径。Admin侧的file-policy、files、deletion-jobs列表/详情/下载/受控delete/retry均必须调用同一领域入口；页面只能调用这些入口，不能在UI中重算预算或直接写表。
 
 HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。Admin 文件列表支持可选精确 `platform_id`：过滤在服务端游标分页前执行；无效 UUID 返回400、未知平台返回404、与平台范围不一致的 cursor 返回400 `INVALID_INPUT`。不带该参数仍保留全局列表语义。若需要变更字段，必须先同步本节、`docs/reference/contracts.md`、canonical OpenAPI、中央 DTO、Consumer conformance/实际消费者和测试，不能静默改名。
+
+### 7.5 Config / Version / Gallery 与文件状态机
+
+`platform_config_files` 仍是唯一物理 Storage ledger；`resource_kind=config_version` 的行由 Config Version 引用，新 `/v1/configs` 与 `/v1/config-gallery` 不创建第二套对象生命周期。Config 进入 `deleting` 时立即移出 Gallery 并取消 pending submission，所有 Version file 进入原有 `deleting`；只有全部 Version file 已由 file cleanup 证明为 `deleted` 后，数据库 reconciliation trigger 才把 Config 收敛为 `deleted`。零 Version Config 在进入 `deleting` 时可立即收敛，任何业务状态都不能提前释放 file reserved bytes/count。
+
+Global Delete 的 `files_blocked` 与 account retention cleanup 会同时停止 authored Gallery 可见性、把 Config 置为 deleting、删除目标账户作为 liker 的关系、把 Usage actor 置空并最小化 Config/Version 用户文本；Usage 计数事实本身保留。Gallery 查询还要求作者平台账户 `active`，因此账户关闭后无需等待对象物理删除即可 fail closed。
+
+恢复数据集必须把 `platform_configs`、`platform_config_versions`、Gallery submissions/entries、likes、usage events 与 `platform_config_files` 元数据作为同一数据库恢复边界考虑；Storage object bytes 仍是数据库之外的对象。现有 backup barrier 会阻止 Config Version 的物理删除，但当前仓库没有可证明的外部 Storage object backup/manifest 介质，因此 Admin 只能展示屏障/技术状态，不得把数据库快照或 metadata 冒充“已备份”。

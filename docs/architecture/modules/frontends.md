@@ -6,7 +6,7 @@ Admin 使用深色导航与浅色数据工作区，平台目录提供紧凑的�
 
 平台与账户表的横向滚动由有名称、可聚焦的单一容器承担，窄屏显示滚动提示；Admin 样式让该容器内的上游 Table 包装层不再独立滚动。详情字段按内容高度从顶部排列。设计与产品约束见 [Admin 设计规则](../../../apps/admin/DESIGN.md) 和 [产品背景](../../../apps/admin/PRODUCT.md)。
 
-[apps/admin](../../../apps/admin)使用 Next.js App Router。Admin Shell 按 URL 区分 Global 与 Platform 两种 Sidebar 上下文：Global 工作区组织概览、平台、统一身份、Billing、Audit、安全与账户，以及只读 Consumer Lab；进入 `/admin/platforms/:platformId/**` 后，Sidebar 只展示当前平台的概览、账户、商业化、文件与配置导航，不再常驻注入平台目录或任何 Global 治理入口。平台设置把 Origin 与 Platform Key 收敛到 `/admin/platforms/:platformId/settings/integration` 接入配置主入口；接入进度只投影现有中央权威事实，目标平台 Auth/BFF 与 E2E 仍明确要求目标仓库独立验证。PlatformSwitcher 是 Global / Platform scope 的常驻主入口：使用同等资源映射在 Global/Platform Accounts 与 Billing 之间切换，其他无法对等映射的平台资源切回 Global 时回到平台目录；其下拉浮层只承载“所有平台（全局透镜）”、平台搜索和具体平台选择。对象详情仍可按业务需要显式深链到全局页面，但不重新形成 Platform Sidebar 的全局导航组。平台工作区不再维护第二套横向一级导航，Topbar 显示当前平台与资源上下文；Ctrl/Cmd+K 继续提供真实路由跳转。
+[apps/admin](../../../apps/admin)使用 Next.js App Router。Admin Shell 按 URL 区分 Global 与 Platform 两种 Sidebar 上下文：Global 工作区组织概览、平台、统一身份、Billing、Audit、安全与账户，以及只读 Consumer Lab；进入 `/admin/platforms/:platformId/**` 后，Sidebar 只展示当前平台的概览、账户、商业化、文件与配置导航，不再常驻注入平台目录或任何 Global 治理入口。平台设置把 Origin 与 Platform Key 收敛到 `/admin/platforms/:platformId/settings/integration` 接入配置主入口；接入进度只投影现有中央权威事实，目标平台 Auth/BFF 与 E2E 仍明确要求目标仓库独立验证。PlatformSwitcher 是 Global / Platform scope 的常驻主入口：使用同等资源映射在 Global/Platform Accounts 与 Billing 之间切换，其他无法对等映射的平台资源切回 Global 时回到平台目录；其下拉浮层只承载“所有平台（全局透镜）”、平台搜索和具体平台选择。对象详情仍可按业务需要显式深链到全局页面，但不重新形成 Platform Sidebar 的全局导航组。平台工作区不再维护第二套横向一级导航，Topbar 显示当前平台与资源上下文；单平台配置入口以配置资源中心承载 Config、Gallery、审核与 usage，Storage file 状态保留为次级技术诊断，不复制删除或配额状态机。Ctrl/Cmd+K 继续提供真实路由跳转。
 
 资源页由 apps/admin/features 实现，通过同源 /api/v1/... 代理访问中央 /admin/api/v1/...。AdminShell 先经 BFF 读取服务端权威 `security/status`，状态确认前不渲染普通管理页面；未登录转登录、AAL1 管理员只进入 `/admin/mfa`、AAL2 管理员继续，非管理员和状态服务故障均 fail closed。BFF 只做同源会话转发，不自行判断 membership/AAL。`/admin/accounts` 以 Supabase Auth Identity 为主对象：中央 Account API 使用 server-only Auth Admin 能力读取身份，再由 `private.admin_identity_accounts` 聚合 AisenHub 平台账户关联；浏览器只发一个 Global Identity 请求，平台目录仅用于筛选选项。Billing 的 Global `/admin/billing/orders` 与 Platform `/admin/platforms/:platformId/billing` 复用同一 `BillingOrderWorkspace`，列表、详情、Evidence Timeline、If-Match、operation_id、Unknown Outcome 与 requery/resolve 只有一套实现；筛选与 selected order 写入 URL，旧 `/admin/billing` 保持兼容。平台文件列表的 platform_id 在 SQL 分页前过滤，游标带平台范围。敏感操作仍由服务端认证和近期 MFA 检查决定，页面按钮不构成权限边界；`/admin/mfa` 保持为独立认证流程，不作为普通 Sidebar 页面。
 
@@ -18,7 +18,7 @@ Admin 使用深色导航与浅色数据工作区，平台目录提供紧凑的�
 
 [tests/consumer-harness](../../../tests/consumer-harness) 是 test-only 原生 Node HTTP Consumer，不在 pnpm workspace 中，也不作为生产进程部署。它提供极薄 HTML/JS 登录与诊断入口、HttpOnly access/refresh Cookie、可读 CSRF Cookie、精确 Origin 校验、canonical operation allowlist、server-only Platform Key BFF、超时/no-store/request_id、二进制文件代理和 fail-closed feature 授权。
 
-Harness 的 Local E2E 使用两个独立 Harness origin/platform key 和真实本地 Supabase Auth/Account API/DB/Storage fixture，验证平台隔离、激活、subscription/redeem、Profile/Preferences ETag、文件上传下载删除、Suspend 拒绝、Logout 与 invalid-refresh terminal clear。它证明公共协议/安全边界可由独立 Consumer 实现，不提供可复制的产品页面、品牌、支付 UI 或完整 OAuth/找回密码流程。
+Harness 的 Local E2E 使用两个独立 Harness origin/platform key 和真实本地 Supabase Auth/Account API/DB/Storage fixture，验证平台隔离、激活、subscription/redeem、Profile/Preferences ETag、legacy 文件上传下载删除、Config/Version/Gallery/Like/Usage、Suspend 拒绝、Logout 与 invalid-refresh terminal clear。它证明公共协议/安全边界可由独立 Consumer 实现，不提供可复制的产品页面、品牌、支付 UI 或完整 OAuth/找回密码流程。
 
 ## 共享 UI 与安装元数据
 

@@ -59,6 +59,10 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.file_intent_create | Files/Account | ctx+metadata+size+replaceId+idem → file_id/预约 |
 | private.file_receive_claim / file_prepare_store / file_write_attempt_mark_unknown / file_write_attempt_finalize | Files | ctx+fileId+fence+大小/hash/结果 → 状态；各短事务 |
 | private.file_delete_request | Files/Account/Admin包装 | 已授权context+fileId → deleting，不提前释放预算 |
+| private.config_create / config_read / config_patch / config_delete_request | Config/Account | Account ctx → Config CRUD；删除立即移出 Gallery、取消 pending review，并把 Version files 交给原 file cleanup |
+| private.config_version_intent_create / config_version_* | Config/Files | Account ctx+Config/Version → immutable Version 与受控 Storage 状态机；物理对象仍只在 `platform_config_files` |
+| private.config_gallery_submission_create / config_gallery_list / config_gallery_read / config_gallery_like_set / config_gallery_usage_record | Gallery/Account | 提交审核、仅 approved immutable Version 可见、Like 与 completed delivery usage；作者账户非 active 时公开查询 fail closed |
+| private.admin_config_resource_list / admin_config_resource_read / admin_config_review_list / admin_config_gallery_review_v2 / admin_config_gallery_govern / admin_config_usage_summary | Config/Admin | 平台范围资源池、审核、Gallery governance 与 usage；服务端过滤，不授予基础表读取 |
 | private.job_lease_claim / job_lease_release | Operations | 租约与 fencing token 原子检查，不调用Storage |
 | private.file_cleanup_candidates / file_cleanup_claim / file_cleanup_finish / file_reconcile_step | Files/Operations | 固定候选、租约、Storage结果结算和对账；不接受任意表名或SQL |
 | private.identity_delete_request | Account | ctx+近期证明 → pending_admin请求；不自动开始删除任务 |
@@ -75,7 +79,7 @@ DomainResult<T>为成功data或确定性业务拒绝code/status，不把业务�
 
 Admin Grant必须有operation_id UUID和reason；兑换operation_id来自code.id；source+operation_id永久唯一。重放先重新鉴权。Profiles/Preferences增加row_version bigint（初始1、每次成功patch+1），ETag为服务端生成的不透明版本表示，客户端仅If-Match回传；updated_at仍用于展示。
 
-OpenAPI必须覆盖API专题当前全部22个Account方法/路径组合、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。结账创建/读取/按Idempotency-Key恢复必须同步声明服务端定价、幂等、跨账户404和CHECKOUT_UNAVAILABLE；尚未实现路由不应暴露成功假数据。
+OpenAPI 必须覆盖当前 canonical Account v1 的 38 个 method/path operation、body/header约束、每条鉴权要求、状态码、分页、no-store及二进制响应。结账创建/读取/按Idempotency-Key恢复必须同步声明服务端定价、幂等、跨账户404和CHECKOUT_UNAVAILABLE；尚未实现路由不应暴露成功假数据。
 
 Admin路径固定为/admin/api/v1，具体动作：
 
@@ -85,14 +89,15 @@ Admin路径固定为/admin/api/v1，具体动作：
 - redemption-batches：创建、读取、confirm-delivery、disable；codes只读mask和按码disable。
 - subscriptions：读取与commands，拒绝直接PATCH Projection。
 - billing：中央订单、Provider 商品映射、积压/对账指标、订单详情、重查和结案；敏感动作需要近期MFA、`operation_id`、`If-Match` 与 reason。
-- config-files：metadata、受控download、delete。
+- config-files：legacy v1 metadata、受控 download、delete。
+- config resources：平台范围 Config 资源池、usage、pending review、approve/reject，以及 Gallery remove/restore/block；总容量仍通过 platform file-policy 的 `max_platform_total_bytes` 治理。
 - audit：只读筛选分页；deletion-jobs：只读状态、Admin start/retry；不提供任意checkpoint编辑。
 
 Admin列表按平台/目标资源过滤；平台、Origin、Key、账户和文件列表支持可选 `q`（最多128字符）以及既有 `limit`/cursor 参数，过滤在受控 SQL wrapper 内执行。文件列表另支持可选精确 `platform_id`，必须在服务端分页前过滤，scoped cursor 跨平台返回400，未知平台返回404；不带该参数保持全局兼容语义。所有敏感动作使用同一授权包装和Audit。读列表也须Admin身份，不能因不修改数据跳过鉴权。
 
 ## 5. OpenAPI 与 DTO 合同
 
-Account与Admin的OpenAPI 3.1合同维护在`contracts/account/v1/openapi.json`和`contracts/admin/v1/openapi.json`，同目录保存 compatibility/changelog。Account合同当前包含22个方法/路径组合，并包含无 Bearer 的平台 Key 商品目录读取；结账创建、读取和按 Idempotency-Key 恢复都需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。所有未实现的操作不得暴露成功假数据。数据库到 Harness/Admin/Registry 的字段级生产者、消费者与测试责任见 [消费者兼容清单](contract-consumer-matrix.md)，其机器可读索引由 `contracts:check` 校验。
+Account与Admin的OpenAPI 3.1合同维护在`contracts/account/v1/openapi.json`和`contracts/admin/v1/openapi.json`，同目录保存 compatibility/changelog。Account 合同当前包含 38 个 method/path operation，并包含无 Bearer 的平台 Key 商品目录读取；结账创建、读取和按 Idempotency-Key 恢复都需要Bearer与Platform Key且响应no-store；Admin合同覆盖平台、账户动作、Key、Plan、兑换批次、Subscription、文件、审计、删除任务和中央 Billing 资源。所有未实现的操作不得暴露成功假数据。数据库到 Harness/Admin/Registry 的字段级生产者、消费者与测试责任见 [消费者兼容清单](contract-consumer-matrix.md)，其机器可读索引由 `contracts:check` 校验。
 
 共享DTO、稳定大写错误码和三类SQL context映射位于`packages/domain/src/contracts/api.ts`。`contracts:check`校验引用、operationId、鉴权、错误枚举、none权益的NULL语义、原始二进制上传/下载和`Cache-Control: no-store`。普通用户Close与Global Delete的近期认证必须使用服务端 session-bound proof；OpenAPI 的存在不代表路由、Provider 或真实会话生命周期已经完成。
 

@@ -9,7 +9,7 @@
 | 01 领域/Storage 兼容 | DONE | 三条 migration、legacy 隔离、Config/Version/Gallery/Like/Usage primitives、fresh+upgrade 63/1209、staging/advisors 已验证 | Phase 02 Account/Consumer |
 | 02 Account/Consumer | DONE | additive Account v1、private Storage Version/Gallery 内容流、OpenAPI 1.1.0、Consumer Harness、Local fresh+upgrade、staging v59 已验证 | Phase 03 Admin 治理 |
 | 03 Admin 治理 | DONE | Admin Config resource/review/Gallery governance、平台容量、Plan slot、Overview pending review、Local canonical R3、staging v60 已验证 | Phase 04 Lifecycle/Release |
-| 04 Lifecycle/Release | NOT_STARTED | 无 | Phase 03 checkpoint 后实施 |
+| 04 Lifecycle/Release | IN_PROGRESS | Lifecycle migration + t26、fresh/upgrade、canonical 21 gates、staging migration/functions/triggers/advisors/HTTP smoke 已通过 | Git closeout：final diff/hygiene → commit/push → fast-forward main → SHA 核对 → 分支清理 |
 
 ## 事实与验证日志
 
@@ -46,6 +46,18 @@
 | 2026-10-11 | Phase 03 staging permissions | Supabase SQL | Staging | PASS：10 个关键 Phase 03 private functions 均 `domain_owner` + security definer + pinned search_path；`admin_executor` 可执行，`account_executor`/authenticated/anon 不可直接执行 |
 | 2026-10-11 | Phase 03 staging HTTP | `pg_net` staging DB → 同项目 `account-api` Edge | Staging | PASS：Config resources、review queue、Overview、file-policy 未认证真实 HTTP 均 401 `UNAUTHORIZED`、`Cache-Control: no-store`、有效 `X-Request-Id`、无 timeout；Runner 直连为 `ECONNRESET`，未伪记为 PASS |
 | 2026-10-11 | Phase 03 staging advisors | Supabase Security + Performance Advisor | Staging | PASS：Security 仅既有两条 WARN；Performance 为既有 unindexed-FK / fresh-unused-index INFO；无 Phase 03 新安全告警，不基于低流量 unused 统计移除新索引 |
+| 2026-10-11 | Phase 04 lifecycle DB | `20261011101738_config_resource_lifecycle.sql` + `t26_config_lifecycle.sql` | Local | PASS：Config deleting→deleted reconciliation、零/多 Version 收敛、Global Delete `files_blocked`、retention privacy cleanup、Like 删除、Usage actor 匿名化、用户文本最小化与 backup barrier 行为均覆盖；targeted 29/29 PASS |
+| 2026-10-11 | Phase 04 Local non-empty regression | `pnpm test:db` | Local Supabase | PASS：Phase 04 增量应用后的现有数据库 66 files / 1289 tests；旧 files/global-delete/retention/backup/billing/audit/Config Phase 01–03 全绿 |
+| 2026-10-11 | Phase 04 fresh | `supabase db reset --local --no-seed` → `pnpm test:db` | Local Supabase | PASS：首次 fresh 暴露并修复新 migration UTF-8 BOM；去 BOM 后全部 migration 从零重放成功，66 / 1289 PASS |
+| 2026-10-11 | Phase 04 upgrade | reset 到 `20261011070729` → 非空 Config/Version/Gallery/Like/Usage fixture → `migration up --local` → t26 + full pgTAP | Local Supabase | PASS：只增量应用 `20261011101738`；历史 Config title/description、Version schema/changelog、file active、approved Gallery、pending review、Like 与 Usage actor 原样保留；t26 29/29、全量 66 / 1289 PASS |
+| 2026-10-11 | Phase 04 API/Admin/static | `test:api`、Admin unit/typecheck/build、lint、format、docs、contracts/breaking | Local | PASS：Edge/API 101/0；Admin unit 13 files / 59 tests；Admin typecheck/build PASS；lint 0 warnings/errors；format PASS；docs 168；Account 38 / Admin 54 operations；相对 `origin/main` 无 breaking |
+| 2026-10-11 | Phase 04 canonical R3 | `pnpm verify:task:0801` | Local Supabase + Browser | PASS：21 executable gates；fresh reset、workspace build/unit/tooling/API、66 / 1289 pgTAP、settlement concurrency、contracts/breaking、Registry/Harness/runtime probe、真实 Consumer Local E2E、真实 Admin T12、docs/contracts 全绿 |
+| 2026-10-11 | Phase 04 canonical Consumer/Admin | TASK-0801 Consumer Harness + T12 | Local Browser + Local Supabase | PASS：Consumer `configResources` / `galleryUsageAndIsolation`；Admin `configReviewGovernance` / `globalCapacityStepUp` / `overCapacityNoDelete`；95 组响应式/可访问性矩阵与安全边界保持 PASS |
+| 2026-10-11 | Phase 04 staging migration | `supabase db push --linked --dry-run` → `--yes` | Staging | PASS：dry-run 仅包含 `20261011101738_config_resource_lifecycle.sql`；远端 migration history 已精确包含 `20261011101738` |
+| 2026-10-11 | Phase 04 staging lifecycle boundary | Supabase SQL introspection | Staging | PASS：6 个 lifecycle/private helper 均 `domain_owner` + security definer + pinned `pg_catalog, private, public` search_path；仅 `account_retention_cleanup` / `deletion_job_step` 授予 `job_executor`；Account/Admin/browser roles 不可直接执行；两个 reconcile trigger 均启用 |
+| 2026-10-11 | Phase 04 staging Edge | Supabase Edge Functions | Staging | PASS：Phase 04 无 Edge 源码变更，不 redeploy；`account-api` 保持 ACTIVE v60、`billing-webhook` v31、`maintenance` v39 |
+| 2026-10-11 | Phase 04 staging HTTP | `pg_net` staging DB → 同项目 `account-api /v1/config-gallery` | Staging | PASS：未认证真实 HTTP = 401 `UNAUTHORIZED`、`Cache-Control: no-store`、有效 `X-Request-Id`、`timed_out=false` |
+| 2026-10-11 | Phase 04 staging advisors | Supabase Security + Performance Advisor | Staging | PASS：Security 仍只有既有 `pg_net` public schema 与 leaked-password protection 两条 WARN；Performance 仍为既有 42 个 unindexed FK + 51 个 fresh/低流量 unused-index INFO；无 Phase 04 新安全告警 |
 | 2026-10-11 | Production | 发布边界 | Production | NOT_RUN：OPT-007 未获 Production 授权 |
 
 ## 当前结论
@@ -53,5 +65,6 @@
 - 正式模型已冻结为 Config / immutable Version / Gallery Submission + Entry / Like / Usage Event，并保留 `platform_config_files` 作为唯一物理 ledger。
 - legacy API 采用 additive coexistence，不做 v1 breaking rename/delete。
 - 槽位、平台容量、Gallery admission、删除与 usage 语义已在 design 固化。
-- Phase 01–03 已完成并同步 staging；Account API 最终为 v60，Local canonical R3、真实 Config/Gallery/容量治理链路与 fail-closed staging HTTP 均已闭环。
-- 下一步进入 Phase 04 Lifecycle/Release；Production 始终 NOT_RUN，除非用户另行明确授权。
+- Phase 01–04 的产品/数据库实现与 Local/staging 验证均已完成；Account API 保持 v60，Phase 04 没有 Edge 源码变更。
+- Phase 04 新增 lifecycle reconciliation 与统一 privacy cleanup；Global Delete/retention 已覆盖 Config/Gallery/Like/Usage，而 Storage 物理删除仍由原 file state machine + backup barrier 证明。
+- canonical R3 为 21 executable gates PASS；当前唯一剩余步骤是 final diff/hygiene、Git commit/push、fast-forward main、远端 SHA 核对与任务分支清理。Production 始终 NOT_RUN，除非用户另行明确授权。
