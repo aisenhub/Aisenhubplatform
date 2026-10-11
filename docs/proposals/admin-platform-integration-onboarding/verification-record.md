@@ -12,7 +12,7 @@
 | 阶段 | 状态 | 已完成 | 剩余 |
 | --- | --- | --- | --- |
 | 01 状态/导航 | PASS | 状态模型、单一接入导航、兼容路由、创建后 welcome 跳转、文档同步 | 无 |
-| 02 接入工作区 | PASS（Git closeout 待完成） | Origin/Key section 复用、真实进度、外部验收边界、synthetic/T12/canonical R3 | 提交、push、merge main、分支清理 |
+| 02 接入工作区 | PASS | Origin/Key section 复用、真实进度、外部验收边界、synthetic/T12/canonical R3、Git closeout | 无 |
 
 ## 验证记录
 
@@ -23,8 +23,10 @@
 | 2026-10-11 | Phase 02 | `pnpm --filter admin build` | Local | PASS：Next production build，包含 `/settings/integration` 与兼容旧路由 |
 | 2026-10-11 | Phase 02 | `node tests/spikes/e2e/admin-ux-local.mjs` | Local production Admin + synthetic API | PASS：创建平台进入 truthful onboarding；legacy integration routes redirect；56 route/viewport semantic checks；零 runtime exception |
 | 2026-10-11 | R3 | `pnpm verify:task:0801 --reuse-local` | Local Supabase | PASS：20 executable gates；62 SQL files / 1146 tests；Edge/API 97/97；settlement concurrency、contracts/registry/consumer harness、Local Consumer E2E、Admin T12、docs/contracts 全绿 |
+| 2026-10-11 | Git | `f164a51f679e6a675be5e5b0bf3ae3cbea65f3ec` / `codex/opt-006-platform-onboarding` / `main` | GitHub | PASS：任务分支已 push；`main` 从 `018bcaf...` fast-forward 到 `f164a51...`；远端 main SHA 已核对；本地与远端任务分支均已删除 |
+| 2026-10-11 | Supabase remote | migration/API/OpenAPI/远端 Supabase 状态核对 | Hosted | N/A：本项没有需要部署的 Supabase 远端状态，Production 未执行任何变更 |
 
 ## 交接
 
-- 当前无产品或验证阻塞；本项没有 migration/API/OpenAPI 变更，因此 Hosted staging/Production Supabase 部署不适用。
-- 下一步仅执行 final diff/hygiene、任务分支提交/push、fast-forward main、远端 SHA 核对与分支清理；完成后才能进入 OPT-007。
+- OPT-006 已完成：产品提交、Local canonical R3、远端 main 核对与任务分支清理均已闭环；本项没有 migration/API/OpenAPI 变更，因此 Hosted staging/Production Supabase 部署不适用。
+- 下一步从最新 `main` 重新核对 OPT-007 配置资源系统的预研架构与当前代码，再建立正式设计/计划。

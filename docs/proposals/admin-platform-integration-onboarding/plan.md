@@ -1,6 +1,6 @@
 # OPT-006 平台接入配置与首次接入向导计划
 
-状态：Ready to Merge
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -10,7 +10,7 @@
 
 风险分级：**R3**。
 
-当前分支：`codex/opt-006-platform-onboarding`。
+最终产品提交：`f164a51f679e6a675be5e5b0bf3ae3cbea65f3ec`；已 fast-forward 进入远端 `main`，任务分支已清理。
 
 本项复用现有 Admin API，不新增数据库 migration、Edge route 或 OpenAPI；因此无新的 Supabase 远端状态需要部署。
 
@@ -19,7 +19,7 @@
 | 阶段 | 目标 | 状态 | 详细计划 |
 | --- | --- | --- | --- |
 | 01 | 状态模型、导航/路由兼容、平台创建连续流程 | 已完成 | [阶段 01](phases/01-integration-state-navigation.md) |
-| 02 | 接入配置页、Origin/Key 复用、browser/R3/Git closeout | 验证完成，待 Git closeout | [阶段 02](phases/02-integration-workspace.md) |
+| 02 | 接入配置页、Origin/Key 复用、browser/R3/Git closeout | 已完成 | [阶段 02](phases/02-integration-workspace.md) |
 
 ## 总体验收
 
@@ -29,7 +29,7 @@
 - [x] 接入配置页复用现有 Origin/Key 安全交互，不复制 mutation 逻辑。
 - [x] 外部目标平台步骤不出现手工伪 PASS。
 - [x] onboarding guide / Admin DESIGN / architecture 与当前实现同步。
-- [ ] R3 Local 与 canonical gate 已通过；待 GitHub/main/分支清理闭环后再进入 OPT-007。
+- [x] R3 Local 与 canonical gate 通过；GitHub/main/分支清理已闭环，可从最新 main 进入 OPT-007。
 
 ## 回退
 
