@@ -229,6 +229,7 @@ function fakeDatabase(
   checkoutRow: Record<string, unknown> = {},
   productRow: Record<string, unknown> = {},
   securityStatusRows: readonly Record<string, unknown>[] = [],
+  configFault?: string,
 ) {
   return {
     async begin<T>(
@@ -774,6 +775,63 @@ function fakeDatabase(
                 mime_type: 'text/plain',
                 created_at: new Date('2026-09-09T00:00:00Z'),
               },
+            ] as unknown as R[];
+          }
+          if (query.startsWith('select * from private.config_create')) {
+            if (configFault) throw new Error(configFault);
+            return [
+              {
+                config_id: keyId,
+                title: 'Fixture Config',
+                description: 'Config API fixture',
+                status: 'active',
+                current_version_id: null,
+                row_version: 1,
+                created_at: new Date('2026-10-11T00:00:00Z'),
+                updated_at: new Date('2026-10-11T00:00:00Z'),
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.config_list') ||
+            query.startsWith('select * from private.config_read')
+          ) {
+            return [
+              {
+                config_id: keyId,
+                title: 'Fixture Config',
+                description: 'Config API fixture',
+                status: 'active',
+                current_version_id: null,
+                row_version: 1,
+                created_at: new Date('2026-10-11T00:00:00Z'),
+                updated_at: new Date('2026-10-11T00:00:00Z'),
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
+              'select * from private.config_version_intent_create',
+            )
+          ) {
+            if (configFault) throw new Error(configFault);
+            return [
+              {
+                version_id: sessionId,
+                file_id: reauthSessionId,
+                version_number: 1,
+                file_status: 'pending',
+                write_outcome: 'not_started',
+                reserved_bytes: 5,
+                intent_expires_at: new Date('2026-10-11T00:10:00Z'),
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.config_gallery_like_set')
+          ) {
+            return [
+              { config_id: keyId, liked: true, like_count: 1 },
             ] as unknown as R[];
           }
           return [] as R[];
@@ -2840,4 +2898,131 @@ Deno.test('Account API maps replacement capacity failures to the stable contract
     (await response.json()).error.code,
     'REPLACEMENT_CAPACITY_REQUIRED',
   );
+});
+
+Deno.test('Account API creates Config resources on the additive v1 surface', async () => {
+  const response = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/configs', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${fakeJwt()}`,
+        'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: 'Fixture Config',
+        description: 'Config API fixture',
+      }),
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 201);
+  assertEquals(response.headers.get('etag'), 'W/"1"');
+  const payload = await response.json();
+  assertEquals(payload.data.config_id, keyId);
+  assertEquals(payload.data.title, 'Fixture Config');
+  assertEquals(payload.data.status, 'active');
+});
+
+Deno.test('Account API requires If-Match before Config metadata mutation', async () => {
+  const response = await handleRequest(
+    new Request(`http://local/functions/v1/account-api/v1/configs/${keyId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${fakeJwt()}`,
+        'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ description: 'missing precondition' }),
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 428);
+  assertEquals((await response.json()).error.code, 'PRECONDITION_REQUIRED');
+});
+
+Deno.test('Account API maps platform Config storage exhaustion to its stable contract code', async () => {
+  const response = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/v1/configs/${keyId}/versions/upload-intent`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'config-capacity-fixture',
+        },
+        body: JSON.stringify({
+          name: 'config.json',
+          size: 5,
+          content_type: 'application/json',
+          schema_key: 'fixture.config',
+          schema_version: '1',
+        }),
+      },
+    ),
+    {
+      database: fakeDatabase(
+        undefined,
+        [],
+        {},
+        {},
+        [],
+        'platform_storage_quota_exceeded',
+      ),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 409);
+  assertEquals(
+    (await response.json()).error.code,
+    'PLATFORM_STORAGE_QUOTA_EXCEEDED',
+  );
+});
+
+Deno.test('Account API requires an Idempotency-Key before Gallery apply delivery', async () => {
+  let storageCalls = 0;
+  const response = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/v1/config-gallery/${keyId}/apply`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+        },
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      verifyAccessToken: async () => userId,
+      storageAdapter: {
+        async putImmutable() {
+          return { providerRequestId: null };
+        },
+        async getInfo() {
+          return { size: 1, etag: null };
+        },
+        async download() {
+          storageCalls += 1;
+          return new Response('x');
+        },
+        async remove() {},
+      },
+    },
+  );
+  assertEquals(response.status, 400);
+  assertEquals((await response.json()).error.code, 'INVALID_INPUT');
+  assertEquals(storageCalls, 0);
 });

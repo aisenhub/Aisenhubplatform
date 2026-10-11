@@ -19,6 +19,7 @@ import {
   assertAllowed,
   accountContextValues,
   fileDto,
+  isoDate,
   sha256Hex,
   requestPath,
 } from './core.ts';
@@ -419,4 +420,370 @@ export async function handleUploadContent(
   } finally {
     gate.release(accountId);
   }
+}
+
+function configVersionContentTarget(
+  request: Request,
+): { configId: string; versionId: string } | null {
+  const match = /^v1\/configs\/([^/]+)\/versions\/([^/]+)\/content$/u.exec(
+    requestPath(request),
+  );
+  const configId = uuidValue(match?.[1]);
+  const versionId = uuidValue(match?.[2]);
+  return configId && versionId ? { configId, versionId } : null;
+}
+
+function galleryContentTarget(
+  request: Request,
+): { configId: string; delivery: 'download' | 'apply' } | null {
+  const match = /^v1\/config-gallery\/([^/]+)\/(content|apply)$/u.exec(
+    requestPath(request),
+  );
+  const configId = uuidValue(match?.[1]);
+  if (!configId || !match?.[2]) return null;
+  return { configId, delivery: match[2] === 'apply' ? 'apply' : 'download' };
+}
+
+function configVersionUploadDto(
+  row: Row,
+  configId: string,
+  versionId: string,
+): Record<string, unknown> {
+  return {
+    config_id: configId,
+    version_id: versionId,
+    file_id: uuidValue(row.file_id),
+    file_status: stringValue(row.status ?? row.file_status),
+    write_outcome: stringValue(row.write_outcome),
+    actual_size_bytes:
+      row.actual_size_bytes === null || row.actual_size_bytes === undefined
+        ? null
+        : Number(row.actual_size_bytes),
+    sha256: stringValue(row.sha256),
+    uploaded_at: isoDate(row.uploaded_at),
+  };
+}
+
+export async function handleConfigVersionUploadContent(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+): Promise<DispatchResult> {
+  if (request.method !== 'PUT') throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const target = configVersionContentTarget(request);
+  if (!target) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const idempotencyKey = request.headers.get('idempotency-key');
+  if (!idempotencyKey || idempotencyKey.length > 128)
+    throw new ApiFault(400, 'INVALID_INPUT');
+
+  const initial = await uploadTransaction(
+    request,
+    dependencies,
+    async (transaction, key) => {
+      const [state] = await transaction.unsafe<Row>(
+        'select * from private.config_version_upload_state(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid)',
+        [
+          ...accountContextValues(session, key),
+          target.configId,
+          target.versionId,
+        ],
+      );
+      if (!state) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return state;
+    },
+  );
+  const accountId = uuidValue(initial.platform_account_id);
+  if (!accountId) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+  const gate = dependencies.uploadGate ?? defaultUploadGate;
+  if (!gate.tryAcquire(accountId)) throw new ApiFault(429, 'RATE_LIMITED');
+
+  try {
+    const stateStatus = stringValue(initial.status);
+    if (stateStatus === 'active') {
+      const limit = Math.min(Number(initial.requested_size_bytes), 1048576);
+      const received = await readBoundedBody(request, limit, 15_000);
+      const hash = await sha256Hex(received.bytes);
+      if (
+        hash !== stringValue(initial.sha256) ||
+        received.size !== Number(initial.actual_size_bytes)
+      )
+        throw new ApiFault(409, 'FILE_CONTENT_CONFLICT');
+      return {
+        status: 202,
+        data: configVersionUploadDto(
+          initial,
+          target.configId,
+          target.versionId,
+        ),
+      };
+    }
+    if (stateStatus !== 'pending')
+      throw new ApiFault(409, 'OPERATION_IN_PROGRESS');
+
+    const claim = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.config_version_receive_claim(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::text, $9::integer)',
+          [
+            ...accountContextValues(session, key),
+            target.configId,
+            target.versionId,
+            `account-api:${crypto.randomUUID()}`,
+            15,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    const limit = Math.min(
+      Number(claim.requested_size_bytes),
+      Number(claim.max_file_bytes),
+    );
+    const received = await readBoundedBody(request, limit, 15_000);
+    const hash = await sha256Hex(received.bytes);
+    const prepared = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.config_version_prepare_store(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::bigint, $9::text, $10::text)',
+          [
+            ...accountContextValues(session, key),
+            target.configId,
+            target.versionId,
+            received.size,
+            hash,
+            idempotencyKey,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    const adapter =
+      dependencies.storageAdapter ?? createSupabaseStorageAdapter();
+    let providerRequestId: string | null = null;
+    try {
+      const putResult = await adapter.putImmutable({
+        bucket: 'platform-config-files',
+        path: String(prepared.storage_path),
+        body: received.bytes,
+        contentType: stringValue(claim.mime_type) ?? 'application/octet-stream',
+        timeoutMs: 30_000,
+      });
+      providerRequestId = putResult.providerRequestId;
+      const info = await adapter.getInfo({
+        bucket: 'platform-config-files',
+        path: String(prepared.storage_path),
+        timeoutMs: 30_000,
+      });
+      if (info.size !== received.size) throw new Error('STORAGE_SIZE_MISMATCH');
+    } catch (error) {
+      await uploadTransaction(
+        request,
+        dependencies,
+        async (transaction, key) => {
+          await transaction.unsafe(
+            'select * from private.config_version_write_attempt_mark_unknown(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::uuid, $9::text)',
+            [
+              ...accountContextValues(session, key),
+              target.configId,
+              target.versionId,
+              prepared.write_attempt_id,
+              error instanceof Error
+                ? error.message.slice(0, 128)
+                : 'storage_error',
+            ],
+          );
+          return undefined;
+        },
+      ).catch(() => undefined);
+      throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+    }
+    const finalized = await uploadTransaction(
+      request,
+      dependencies,
+      async (transaction, key) => {
+        const [result] = await transaction.unsafe<Row>(
+          'select * from private.config_version_write_attempt_finalize(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::uuid, $9::bigint, $10::text, $11::text)',
+          [
+            ...accountContextValues(session, key),
+            target.configId,
+            target.versionId,
+            prepared.write_attempt_id,
+            received.size,
+            hash,
+            providerRequestId,
+          ],
+        );
+        if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+        return result;
+      },
+    );
+    return {
+      status: 202,
+      data: configVersionUploadDto(
+        finalized,
+        target.configId,
+        target.versionId,
+      ),
+    };
+  } catch (error) {
+    if (error instanceof UploadFault)
+      throw new ApiFault(error.status, error.code);
+    throw error;
+  } finally {
+    gate.release(accountId);
+  }
+}
+
+async function recordGalleryUsage(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+  configId: string,
+  eventType: 'download_completed' | 'apply_delivery_completed',
+  eventKey: string,
+): Promise<void> {
+  try {
+    await uploadTransaction(request, dependencies, async (transaction, key) => {
+      await transaction.unsafe(
+        'select * from private.config_gallery_usage_record(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::text)',
+        [...accountContextValues(session, key), configId, eventType, eventKey],
+      );
+    });
+  } catch {
+    // Usage facts are only recorded after a complete stream. If that final
+    // append is unavailable, do not turn already-delivered bytes into a
+    // synthetic application failure or invent a count.
+  }
+}
+
+export async function handleConfigResourceDownload(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+): Promise<Response> {
+  const versionTarget = configVersionContentTarget(request);
+  const galleryTarget = galleryContentTarget(request);
+  if (versionTarget) {
+    if (request.method !== 'GET') throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  } else if (galleryTarget) {
+    if (
+      (galleryTarget.delivery === 'download' && request.method !== 'GET') ||
+      (galleryTarget.delivery === 'apply' && request.method !== 'POST')
+    )
+      throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  } else {
+    throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  }
+
+  const applyKey =
+    galleryTarget?.delivery === 'apply'
+      ? request.headers.get('idempotency-key')
+      : null;
+  if (
+    galleryTarget?.delivery === 'apply' &&
+    (!applyKey || applyKey.length > 128)
+  )
+    throw new ApiFault(400, 'INVALID_INPUT');
+
+  const target = await uploadTransaction(
+    request,
+    dependencies,
+    async (transaction, key) => {
+      const [principalRow] = await transaction.unsafe<Row>(
+        'select * from private.account_principal(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
+        accountContextValues(session, key),
+      );
+      if (!principalRow) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      assertAllowed(principalRow);
+      if (versionTarget) {
+        const [row] = await transaction.unsafe<Row>(
+          'select * from private.config_version_download_authorize(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid)',
+          [
+            ...accountContextValues(session, key),
+            versionTarget.configId,
+            versionTarget.versionId,
+          ],
+        );
+        if (!row) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+        return row;
+      }
+      const [row] = await transaction.unsafe<Row>(
+        'select * from private.config_gallery_content_authorize(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text)',
+        [
+          ...accountContextValues(session, key),
+          galleryTarget!.configId,
+          galleryTarget!.delivery,
+        ],
+      );
+      if (!row) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return row;
+    },
+  );
+
+  const adapter = dependencies.storageAdapter ?? createSupabaseStorageAdapter();
+  let upstream: Response;
+  try {
+    upstream = await adapter.download({
+      bucket: 'platform-config-files',
+      path: String(target.storage_path),
+      timeoutMs: 30_000,
+    });
+  } catch {
+    throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+  }
+  if (!upstream.ok || !upstream.body)
+    throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+
+  const reader = upstream.body.getReader();
+  let settled = false;
+  const settle = async () => {
+    if (settled) return;
+    settled = true;
+    if (!galleryTarget) return;
+    const eventKey =
+      galleryTarget.delivery === 'apply'
+        ? applyKey!
+        : (session.requestId ?? crypto.randomUUID());
+    await recordGalleryUsage(
+      request,
+      dependencies,
+      session,
+      galleryTarget.configId,
+      galleryTarget.delivery === 'apply'
+        ? 'apply_delivery_completed'
+        : 'download_completed',
+      eventKey,
+    );
+  };
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const chunk = await reader.read();
+        if (chunk.done) {
+          await settle();
+          controller.close();
+        } else if (chunk.value) {
+          controller.enqueue(chunk.value);
+        }
+      } catch {
+        controller.error(new Error('STORAGE_STREAM_FAILED'));
+      }
+    },
+    async cancel(reason) {
+      await reader.cancel(reason);
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...downloadHeaders(target.original_name),
+      ...(session.requestId ? { 'X-Request-Id': session.requestId } : {}),
+    },
+  });
 }

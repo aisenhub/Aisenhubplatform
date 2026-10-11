@@ -35,6 +35,7 @@ import {
   requestPath,
 } from './core.ts';
 import { boundedLimit } from './admin.ts';
+import { dispatchConfigResources } from './configs.ts';
 
 export async function dispatchAccount(
   request: Request,
@@ -113,6 +114,15 @@ export async function dispatchAccount(
   }
 
   const contextValues = accountContextValues(session, key);
+  if (path.startsWith('v1/configs') || path.startsWith('v1/config-gallery')) {
+    assertAllowed(row);
+    const configResult = await dispatchConfigResources(
+      request,
+      transaction,
+      contextValues,
+    );
+    if (configResult) return configResult;
+  }
   if (path === 'v1/subscription/checkout' && request.method === 'GET') {
     assertAllowed(row);
     const idempotencyKey = request.headers.get('idempotency-key');

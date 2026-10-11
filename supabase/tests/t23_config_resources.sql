@@ -344,9 +344,19 @@ select is(
   1,
   'repeated delivery does not double count usage'
 );
+select * from private.config_gallery_content_authorize(row(
+  '00000000-0000-4000-8000-000000005102', '00000000-0000-4000-8000-000000005112',
+  '00000000-0000-4000-8000-000000005120', '00000000-0000-4000-8000-000000005150',
+  '00000000-0000-4000-8000-000000005300'
+)::private.account_context, (select config_id from config_one), 'download');
+select * from private.config_gallery_content_authorize(row(
+  '00000000-0000-4000-8000-000000005102', '00000000-0000-4000-8000-000000005112',
+  '00000000-0000-4000-8000-000000005120', '00000000-0000-4000-8000-000000005150',
+  '00000000-0000-4000-8000-000000005301'
+)::private.account_context, (select config_id from config_one), 'apply');
 select ok(
-  exists (select 1 from private.rate_limit_windows where limit_count = 600),
-  'Gallery download and apply delivery share the frozen 600 per hour limiter'
+  exists (select 1 from private.rate_limit_windows where limit_count = 600 and hit_count = 2),
+  'Gallery download and apply authorization share the frozen 600 per hour limiter'
 );
 select is(
   (select event_type from private.config_gallery_usage_record(row(

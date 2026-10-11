@@ -32,6 +32,22 @@ export const SUPPORTED_OPERATIONS = [
   ['DELETE', '/v1/config-files/{fileId}'],
   ['GET', '/v1/config-files/{fileId}/content'],
   ['PUT', '/v1/config-files/{fileId}/content'],
+  ['GET', '/v1/configs'],
+  ['POST', '/v1/configs'],
+  ['GET', '/v1/configs/{configId}'],
+  ['PATCH', '/v1/configs/{configId}'],
+  ['DELETE', '/v1/configs/{configId}'],
+  ['GET', '/v1/configs/{configId}/versions'],
+  ['POST', '/v1/configs/{configId}/versions/upload-intent'],
+  ['PUT', '/v1/configs/{configId}/versions/{versionId}/content'],
+  ['GET', '/v1/configs/{configId}/versions/{versionId}/content'],
+  ['POST', '/v1/configs/{configId}/gallery-submissions'],
+  ['GET', '/v1/config-gallery'],
+  ['GET', '/v1/config-gallery/{configId}'],
+  ['PUT', '/v1/config-gallery/{configId}/like'],
+  ['DELETE', '/v1/config-gallery/{configId}/like'],
+  ['GET', '/v1/config-gallery/{configId}/content'],
+  ['POST', '/v1/config-gallery/{configId}/apply'],
 ];
 
 const UUID =
@@ -46,7 +62,9 @@ function templatePattern(template) {
   return new RegExp(
     `^${escaped
       .replace('\\{fileId\\}', UUID)
-      .replace('\\{checkout_id\\}', UUID)}$`,
+      .replace('\\{checkout_id\\}', UUID)
+      .replace('\\{configId\\}', UUID)
+      .replace('\\{versionId\\}', UUID)}$`,
     'u',
   );
 }

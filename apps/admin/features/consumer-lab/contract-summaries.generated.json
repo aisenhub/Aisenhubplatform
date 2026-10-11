@@ -2,7 +2,7 @@
   "account": {
     "title": "Aisenhub Account API",
     "major": "v1",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "securitySchemes": [
       "bearerAuth",
       "platformKey"
@@ -93,6 +93,150 @@
         "method": "POST",
         "path": "/v1/config-files/upload-intent",
         "operationId": "createUploadIntent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/config-gallery",
+        "operationId": "listConfigGallery",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/config-gallery/{configId}",
+        "operationId": "getConfigGalleryEntry",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/config-gallery/{configId}/apply",
+        "operationId": "applyConfigGalleryContent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/config-gallery/{configId}/content",
+        "operationId": "downloadConfigGalleryContent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "DELETE",
+        "path": "/v1/config-gallery/{configId}/like",
+        "operationId": "unlikeConfigGalleryEntry",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "PUT",
+        "path": "/v1/config-gallery/{configId}/like",
+        "operationId": "likeConfigGalleryEntry",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/configs",
+        "operationId": "listConfigs",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/configs",
+        "operationId": "createConfig",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "DELETE",
+        "path": "/v1/configs/{configId}",
+        "operationId": "deleteConfig",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/configs/{configId}",
+        "operationId": "getConfig",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/v1/configs/{configId}",
+        "operationId": "patchConfig",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/configs/{configId}/gallery-submissions",
+        "operationId": "submitConfigToGallery",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/configs/{configId}/versions",
+        "operationId": "listConfigVersions",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/v1/configs/{configId}/versions/{versionId}/content",
+        "operationId": "getConfigVersionContent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "PUT",
+        "path": "/v1/configs/{configId}/versions/{versionId}/content",
+        "operationId": "putConfigVersionContent",
+        "security": [
+          "bearerAuth",
+          "platformKey"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/v1/configs/{configId}/versions/upload-intent",
+        "operationId": "createConfigVersionUploadIntent",
         "security": [
           "bearerAuth",
           "platformKey"

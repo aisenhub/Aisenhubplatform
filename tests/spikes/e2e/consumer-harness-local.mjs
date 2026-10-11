@@ -204,8 +204,8 @@ async function createFixtures() {
     await sql`
       insert into public.plans (id, platform_id, code, name, kind, features)
       values
-        (${fixture.planId}, ${fixture.platformId}, 'free', 'Free', 'free', ${sql.json({})}),
-        (${fixture.paidPlanId}, ${fixture.platformId}, 'pro', 'Pro', 'paid', ${sql.json({ advanced_config: true })})
+        (${fixture.planId}, ${fixture.platformId}, 'free', 'Free', 'free', ${sql.json({ config_slot_limit: 3 })}),
+        (${fixture.paidPlanId}, ${fixture.platformId}, 'pro', 'Pro', 'paid', ${sql.json({ advanced_config: true, config_slot_limit: 3 })})
     `;
     await sql`
       update public.platforms
@@ -558,6 +558,294 @@ async function exerciseHarness(
   );
   assert.equal(removed.status, 202, 'file delete request');
 
+  const configCreate = await mutation(page, baseUrl, '/api/v1/configs', {
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: 'Harness Config',
+      description: 'OPT-007 Phase 02',
+    }),
+  });
+  assert.equal(configCreate.status, 201, 'Config create');
+  const configId = configCreate.body?.data?.config_id;
+  assert.ok(configId, 'Config create must return config_id');
+  assert.ok(configCreate.headers.etag, 'Config create must expose ETag');
+
+  const configList = await pageRequest(page, '/api/v1/configs?limit=20');
+  assert.equal(configList.status, 200, 'Config list');
+  assert.ok(
+    configList.body?.data?.items?.some((item) => item.config_id === configId),
+    'created Config must be listed',
+  );
+  const configRead = await pageRequest(page, `/api/v1/configs/${configId}`);
+  assert.equal(configRead.status, 200, 'Config read');
+  assert.ok(configRead.headers.etag, 'Config read must expose ETag');
+  const originalConfigEtag = configRead.headers.etag;
+  const configPatch = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/configs/${configId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'If-Match': originalConfigEtag,
+      },
+      body: JSON.stringify({ description: 'Updated through Consumer Harness' }),
+    },
+  );
+  assert.equal(configPatch.status, 200, 'Config PATCH');
+  const staleConfigPatch = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/configs/${configId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'If-Match': originalConfigEtag,
+      },
+      body: JSON.stringify({ description: 'stale Config write' }),
+    },
+  );
+  assert.equal(staleConfigPatch.status, 412, 'stale Config If-Match');
+
+  const configContent = `consumer-harness-config:${expectedPlatformId}`;
+  const versionIntent = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/configs/${configId}/versions/upload-intent`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': randomUUID(),
+      },
+      body: JSON.stringify({
+        name: 'harness-config.json',
+        size: configContent.length,
+        content_type: 'application/json',
+        schema_key: 'harness.config',
+        schema_version: '1',
+        changelog: 'Initial Harness Version',
+      }),
+    },
+  );
+  assert.equal(versionIntent.status, 201, 'Config Version upload intent');
+  const versionId = versionIntent.body?.data?.version_id;
+  const versionFileId = versionIntent.body?.data?.file_id;
+  const versionUploadPath = versionIntent.body?.data?.upload_path;
+  assert.ok(
+    versionId && versionFileId && versionUploadPath,
+    'Version intent ids/path',
+  );
+  const versionUpload = await mutation(
+    page,
+    baseUrl,
+    `/api${versionUploadPath}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Idempotency-Key': randomUUID(),
+      },
+      body: configContent,
+    },
+  );
+  assert.equal(versionUpload.status, 202, 'Config Version binary upload');
+
+  const configAfterUpload = await pageRequest(
+    page,
+    `/api/v1/configs/${configId}`,
+  );
+  assert.equal(
+    configAfterUpload.status,
+    200,
+    'Config read after Version upload',
+  );
+  assert.equal(
+    configAfterUpload.body?.data?.current_version_id,
+    versionId,
+    'completed Version upload must advance current_version_id',
+  );
+  const versionList = await pageRequest(
+    page,
+    `/api/v1/configs/${configId}/versions`,
+  );
+  assert.equal(versionList.status, 200, 'Config Version list');
+  assert.ok(
+    versionList.body?.data?.items?.some(
+      (item) => item.version_id === versionId,
+    ),
+    'uploaded Version must be listed',
+  );
+  const legacyAfterVersion = await pageRequest(
+    page,
+    '/api/v1/config-files?limit=20',
+  );
+  assert.equal(
+    legacyAfterVersion.status,
+    200,
+    'legacy file list after Version upload',
+  );
+  assert.equal(
+    legacyAfterVersion.body?.data?.items?.some(
+      (item) => item.file_id === versionFileId,
+    ),
+    false,
+    'legacy file list must not expose Config Version physical files',
+  );
+  const ownerVersionContent = await pageRequest(
+    page,
+    `/api/v1/configs/${configId}/versions/${versionId}/content`,
+  );
+  assert.equal(
+    ownerVersionContent.status,
+    200,
+    'owner Version content download',
+  );
+  assert.equal(
+    ownerVersionContent.body?.raw,
+    configContent,
+    'owner Version bytes',
+  );
+
+  const gallerySubmission = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/configs/${configId}/gallery-submissions`,
+    {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version_id: versionId }),
+    },
+  );
+  assert.equal(gallerySubmission.status, 201, 'Gallery submission');
+  assert.equal(gallerySubmission.body?.data?.status, 'pending');
+  const beforeApproval = await pageRequest(
+    page,
+    `/api/v1/config-gallery/${configId}`,
+  );
+  assert.equal(beforeApproval.status, 404, 'pending submission is not public');
+
+  const [pendingSubmission] = await sql`
+    select id
+    from public.platform_config_gallery_submissions
+    where platform_id = ${expectedPlatformId}
+      and config_id = ${configId}
+      and version_id = ${versionId}
+      and status = 'pending'
+  `;
+  assert.ok(pendingSubmission?.id, 'pending Gallery submission fixture');
+  await sql`
+    update public.platform_config_gallery_submissions
+    set status = 'approved', reviewed_at = now(), review_reason = 'Consumer Harness Phase 02 fixture'
+    where id = ${pendingSubmission.id}
+  `;
+  await sql`
+    insert into public.platform_config_gallery_entries
+      (config_id, platform_id, published_version_id, approved_submission_id, status, approved_at)
+    values
+      (${configId}, ${expectedPlatformId}, ${versionId}, ${pendingSubmission.id}, 'approved', now())
+  `;
+
+  const galleryList = await pageRequest(
+    page,
+    '/api/v1/config-gallery?limit=20',
+  );
+  assert.equal(galleryList.status, 200, 'Gallery list after approval');
+  assert.ok(
+    galleryList.body?.data?.items?.some((item) => item.config_id === configId),
+    'approved Config must appear in Gallery',
+  );
+  const galleryRead = await pageRequest(
+    page,
+    `/api/v1/config-gallery/${configId}`,
+  );
+  assert.equal(galleryRead.status, 200, 'Gallery detail after approval');
+  assert.equal(galleryRead.body?.data?.published_version_id, versionId);
+
+  const liked = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/config-gallery/${configId}/like`,
+    {
+      method: 'PUT',
+    },
+  );
+  assert.equal(liked.status, 200, 'Gallery like');
+  assert.equal(liked.body?.data?.liked, true);
+  assert.equal(liked.body?.data?.like_count, 1);
+  const unliked = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/config-gallery/${configId}/like`,
+    { method: 'DELETE' },
+  );
+  assert.equal(unliked.status, 200, 'Gallery unlike');
+  assert.equal(unliked.body?.data?.liked, false);
+  assert.equal(unliked.body?.data?.like_count, 0);
+
+  const galleryDownload = await pageRequest(
+    page,
+    `/api/v1/config-gallery/${configId}/content`,
+  );
+  assert.equal(galleryDownload.status, 200, 'Gallery content download');
+  assert.equal(
+    galleryDownload.body?.raw,
+    configContent,
+    'Gallery content bytes',
+  );
+  const [{ count: downloadCount }] = await sql`
+    select count(*)::integer as count
+    from public.platform_config_usage_events
+    where platform_id = ${expectedPlatformId}
+      and config_id = ${configId}
+      and event_type = 'download_completed'
+  `;
+  assert.equal(
+    downloadCount,
+    1,
+    'completed Gallery download records one usage fact',
+  );
+
+  const applyKey = randomUUID();
+  const applyOne = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/config-gallery/${configId}/apply`,
+    {
+      headers: { 'Idempotency-Key': applyKey },
+    },
+  );
+  assert.equal(applyOne.status, 200, 'Gallery apply delivery');
+  assert.equal(
+    applyOne.body?.raw,
+    configContent,
+    'apply returns approved Version bytes',
+  );
+  const applyRepeat = await mutation(
+    page,
+    baseUrl,
+    `/api/v1/config-gallery/${configId}/apply`,
+    { headers: { 'Idempotency-Key': applyKey } },
+  );
+  assert.equal(applyRepeat.status, 200, 'repeated Gallery apply delivery');
+  assert.equal(
+    applyRepeat.body?.raw,
+    configContent,
+    'repeated apply safely redelivers bytes',
+  );
+  const [{ count: applyCount }] = await sql`
+    select count(*)::integer as count
+    from public.platform_config_usage_events
+    where platform_id = ${expectedPlatformId}
+      and config_id = ${configId}
+      and event_type = 'apply_delivery_completed'
+  `;
+  assert.equal(
+    applyCount,
+    1,
+    'repeated apply key deduplicates central usage fact',
+  );
+
   await sql`
     update public.platform_accounts
     set status = 'suspended'
@@ -571,6 +859,7 @@ async function exerciseHarness(
     set status = 'active'
     where platform_id = ${expectedPlatformId} and user_id = ${userId}
   `;
+  return { configId, versionId, versionFileId };
 }
 
 async function exerciseSessionTerminal(page, context, baseUrl) {
@@ -630,6 +919,27 @@ async function cleanup() {
     () => {},
   );
   await sql`delete from public.redemption_code_batches where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.platform_config_usage_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.platform_config_likes where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.platform_config_gallery_entries where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.platform_config_gallery_submissions where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`update public.platform_configs set current_version_id = null where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.platform_config_versions where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.platform_configs where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
   await sql`delete from storage.objects where bucket_id = 'platform-config-files' and (name like ${`${platformAId}/%`} or name like ${`${platformBId}/%`})`.catch(
@@ -692,20 +1002,82 @@ try {
   const pageA = await contextA.newPage();
   const pageB = await contextB.newPage();
 
-  await exerciseHarness(
+  const resultA = await exerciseHarness(
     pageA,
     contextA,
     harnessAUrl,
     platformAId,
     redemptionCodeA,
   );
-  await exerciseHarness(
+  const resultB = await exerciseHarness(
     pageB,
     contextB,
     harnessBUrl,
     platformBId,
     redemptionCodeB,
   );
+
+  const crossConfigFromB = await pageRequest(
+    pageB,
+    `/api/v1/configs/${resultA.configId}`,
+  );
+  assert.equal(
+    crossConfigFromB.status,
+    404,
+    'cross-platform Config IDOR fails closed',
+  );
+  const crossGalleryFromB = await pageRequest(
+    pageB,
+    `/api/v1/config-gallery/${resultA.configId}`,
+  );
+  assert.equal(
+    crossGalleryFromB.status,
+    404,
+    'cross-platform Gallery IDOR fails closed',
+  );
+  const crossConfigFromA = await pageRequest(
+    pageA,
+    `/api/v1/configs/${resultB.configId}`,
+  );
+  assert.equal(
+    crossConfigFromA.status,
+    404,
+    'reverse cross-platform Config IDOR fails closed',
+  );
+
+  for (const [page, baseUrl, result, platformId] of [
+    [pageA, harnessAUrl, resultA, platformAId],
+    [pageB, harnessBUrl, resultB, platformBId],
+  ]) {
+    const deleted = await mutation(
+      page,
+      baseUrl,
+      `/api/v1/configs/${result.configId}`,
+      { method: 'DELETE' },
+    );
+    assert.equal(deleted.status, 202, 'Config delete request');
+    assert.equal(deleted.body?.data?.status, 'deleting');
+    const hiddenGallery = await pageRequest(
+      page,
+      `/api/v1/config-gallery/${result.configId}`,
+    );
+    assert.equal(
+      hiddenGallery.status,
+      404,
+      'deleted-requested Config leaves Gallery immediately',
+    );
+    const [fileState] = await sql`
+      select status, resource_kind
+      from public.platform_config_files
+      where platform_id = ${platformId} and id = ${result.versionFileId}
+    `;
+    assert.equal(fileState?.resource_kind, 'config_version');
+    assert.equal(
+      fileState?.status,
+      'deleting',
+      'Config delete hands Version file to cleanup',
+    );
+  }
   const cookiesA = await contextA.cookies();
   const cookiesB = await contextB.cookies();
   assert.notEqual(
@@ -725,6 +1097,8 @@ try {
         subscriptionRedeem: 'PASS',
         profilePreferencesEtag: 'PASS',
         binaryFiles: 'PASS',
+        configResources: 'PASS',
+        galleryUsageAndIsolation: 'PASS',
         suspendedFailClosed: 'PASS',
         logoutAndInvalidRefresh: 'PASS',
       },

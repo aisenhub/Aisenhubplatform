@@ -14,7 +14,12 @@ import {
 } from './core.ts';
 import { dispatchAccount } from './account.ts';
 import { dispatchAdmin } from './admin.ts';
-import { handleDownload, handleUploadContent } from './files.ts';
+import {
+  handleConfigResourceDownload,
+  handleConfigVersionUploadContent,
+  handleDownload,
+  handleUploadContent,
+} from './files.ts';
 
 export async function handleRequest(
   request: Request,
@@ -63,6 +68,34 @@ export async function handleRequest(
     ) {
       if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
       return await handleDownload(request, dependencies, session, false);
+    }
+    if (
+      /^v1\/configs\/[^/]+\/versions\/[^/]+\/content$/u.test(path) &&
+      request.method === 'PUT'
+    ) {
+      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+      const upload = await handleConfigVersionUploadContent(
+        request,
+        dependencies,
+        session,
+      );
+      return response(
+        { data: upload.data, request_id: id },
+        upload.status,
+        id,
+        upload.headers,
+      );
+    }
+    if (
+      (/^v1\/configs\/[^/]+\/versions\/[^/]+\/content$/u.test(path) &&
+        request.method === 'GET') ||
+      (/^v1\/config-gallery\/[^/]+\/content$/u.test(path) &&
+        request.method === 'GET') ||
+      (/^v1\/config-gallery\/[^/]+\/apply$/u.test(path) &&
+        request.method === 'POST')
+    ) {
+      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+      return await handleConfigResourceDownload(request, dependencies, session);
     }
     if (
       path.startsWith('admin/api/v1/config-files/') &&

@@ -2,31 +2,71 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Aisenhub Account API",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "Account API contract. Runtime routes are defined in supabase/functions/account-api/index.ts."
   },
-  "servers": [{ "url": "https://account.example.invalid" }],
+  "servers": [
+    {
+      "url": "https://account.example.invalid"
+    }
+  ],
   "tags": [
-    { "name": "plans" },
-    { "name": "account" },
-    { "name": "profile" },
-    { "name": "preferences" },
-    { "name": "subscription" },
-    { "name": "files" },
-    { "name": "identity" }
+    {
+      "name": "plans"
+    },
+    {
+      "name": "account"
+    },
+    {
+      "name": "profile"
+    },
+    {
+      "name": "preferences"
+    },
+    {
+      "name": "subscription"
+    },
+    {
+      "name": "files"
+    },
+    {
+      "name": "identity"
+    },
+    {
+      "name": "configs"
+    },
+    {
+      "name": "config-gallery"
+    }
   ],
   "paths": {
     "/v1/plans": {
       "get": {
         "operationId": "listPublicPlans",
         "tags": ["plans"],
-        "security": [{ "platformKey": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "security": [
+          {
+            "platformKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Plans" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Plans"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -35,13 +75,29 @@
         "operationId": "listSubscriptionProducts",
         "tags": ["subscription"],
         "description": "Returns the fixed product catalog and platform-specific availability. Provider checkout is not enabled in this phase.",
-        "security": [{ "platformKey": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "security": [
+          {
+            "platformKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/SubscriptionProducts" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/SubscriptionProducts"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -50,39 +106,81 @@
         "operationId": "getSubscriptionCheckoutByIdempotencyKey",
         "tags": ["subscription"],
         "description": "Recovers a durable Checkout intent by the authenticated account's Idempotency-Key after an unknown create response. This endpoint never creates a new Checkout.",
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/IdempotencyKey" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/SubscriptionCheckout" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/SubscriptionCheckout"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       },
       "post": {
         "operationId": "createSubscriptionCheckout",
         "tags": ["subscription"],
         "description": "Creates or recovers a server-priced checkout intent. Checkout remains closed until a verified provider mapping is configured.",
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/IdempotencyKey" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
         ],
         "requestBody": {
           "$ref": "#/components/requestBodies/SubscriptionCheckout"
         },
         "responses": {
-          "201": { "$ref": "#/components/responses/SubscriptionCheckout" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "201": {
+            "$ref": "#/components/responses/SubscriptionCheckout"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -90,23 +188,45 @@
       "get": {
         "operationId": "getSubscriptionCheckout",
         "tags": ["subscription"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
           {
             "name": "checkout_id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/SubscriptionCheckout" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/SubscriptionCheckout"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -114,13 +234,30 @@
       "get": {
         "operationId": "getPrincipal",
         "tags": ["account"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Principal" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Principal"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -130,16 +267,33 @@
         "tags": ["account"],
         "x-reauthentication-event": "supabase-auth-email-otp-session",
         "x-proof-binding": "original-user-session",
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/ReauthAccessToken" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ReauthAccessToken"
+          }
         ],
         "responses": {
-          "201": { "$ref": "#/components/responses/RecentAuthProof" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "201": {
+            "$ref": "#/components/responses/RecentAuthProof"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -147,14 +301,33 @@
       "post": {
         "operationId": "activateAccount",
         "tags": ["account"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Principal" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Principal"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -163,17 +336,36 @@
         "operationId": "closeAccount",
         "tags": ["account"],
         "x-requires-recent-auth": true,
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/RecentAuthProof" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/RecentAuthProof"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Principal" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Principal"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -181,34 +373,80 @@
       "get": {
         "operationId": "getProfile",
         "tags": ["profile"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Profile" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Profile"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       },
       "patch": {
         "operationId": "patchProfile",
         "tags": ["profile"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/IfMatch" }
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/ProfilePatch" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ProfilePatch"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Profile" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "412": { "$ref": "#/components/responses/PreconditionFailed" },
-          "428": { "$ref": "#/components/responses/PreconditionRequired" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Profile"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "428": {
+            "$ref": "#/components/responses/PreconditionRequired"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -216,36 +454,80 @@
       "get": {
         "operationId": "getPreferences",
         "tags": ["preferences"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Preferences" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Preferences"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       },
       "patch": {
         "operationId": "patchPreferences",
         "tags": ["preferences"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/IfMatch" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
         ],
         "requestBody": {
           "$ref": "#/components/requestBodies/PreferencesPatch"
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Preferences" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "412": { "$ref": "#/components/responses/PreconditionFailed" },
-          "428": { "$ref": "#/components/responses/PreconditionRequired" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Preferences"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "428": {
+            "$ref": "#/components/responses/PreconditionRequired"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -253,14 +535,33 @@
       "get": {
         "operationId": "getSubscription",
         "tags": ["subscription"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Subscription" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Subscription"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -268,21 +569,48 @@
       "post": {
         "operationId": "redeemSubscriptionCode",
         "tags": ["subscription"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/IdempotencyKey" }
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/Redeem" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Redeem"
+        },
         "responses": {
-          "200": { "$ref": "#/components/responses/Subscription" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "429": { "$ref": "#/components/responses/RateLimited" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Subscription"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -290,21 +618,48 @@
       "post": {
         "operationId": "createUploadIntent",
         "tags": ["files"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/IdempotencyKey" }
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/UploadIntent" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/UploadIntent"
+        },
         "responses": {
-          "201": { "$ref": "#/components/responses/UploadIntent" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
-          "429": { "$ref": "#/components/responses/RateLimited" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "201": {
+            "$ref": "#/components/responses/UploadIntent"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -312,38 +667,86 @@
       "put": {
         "operationId": "uploadConfigFileContent",
         "tags": ["files"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
-        "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/FileId" },
-          { "$ref": "#/components/parameters/IdempotencyKey" }
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
         ],
-        "requestBody": { "$ref": "#/components/requestBodies/BinaryUpload" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FileId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/BinaryUpload"
+        },
         "responses": {
-          "202": { "$ref": "#/components/responses/File" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "202": {
+            "$ref": "#/components/responses/File"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       },
       "get": {
         "operationId": "downloadConfigFileContent",
         "tags": ["files"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/FileId" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FileId"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/BinaryFile" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/BinaryFile"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -351,17 +754,36 @@
       "get": {
         "operationId": "listConfigFiles",
         "tags": ["files"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/FileCursor" },
-          { "$ref": "#/components/parameters/FileLimit" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FileCursor"
+          },
+          {
+            "$ref": "#/components/parameters/FileLimit"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Files" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/Files"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -369,35 +791,77 @@
       "get": {
         "operationId": "getConfigFile",
         "tags": ["files"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/FileId" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FileId"
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/File" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "200": {
+            "$ref": "#/components/responses/File"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       },
       "delete": {
         "operationId": "deleteConfigFile",
         "tags": ["files"],
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/FileId" },
-          { "$ref": "#/components/parameters/IdempotencyKey" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/FileId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
         ],
         "responses": {
-          "202": { "$ref": "#/components/responses/File" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "202": {
+            "$ref": "#/components/responses/File"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     },
@@ -406,17 +870,731 @@
         "operationId": "createIdentityDeleteRequest",
         "tags": ["identity"],
         "x-requires-recent-auth": true,
-        "security": [{ "platformKey": [], "bearerAuth": [] }],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PlatformKey" },
-          { "$ref": "#/components/parameters/RecentAuthProof" }
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/RecentAuthProof"
+          }
         ],
         "responses": {
-          "202": { "$ref": "#/components/responses/DeleteRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "503": { "$ref": "#/components/responses/Unavailable" }
+          "202": {
+            "$ref": "#/components/responses/DeleteRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/configs": {
+      "get": {
+        "operationId": "listConfigs",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigCursor"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Configs"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createConfig",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ConfigCreate"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Config"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/configs/{configId}": {
+      "get": {
+        "operationId": "getConfig",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Config"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchConfig",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ConfigPatch"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Config"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "428": {
+            "$ref": "#/components/responses/PreconditionRequired"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteConfig",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/ConfigDelete"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/configs/{configId}/versions": {
+      "get": {
+        "operationId": "listConfigVersions",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ConfigVersions"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/configs/{configId}/versions/upload-intent": {
+      "post": {
+        "operationId": "createConfigVersionUploadIntent",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ConfigVersionIntent"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/ConfigVersionIntent"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/configs/{configId}/versions/{versionId}/content": {
+      "put": {
+        "operationId": "putConfigVersionContent",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          },
+          {
+            "$ref": "#/components/parameters/VersionId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/BinaryUpload"
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/ConfigVersionUpload"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "get": {
+        "operationId": "getConfigVersionContent",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          },
+          {
+            "$ref": "#/components/parameters/VersionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/BinaryFile"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/configs/{configId}/gallery-submissions": {
+      "post": {
+        "operationId": "submitConfigToGallery",
+        "tags": ["configs"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GallerySubmission"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/GallerySubmission"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/config-gallery": {
+      "get": {
+        "operationId": "listConfigGallery",
+        "tags": ["config-gallery"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigCursor"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GalleryEntries"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/config-gallery/{configId}": {
+      "get": {
+        "operationId": "getConfigGalleryEntry",
+        "tags": ["config-gallery"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GalleryEntry"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/config-gallery/{configId}/like": {
+      "put": {
+        "operationId": "likeConfigGalleryEntry",
+        "tags": ["config-gallery"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GalleryLike"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unlikeConfigGalleryEntry",
+        "tags": ["config-gallery"],
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GalleryLike"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/config-gallery/{configId}/content": {
+      "get": {
+        "operationId": "downloadConfigGalleryContent",
+        "tags": ["config-gallery"],
+        "description": "Streams the approved immutable Version from private Storage. Only a completed stream records download_completed.",
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/BinaryFile"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/config-gallery/{configId}/apply": {
+      "post": {
+        "operationId": "applyConfigGalleryContent",
+        "tags": ["config-gallery"],
+        "description": "Delivers the approved Version bytes to the Consumer BFF. apply_delivery_completed proves central delivery only, not target-platform business success. Repeated Idempotency-Key values deduplicate the usage fact.",
+        "security": [
+          {
+            "platformKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformKey"
+          },
+          {
+            "$ref": "#/components/parameters/ConfigId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/BinaryFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
         }
       }
     }
@@ -439,13 +1617,19 @@
         "name": "X-Platform-Key",
         "in": "header",
         "required": true,
-        "schema": { "type": "string", "minLength": 32 }
+        "schema": {
+          "type": "string",
+          "minLength": 32
+        }
       },
       "IfMatch": {
         "name": "If-Match",
         "in": "header",
         "required": true,
-        "schema": { "type": "string", "minLength": 1 }
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "IdempotencyKey": {
         "name": "Idempotency-Key",
@@ -462,13 +1646,19 @@
         "name": "fileId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "FileCursor": {
         "name": "cursor",
         "in": "query",
         "required": false,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "FileLimit": {
         "name": "limit",
@@ -486,14 +1676,59 @@
         "in": "header",
         "required": true,
         "description": "Short-lived server-to-server token for the independently verified email-auth event. Never returned to the browser.",
-        "schema": { "type": "string", "minLength": 16, "maxLength": 4096 }
+        "schema": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 4096
+        }
       },
       "RecentAuthProof": {
         "name": "X-Recent-Auth-Proof",
         "in": "header",
         "required": true,
         "description": "Opaque server-issued proof bound to the current account session.",
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ConfigId": {
+        "name": "configId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "VersionId": {
+        "name": "versionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ConfigCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ConfigLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
       }
     },
     "requestBodies": {
@@ -501,9 +1736,15 @@
         "required": true,
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ProfilePatch" },
+            "schema": {
+              "$ref": "#/components/schemas/ProfilePatch"
+            },
             "examples": {
-              "displayName": { "value": { "display_name": "Example" } }
+              "displayName": {
+                "value": {
+                  "display_name": "Example"
+                }
+              }
             }
           }
         }
@@ -528,7 +1769,11 @@
               "type": "object",
               "required": ["code"],
               "properties": {
-                "code": { "type": "string", "minLength": 26, "maxLength": 64 }
+                "code": {
+                  "type": "string",
+                  "minLength": 26,
+                  "maxLength": 64
+                }
               },
               "additionalProperties": false
             }
@@ -557,7 +1802,9 @@
         "required": true,
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/UploadIntentInput" }
+            "schema": {
+              "$ref": "#/components/schemas/UploadIntentInput"
+            }
           }
         }
       },
@@ -572,29 +1819,91 @@
             }
           }
         }
+      },
+      "ConfigCreate": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigCreateInput"
+            }
+          }
+        }
+      },
+      "ConfigPatch": {
+        "required": true,
+        "content": {
+          "application/merge-patch+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigPatchInput"
+            }
+          },
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigPatchInput"
+            }
+          }
+        }
+      },
+      "ConfigVersionIntent": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigVersionIntentInput"
+            }
+          }
+        }
+      },
+      "GallerySubmission": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GallerySubmissionInput"
+            }
+          }
+        }
       }
     },
     "headers": {
       "NoStore": {
         "description": "V1 responses are not shared or ISR cached.",
-        "schema": { "type": "string", "const": "no-store" }
+        "schema": {
+          "type": "string",
+          "const": "no-store"
+        }
       },
       "ETag": {
         "description": "Opaque row-version validator.",
-        "schema": { "type": "string", "minLength": 1 }
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
       },
-      "RequestId": { "schema": { "type": "string", "format": "uuid" } }
+      "RequestId": {
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
     },
     "schemas": {
       "ApiError": {
         "type": "object",
         "required": ["code", "message"],
         "properties": {
-          "code": { "$ref": "#/components/schemas/ApiErrorCode" },
-          "message": { "type": "string" },
+          "code": {
+            "$ref": "#/components/schemas/ApiErrorCode"
+          },
+          "message": {
+            "type": "string"
+          },
           "details": {
             "type": "object",
-            "additionalProperties": { "type": "string" }
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false
@@ -638,15 +1947,25 @@
           "PRECONDITION_REQUIRED",
           "RATE_LIMITED",
           "AUTHORIZATION_UNAVAILABLE",
-          "STORAGE_UNAVAILABLE"
+          "STORAGE_UNAVAILABLE",
+          "FILE_NOT_DOWNLOADABLE",
+          "CONFIG_SLOT_LIMIT_EXCEEDED",
+          "PLATFORM_STORAGE_QUOTA_EXCEEDED",
+          "VERSION_NOT_READY",
+          "SUBMISSION_PENDING"
         ]
       },
       "ErrorEnvelope": {
         "type": "object",
         "required": ["error", "request_id"],
         "properties": {
-          "error": { "$ref": "#/components/schemas/ApiError" },
-          "request_id": { "type": "string", "format": "uuid" }
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
         "additionalProperties": false
       },
@@ -654,11 +1973,23 @@
         "type": "object",
         "required": ["code", "name", "description", "kind", "features"],
         "properties": {
-          "code": { "type": "string" },
-          "name": { "type": "string" },
-          "description": { "type": ["string", "null"] },
-          "kind": { "type": "string", "enum": ["free", "paid"] },
-          "features": { "type": "object", "additionalProperties": true }
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["free", "paid"]
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": true
+          }
         },
         "additionalProperties": false,
         "examples": [
@@ -677,9 +2008,14 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Plan" }
+            "items": {
+              "$ref": "#/components/schemas/Plan"
+            }
           },
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "SubscriptionProduct": {
@@ -702,16 +2038,32 @@
             "type": "string",
             "enum": ["free", "monthly", "yearly", "lifetime"]
           },
-          "name": { "type": "string" },
-          "description": { "type": ["string", "null"] },
-          "price": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
-          "currency": { "type": "string", "const": "CNY" },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          },
+          "currency": {
+            "type": "string",
+            "const": "CNY"
+          },
           "term": {
             "type": "object",
             "required": ["kind", "duration_value", "duration_unit"],
             "properties": {
-              "kind": { "type": "string", "enum": ["free", "finite"] },
-              "duration_value": { "type": ["integer", "null"], "minimum": 1 },
+              "kind": {
+                "type": "string",
+                "enum": ["free", "finite"]
+              },
+              "duration_value": {
+                "type": ["integer", "null"],
+                "minimum": 1
+              },
               "duration_unit": {
                 "type": ["string", "null"],
                 "enum": ["month", "year", null]
@@ -719,10 +2071,19 @@
             },
             "additionalProperties": false
           },
-          "price_version": { "type": "integer", "minimum": 1 },
-          "recommended": { "type": "boolean" },
-          "enabled": { "type": "boolean" },
-          "purchasable": { "type": "boolean" },
+          "price_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "recommended": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "purchasable": {
+            "type": "boolean"
+          },
           "reason": {
             "type": "string",
             "enum": [
@@ -747,17 +2108,27 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/SubscriptionProduct" }
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionProduct"
+            }
           },
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "SubscriptionCheckout": {
         "type": "object",
         "required": ["data", "request_id"],
         "properties": {
-          "data": { "$ref": "#/components/schemas/SubscriptionCheckoutData" },
-          "request_id": { "type": "string", "format": "uuid" }
+          "data": {
+            "$ref": "#/components/schemas/SubscriptionCheckoutData"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
         "additionalProperties": false
       },
@@ -778,29 +2149,63 @@
           "progress"
         ],
         "properties": {
-          "checkout_id": { "type": "string", "format": "uuid" },
-          "status": { "$ref": "#/components/schemas/BillingCheckoutStatus" },
+          "checkout_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BillingCheckoutStatus"
+          },
           "product_code": {
             "type": "string",
             "enum": ["monthly", "yearly", "lifetime"]
           },
-          "price": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
-          "currency": { "type": "string", "const": "CNY" },
+          "price": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          },
+          "currency": {
+            "type": "string",
+            "const": "CNY"
+          },
           "term": {
             "type": "object",
             "required": ["kind", "duration_value", "duration_unit"],
             "properties": {
-              "kind": { "type": "string", "const": "finite" },
-              "duration_value": { "type": "integer", "minimum": 1 },
-              "duration_unit": { "type": "string", "enum": ["month", "year"] }
+              "kind": {
+                "type": "string",
+                "const": "finite"
+              },
+              "duration_value": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "duration_unit": {
+                "type": "string",
+                "enum": ["month", "year"]
+              }
             },
             "additionalProperties": false
           },
-          "expires_at": { "type": "string", "format": "date-time" },
-          "provider_display_name": { "type": ["string", "null"] },
-          "payment_url": { "type": ["string", "null"], "format": "uri" },
-          "paid_at": { "type": ["string", "null"], "format": "date-time" },
-          "granted_at": { "type": ["string", "null"], "format": "date-time" },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "provider_display_name": {
+            "type": ["string", "null"]
+          },
+          "payment_url": {
+            "type": ["string", "null"],
+            "format": "uri"
+          },
+          "paid_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "granted_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "progress": {
             "$ref": "#/components/schemas/SubscriptionCheckoutProgress"
           }
@@ -819,7 +2224,9 @@
           "next_action"
         ],
         "properties": {
-          "status": { "$ref": "#/components/schemas/BillingCheckoutStatus" },
+          "status": {
+            "$ref": "#/components/schemas/BillingCheckoutStatus"
+          },
           "provider_status": {
             "type": "string",
             "enum": ["unknown", "pending", "paid", "failed"]
@@ -890,8 +2297,14 @@
           "account_status"
         ],
         "properties": {
-          "user_id": { "type": "string", "format": "uuid" },
-          "platform_id": { "type": "string", "format": "uuid" },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "platform_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "platform_account_id": {
             "type": ["string", "null"],
             "format": "uuid"
@@ -919,25 +2332,54 @@
           "row_version"
         ],
         "properties": {
-          "display_name": { "type": ["string", "null"] },
-          "avatar_url": { "type": ["string", "null"] },
-          "bio": { "type": ["string", "null"] },
-          "locale": { "type": ["string", "null"] },
-          "timezone": { "type": ["string", "null"] },
-          "metadata": { "type": "object", "additionalProperties": true },
-          "row_version": { "type": "integer", "minimum": 1 }
+          "display_name": {
+            "type": ["string", "null"]
+          },
+          "avatar_url": {
+            "type": ["string", "null"]
+          },
+          "bio": {
+            "type": ["string", "null"]
+          },
+          "locale": {
+            "type": ["string", "null"]
+          },
+          "timezone": {
+            "type": ["string", "null"]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "row_version": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
         "additionalProperties": false
       },
       "ProfilePatch": {
         "type": "object",
         "properties": {
-          "display_name": { "type": ["string", "null"] },
-          "avatar_url": { "type": ["string", "null"] },
-          "bio": { "type": ["string", "null"] },
-          "locale": { "type": ["string", "null"] },
-          "timezone": { "type": ["string", "null"] },
-          "metadata": { "type": "object", "additionalProperties": true }
+          "display_name": {
+            "type": ["string", "null"]
+          },
+          "avatar_url": {
+            "type": ["string", "null"]
+          },
+          "bio": {
+            "type": ["string", "null"]
+          },
+          "locale": {
+            "type": ["string", "null"]
+          },
+          "timezone": {
+            "type": ["string", "null"]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
         },
         "additionalProperties": false,
         "maxProperties": 6
@@ -946,8 +2388,14 @@
         "type": "object",
         "required": ["preferences", "row_version"],
         "properties": {
-          "preferences": { "type": "object", "additionalProperties": true },
-          "row_version": { "type": "integer", "minimum": 1 }
+          "preferences": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "row_version": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
         "additionalProperties": false
       },
@@ -975,8 +2423,12 @@
           },
           "plan": {
             "anyOf": [
-              { "$ref": "#/components/schemas/Plan" },
-              { "type": "null" }
+              {
+                "$ref": "#/components/schemas/Plan"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "subscription_product": {
@@ -989,20 +2441,33 @@
                     "type": "string",
                     "enum": ["free", "monthly", "yearly", "lifetime"]
                   },
-                  "name": { "type": "string" }
+                  "name": {
+                    "type": "string"
+                  }
                 },
                 "additionalProperties": false
               },
-              { "type": "null" }
+              {
+                "type": "null"
+              }
             ]
           },
-          "features": { "type": "object", "additionalProperties": true },
-          "started_at": { "type": ["string", "null"], "format": "date-time" },
+          "features": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "started_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "current_period_end": {
             "type": ["string", "null"],
             "format": "date-time"
           },
-          "evaluated_at": { "type": "string", "format": "date-time" },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
           "next_transition_at": {
             "type": ["string", "null"],
             "format": "date-time"
@@ -1026,19 +2491,40 @@
         "type": "object",
         "required": ["data", "request_id"],
         "properties": {
-          "data": { "$ref": "#/components/schemas/Entitlement" },
-          "request_id": { "type": "string", "format": "uuid" }
+          "data": {
+            "$ref": "#/components/schemas/Entitlement"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "UploadIntentInput": {
         "type": "object",
         "required": ["name", "size", "content_type", "purpose"],
         "properties": {
-          "name": { "type": "string", "maxLength": 255 },
-          "size": { "type": "integer", "minimum": 0, "maximum": 1048576 },
-          "content_type": { "type": "string", "maxLength": 127 },
-          "purpose": { "type": "string", "const": "config" },
-          "replaces_file_id": { "type": ["string", "null"], "format": "uuid" }
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1048576
+          },
+          "content_type": {
+            "type": "string",
+            "maxLength": 127
+          },
+          "purpose": {
+            "type": "string",
+            "const": "config"
+          },
+          "replaces_file_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
         },
         "additionalProperties": false
       },
@@ -1059,18 +2545,50 @@
           "cancel_requested_at"
         ],
         "properties": {
-          "file_id": { "type": "string", "format": "uuid" },
-          "status": { "type": "string" },
-          "write_outcome": { "type": "string" },
-          "size": { "type": "integer", "minimum": 0 },
-          "reserved_bytes": { "type": "integer", "minimum": 0 },
-          "reserved_count": { "type": "integer", "minimum": 0, "maximum": 1 },
-          "actual_size_bytes": { "type": ["integer", "null"], "minimum": 0 },
-          "original_name": { "type": ["string", "null"] },
-          "content_type": { "type": "string" },
-          "created_at": { "type": "string", "format": "date-time" },
-          "updated_at": { "type": "string", "format": "date-time" },
-          "cancel_requested_at": { "type": ["string", "null"] }
+          "file_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "write_outcome": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reserved_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reserved_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "actual_size_bytes": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "original_name": {
+            "type": ["string", "null"]
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancel_requested_at": {
+            "type": ["string", "null"]
+          }
         },
         "additionalProperties": false
       },
@@ -1084,9 +2602,14 @@
             "properties": {
               "items": {
                 "type": "array",
-                "items": { "$ref": "#/components/schemas/ConfigFile" }
+                "items": {
+                  "$ref": "#/components/schemas/ConfigFile"
+                }
               },
-              "next_cursor": { "type": ["string", "null"], "format": "uuid" },
+              "next_cursor": {
+                "type": ["string", "null"],
+                "format": "uuid"
+              },
               "budget": {
                 "type": "object",
                 "required": [
@@ -1105,15 +2628,40 @@
                     "type": ["string", "null"],
                     "format": "uuid"
                   },
-                  "enabled": { "type": "boolean" },
-                  "max_file_bytes": { "type": "integer", "minimum": 0 },
-                  "max_files": { "type": "integer", "minimum": 0 },
-                  "max_total_bytes": { "type": "integer", "minimum": 0 },
-                  "reserved_bytes": { "type": "integer", "minimum": 0 },
-                  "reserved_count": { "type": "integer", "minimum": 0 },
-                  "available_bytes": { "type": "integer", "minimum": 0 },
-                  "available_count": { "type": "integer", "minimum": 0 },
-                  "over_quota": { "type": "boolean" },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "max_file_bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "max_files": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "max_total_bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reserved_bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reserved_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "available_bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "available_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "over_quota": {
+                    "type": "boolean"
+                  },
                   "updated_at": {
                     "type": ["string", "null"],
                     "format": "date-time"
@@ -1124,7 +2672,10 @@
             },
             "additionalProperties": false
           },
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "UploadIntent": {
@@ -1135,12 +2686,23 @@
             "type": "object",
             "required": ["file_id", "upload_path", "expires_at"],
             "properties": {
-              "file_id": { "type": "string", "format": "uuid" },
-              "upload_path": { "type": "string" },
-              "expires_at": { "type": "string", "format": "date-time" }
+              "file_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "upload_path": {
+                "type": "string"
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              }
             }
           },
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "DeleteRequest": {
@@ -1151,11 +2713,20 @@
             "type": "object",
             "required": ["request_id", "state"],
             "properties": {
-              "request_id": { "type": "string", "format": "uuid" },
-              "state": { "type": "string", "const": "pending_admin" }
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "state": {
+                "type": "string",
+                "const": "pending_admin"
+              }
             }
           },
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "RecentAuthProof": {
@@ -1166,12 +2737,627 @@
             "type": "object",
             "required": ["proof_id", "expires_at"],
             "properties": {
-              "proof_id": { "type": "string", "format": "uuid" },
-              "expires_at": { "type": "string", "format": "date-time" }
+              "proof_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              }
             },
             "additionalProperties": false
           },
-          "request_id": { "type": "string", "format": "uuid" }
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Config": {
+        "type": "object",
+        "required": [
+          "config_id",
+          "title",
+          "description",
+          "status",
+          "current_version_id",
+          "row_version",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "config_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": ["string", "null"],
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "deleting", "deleted"]
+          },
+          "current_version_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigVersion": {
+        "type": "object",
+        "required": [
+          "version_id",
+          "file_id",
+          "version_number",
+          "schema_key",
+          "schema_version",
+          "changelog",
+          "file_status",
+          "write_outcome",
+          "actual_size_bytes",
+          "created_at"
+        ],
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "schema_key": {
+            "type": "string"
+          },
+          "schema_version": {
+            "type": "string"
+          },
+          "changelog": {
+            "type": ["string", "null"]
+          },
+          "file_status": {
+            "type": ["string", "null"]
+          },
+          "write_outcome": {
+            "type": ["string", "null"]
+          },
+          "actual_size_bytes": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigCreateInput": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": ["string", "null"],
+            "maxLength": 2000
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigPatchInput": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": ["string", "null"],
+            "maxLength": 2000
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigVersionIntentInput": {
+        "type": "object",
+        "required": ["name", "size", "schema_key", "schema_version"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1048576
+          },
+          "content_type": {
+            "type": ["string", "null"],
+            "maxLength": 255
+          },
+          "schema_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "schema_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "changelog": {
+            "type": ["string", "null"],
+            "maxLength": 2000
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigVersionIntent": {
+        "type": "object",
+        "required": [
+          "version_id",
+          "file_id",
+          "version_number",
+          "file_status",
+          "write_outcome",
+          "reserved_bytes",
+          "intent_expires_at",
+          "upload_path",
+          "upload_method"
+        ],
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "file_status": {
+            "type": ["string", "null"]
+          },
+          "write_outcome": {
+            "type": ["string", "null"]
+          },
+          "reserved_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "intent_expires_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "upload_path": {
+            "type": "string"
+          },
+          "upload_method": {
+            "type": "string",
+            "const": "PUT"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigVersionUpload": {
+        "type": "object",
+        "required": [
+          "config_id",
+          "version_id",
+          "file_id",
+          "file_status",
+          "write_outcome",
+          "actual_size_bytes",
+          "sha256",
+          "uploaded_at"
+        ],
+        "properties": {
+          "config_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "file_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "file_status": {
+            "type": ["string", "null"]
+          },
+          "write_outcome": {
+            "type": ["string", "null"]
+          },
+          "actual_size_bytes": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "sha256": {
+            "type": ["string", "null"]
+          },
+          "uploaded_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GallerySubmissionInput": {
+        "type": "object",
+        "required": ["version_id"],
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GallerySubmission": {
+        "type": "object",
+        "required": [
+          "submission_id",
+          "config_id",
+          "version_id",
+          "status",
+          "submitted_at"
+        ],
+        "properties": {
+          "submission_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "config_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "version_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "status": {
+            "type": ["string", "null"]
+          },
+          "submitted_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GalleryEntry": {
+        "type": "object",
+        "required": [
+          "config_id",
+          "title",
+          "description",
+          "author_display_name",
+          "published_version_id",
+          "version_number",
+          "schema_key",
+          "schema_version",
+          "changelog",
+          "like_count",
+          "download_count",
+          "apply_delivery_count",
+          "liked",
+          "approved_at",
+          "updated_at"
+        ],
+        "properties": {
+          "config_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "author_display_name": {
+            "type": ["string", "null"]
+          },
+          "published_version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "schema_key": {
+            "type": "string"
+          },
+          "schema_version": {
+            "type": "string"
+          },
+          "changelog": {
+            "type": ["string", "null"]
+          },
+          "like_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "download_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "apply_delivery_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "liked": {
+            "type": "boolean"
+          },
+          "approved_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GalleryLike": {
+        "type": "object",
+        "required": ["config_id", "liked", "like_count"],
+        "properties": {
+          "config_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "liked": {
+            "type": "boolean"
+          },
+          "like_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigDelete": {
+        "type": "object",
+        "required": [
+          "config_id",
+          "status",
+          "row_version",
+          "delete_requested_at"
+        ],
+        "properties": {
+          "config_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "status": {
+            "type": ["string", "null"]
+          },
+          "row_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "delete_requested_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Config"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigListEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id", "next_cursor"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["items"],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "next_cursor": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigVersionListEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["items"],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ConfigVersion"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigVersionIntentEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConfigVersionIntent"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigVersionUploadEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConfigVersionUpload"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GallerySubmissionEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GallerySubmission"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GalleryEntryEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GalleryEntry"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GalleryListEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id", "next_cursor"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["items"],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GalleryEntry"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "next_cursor": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GalleryLikeEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GalleryLike"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfigDeleteEnvelope": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConfigDelete"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
         "additionalProperties": false
       }
@@ -1180,152 +3366,222 @@
       "Plans": {
         "description": "Public active plans.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "X-Request-Id": { "$ref": "#/components/headers/RequestId" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/PlanList" }
+            "schema": {
+              "$ref": "#/components/schemas/PlanList"
+            }
           }
         }
       },
       "SubscriptionProducts": {
         "description": "Fixed subscription products with platform availability and explicit purchase readiness.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "X-Request-Id": { "$ref": "#/components/headers/RequestId" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/SubscriptionProductList" }
+            "schema": {
+              "$ref": "#/components/schemas/SubscriptionProductList"
+            }
           }
         }
       },
       "Principal": {
         "description": "Account principal or diagnostic state.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/Principal" }
+            "schema": {
+              "$ref": "#/components/schemas/Principal"
+            }
           }
         }
       },
       "RecentAuthProof": {
         "description": "Recent-auth proof bound to the original account session.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/RecentAuthProof" }
+            "schema": {
+              "$ref": "#/components/schemas/RecentAuthProof"
+            }
           }
         }
       },
       "Profile": {
         "description": "Profile DTO.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "ETag": { "$ref": "#/components/headers/ETag" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/Profile" }
+            "schema": {
+              "$ref": "#/components/schemas/Profile"
+            }
           }
         }
       },
       "Preferences": {
         "description": "Preferences DTO.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "ETag": { "$ref": "#/components/headers/ETag" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/Preferences" }
+            "schema": {
+              "$ref": "#/components/schemas/Preferences"
+            }
           }
         }
       },
       "Subscription": {
         "description": "Standard entitlement DTO.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/Subscription" }
+            "schema": {
+              "$ref": "#/components/schemas/Subscription"
+            }
           }
         }
       },
       "SubscriptionCheckout": {
         "description": "Checkout intent status and immutable price snapshot.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "X-Request-Id": { "$ref": "#/components/headers/RequestId" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/SubscriptionCheckout" }
+            "schema": {
+              "$ref": "#/components/schemas/SubscriptionCheckout"
+            }
           }
         }
       },
       "UploadIntent": {
         "description": "Upload reservation.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/UploadIntent" }
+            "schema": {
+              "$ref": "#/components/schemas/UploadIntent"
+            }
           }
         }
       },
       "File": {
         "description": "File metadata or asynchronous state.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ConfigFile" }
+            "schema": {
+              "$ref": "#/components/schemas/ConfigFile"
+            }
           }
         }
       },
       "Files": {
         "description": "File list.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ConfigFileList" }
+            "schema": {
+              "$ref": "#/components/schemas/ConfigFileList"
+            }
           }
         }
       },
       "DeleteRequest": {
         "description": "Pending global delete request.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/DeleteRequest" }
+            "schema": {
+              "$ref": "#/components/schemas/DeleteRequest"
+            }
           }
         }
       },
       "BinaryFile": {
         "description": "Private download stream.",
         "headers": {
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" },
-          "Content-Disposition": { "schema": { "type": "string" } },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "Content-Disposition": {
+            "schema": {
+              "type": "string"
+            }
+          },
           "X-Content-Type-Options": {
-            "schema": { "type": "string", "const": "nosniff" }
+            "schema": {
+              "type": "string",
+              "const": "nosniff"
+            }
           }
         },
         "content": {
           "application/octet-stream": {
-            "schema": { "type": "string", "format": "binary" }
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
           }
         }
       },
@@ -1333,7 +3589,9 @@
         "description": "Invalid input.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1341,7 +3599,9 @@
         "description": "Request exceeds the bounded body or byte limit.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1349,7 +3609,9 @@
         "description": "Authentication or platform credential failure.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1357,7 +3619,9 @@
         "description": "Authorization or lifecycle refusal.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1365,7 +3629,9 @@
         "description": "Resource not found without cross-tenant existence disclosure.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1373,7 +3639,9 @@
         "description": "State, idempotency, quota or content conflict.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1381,7 +3649,9 @@
         "description": "If-Match did not match.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1389,18 +3659,27 @@
         "description": "If-Match is required.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
       "RateLimited": {
         "description": "Rate limited; response includes Retry-After when available.",
         "headers": {
-          "Retry-After": { "schema": { "type": "integer", "minimum": 1 } }
+          "Retry-After": {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -1408,7 +3687,192 @@
         "description": "Authorization or Storage dependency unavailable.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "Config": {
+        "description": "Config resource.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigEnvelope"
+            }
+          }
+        }
+      },
+      "Configs": {
+        "description": "Config resource list.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigListEnvelope"
+            }
+          }
+        }
+      },
+      "ConfigVersions": {
+        "description": "Immutable Config Version list.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigVersionListEnvelope"
+            }
+          }
+        }
+      },
+      "ConfigVersionIntent": {
+        "description": "Config Version upload reservation.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigVersionIntentEnvelope"
+            }
+          }
+        }
+      },
+      "ConfigVersionUpload": {
+        "description": "Config Version content state.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigVersionUploadEnvelope"
+            }
+          }
+        }
+      },
+      "GallerySubmission": {
+        "description": "Gallery review submission.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GallerySubmissionEnvelope"
+            }
+          }
+        }
+      },
+      "GalleryEntry": {
+        "description": "Approved Gallery projection.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GalleryEntryEnvelope"
+            }
+          }
+        }
+      },
+      "GalleryEntries": {
+        "description": "Approved Gallery list.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GalleryListEnvelope"
+            }
+          }
+        }
+      },
+      "GalleryLike": {
+        "description": "Gallery like state.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GalleryLikeEnvelope"
+            }
+          }
+        }
+      },
+      "ConfigDelete": {
+        "description": "Asynchronous Config delete request.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfigDeleteEnvelope"
+            }
           }
         }
       }

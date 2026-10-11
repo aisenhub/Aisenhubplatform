@@ -1,6 +1,6 @@
 # Phase 02 — Account v1 与 Consumer Conformance
 
-状态：未开始
+状态：已完成
 
 ## 目标
 
@@ -8,14 +8,14 @@
 
 ## 实施项
 
-- [ ] API-001：Account API 增加 `/v1/configs` CRUD、versions list/upload-intent/content、gallery submission；metadata mutation 使用 ETag/If-Match 或幂等键。
-- [ ] API-002：增加 `/v1/config-gallery` list/detail/like/content/apply；只解析 approved Entry 的 published Version。
-- [ ] STORAGE-001：Version content PUT/GET 与 Gallery download/apply 复用现有 Storage service、write attempt/finalize、no-store、binary 安全与 request_id；不发 signed/public URL。
-- [ ] EVENT-001：download 在 stream completed 后写 `download_completed`；apply 以 Idempotency-Key 去重写 `apply_delivery_completed`，文案不宣称业务应用成功。
-- [ ] CONTRACT-001：Account OpenAPI additive 定义 DTO/error/ETag/Idempotency/二进制响应；运行 `contracts:check` 与 `contracts:breaking`。
-- [ ] HARNESS-001：Consumer Harness canonical allowlist 加入新 API，验证 server-only Platform Key、Origin/CSRF（mutation）、deadline/no-store/binary、跨平台拒绝与 legacy 兼容。
-- [ ] E2E-001：Local Consumer Harness 真实创建 Config、上传 Version、提交审核前私有、批准 fixture 后 Gallery 下载/Like/Apply；不得用 Mock 冒充 Storage。
-- [ ] STAGE-001：部署 Account API 到授权 staging，执行真实 HTTP smoke 与函数权限/版本核对；Production NOT_RUN。
+- [x] API-001：Account API 增加 `/v1/configs` CRUD、versions list/upload-intent/content、gallery submission；metadata mutation 使用 ETag/If-Match 或幂等键。
+- [x] API-002：增加 `/v1/config-gallery` list/detail/like/content/apply；只解析 approved Entry 的 published Version。
+- [x] STORAGE-001：Version content PUT/GET 与 Gallery download/apply 复用现有 Storage service、write attempt/finalize、no-store、binary 安全与 request_id；不发 signed/public URL。
+- [x] EVENT-001：download 在 stream completed 后写 `download_completed`；apply 以 Idempotency-Key 去重写 `apply_delivery_completed`，文案不宣称业务应用成功。
+- [x] CONTRACT-001：Account OpenAPI additive 定义 DTO/error/ETag/Idempotency/二进制响应；`contracts:check` 与 `contracts:breaking` 均通过。
+- [x] HARNESS-001：Consumer Harness canonical allowlist 加入新 API，验证 server-only Platform Key、Origin/CSRF（mutation）、deadline/no-store/binary、跨平台拒绝与 legacy 兼容。
+- [x] E2E-001：Local Consumer Harness 真实创建 Config、上传 Version、提交审核前私有、批准 fixture 后 Gallery 下载/Like/Apply；使用 Local Supabase private Storage，无 Mock Storage。
+- [x] STAGE-001：`20261011052654` 已同步授权 staging，`account-api` ACTIVE v59；函数权限、Advisor 与 staging→Edge 真实 HTTP 认证边界 smoke 均已核对；Production NOT_RUN。
 
 ## 完成门槛
 

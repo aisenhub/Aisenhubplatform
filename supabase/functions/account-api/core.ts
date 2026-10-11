@@ -606,6 +606,16 @@ export function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(409, 'ENTITLEMENT_PERPETUAL');
   if (message.includes('code_already_redeemed'))
     return new ApiFault(409, 'CODE_ALREADY_REDEEMED');
+  if (message.includes('config_slot_limit_exceeded'))
+    return new ApiFault(409, 'CONFIG_SLOT_LIMIT_EXCEEDED');
+  if (message.includes('platform_storage_quota_exceeded'))
+    return new ApiFault(409, 'PLATFORM_STORAGE_QUOTA_EXCEEDED');
+  if (message.includes('version_not_ready'))
+    return new ApiFault(409, 'VERSION_NOT_READY');
+  if (message.includes('submission_pending'))
+    return new ApiFault(409, 'SUBMISSION_PENDING');
+  if (message.includes('rate_limited'))
+    return new ApiFault(429, 'RATE_LIMITED');
   if (message.includes('quota_exceeded'))
     return new ApiFault(409, 'QUOTA_EXCEEDED');
   if (message.includes('file_busy')) return new ApiFault(409, 'FILE_BUSY');

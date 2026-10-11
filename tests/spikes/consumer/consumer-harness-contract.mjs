@@ -61,6 +61,14 @@ assert.equal(
   '/v1/config-files/{fileId}/content',
   'dynamic file route must match its canonical template',
 );
+assert.equal(
+  operationFor(
+    'PUT',
+    '/v1/configs/00000000-0000-4000-8000-000000000001/versions/00000000-0000-4000-8000-000000000002/content',
+  )?.template,
+  '/v1/configs/{configId}/versions/{versionId}/content',
+  'dynamic Config Version content route must match its canonical template',
+);
 
 const workspace = fs.readFileSync(
   path.join(repositoryRoot, 'pnpm-workspace.yaml'),
