@@ -1,6 +1,6 @@
 # OPT-006 平台接入配置与首次接入向导
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md) · [新平台接入手册](../../guides/platform-onboarding.md)
 
