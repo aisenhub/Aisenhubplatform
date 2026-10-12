@@ -1,6 +1,6 @@
 # OPT-008 实施与验证记录
 
-状态：Completed / Paused
+状态：Completed
 
 ## 项目与基线
 
@@ -55,6 +55,6 @@
 
 ## 当前交接
 
-- 下一步：暂停。OPT-009 未启动；恢复时从 `docs/proposals/optimization-intake/README.md` 的 OPT-009 行和 `docs/proposals/optimization-intake/platform-account-workbench-architecture.md` 开始。
+- 下一步：OPT-008 已完成并收口；后续从 `docs/proposals/optimization-intake/README.md` 的 OPT-009 行和 `docs/proposals/optimization-intake/platform-account-workbench-architecture.md` 开始。
 - 需要用户决定：无。
 - Production：NOT_RUN / 未授权。
