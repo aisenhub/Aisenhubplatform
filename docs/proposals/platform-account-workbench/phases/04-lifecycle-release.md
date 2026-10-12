@@ -1,6 +1,6 @@
 # 阶段 04：Lifecycle / Release
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](../plan.md) · [设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -16,12 +16,12 @@
 - [x] TEST-002：API/contracts/breaking、Admin unit/typecheck/build、Consumer/Admin browser、lint/format/docs。
 - [x] TEST-003：canonical `TASK-0801` R3 PASS。
 - [x] STAGE-001：如 migration/Edge 有变更，同步到已授权 staging 并核对 migration/function/权限/HTTP smoke。
-- [ ] GIT-001：最终 diff/hygiene、push task branch、PR/CI、fast-forward/merge main、核对远端 main。
-- [ ] GIT-002：确认无独有提交/未提交改动后清理本地/远端 OPT-009 分支。
+- [x] GIT-001：最终 diff/hygiene、push task branch、PR/CI、fast-forward/merge main、核对远端 main。
+- [x] GIT-002：确认无独有提交/未提交改动后清理本地/远端 OPT-009 分支。
 
 ## 退出条件
 
-所有必需 R3 与 staging 证据 PASS、最终 main 与远端状态一致且分支清理完成后，OPT-009 才可标记 Completed 并开始 OPT-010。Production 未授权则明确 NOT_RUN。
+所有必需 R3、staging、GitHub CI/main 与原任务分支清理均已闭环，OPT-009 已满足 Completed 条件。Production 不属于本项发布目标，NOT_RUN。
 
 ## 数据库退出证据
 
@@ -36,4 +36,5 @@
 - docs 184、OpenAPI account/admin 46/65、Consumer Lab snapshot 与 compatibility 全部 PASS。
 - staging `workendstaging` 已增量同步 Feedback + OPT-009 migration 至 `20261012094715`，`account-api` 部署为 v61 且保持 `verify_jwt=false`；Hosted SQL 验证关键表/函数/权限与三条 FK index 均存在，未授权 `/functions/v1/account-api/v1/plans` 正确 fail-closed 为 HTTP 401。
 - Supabase security advisor 未发现本轮新增 RLS/权限问题；现存 `pg_net` public extension 与 leaked-password protection WARN 为既有环境项。Performance advisor 暴露的三条 OPT-009 Admin actor FK 缺索引已由 `20261012094715` forward migration 修复。
-- Phase 04 仍保持 In Progress：仅 `GIT-001`、`GIT-002` 尚未完成；Production 不属于本阶段发布目标，保持 NOT_RUN。
+- GitHub PR #15 在 head `4901dd7bdb378941ec3f33916e9cb71ab9a18f0e` 上通过 Actions run #155；其中 `TASK-0801 full local verification` 明确 PASS。PR 采用 rebase 合并，远端 `main` 核对为 `0bb6e7f835f75698b10cabdfebd59b5b7609e224`。
+- 原任务分支 `codex/opt-009-account-workbench` 无未提交/独有待保留工作后已删除本地与远端 ref。Phase 04 Completed；Production NOT_RUN。
