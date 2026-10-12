@@ -1,6 +1,6 @@
 # OPT-004 单平台运营概览
 
-状态：Complete
+状态：Completed
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md)
 
@@ -109,4 +109,3 @@ KPI：总账户 | 活跃账户 | 当前有效付费账户 | 本期订单
 4. `admin_executor` 可读，其他 executor 拒绝；invalid days / missing platform fail closed。
 5. Overview 的反馈/配置审核卡明确标注尚未接入，不显示假数字。
 6. Admin unit/typecheck/build/browser、fresh/upgrade DB、API/contracts、canonical R3 全 PASS。
-
