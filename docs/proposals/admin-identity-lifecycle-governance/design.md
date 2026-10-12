@@ -1,6 +1,6 @@
 # OPT-003 统一用户与身份删除生命周期治理
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md)
 
