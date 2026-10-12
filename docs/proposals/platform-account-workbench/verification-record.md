@@ -27,7 +27,7 @@
 | 01 Domain/read model | Completed | migration + `t31`、fresh/non-empty upgrade、canonical R3 全绿 | 无 |
 | 02 Admin API/contract | Completed | API 107/0、Admin unit 64/64、t31 37/37、OpenAPI 46/65、Consumer snapshot/compatibility、breaking、canonical R3 全绿 | 无 |
 | 03 Account 360 UI | Completed | URL-backed cursor/filter 列表、独立 Account 360、support/governance、安全交互、100-route browser matrix、canonical R3 全绿 | 无 |
-| 04 Lifecycle/release | Not Started | - | 依赖 01–03 |
+| 04 Lifecycle/release | In Progress | lifecycle/fresh/upgrade + staging + 本地 canonical R3 全绿 | 待 Git/main closeout |
 
 ## 实施与验证日志
 
@@ -47,9 +47,18 @@
 | 2026-10-12 | Phase 03 effective Plan forward-fix | `20261012070000_platform_account_workbench_effective_plan.sql` + fresh `db:reset` + `t31` | PASS：真实 browser 揭示 free subscription projection 经 entitlement recompute 后 `plan_id=null`；按 design/architecture 的“当前有效 Plan”语义修复 list v3 与 Account 360，使 active default free Plan 参与投影/搜索/Plan filter，subscription 状态保持独立；fresh 106 migrations 完整应用；`t31` 40/40；全 DB 71 files / 1460 tests PASS |
 | 2026-10-12 | Phase 03 real browser | Admin T12 | PASS：Global Identity→Account 360 deep link、Profile/effective Plan/Config/Feedback 摘要、tags/notes、reason timeline、recent-MFA 不自动重放 + 显式 resubmit、cross-platform IDOR、20-row cursor pagination、组合 server-side filters 全绿；responsive/a11y 5 viewports × 20 routes = 100 observations，overflow/semantic controls/dialog focus/tab navigation 全 PASS |
 | 2026-10-12 | Phase 03 canonical R3 | `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1460、API 107/0、Account workbench browser 六组 architecture behavior 全 PASS、100-route responsive/a11y、docs 184、OpenAPI account/admin 46/65、breaking/Consumer/registry/runtime/contracts 全绿 |
+| 2026-10-12 | Phase 03 Git checkpoint | `2c847e3 feat(admin): complete opt-009 phase 03 workbench` | PASS：14 files；任务分支 `codex/opt-009-account-workbench` 已 push 到 origin |
+| 2026-10-12 | Phase 04 lifecycle DB | `t31_account_workbench_domain.sql` | PASS：扩展至 52/52；普通 close 保留运营历史；Global Delete `files_blocked` 最小化 support 并使 Config/Feedback 摘要归零，Billing 只保留安全状态字段；随后 `personal_data_cleared` 清空 Profile、`auth_deleted` 解绑 UID/匿名化 Platform Account；Hosted advisor 暴露的三条 Admin actor FK covering index 也纳入回归；全 DB 71/1472 |
+| 2026-10-12 | Phase 04 fresh | `pnpm db:reset --yes` → `pnpm test:db` | PASS：全部 migration 从零重放至 `20261012094715`；71 files / 1472 tests |
+| 2026-10-12 | Phase 04 non-empty upgrade | reset `20261011175718` + legacy Account/Profile/Subscription/Config/Feedback fixture → 三条 OPT-009 migration → upgrade smoke + full pgTAP | PASS：仅应用 `20261012043000` / `054500` / `070000`；旧事实原样保持；upgrade smoke 7/7；升级库 71/1469 PASS |
+| 2026-10-12 | Phase 04 Billing upgrade compatibility | legacy Billing order before/after migration + Account 360 smoke | PASS：原始 amount/provider private facts 在 Billing 领域记录中保持，Account 360 仅返回 provider/verification/entitlement/linkage/resolution/settlement 等安全状态，不暴露 `total_amount` / `show_amount` / provider user/private id；该持久 Billing fixture 不参与最终全量 pgTAP，因为既有 `bill_13` 明确假设全局订单表除本测试三单外为空 |
+| 2026-10-12 | Phase 04 final canonical R3 | fresh reset → `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1469、API 107/0；Account Workbench detail/support/governance/pagination/filters/IDOR 全 PASS；responsive/a11y 5 viewports × 20 routes = 100 observations；docs 184；OpenAPI account/admin 46/65；breaking、Consumer、registry、runtime、contracts 全绿 |
+| 2026-10-12 | Phase 04 hosted staging | Supabase `workendstaging` | PASS：增量同步 6 条 Feedback + 4 条 OPT-009 migration，最新为 `20261012094715_platform_account_workbench_fk_indexes`；`account-api` v61 / `verify_jwt=false`；关键 support/governance 表、list v3/Account 360/transition v2 与权限均存在；三条 Admin actor FK covering index 存在；未授权 `/v1/plans` HTTP 401 fail-closed |
+| 2026-10-12 | Phase 04 hosted advisors | Supabase security/performance advisors | PASS（本轮范围）：未出现新增 RLS/权限安全告警；三条 OPT-009 FK index 警告已 forward-fix。既有 `pg_net` public extension、Auth leaked-password protection 与历史 FK/index INFO 不归入 OPT-009 release blocker |
+| 2026-10-12 | Phase 04 final canonical after hosted fix | fresh reset → `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1472、API 107/0；Account Workbench 六组 browser architecture behavior、100-route responsive/a11y、docs 184、OpenAPI 46/65、breaking/Consumer/registry/runtime/contracts 全绿 |
 
 ## 规则
 
 - 不预填 PASS。
 - 每个失败/修复/复测、migration/Edge/staging、commit/PR/main/branch 状态都追加到本文件。
-- Phase 01–03 已通过完整本地 R3；OPT-009 仍保持 In Progress，必须完成 Phase 04、适用 staging 与 GitHub main closeout 后才能标记 Completed。
+- Phase 01–04 本地实现与 R3 已通过；OPT-009 仍保持 In Progress，必须完成适用 staging 与 GitHub main closeout 后才能标记 Completed。
