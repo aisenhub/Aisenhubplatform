@@ -1,6 +1,6 @@
 # OPT-009 实施与验证记录
 
-状态：In Progress
+状态：Completed
 
 ## 项目与基线
 
@@ -8,7 +8,7 @@
 - 起始 main：`e5376b6a4c626a9c55e86d64633491c20fdfde19`
 - 任务分支：`codex/opt-009-account-workbench`
 - 风险：R3
-- Production：NOT_RUN / 未授权
+- Production：NOT_RUN / 本项无 Production 发布目标
 
 ## 起始事实核验
 
@@ -27,7 +27,7 @@
 | 01 Domain/read model | Completed | migration + `t31`、fresh/non-empty upgrade、canonical R3 全绿 | 无 |
 | 02 Admin API/contract | Completed | API 107/0、Admin unit 64/64、t31 37/37、OpenAPI 46/65、Consumer snapshot/compatibility、breaking、canonical R3 全绿 | 无 |
 | 03 Account 360 UI | Completed | URL-backed cursor/filter 列表、独立 Account 360、support/governance、安全交互、100-route browser matrix、canonical R3 全绿 | 无 |
-| 04 Lifecycle/release | In Progress | lifecycle/fresh/upgrade + staging + 本地 canonical R3 全绿 | 待 Git/main closeout |
+| 04 Lifecycle/release | Completed | lifecycle/fresh/upgrade + staging + 本地/GitHub canonical R3 + main/branch closeout 全绿 | 无 |
 
 ## 实施与验证日志
 
@@ -56,9 +56,12 @@
 | 2026-10-12 | Phase 04 hosted staging | Supabase `workendstaging` | PASS：增量同步 6 条 Feedback + 4 条 OPT-009 migration，最新为 `20261012094715_platform_account_workbench_fk_indexes`；`account-api` v61 / `verify_jwt=false`；关键 support/governance 表、list v3/Account 360/transition v2 与权限均存在；三条 Admin actor FK covering index 存在；未授权 `/v1/plans` HTTP 401 fail-closed |
 | 2026-10-12 | Phase 04 hosted advisors | Supabase security/performance advisors | PASS（本轮范围）：未出现新增 RLS/权限安全告警；三条 OPT-009 FK index 警告已 forward-fix。既有 `pg_net` public extension、Auth leaked-password protection 与历史 FK/index INFO 不归入 OPT-009 release blocker |
 | 2026-10-12 | Phase 04 final canonical after hosted fix | fresh reset → `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1472、API 107/0；Account Workbench 六组 browser architecture behavior、100-route responsive/a11y、docs 184、OpenAPI 46/65、breaking/Consumer/registry/runtime/contracts 全绿 |
+| 2026-10-12 | GitHub PR CI | PR #15 / Actions run #155 / head `4901dd7` | PASS：PR Ready 后完整 `M0 quality checks` 成功，`TASK-0801 full local verification` step 明确 success |
+| 2026-10-12 | GitHub main | PR #15 rebase merge | PASS：GitHub 返回 merged=true；远端 `main` 核对为 `0bb6e7f835f75698b10cabdfebd59b5b7609e224` |
+| 2026-10-12 | Task branch cleanup | `codex/opt-009-account-workbench` | PASS：worktree clean 后删除本地 branch；远端 ref 通过 GitHub API 删除并再次检索确认不存在 |
 
 ## 规则
 
 - 不预填 PASS。
 - 每个失败/修复/复测、migration/Edge/staging、commit/PR/main/branch 状态都追加到本文件。
-- Phase 01–04 本地实现与 R3 已通过；OPT-009 仍保持 In Progress，必须完成适用 staging 与 GitHub main closeout 后才能标记 Completed。
+- OPT-009 已完成 Proposal→Phase 01–04→本地/hosted 验证→PR/CI→main→原任务分支清理全链路；后续工作从最新 main 开始 OPT-010。
