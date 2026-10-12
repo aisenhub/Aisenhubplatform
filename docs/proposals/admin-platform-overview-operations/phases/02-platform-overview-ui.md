@@ -1,6 +1,6 @@
 # 阶段 02：平台运营 Overview UI
 
-状态：Complete
+状态：Completed
 
 关联：[总计划](../plan.md) · [设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -31,4 +31,3 @@
 ## 退出条件
 
 所有必需 Local R3 与浏览器证据 PASS 后才能合并 main。
-
