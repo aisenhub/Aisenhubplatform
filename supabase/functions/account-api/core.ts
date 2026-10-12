@@ -355,7 +355,10 @@ async function verifyAccessTokenLocally(
     const claims = objectValue(JSON.parse(base64UrlDecode(parts[1]!)));
     if (claims.aud !== 'authenticated') return null;
     const authUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
-    if (authUrl && claims.iss !== `${authUrl}/auth/v1`) return null;
+    const expectedIssuer =
+      Deno.env.get('ACCOUNT_API_JWT_ISSUER')?.trim() ||
+      (authUrl ? `${authUrl}/auth/v1` : null);
+    if (expectedIssuer && claims.iss !== expectedIssuer) return null;
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = Number(claims.exp);
     const notBefore = claims.nbf === undefined ? null : Number(claims.nbf);

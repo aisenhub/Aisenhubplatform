@@ -16,8 +16,8 @@
 | --- | --- | --- | --- | --- |
 | 01 | Offer/Price 数据模型、legacy bootstrap、经营/权益/Campaign 读模型 | 最新 main + design 冻结 | 已完成 | [阶段 01](phases/01-commerce-domain-read-model.md) |
 | 02 | Consumer/Admin API、OpenAPI、Checkout/Provider Mapping 兼容 | 01 | 已完成 | [阶段 02](phases/02-api-contract-checkout.md) |
-| 03 | Global/Platform 商业 UI、套餐/Offer、权益用户、Campaign 与跨 OPT 集成 | 02 | 进行中 | [阶段 03](phases/03-admin-commerce-workspaces.md) |
-| 04 | lifecycle/upgrade/staging、完整 R3、GitHub/main closeout | 01–03 | 未开始 | [阶段 04](phases/04-release.md) |
+| 03 | Global/Platform 商业 UI、套餐/Offer、权益用户、Campaign 与跨 OPT 集成 | 02 | 已完成 | [阶段 03](phases/03-admin-commerce-workspaces.md) |
+| 04 | lifecycle/upgrade/staging、完整 R3、GitHub/main closeout | 01–03 | 进行中 | [阶段 04](phases/04-release.md) |
 
 阶段串行交付。数据库目录/Checkout/OpenAPI 属共享契约，不并行修改。
 
@@ -34,14 +34,14 @@
 
 ## 总体验收
 
-- [ ] Offer/Price + legacy bootstrap + historical snapshot 完成。
-- [ ] 多 Paid Plan 可销售，Plan/Offer/Price 不混淆。
+- [x] Offer/Price + legacy bootstrap + historical snapshot 完成。
+- [x] 多 Paid Plan 可销售，Plan/Offer/Price 不混淆。
 - [x] Consumer legacy + Offer-aware catalog/checkout 合同兼容。
 - [x] Global/Platform commerce summary API 采用可证明金额口径。
 - [x] 权益账户列表 API stable cursor/filter + source projection 完成。
 - [x] Admin direct entitlement governance API 保持安全语义。
 - [x] Redemption Campaign v2 stats/detail API 安全完成。
-- [ ] OPT-004/006/009 集成完成。
+- [x] OPT-004/006/009 集成完成。
 - [ ] fresh/non-empty upgrade、DB/API/contracts/browser/canonical R3 全绿。
 - [ ] staging 与最终 main 一致。
 - [ ] PR/CI/main/branch cleanup 闭环。

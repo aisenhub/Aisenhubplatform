@@ -1692,23 +1692,27 @@ Deno.test('Account API can verify a signed JWT locally without Auth round-trip',
   }
 });
 
-Deno.test('Account API verifies ES256 JWTs from cached Supabase JWKS', async () => {
+Deno.test('Account API separates ES256 issuer validation from JWKS transport', async () => {
   const previousUrl = Deno.env.get('SUPABASE_URL');
   const previousKey = Deno.env.get('SUPABASE_ANON_KEY');
   const previousSecret = Deno.env.get('ACCOUNT_API_JWT_SECRET');
+  const previousIssuer = Deno.env.get('ACCOUNT_API_JWT_ISSUER');
   const originalFetch = globalThis.fetch;
   let authCalls = 0;
   let jwksHadSignal = false;
   const { token, jwk } = await signedEcdsaJwt();
-  Deno.env.set('SUPABASE_URL', 'http://local-jwks');
+  Deno.env.set('SUPABASE_URL', 'http://jwks-transport');
   Deno.env.set('SUPABASE_ANON_KEY', 'local-publishable-key');
+  Deno.env.set('ACCOUNT_API_JWT_ISSUER', 'http://local-jwks/auth/v1');
   Deno.env.delete('ACCOUNT_API_JWT_SECRET');
   globalThis.fetch = async (input, init) => {
-    if (String(input) === 'http://local-jwks/auth/v1/.well-known/jwks.json') {
+    if (
+      String(input) === 'http://jwks-transport/auth/v1/.well-known/jwks.json'
+    ) {
       jwksHadSignal = init?.signal instanceof AbortSignal;
       return new Response(JSON.stringify({ keys: [jwk] }), { status: 200 });
     }
-    if (String(input) === 'http://local-jwks/auth/v1/user') {
+    if (String(input) === 'http://jwks-transport/auth/v1/user') {
       authCalls += 1;
       return new Response(JSON.stringify({ user: { id: userId } }), {
         status: 200,
@@ -1744,6 +1748,11 @@ Deno.test('Account API verifies ES256 JWTs from cached Supabase JWKS', async () 
     assertEquals(invalid.status, 401);
     assertEquals((await invalid.json()).error.code, 'UNAUTHORIZED');
     assertEquals(authCalls, 0);
+    Deno.env.set('ACCOUNT_API_JWT_ISSUER', 'http://wrong-issuer/auth/v1');
+    const wrongIssuer = await request(token);
+    assertEquals(wrongIssuer.status, 401);
+    assertEquals((await wrongIssuer.json()).error.code, 'UNAUTHORIZED');
+    assertEquals(authCalls, 0);
   } finally {
     globalThis.fetch = originalFetch;
     if (previousUrl === undefined) Deno.env.delete('SUPABASE_URL');
@@ -1752,6 +1761,8 @@ Deno.test('Account API verifies ES256 JWTs from cached Supabase JWKS', async () 
     else Deno.env.set('SUPABASE_ANON_KEY', previousKey);
     if (previousSecret === undefined) Deno.env.delete('ACCOUNT_API_JWT_SECRET');
     else Deno.env.set('ACCOUNT_API_JWT_SECRET', previousSecret);
+    if (previousIssuer === undefined) Deno.env.delete('ACCOUNT_API_JWT_ISSUER');
+    else Deno.env.set('ACCOUNT_API_JWT_ISSUER', previousIssuer);
   }
 });
 

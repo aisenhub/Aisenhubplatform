@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { BillingOrderWorkspace } from './billing-order-workspace';
+import { CommerceSummaryPanel } from './commerce-summary-panel';
 import {
   billingFiltersFromSearchParams,
   billingFiltersToSearchParams,
@@ -60,13 +61,19 @@ export function PlatformBillingPage() {
     >
       <AdminPageHeader title={platformTitle} description={platformDesc} />
       {platform?.platform_id ? (
-        <BillingOrderWorkspace
-          filters={filters}
-          onFiltersChange={updateFilters}
-          onSelectedOrderChange={updateSelected}
-          platformId={platform.platform_id}
-          selectedOrderId={selectedOrderId}
-        />
+        <>
+          <CommerceSummaryPanel
+            platformId={platform.platform_id}
+            title={`${platform.name} 商业概览`}
+          />
+          <BillingOrderWorkspace
+            filters={filters}
+            onFiltersChange={updateFilters}
+            onSelectedOrderChange={updateSelected}
+            platformId={platform.platform_id}
+            selectedOrderId={selectedOrderId}
+          />
+        </>
       ) : null}
     </main>
   );

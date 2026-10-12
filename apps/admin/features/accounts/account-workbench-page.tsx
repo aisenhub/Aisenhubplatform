@@ -41,6 +41,7 @@ import {
   type AccountIntent,
   type AccountWorkbench,
 } from './account-types';
+import { AccountCommerceAttribution } from './account-commerce-attribution';
 
 type SupportMutationState =
   | 'idle'
@@ -550,6 +551,10 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
               <dd>{formatUtc(detail.next_transition_at)}</dd>
             </div>
           </dl>
+          <AccountCommerceAttribution
+            platformId={platform.platform_id}
+            accountId={detail.platform_account_id}
+          />
           <Button
             variant="outline"
             size="sm"

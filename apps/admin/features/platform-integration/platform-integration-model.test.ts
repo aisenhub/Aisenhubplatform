@@ -83,4 +83,34 @@ describe('platform integration model', () => {
     expect(state.commerceStep.status).toBe('complete');
     expect(state.totalCentralSteps).toBe(4);
   });
+
+  it('uses Offer Price and Provider Mapping readiness as the authoritative commerce fact', () => {
+    const ready = derivePlatformIntegrationState({
+      platform,
+      origins: [],
+      keys: [],
+      subscription: null,
+      offers: [
+        { status: 'active', price_status: 'active', mapping_status: 'ready' },
+      ],
+    });
+    expect(ready.commerceStep.status).toBe('complete');
+
+    const notReady = derivePlatformIntegrationState({
+      platform,
+      origins: [],
+      keys: [],
+      subscription: {
+        paid_plan_id: '22222222-2222-4222-8222-222222222222',
+        paid_plan_status: 'active',
+        monthly_enabled: true,
+        yearly_enabled: true,
+        lifetime_enabled: true,
+      },
+      offers: [
+        { status: 'active', price_status: 'active', mapping_status: 'missing' },
+      ],
+    });
+    expect(notReady.commerceStep.status).toBe('optional');
+  });
 });

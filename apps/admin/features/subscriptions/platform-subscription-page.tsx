@@ -16,12 +16,14 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
 import {
   formatUtc,
+  isRecentMfaRequired,
   readApiPayload,
   resourceError,
   resourcePath,
@@ -31,6 +33,7 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import { CommerceEntitlementList } from './commerce-entitlement-list';
 
 type AccountSummary = {
   platform_account_id: string;
@@ -311,6 +314,10 @@ export function PlatformSubscriptionPage() {
       );
       const payload = await readApiPayload<unknown>(response);
       if (!response.ok) {
+        if (isRecentMfaRequired(response, payload)) {
+          setMutationState('step_up_required');
+          return;
+        }
         if (response.status === 409) {
           await loadSubscription(true);
           setMutationState('failure');
@@ -373,8 +380,8 @@ export function PlatformSubscriptionPage() {
   return (
     <section className="grid gap-5" data-test="platform-subscription-page">
       <AdminPageHeader
-        title="订阅"
-        description="选择当前平台的账户，查看订阅权益并执行受控调整。"
+        title="权益账户"
+        description="按权威 winning Grant 查看当前权益来源、Plan 与周期，并复用受控订阅治理动作。"
         actions={
           <Button
             variant="outline"
@@ -387,6 +394,8 @@ export function PlatformSubscriptionPage() {
           </Button>
         }
       />
+
+      <CommerceEntitlementList onSelectAccount={selectAccount} />
 
       <section className="panel gap-4" data-test="subscription-account-picker">
         <div>
@@ -676,6 +685,13 @@ export function PlatformSubscriptionPage() {
           reasonRequired
           state={mutationState}
           error={mutationError}
+          stepUpContent={
+            mutationState === 'step_up_required' ? (
+              <AdminRecentMfaPanel
+                onVerified={() => setMutationState('confirm_required')}
+              />
+            ) : null
+          }
           onCheckUnknown={
             mutationState === 'unknown_outcome' ? checkUnknown : undefined
           }

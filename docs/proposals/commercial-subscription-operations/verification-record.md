@@ -27,9 +27,9 @@
 | 阶段 | 状态 | 证据 | 阻塞 |
 | --- | --- | --- | --- |
 | 01 Domain/read model | Completed | Offer/Price + read models；fresh/non-empty；canonical R3；staging aligned | 无 |
-| 02 API/contract | Completed | Offer-aware Consumer/Admin API + OpenAPI；DB 73/1536；API 111/111；contracts/breaking；staging migration + account-api v62 | GitHub push 网络阻塞不影响本地/staging 技术验证，但最终 release 仍需闭环 |
-| 03 Admin commerce UI | In Progress | Phase 02 已满足进入条件 | 无 |
-| 04 Release | Not Started | - | 依赖 01–03 |
+| 02 API/contract | Completed | Offer-aware Consumer/Admin API + OpenAPI；DB 73/1536；API 111/111；contracts/breaking；staging migration + account-api v62；task branch 已 push | 无 |
+| 03 Admin commerce UI | Completed | Global/Platform summary、Offer/Price、Entitlement stable cursor、Campaign stats/detail、OPT-004/006/009 集成；Admin unit 15/68、typecheck/build/lint/format、Consumer harness、真实 Local browser 与 100-observation responsive/a11y 全 PASS | 无 |
+| 04 Release | In Progress | Phase 03 已满足依赖门槛 | fresh/non-empty/full R3、staging smoke、GitHub/main/branch closeout |
 
 ## 实施与验证日志
 
@@ -48,7 +48,12 @@
 | 2026-10-12 | Phase 02 DB/API | Local | PASS：fresh reset；DB **73 files / 1536 tests**（新增 `t33` 21 assertions 验证非 legacy 7-day Offer Checkout、server pricing、snapshot/idempotency）；API **111/111**；typecheck/lint/format/diff 全绿 |
 | 2026-10-12 | Phase 02 contracts | Local | PASS：Account/Admin OpenAPI **47/77 operations**；Consumer Lab snapshot/compatibility、breaking PASS；为 additive response union 增加 breaking-checker 回归，只有完整保留旧 response schema 的新 union 才允许通过 |
 | 2026-10-12 | Phase 02 staging | `workendstaging / egsokuicabbxspkdccqe` | PASS：remote migration history=`20261012145252 commercial_operations_api_contract`；SQL 核验 Offer/Checkout/Admin/Campaign functions + constraint/index；`account-api` **v62 ACTIVE**（from v61，`verify_jwt=false` 保持）；Security advisor 仅既有 pg_net/leaked-password WARN，未出现 OPT-010 新 SECURITY finding；Production NOT_RUN |
-| 2026-10-12 | GitHub delivery | task branch | BLOCKED：Runner 到 `github.com:443` 连接失败，SSH 443 无可用 public key；不通过 API 伪造不同 SHA 历史。继续本地/staging phase 实施，Phase 04 必须重试并完成 branch/PR/CI/main cleanup 后才能标 Completed |
+| 2026-10-12 | GitHub delivery | task branch | PASS：远端先存在 patch-equivalent Proposal `43891ca`；本地 Phase 01/02 安全 rebase 到该 SHA 后无 force push 成功。当前远端：`056e881 feat(db): complete opt-010 commerce domain`、`5f20f1e feat(api): add opt-010 commerce contracts`。最终 PR/CI/main/branch cleanup 仍属于 Phase 04。 |
+| 2026-10-12 | Phase 03 implementation | Local Admin | PASS（implementation/static）：同一 `admin_commerce_summary` 驱动 Global Billing、Platform Billing 与 Overview；Plans 增 Offer/Price + readiness；Subscriptions 增 stable cursor/filter + source；Redemption 切 server Campaign stats/filter/cursor + masked code detail；Onboarding readiness 升级为 active Offer + active Price + ready Mapping；Account 360 增 source/Offer/Billing/Campaign 深链。Admin unit **15 files / 68 tests**、typecheck、production build、lint PASS。 |
+| 2026-10-12 | Phase 03 browser environment | Local | IN_PROGRESS：首次 E2E 在测试用户创建于 Local Supabase、Admin Web 仍指向非 Local Auth 时于登录得到 403；这发生在任何 Commerce DOM 断言前。已启动独立 Local `account-api` 并确认无 Platform Key 请求按预期返回 401，正在用内存注入 Local Supabase env 的 built Admin server 继续；失败不计为产品回归，也不预填 browser PASS。 |
+| 2026-10-13 | Phase 03 browser recovery + product fix | Local | PASS：Local Auth + Local Edge + built Admin 同源环境完成；发现 Commerce composite 写函数使用 select (volatile_function(...)).* 会重复求值并导致 Offer 首次写入 23505/409，已统一改为 select * from function(...) as result，API **111/111** 保持 PASS。 |
+| 2026-10-13 | Phase 03 real browser / a11y | Local | PASS：完整 T12 browser 输出所有顶层治理场景 PASS；commerceSummarySurfaces、commerceCatalogSurface、commerceEntitlementSurface、commerceCampaignSurface、commerceRecentMfaNoReplay 全 PASS；responsive/a11y **5 viewports × 20 routes = 100 observations** 全 PASS。 |
+| 2026-10-13 | Phase 03 final static/harness | Local | PASS：Admin unit **15 files / 68 tests**、typecheck、production build、workspace lint **0/0**、format PASS；Consumer harness contract（含 **43 canonical operations**）+ smoke 全 PASS。 |
 
 ## 规则
 

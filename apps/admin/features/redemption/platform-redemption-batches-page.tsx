@@ -25,12 +25,15 @@ import {
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
+import { CampaignCodesPanel } from './campaign-codes-panel';
 import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
 import {
   formatUtc,
+  isRecentMfaRequired,
   readApiPayload,
   resourceError,
   statusLabel,
@@ -55,11 +58,30 @@ type Batch = {
   delivery_deadline: string;
   delivered_at: string | null;
   created_at: string;
+  commercial_offer_id?: string | null;
+  offer_code?: string | null;
+  offer_name?: string | null;
+  redeemed_count?: number;
+  unused_count?: number;
+  disabled_count?: number;
+  redemption_rate?: string | number;
+};
+
+type Offer = {
+  offer_id: string;
+  offer_code: string;
+  offer_name: string;
+  status: string;
+  plan_code: string;
+  duration_value: number;
+  duration_unit: 'day' | 'month' | 'year';
+  price_status: string | null;
+  mapping_status: string;
 };
 
 type CreateBatchPayload = {
   platform_id: string;
-  product_code: 'monthly' | 'yearly' | 'lifetime';
+  offer_id: string;
   name: string;
   quantity: number;
   expires_at: string;
@@ -110,9 +132,8 @@ export function PlatformRedemptionBatchesPage() {
   const [error, setError] = useState<ResourceError | null>(null);
   const [refreshError, setRefreshError] = useState<ResourceError | null>(null);
   const [filter, setFilter] = useState('');
-  const [productCode, setProductCode] = useState<
-    'monthly' | 'yearly' | 'lifetime'
-  >('monthly');
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [offerId, setOfferId] = useState('');
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [expiresAt, setExpiresAt] = useState(() => localDateTime(30));
@@ -128,6 +149,7 @@ export function PlatformRedemptionBatchesPage() {
   const [mutationError, setMutationError] = useState<ResourceError | null>(
     null,
   );
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const loadGeneration = useRef(0);
 
   const load = useCallback(
@@ -141,11 +163,27 @@ export function PlatformRedemptionBatchesPage() {
         setError(null);
       }
       try {
-        const batchesResponse = await adminAuthSession.request(
-          `/api/v1/admin/api/v1/redemption-batches?platform_id=${encodeURIComponent(platform.platform_id)}&limit=100`,
-          { cache: 'no-store' },
-        );
-        const batchesPayload = await readApiPayload<Batch[]>(batchesResponse);
+        const params = new URLSearchParams({ limit: '20' });
+        if (filter.trim()) params.set('q', filter.trim());
+        const [batchesResponse, offersResponse] = await Promise.all([
+          adminAuthSession.request(
+            `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platform.platform_id)}/commerce/campaigns?${params}`,
+            { cache: 'no-store' },
+          ),
+          adminAuthSession.request(
+            `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platform.platform_id)}/commerce/offers`,
+            { cache: 'no-store' },
+          ),
+        ]);
+        const batchesPayload = (await batchesResponse
+          .json()
+          .catch(() => null)) as
+          | ({ data?: Batch[]; next_cursor?: string | null } & {
+              error?: { code?: string; message?: string };
+              request_id?: string;
+            })
+          | null;
+        const offersPayload = await readApiPayload<Offer[]>(offersResponse);
         if (
           generation !== loadGeneration.current ||
           !adminAuthSession.isCurrentEpoch(epoch)
@@ -165,6 +203,17 @@ export function PlatformRedemptionBatchesPage() {
           return;
         }
         setBatches(batchesPayload.data);
+        setNextCursor(batchesPayload.next_cursor ?? null);
+        if (offersResponse.ok && Array.isArray(offersPayload?.data)) {
+          const active = offersPayload.data.filter(
+            (offer) =>
+              offer.status === 'active' &&
+              offer.price_status === 'active' &&
+              offer.mapping_status === 'ready',
+          );
+          setOffers(active);
+          setOfferId((current) => current || active[0]?.offer_id || '');
+        }
         setState('success');
       } catch (caught) {
         if (
@@ -187,18 +236,42 @@ export function PlatformRedemptionBatchesPage() {
         if (generation === loadGeneration.current) setRefreshing(false);
       }
     },
-    [platform.platform_id],
+    [filter, platform.platform_id],
   );
 
   useEffect(() => {
     void load(false);
   }, [load]);
 
-  const visibleBatches = batches.filter((batch) =>
-    `${batch.name} ${batch.plan_code} ${batch.product_code ?? ''} ${batch.status}`
-      .toLowerCase()
-      .includes(filter.trim().toLowerCase()),
-  );
+  async function loadMoreCampaigns() {
+    if (!nextCursor) return;
+    setRefreshing(true);
+    setRefreshError(null);
+    try {
+      const params = new URLSearchParams({ limit: '20', cursor: nextCursor });
+      if (filter.trim()) params.set('q', filter.trim());
+      const response = await adminAuthSession.request(
+        `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platform.platform_id)}/commerce/campaigns?${params}`,
+        { cache: 'no-store' },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | ({ data?: Batch[]; next_cursor?: string | null } & {
+            error?: { code?: string; message?: string };
+            request_id?: string;
+          })
+        | null;
+      if (!response.ok || !Array.isArray(payload?.data)) {
+        setRefreshError(resourceError(response, payload, 'Campaign 下一页'));
+        return;
+      }
+      setBatches((current) => [...current, ...payload.data!]);
+      setNextCursor(payload.next_cursor ?? null);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const visibleBatches = batches;
 
   function openCreateReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -208,6 +281,7 @@ export function PlatformRedemptionBatchesPage() {
     const deadline = new Date(deliveryDeadline);
     if (
       !normalizedName ||
+      !offerId ||
       !Number.isInteger(quantityValue) ||
       quantityValue < 1 ||
       quantityValue > 1000 ||
@@ -227,7 +301,7 @@ export function PlatformRedemptionBatchesPage() {
     }
     const payload: CreateBatchPayload = {
       platform_id: platform.platform_id,
-      product_code: productCode,
+      offer_id: offerId,
       name: normalizedName,
       quantity: quantityValue,
       expires_at: expires.toISOString(),
@@ -242,7 +316,7 @@ export function PlatformRedemptionBatchesPage() {
       payload,
       targetId: payload.creation_operation_id,
       title: '创建兑换码批次',
-      impact: `将按 ${payload.product_code} 生成 ${payload.quantity} 个一次性兑换码；批次先进入待交付，明文只在成功响应和当前内存面板显示一次。`,
+      impact: `将按 Offer ${offers.find((offer) => offer.offer_id === payload.offer_id)?.offer_code ?? payload.offer_id} 生成 ${payload.quantity} 个一次性兑换码；批次先进入待交付，明文只在成功响应和当前内存面板显示一次。`,
     });
   }
 
@@ -304,6 +378,10 @@ export function PlatformRedemptionBatchesPage() {
           delivery_receipt?: string;
         }>(response);
         if (!response.ok) {
+          if (isRecentMfaRequired(response, payload)) {
+            setMutationState('step_up_required');
+            return;
+          }
           setMutationState('failure');
           setMutationError(resourceError(response, payload, '兑换批次创建'));
           return;
@@ -376,6 +454,10 @@ export function PlatformRedemptionBatchesPage() {
       );
       const payload = await readApiPayload<Batch>(response);
       if (!response.ok) {
+        if (isRecentMfaRequired(response, payload)) {
+          setMutationState('step_up_required');
+          return;
+        }
         setMutationState('failure');
         setMutationError(
           resourceError(
@@ -528,18 +610,20 @@ export function PlatformRedemptionBatchesPage() {
               onSubmit={openCreateReview}
             >
               <label className="grid gap-2" htmlFor="batch-product">
-                <span className="text-sm font-medium">兑换商品</span>
+                <span className="text-sm font-medium">兑换 Offer</span>
                 <select
                   id="batch-product"
-                  value={productCode}
-                  onChange={(event) =>
-                    setProductCode(event.target.value as typeof productCode)
-                  }
+                  value={offerId}
+                  onChange={(event) => setOfferId(event.target.value)}
                   data-test="batch-product"
                 >
-                  <option value="monthly">Monthly · 1 month</option>
-                  <option value="yearly">Yearly · 1 year</option>
-                  <option value="lifetime">Lifetime · 99 years</option>
+                  <option value="">选择可用 Offer</option>
+                  {offers.map((offer) => (
+                    <option key={offer.offer_id} value={offer.offer_id}>
+                      {offer.offer_code} · {offer.plan_code} ·{' '}
+                      {offer.duration_value} {offer.duration_unit}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="grid gap-2" htmlFor="batch-name">
@@ -604,7 +688,8 @@ export function PlatformRedemptionBatchesPage() {
               <div>
                 <h2>批次目录</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  最多显示 100 个批次，筛选作用于当前已加载结果。
+                  使用服务端 q/filter/cursor；统计由 Campaign read model
+                  计算，不在浏览器重算。
                 </p>
               </div>
               <label className="grid gap-2 sm:w-72" htmlFor="batch-filter">
@@ -638,6 +723,7 @@ export function PlatformRedemptionBatchesPage() {
                       <TableHead scope="col">名称</TableHead>
                       <TableHead scope="col">Plan</TableHead>
                       <TableHead scope="col">数量</TableHead>
+                      <TableHead scope="col">兑换进度</TableHead>
                       <TableHead scope="col">状态</TableHead>
                       <TableHead scope="col">到期</TableHead>
                       <TableHead scope="col">交付截止/时间</TableHead>
@@ -668,6 +754,14 @@ export function PlatformRedemptionBatchesPage() {
                           </TableCell>
                           <TableCell className="text-left">
                             {batch.quantity}
+                          </TableCell>
+                          <TableCell className="text-left text-sm">
+                            {batch.redeemed_count ?? 0} 已兑 /{' '}
+                            {batch.unused_count ?? 0} 未用
+                            <small className="block text-muted-foreground">
+                              {batch.redemption_rate ?? 0}% · disabled{' '}
+                              {batch.disabled_count ?? 0}
+                            </small>
                           </TableCell>
                           <TableCell>
                             <StatusBadge
@@ -716,7 +810,23 @@ export function PlatformRedemptionBatchesPage() {
                 </Table>
               </div>
             )}
+            {nextCursor ? (
+              <Button
+                variant="outline"
+                onClick={() => void loadMoreCampaigns()}
+                disabled={refreshing}
+              >
+                {refreshing ? '加载中…' : '加载更多 Campaign'}
+              </Button>
+            ) : null}
           </section>
+          <CampaignCodesPanel
+            platformId={platform.platform_id}
+            campaigns={visibleBatches.map((batch) => ({
+              batch_id: batch.batch_id,
+              name: batch.name,
+            }))}
+          />
         </>
       ) : null}
       {intent ? (
@@ -734,6 +844,13 @@ export function PlatformRedemptionBatchesPage() {
           reversible={intent.kind === 'confirm-delivery'}
           state={mutationState}
           error={mutationError}
+          stepUpContent={
+            mutationState === 'step_up_required' ? (
+              <AdminRecentMfaPanel
+                onVerified={() => setMutationState('confirm_required')}
+              />
+            ) : null
+          }
           onCheckUnknown={
             mutationState === 'unknown_outcome' ? checkUnknown : undefined
           }

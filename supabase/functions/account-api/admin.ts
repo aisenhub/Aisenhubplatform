@@ -1715,7 +1715,7 @@ export async function dispatchAdmin(
       )
         throw new ApiFault(400, 'INVALID_INPUT');
       const [result] = await transaction.unsafe<Row>(
-        'select (private.admin_commercial_offer_upsert(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text, $8::text, $9::text, $10::integer, $11::text, $12::boolean)).*',
+        'select result.* from private.admin_commercial_offer_upsert(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text, $8::text, $9::text, $10::integer, $11::text, $12::boolean) as result',
         [
           ...context,
           platformId,
@@ -1755,7 +1755,7 @@ export async function dispatchAdmin(
     )
       throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
-      'select (private.admin_commercial_offer_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::text)).*',
+      'select result.* from private.admin_commercial_offer_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::text) as result',
       [
         ...context,
         commerceOfferCommand[1],
@@ -1785,7 +1785,7 @@ export async function dispatchAdmin(
     if (!Number.isFinite(amount) || amount <= 0 || currency !== 'CNY')
       throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
-      'select (private.admin_commercial_price_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::numeric, $7::text)).*',
+      'select result.* from private.admin_commercial_price_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::numeric, $7::text) as result',
       [
         ...context,
         commercePriceCollection[1],
@@ -1813,7 +1813,7 @@ export async function dispatchAdmin(
     const reason = stringValue(input.reason);
     if (!operationId || !reason) throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
-      'select (private.admin_commercial_price_publish(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text)).*',
+      'select result.* from private.admin_commercial_price_publish(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text) as result',
       [
         ...context,
         commercePricePublish[1],
@@ -1874,7 +1874,7 @@ export async function dispatchAdmin(
       )
         throw new ApiFault(400, 'INVALID_INPUT');
       const [result] = await transaction.unsafe<Row>(
-        'select (private.admin_commercial_mapping_upsert(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::uuid, $8::text, $9::text, $10::text[], $11::integer, $12::text)).*',
+        'select result.* from private.admin_commercial_mapping_upsert(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::uuid, $8::text, $9::text, $10::text[], $11::integer, $12::text) as result',
         [
           ...context,
           platformId,
@@ -1914,7 +1914,7 @@ export async function dispatchAdmin(
     )
       throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
-      'select (private.admin_commercial_mapping_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::text)).*',
+      'select result.* from private.admin_commercial_mapping_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::text) as result',
       [
         ...context,
         commerceMappingCommand[1],

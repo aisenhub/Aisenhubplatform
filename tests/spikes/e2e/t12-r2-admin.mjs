@@ -526,6 +526,148 @@ async function runBrowserFlow(secret) {
     where user_id = ${userId}
   `;
   await new Promise((resolve) => setTimeout(resolve, 1_200));
+
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/plans`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="commerce-offers-panel"]').waitFor({
+    state: 'visible',
+  });
+  await page
+    .getByLabel('Offer Plan')
+    .selectOption({ label: 'browser-pro · Browser Pro' });
+  await page.getByLabel('Offer code').fill('browser-seven-day');
+  await page.getByLabel('Offer 名称').fill('Browser Seven Day');
+  await page.getByLabel('期限数值').fill('7');
+  await page.getByLabel('期限单位').selectOption('day');
+  const commerceOfferPostStatuses = [];
+  const commerceOfferPath = `/api/v1/admin/api/v1/platforms/${platformId}/commerce/offers`;
+  page.on('response', (response) => {
+    if (
+      response.url().endsWith(commerceOfferPath) &&
+      response.request().method() === 'POST'
+    )
+      commerceOfferPostStatuses.push(response.status());
+  });
+  const [expiredCommerceProof] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/commerce/offers`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.getByRole('button', { name: '创建 Offer' }).click(),
+  ]);
+  assertStatus(
+    expiredCommerceProof.status(),
+    403,
+    'expired Commerce Offer proof',
+  );
+  assert.equal(
+    (await expiredCommerceProof.json()).error?.code,
+    'RECENT_MFA_REQUIRED',
+  );
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
+    state: 'visible',
+  });
+  const [offersBeforeCommerceStepUp] = await sql`
+    select count(*)::integer as count
+    from public.platform_commercial_offers
+    where platform_id = ${platformId} and code = 'browser-seven-day'
+  `;
+  assert.equal(
+    offersBeforeCommerceStepUp.count,
+    0,
+    'Commerce step-up must not create the Offer before explicit retry',
+  );
+  const waitForCommerceTotpMs = 31_000 - (Date.now() % 30_000);
+  await new Promise((resolve) => setTimeout(resolve, waitForCommerceTotpMs));
+  await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
+  const [commerceMfaResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/auth/mfa/verify'),
+    ),
+    page.locator('[data-test="recent-mfa-submit"]').click(),
+  ]);
+  assertStatus(
+    commerceMfaResponse.status(),
+    200,
+    'Commerce recent MFA verification',
+  );
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
+    state: 'detached',
+  });
+  const [offersAfterCommerceStepUp] = await sql`
+    select count(*)::integer as count
+    from public.platform_commercial_offers
+    where platform_id = ${platformId} and code = 'browser-seven-day'
+  `;
+  assert.equal(
+    offersAfterCommerceStepUp.count,
+    0,
+    'successful Commerce step-up must not auto-replay the original write',
+  );
+  const [commerceOfferCreated, commerceOfferReloaded] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/commerce/offers`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.waitForResponse(
+      (response) =>
+        response.url().endsWith(commerceOfferPath) &&
+        response.request().method() === 'GET',
+    ),
+    page.getByRole('button', { name: '创建 Offer' }).click(),
+  ]);
+  const commerceOfferCreatedBody = await commerceOfferCreated.json();
+  const commerceOfferReloadedBody = await commerceOfferReloaded.json();
+  await page.waitForTimeout(250);
+  const [offerAfterExplicitRetry] = await sql`
+    select count(*)::integer as count
+    from public.platform_commercial_offers
+    where platform_id = ${platformId} and code = 'browser-seven-day'
+  `;
+  const [offerAuditAfterExplicitRetry] = await sql`
+    select count(*)::integer as count
+    from public.audit_logs
+    where platform_id = ${platformId}
+      and event_type = 'commerce.offer_saved'
+  `;
+  assertStatus(
+    commerceOfferCreated.status(),
+    201,
+    `Commerce Offer explicit retry (${commerceOfferCreatedBody?.error?.code ?? 'no-error'}; posts=${commerceOfferPostStatuses.join(',')}; offers=${offerAfterExplicitRetry.count}; audits=${offerAuditAfterExplicitRetry.count})`,
+  );
+  assertStatus(
+    commerceOfferReloaded.status(),
+    200,
+    `Commerce Offer reload (${commerceOfferReloadedBody?.error?.code ?? 'no-error'})`,
+  );
+  assert.ok(
+    commerceOfferReloadedBody?.data?.some?.(
+      (offer) => offer?.offer_code === 'browser-seven-day',
+    ),
+    `Commerce Offer reload must include browser-seven-day: ${JSON.stringify(commerceOfferReloadedBody?.data ?? null)}`,
+  );
+  await page
+    .getByText('browser-seven-day · browser-pro / Browser Pro', { exact: true })
+    .waitFor({
+      state: 'visible',
+    });
+
+  await sql`
+    update private.admin_step_up
+    set expires_at = verified_at + interval '1 second'
+    where user_id = ${userId}
+  `;
+  await new Promise((resolve) => setTimeout(resolve, 1_200));
+
   const loadKeysResponsePromise = page.waitForResponse(
     (response) =>
       response
@@ -1694,6 +1836,9 @@ async function runArchitectureBehaviorMatrix(secret) {
   await page.locator('[data-test="central-billing-page"]').waitFor({
     state: 'visible',
   });
+  await page.locator('[data-test="commerce-summary-panel"]').waitFor({
+    state: 'visible',
+  });
   assert.equal(
     await page.getByLabel('Billing 状态').inputValue(),
     'manual_review',
@@ -1717,6 +1862,9 @@ async function runArchitectureBehaviorMatrix(secret) {
     .filter({ hasText: platformCode })
     .click();
   await page.waitForURL(`**/admin/platforms/${platformId}/billing`);
+  await page.locator('[data-test="commerce-summary-panel"]').waitFor({
+    state: 'visible',
+  });
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   await page
     .locator('[data-test="platform-switcher-dropdown"]')
@@ -1766,6 +1914,35 @@ async function runArchitectureBehaviorMatrix(secret) {
   await page.goto(`${appUrl}/admin/platforms/${platformId}/billing`, {
     waitUntil: 'domcontentloaded',
   });
+  await page.locator('[data-test="commerce-summary-panel"]').waitFor({
+    state: 'visible',
+  });
+
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/plans`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="commerce-offers-panel"]').waitFor({
+    state: 'visible',
+  });
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/subscriptions`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="commerce-entitlement-list"]').waitFor({
+    state: 'visible',
+  });
+  await page.goto(
+    `${appUrl}/admin/platforms/${platformId}/redemption-batches`,
+    {
+      waitUntil: 'domcontentloaded',
+    },
+  );
+  await page.locator('[data-test="campaign-code-detail"]').waitFor({
+    state: 'visible',
+  });
+
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/billing`, {
+    waitUntil: 'domcontentloaded',
+  });
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   await page
     .locator('[data-test="platform-switcher-dropdown"]')
@@ -1790,6 +1967,11 @@ async function runArchitectureBehaviorMatrix(secret) {
     billingRefreshPersistence: 'PASS',
     accountsEquivalentScopeSwitch: 'PASS',
     billingEquivalentScopeSwitch: 'PASS',
+    commerceSummarySurfaces: 'PASS',
+    commerceCatalogSurface: 'PASS',
+    commerceEntitlementSurface: 'PASS',
+    commerceCampaignSurface: 'PASS',
+    commerceRecentMfaNoReplay: 'PASS',
     platformScopeIsolation: 'PASS',
   };
 }
