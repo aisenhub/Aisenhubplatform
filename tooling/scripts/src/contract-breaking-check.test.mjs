@@ -128,6 +128,45 @@ test('allows additive endpoints and optional response fields', () => {
   assert.deepEqual(compareContractDocuments('account', before, after), []);
 });
 
+test('allows additive response unions only when one branch preserves the prior schema', () => {
+  const before = baseDocument();
+  const previous = structuredClone(
+    before.paths['/v1/items'].post.responses[200].content['application/json']
+      .schema,
+  );
+  const after = clone(before);
+  after.paths['/v1/items'].post.responses[200].content[
+    'application/json'
+  ].schema = {
+    oneOf: [
+      previous,
+      {
+        type: 'object',
+        required: ['offer_id'],
+        properties: { offer_id: { type: 'string', format: 'uuid' } },
+      },
+    ],
+  };
+  assert.deepEqual(compareContractDocuments('account', before, after), []);
+
+  const incompatible = clone(before);
+  incompatible.paths['/v1/items'].post.responses[200].content[
+    'application/json'
+  ].schema = {
+    oneOf: [
+      {
+        type: 'object',
+        required: ['offer_id'],
+        properties: { offer_id: { type: 'string', format: 'uuid' } },
+      },
+    ],
+  };
+  assert.match(
+    compareContractDocuments('account', before, incompatible).join('\n'),
+    /response union removed prior schema/u,
+  );
+});
+
 test('resolves response content entries that directly reference schemas', () => {
   const before = baseDocument();
   before.components.schemas.Envelope = {

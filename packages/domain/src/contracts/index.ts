@@ -33,6 +33,8 @@ export type {
   ApiErrorCode,
   ApiErrorResponse,
   ApiResponse,
+  CommerceOfferDto,
+  CommerceOfferReason,
   ConfigFileDto,
   ConfigFileListDto,
   DeleteRequestDto,

@@ -55,6 +55,44 @@ export function boundedLimit(value: string | null): number {
   return parsed;
 }
 
+function encodeCommerceCursor(
+  row: Row,
+  atKey: string,
+  idKey: string,
+): string | null {
+  const at = row[atKey];
+  const id = uuidValue(row[idKey]);
+  const iso =
+    at instanceof Date
+      ? at.toISOString()
+      : typeof at === 'string' && Number.isFinite(Date.parse(at))
+        ? new Date(at).toISOString()
+        : null;
+  if (!iso || !id) return null;
+  return btoa(JSON.stringify({ at: iso, id }))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '');
+}
+
+function parseCommerceCursor(
+  value: string | null,
+): { at: string; id: string } | null {
+  if (!value) return null;
+  try {
+    const normalized = value.replaceAll('-', '+').replaceAll('_', '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    const parsed = JSON.parse(atob(padded)) as Record<string, unknown>;
+    const id = uuidValue(parsed.id);
+    const at =
+      typeof parsed.at === 'string' ? optionalTimestampQuery(parsed.at) : null;
+    if (!id || !at) throw new Error('invalid cursor');
+    return { at, id };
+  } catch {
+    throw new ApiFault(400, 'INVALID_INPUT');
+  }
+}
+
 function optionalBooleanQuery(value: string | null): boolean | null {
   if (value === null || value === '') return null;
   if (value === 'true') return true;
@@ -638,6 +676,23 @@ export async function dispatchAdmin(
     const [result] = await transaction.unsafe<Row>(
       'select * from private.admin_billing_observability(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context)',
       context,
+    );
+    return { status: 200, data: result ?? null };
+  }
+  if (path === 'admin/api/v1/commerce/summary' && request.method === 'GET') {
+    const platformId = url.searchParams.get('platform_id');
+    const from = optionalTimestampQuery(url.searchParams.get('from'));
+    const to = optionalTimestampQuery(url.searchParams.get('to'));
+    if (platformId !== null && !uuidValue(platformId))
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_commerce_summary(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::timestamptz, $6::timestamptz)',
+      [
+        ...context,
+        platformId === null ? null : uuidValue(platformId),
+        from,
+        to,
+      ],
     );
     return { status: 200, data: result ?? null };
   }
@@ -1622,6 +1677,377 @@ export async function dispatchAdmin(
     return { status: 200, data: result };
   }
 
+  const commerceOfferCollection =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/offers$/u.exec(path);
+  if (commerceOfferCollection && UUID.test(commerceOfferCollection[1]!)) {
+    const platformId = commerceOfferCollection[1]!;
+    if (request.method === 'GET') {
+      const rows = await transaction.unsafe<Row>(
+        'select * from private.admin_commercial_offer_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
+        [...context, platformId],
+      );
+      return { status: 200, data: rows };
+    }
+    if (request.method === 'POST') {
+      await adminStepUp(transaction, session, request);
+      const input = await body(request);
+      const offerId =
+        input.offer_id === undefined ? null : uuidValue(input.offer_id);
+      const planId = uuidValue(input.plan_id);
+      const code = stringValue(input.code);
+      const name = stringValue(input.name);
+      const description =
+        input.description === null ? null : stringValue(input.description);
+      const durationValue = Number(input.duration_value);
+      const durationUnit = stringValue(input.duration_unit);
+      if (
+        (input.offer_id !== undefined && !offerId) ||
+        !planId ||
+        !code ||
+        !name ||
+        (input.description !== null &&
+          input.description !== undefined &&
+          description === undefined) ||
+        !Number.isInteger(durationValue) ||
+        durationValue < 1 ||
+        !['day', 'month', 'year'].includes(durationUnit ?? '') ||
+        typeof input.recommended !== 'boolean'
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const [result] = await transaction.unsafe<Row>(
+        'select (private.admin_commercial_offer_upsert(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text, $8::text, $9::text, $10::integer, $11::text, $12::boolean)).*',
+        [
+          ...context,
+          platformId,
+          offerId,
+          planId,
+          code,
+          name,
+          description ?? null,
+          durationValue,
+          durationUnit,
+          input.recommended,
+        ],
+      );
+      return { status: offerId ? 200 : 201, data: result };
+    }
+  }
+
+  const commerceOfferCommand =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/offers\/([^/]+)\/commands$/u.exec(
+      path,
+    );
+  if (
+    commerceOfferCommand &&
+    UUID.test(commerceOfferCommand[1]!) &&
+    UUID.test(commerceOfferCommand[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const action = stringValue(input.action);
+    const operationId = uuidValue(input.operation_id);
+    const reason = stringValue(input.reason);
+    if (
+      !operationId ||
+      !reason ||
+      !['activate', 'archive'].includes(action ?? '')
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select (private.admin_commercial_offer_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::text)).*',
+      [
+        ...context,
+        commerceOfferCommand[1],
+        commerceOfferCommand[2],
+        action,
+        operationId,
+        reason,
+      ],
+    );
+    return { status: 200, data: result };
+  }
+
+  const commercePriceCollection =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/offers\/([^/]+)\/prices$/u.exec(
+      path,
+    );
+  if (
+    commercePriceCollection &&
+    UUID.test(commercePriceCollection[1]!) &&
+    UUID.test(commercePriceCollection[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const amount = Number(input.amount);
+    const currency = stringValue(input.currency) ?? 'CNY';
+    if (!Number.isFinite(amount) || amount <= 0 || currency !== 'CNY')
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select (private.admin_commercial_price_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::numeric, $7::text)).*',
+      [
+        ...context,
+        commercePriceCollection[1],
+        commercePriceCollection[2],
+        amount,
+        currency,
+      ],
+    );
+    return { status: 201, data: result };
+  }
+
+  const commercePricePublish =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/prices\/([^/]+)\/publish$/u.exec(
+      path,
+    );
+  if (
+    commercePricePublish &&
+    UUID.test(commercePricePublish[1]!) &&
+    UUID.test(commercePricePublish[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const operationId = uuidValue(input.operation_id);
+    const reason = stringValue(input.reason);
+    if (!operationId || !reason) throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select (private.admin_commercial_price_publish(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text)).*',
+      [
+        ...context,
+        commercePricePublish[1],
+        commercePricePublish[2],
+        operationId,
+        reason,
+      ],
+    );
+    return { status: 200, data: result };
+  }
+
+  const commerceMappingCollection =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/provider-mappings$/u.exec(
+      path,
+    );
+  if (commerceMappingCollection && UUID.test(commerceMappingCollection[1]!)) {
+    const platformId = commerceMappingCollection[1]!;
+    if (request.method === 'GET') {
+      const priceIdValue = url.searchParams.get('price_id');
+      const priceId = priceIdValue === null ? null : uuidValue(priceIdValue);
+      if (priceIdValue !== null && !priceId)
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const rows = await transaction.unsafe<Row>(
+        'select * from private.admin_commercial_mapping_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+        [...context, platformId, priceId],
+      );
+      return { status: 200, data: rows };
+    }
+    if (request.method === 'POST') {
+      await adminStepUp(transaction, session, request);
+      const input = await body(request);
+      const mappingId =
+        input.mapping_id === undefined ? null : uuidValue(input.mapping_id);
+      const providerAccountId = uuidValue(input.provider_account_id);
+      const priceId = uuidValue(input.price_id);
+      const externalPlanId = stringValue(input.external_plan_id);
+      const productType = stringValue(input.product_type);
+      const skuIds = Array.isArray(input.external_sku_ids)
+        ? input.external_sku_ids.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [];
+      const purchaseMonths =
+        input.purchase_months === null || input.purchase_months === undefined
+          ? null
+          : Number(input.purchase_months);
+      const validationStatus =
+        stringValue(input.validation_status) ?? 'unverified';
+      if (
+        (input.mapping_id !== undefined && !mappingId) ||
+        !providerAccountId ||
+        !priceId ||
+        !externalPlanId ||
+        !productType ||
+        (purchaseMonths !== null &&
+          (!Number.isInteger(purchaseMonths) || purchaseMonths < 1)) ||
+        !['unverified', 'verified', 'rejected'].includes(validationStatus)
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const [result] = await transaction.unsafe<Row>(
+        'select (private.admin_commercial_mapping_upsert(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::uuid, $8::text, $9::text, $10::text[], $11::integer, $12::text)).*',
+        [
+          ...context,
+          platformId,
+          mappingId,
+          providerAccountId,
+          priceId,
+          externalPlanId,
+          productType,
+          skuIds,
+          purchaseMonths,
+          validationStatus,
+        ],
+      );
+      return { status: mappingId ? 200 : 201, data: result };
+    }
+  }
+
+  const commerceMappingCommand =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/provider-mappings\/([^/]+)\/commands$/u.exec(
+      path,
+    );
+  if (
+    commerceMappingCommand &&
+    UUID.test(commerceMappingCommand[1]!) &&
+    UUID.test(commerceMappingCommand[2]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const operationId = uuidValue(input.operation_id);
+    const action = stringValue(input.action);
+    const reason = stringValue(input.reason);
+    if (
+      !operationId ||
+      !reason ||
+      !['publish', 'disable'].includes(action ?? '')
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select (private.admin_commercial_mapping_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::text)).*',
+      [
+        ...context,
+        commerceMappingCommand[1],
+        commerceMappingCommand[2],
+        action,
+        operationId,
+        reason,
+      ],
+    );
+    return { status: 200, data: result };
+  }
+
+  const commerceEntitlements =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/entitlements$/u.exec(path);
+  if (
+    commerceEntitlements &&
+    UUID.test(commerceEntitlements[1]!) &&
+    request.method === 'GET'
+  ) {
+    const cursor = parseCommerceCursor(url.searchParams.get('cursor'));
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const planIdValue = url.searchParams.get('plan_id');
+    const planId = planIdValue === null ? null : uuidValue(planIdValue);
+    if (planIdValue !== null && !planId)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_commerce_entitlement_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::timestamptz, $6::uuid, $7::integer, $8::text, $9::text, $10::uuid, $11::text, $12::timestamptz, $13::timestamptz)',
+      [
+        ...context,
+        commerceEntitlements[1],
+        cursor?.at ?? null,
+        cursor?.id ?? null,
+        limit,
+        url.searchParams.get('q'),
+        url.searchParams.get('status'),
+        planId,
+        url.searchParams.get('source'),
+        optionalTimestampQuery(url.searchParams.get('ending_from')),
+        optionalTimestampQuery(url.searchParams.get('ending_to')),
+      ],
+    );
+    return {
+      status: 200,
+      data: rows,
+      next_cursor:
+        rows.length === limit
+          ? encodeCommerceCursor(
+              rows.at(-1)!,
+              'updated_at',
+              'platform_account_id',
+            )
+          : null,
+    };
+  }
+
+  const commerceCampaigns =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/campaigns$/u.exec(path);
+  if (
+    commerceCampaigns &&
+    UUID.test(commerceCampaigns[1]!) &&
+    request.method === 'GET'
+  ) {
+    const cursor = parseCommerceCursor(url.searchParams.get('cursor'));
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const planIdValue = url.searchParams.get('plan_id');
+    const offerIdValue = url.searchParams.get('offer_id');
+    const planId = planIdValue === null ? null : uuidValue(planIdValue);
+    const offerId = offerIdValue === null ? null : uuidValue(offerIdValue);
+    if (
+      (planIdValue !== null && !planId) ||
+      (offerIdValue !== null && !offerId)
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_redemption_campaign_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::integer, $7::text, $8::text, $9::uuid, $10::uuid, $11::timestamptz, $12::timestamptz)',
+      [
+        ...context,
+        commerceCampaigns[1],
+        cursor?.id ?? null,
+        limit,
+        url.searchParams.get('q'),
+        url.searchParams.get('status'),
+        planId,
+        offerId,
+        optionalTimestampQuery(url.searchParams.get('created_from')),
+        optionalTimestampQuery(url.searchParams.get('created_to')),
+      ],
+    );
+    return {
+      status: 200,
+      data: rows,
+      next_cursor:
+        rows.length === limit
+          ? encodeCommerceCursor(rows.at(-1)!, 'created_at', 'batch_id')
+          : null,
+    };
+  }
+
+  const commerceCampaignCodes =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/commerce\/campaigns\/([^/]+)\/codes$/u.exec(
+      path,
+    );
+  if (
+    commerceCampaignCodes &&
+    UUID.test(commerceCampaignCodes[1]!) &&
+    UUID.test(commerceCampaignCodes[2]!) &&
+    request.method === 'GET'
+  ) {
+    const cursorValue = url.searchParams.get('cursor');
+    const cursor = cursorValue === null ? null : uuidValue(cursorValue);
+    if (cursorValue !== null && !cursor)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_redemption_campaign_codes_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::integer)',
+      [
+        ...context,
+        commerceCampaignCodes[1],
+        commerceCampaignCodes[2],
+        cursor,
+        limit,
+      ],
+    );
+    return {
+      status: 200,
+      data: rows,
+      next_cursor:
+        rows.length === limit
+          ? String(rows.at(-1)?.redemption_code_id ?? '') || null
+          : null,
+    };
+  }
+
   const planMatch = /^admin\/api\/v1\/platforms\/([^/]+)\/plans$/u.exec(path);
   if (planMatch && UUID.test(planMatch[1]!)) {
     const platformId = planMatch[1]!;
@@ -1719,9 +2145,11 @@ export async function dispatchAdmin(
       return { status: 200, data: rows };
     }
     if (request.method === 'POST') {
+      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const inputPlatformId = uuidValue(input.platform_id);
       const planId = uuidValue(input.plan_id);
+      const offerId = uuidValue(input.offer_id);
       const productCode = stringValue(input.product_code)?.trim().toLowerCase();
       const batchName = stringValue(input.name);
       const quantity = Number(input.quantity);
@@ -1730,10 +2158,9 @@ export async function dispatchAdmin(
       const deliveryDeadline = stringValue(input.delivery_deadline);
       if (
         !inputPlatformId ||
-        (!planId && !productCode) ||
+        [!!planId, !!offerId, !!productCode].filter(Boolean).length !== 1 ||
         (productCode !== undefined &&
           !['monthly', 'yearly', 'lifetime'].includes(productCode)) ||
-        (productCode === undefined && !planId) ||
         !batchName ||
         !creationOperationId ||
         !expiresAt ||
@@ -1744,7 +2171,7 @@ export async function dispatchAdmin(
       )
         throw new ApiFault(400, 'INVALID_INPUT');
       if (
-        !productCode &&
+        planId &&
         (!Number.isInteger(Number(input.duration_value)) ||
           Number(input.duration_value) <= 0 ||
           !['day', 'month', 'year'].includes(String(input.duration_unit)))
@@ -1773,13 +2200,13 @@ export async function dispatchAdmin(
           code_suffix: code.codeSuffix,
         })),
       );
-      const [result] = productCode
+      const [result] = offerId
         ? await transaction.unsafe<Row>(
-            'select * from private.admin_batch_create_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::text, $7::integer, $8::timestamptz, $9::timestamptz, $10::uuid, $11::text, $12::jsonb)',
+            'select * from private.admin_batch_create_v3(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::integer, $8::timestamptz, $9::timestamptz, $10::uuid, $11::text, $12::jsonb)',
             [
               ...context,
               inputPlatformId,
-              productCode,
+              offerId,
               batchName,
               quantity,
               expiresAt,
@@ -1789,23 +2216,39 @@ export async function dispatchAdmin(
               codePayload,
             ],
           )
-        : await transaction.unsafe<Row>(
-            'select * from private.admin_batch_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::integer, $8::integer, $9::text, $10::timestamptz, $11::timestamptz, $12::uuid, $13::text, $14::jsonb)',
-            [
-              ...context,
-              inputPlatformId,
-              planId,
-              batchName,
-              quantity,
-              Number(input.duration_value),
-              input.duration_unit,
-              expiresAt,
-              deliveryDeadline,
-              creationOperationId,
-              receiptHmac,
-              codePayload,
-            ],
-          );
+        : productCode
+          ? await transaction.unsafe<Row>(
+              'select * from private.admin_batch_create_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::text, $7::integer, $8::timestamptz, $9::timestamptz, $10::uuid, $11::text, $12::jsonb)',
+              [
+                ...context,
+                inputPlatformId,
+                productCode,
+                batchName,
+                quantity,
+                expiresAt,
+                deliveryDeadline,
+                creationOperationId,
+                receiptHmac,
+                codePayload,
+              ],
+            )
+          : await transaction.unsafe<Row>(
+              'select * from private.admin_batch_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::integer, $8::integer, $9::text, $10::timestamptz, $11::timestamptz, $12::uuid, $13::text, $14::jsonb)',
+              [
+                ...context,
+                inputPlatformId,
+                planId,
+                batchName,
+                quantity,
+                Number(input.duration_value),
+                input.duration_unit,
+                expiresAt,
+                deliveryDeadline,
+                creationOperationId,
+                receiptHmac,
+                codePayload,
+              ],
+            );
       if (result?.creation_state === 'replayed_existing') {
         return {
           status: 200,
@@ -1864,6 +2307,7 @@ export async function dispatchAdmin(
     const platformId = uuidValue(url.searchParams.get('platform_id'));
     if (!platformId) throw new ApiFault(400, 'INVALID_INPUT');
     if (path.endsWith('/commands')) {
+      await adminStepUp(transaction, session, request);
       const input = await body(request);
       const [result] = await transaction.unsafe<Row>(
         'select * from private.admin_entitlement_command(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::uuid, $8::uuid, $9::integer, $10::text, $11::uuid, $12::text)',

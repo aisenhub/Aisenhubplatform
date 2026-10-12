@@ -27,8 +27,8 @@
 | 阶段 | 状态 | 证据 | 阻塞 |
 | --- | --- | --- | --- |
 | 01 Domain/read model | Completed | Offer/Price + read models；fresh/non-empty；canonical R3；staging aligned | 无 |
-| 02 API/contract | In Progress | Phase 01 已满足进入条件 | 无 |
-| 03 Admin commerce UI | Not Started | - | 依赖 02 |
+| 02 API/contract | Completed | Offer-aware Consumer/Admin API + OpenAPI；DB 73/1536；API 111/111；contracts/breaking；staging migration + account-api v62 | GitHub push 网络阻塞不影响本地/staging 技术验证，但最终 release 仍需闭环 |
+| 03 Admin commerce UI | In Progress | Phase 02 已满足进入条件 | 无 |
 | 04 Release | Not Started | - | 依赖 01–03 |
 
 ## 实施与验证日志
@@ -44,6 +44,11 @@
 | 2026-10-12 | Phase 01 fresh DB | Local Supabase | PASS：`pnpm db:reset --yes`；`pnpm test:db` = 72 files / 1515 tests |
 | 2026-10-12 | Phase 01 canonical R3 | Local | PASS：`pnpm verify:task:0801 --reuse-local` = 20/20 gates；API 107/107；DB 72/1515；settlement concurrency、contracts breaking、registry、Consumer/Admin browser、docs/OpenAPI 全绿 |
 | 2026-10-12 | Phase 01 staging migrations | `workendstaging / egsokuicabbxspkdccqe` | PASS：`20261012114256`、`20261012123209`、`20261012131422` 全部进入 remote migration history；只读 SQL 核验 Offer/Price、Commerce Summary、Entitlement list、Campaign v2 与 `billing_checkout_commercial_price_idx` 均存在；Production NOT_RUN |
+| 2026-10-12 | Phase 02 implementation | Local | PASS：Offer catalog、`offer_id XOR product_code` Checkout、Price-scoped Provider Mapping、Admin Offer/Price/Mapping、Commerce Summary、Entitlement filters、Campaign v2/detail 与 Offer-based Campaign create 全部接入现有 Account/Admin API；高风险写保持 recent-MFA，权益命令继续复用 `admin_entitlement_command` |
+| 2026-10-12 | Phase 02 DB/API | Local | PASS：fresh reset；DB **73 files / 1536 tests**（新增 `t33` 21 assertions 验证非 legacy 7-day Offer Checkout、server pricing、snapshot/idempotency）；API **111/111**；typecheck/lint/format/diff 全绿 |
+| 2026-10-12 | Phase 02 contracts | Local | PASS：Account/Admin OpenAPI **47/77 operations**；Consumer Lab snapshot/compatibility、breaking PASS；为 additive response union 增加 breaking-checker 回归，只有完整保留旧 response schema 的新 union 才允许通过 |
+| 2026-10-12 | Phase 02 staging | `workendstaging / egsokuicabbxspkdccqe` | PASS：remote migration history=`20261012145252 commercial_operations_api_contract`；SQL 核验 Offer/Checkout/Admin/Campaign functions + constraint/index；`account-api` **v62 ACTIVE**（from v61，`verify_jwt=false` 保持）；Security advisor 仅既有 pg_net/leaked-password WARN，未出现 OPT-010 新 SECURITY finding；Production NOT_RUN |
+| 2026-10-12 | GitHub delivery | task branch | BLOCKED：Runner 到 `github.com:443` 连接失败，SSH 443 无可用 public key；不通过 API 伪造不同 SHA 历史。继续本地/staging phase 实施，Phase 04 必须重试并完成 branch/PR/CI/main cleanup 后才能标 Completed |
 
 ## 规则
 

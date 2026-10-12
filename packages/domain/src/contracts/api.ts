@@ -145,6 +145,41 @@ export interface SubscriptionProductDto {
   readonly reason: SubscriptionProductReason;
 }
 
+export type CommerceOfferReason =
+  | 'ready'
+  | 'platform_disabled'
+  | 'purchases_paused'
+  | 'plan_unavailable'
+  | 'price_unavailable'
+  | 'provider_mapping_unavailable';
+
+export interface CommerceOfferDto {
+  readonly offer_id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly plan: {
+    readonly id: string;
+    readonly code: string;
+    readonly name: string;
+  };
+  readonly term: {
+    readonly kind: 'finite';
+    readonly duration_value: number;
+    readonly duration_unit: 'day' | 'month' | 'year';
+  };
+  readonly price: {
+    readonly id: string | null;
+    readonly amount: string | null;
+    readonly currency: 'CNY';
+    readonly version: number | null;
+  };
+  readonly recommended: boolean;
+  readonly legacy_product_code: 'monthly' | 'yearly' | 'lifetime' | null;
+  readonly purchasable: boolean;
+  readonly reason: CommerceOfferReason;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -218,13 +253,18 @@ export type SubscriptionCheckoutStatus = BillingCheckoutStatus;
 export interface SubscriptionCheckoutDto {
   readonly checkout_id: string;
   readonly status: SubscriptionCheckoutStatus;
-  readonly product_code: 'monthly' | 'yearly' | 'lifetime';
+  readonly product_code: 'monthly' | 'yearly' | 'lifetime' | null;
+  readonly offer_id: string | null;
+  readonly offer_code: string | null;
+  readonly plan_id: string;
+  readonly plan_name: string;
+  readonly price_version: number;
   readonly price: string;
   readonly currency: 'CNY';
   readonly term: {
     readonly kind: 'finite';
     readonly duration_value: number;
-    readonly duration_unit: 'month' | 'year';
+    readonly duration_unit: 'day' | 'month' | 'year';
   };
   readonly expires_at: string;
   readonly provider_display_name: string | null;

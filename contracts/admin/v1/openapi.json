@@ -911,6 +911,286 @@
         }
       }
     },
+    "/admin/api/v1/platforms/{platformId}/commerce/offers": {
+      "get": {
+        "operationId": "adminListCommerceOffers",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "description": "Lists platform Offers with their latest Price and Provider Mapping readiness.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "operationId": "adminUpsertCommerceOffer",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/offers/{offerId}/commands": {
+      "post": {
+        "operationId": "adminCommandCommerceOffer",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "name": "offerId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "description": "Activates or archives an Offer with a reason and idempotent operation id.",
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/offers/{offerId}/prices": {
+      "post": {
+        "operationId": "adminCreateCommercePrice",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "name": "offerId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "description": "Creates the next immutable draft Price version for an Offer.",
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/prices/{priceId}/publish": {
+      "post": {
+        "operationId": "adminPublishCommercePrice",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "name": "priceId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "description": "Publishes an immutable Price version and retires the previous active Price for the same Offer.",
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/provider-mappings": {
+      "get": {
+        "operationId": "adminListCommerceProviderMappings",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "name": "price_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "adminUpsertCommerceProviderMapping",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/provider-mappings/{mappingId}/commands": {
+      "post": {
+        "operationId": "adminCommandCommerceProviderMapping",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "name": "mappingId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "description": "Publishes or disables a Price-scoped Provider Mapping with a reason and operation id.",
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/entitlements": {
+      "get": {
+        "operationId": "adminListCommerceEntitlements",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "plan_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["billing_order", "redemption_code", "admin"]
+            }
+          },
+          {
+            "name": "ending_from",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "ending_to",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          }
+        ],
+        "description": "Stable server-side cursor/filter list of entitlement accounts with winning Grant attribution.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/campaigns": {
+      "get": {
+        "operationId": "adminListCommerceCampaigns",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "plan_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "offer_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          }
+        ],
+        "description": "Stable Campaign list with server-side filters and redemption statistics.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/campaigns/{batchId}/codes": {
+      "get": {
+        "operationId": "adminListCommerceCampaignCodes",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/BatchId" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "description": "Lists masked Redemption code state and redeemed account attribution; plaintext and HMAC are never returned.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/admin/api/v1/redemption-batches": {
       "get": {
         "operationId": "adminListRedemptionBatches",
@@ -927,6 +1207,7 @@
       },
       "post": {
         "operationId": "adminCreateRedemptionBatch",
+        "x-requires-step-up": true,
         "security": [
           {
             "adminBearer": []
@@ -941,6 +1222,9 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/StepUpRequired"
           }
         }
       }
@@ -1023,6 +1307,7 @@
     "/admin/api/v1/subscriptions/{accountId}/commands": {
       "post": {
         "operationId": "adminApplySubscriptionCommand",
+        "x-requires-step-up": true,
         "security": [
           {
             "adminBearer": []
@@ -1041,7 +1326,7 @@
             "$ref": "#/components/responses/Object"
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "$ref": "#/components/responses/StepUpRequired"
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
@@ -1277,6 +1562,38 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           }
+        }
+      }
+    },
+    "/admin/api/v1/commerce/summary": {
+      "get": {
+        "operationId": "adminGetCommerceSummary",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          {
+            "name": "platform_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" }
+          }
+        ],
+        "description": "Returns bounded commerce metrics using verified settlement, compensated refund and current winning Grant facts; values are not MRR/ARR or accounting revenue.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
         }
       }
     },

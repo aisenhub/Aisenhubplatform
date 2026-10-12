@@ -2,7 +2,7 @@
 
 - 优化名称：OPT-010 全局商业治理与单平台订阅运营
 - 总计划：[plan.md](plan.md)
-- 当前阶段：Phase 02 / In Progress
+- 当前阶段：Phase 03 / In Progress
 - 任务分支：`codex/opt-010-commercial-operations`
 - 基线：`main@a0e903731333cdddeb20361064d9e3557ef5bd84`
 - 风险：R3
@@ -28,7 +28,7 @@
 
 ## 当前执行环境
 
-OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支已清理。OPT-010 已从该最新 main 创建独立分支；Phase 01 的 Offer/Price domain、legacy bootstrap、经营/权益/Campaign read model、fresh/non-empty、canonical R3 与授权 staging 对齐均已完成，当前进入 Phase 02 API/Contract/Checkout。
+OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支已清理。OPT-010 已从该最新 main 创建独立分支；Phase 01 的 Offer/Price domain/read model 与 Phase 02 Consumer/Admin API、Offer-aware Checkout、OpenAPI/compatibility 已完成。Phase 02 local fresh/DB **73/1536**、API **111/111**、contracts/breaking/typecheck/lint 全绿；授权 staging 已对齐 `20261012145252 commercial_operations_api_contract`，`account-api` 为 **v62 ACTIVE**。当前进入 Phase 03 Admin commerce UI / cross-OPT integration。Production 仍为 NOT_RUN。
 
 ## 阶段完成门槛
 
@@ -36,4 +36,5 @@ OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支
 - [x] fresh + non-empty upgrade 与 pgTAP 真实通过。
 - [x] 需要的 staging migration 已同步并核对。
 - [x] verification record 已更新。
-- [ ] Phase 01 阶段 commit 已 push 并核对。
+- [x] Phase 02 local + staging 技术验证已完成。
+- [ ] task branch commits 已 push 并核对：当前 Runner 到 GitHub HTTPS 不可达，SSH 无可用 key；这是 release delivery blocker，不伪报完成，Phase 04 必须闭环。
