@@ -20,6 +20,12 @@ export type IntegrationSubscriptionFact = {
   lifetime_enabled: boolean;
 };
 
+export type IntegrationCommerceOfferFact = {
+  status: string;
+  price_status: string | null;
+  mapping_status: string;
+};
+
 export type IntegrationStepStatus =
   | 'complete'
   | 'incomplete'
@@ -58,11 +64,13 @@ export function derivePlatformIntegrationState({
   origins,
   keys,
   subscription,
+  offers,
 }: {
   platform: Platform;
   origins?: IntegrationOriginFact[];
   keys?: IntegrationKeyFact[];
   subscription?: IntegrationSubscriptionFact | null;
+  offers?: IntegrationCommerceOfferFact[];
 }): PlatformIntegrationState {
   const platformReady =
     platform.status === 'active' && platform.allow_activation === true;
@@ -135,27 +143,33 @@ export function derivePlatformIntegrationState({
   ];
 
   const commerceConfigured = Boolean(
-    subscription?.paid_plan_id &&
-    subscription.paid_plan_status === 'active' &&
-    (subscription.monthly_enabled ||
-      subscription.yearly_enabled ||
-      subscription.lifetime_enabled),
+    offers?.some(
+      (offer) =>
+        offer.status === 'active' &&
+        offer.price_status === 'active' &&
+        offer.mapping_status === 'ready',
+    ) ??
+    (subscription?.paid_plan_id &&
+      subscription.paid_plan_status === 'active' &&
+      (subscription.monthly_enabled ||
+        subscription.yearly_enabled ||
+        subscription.lifetime_enabled)),
   );
   const commerceStep: IntegrationStep = {
     key: 'commerce',
     label: '商业配置（按需）',
     status:
-      subscription === undefined
+      offers === undefined && subscription === undefined
         ? 'unknown'
         : commerceConfigured
           ? 'complete'
           : 'optional',
     description:
-      subscription === undefined
-        ? '当前无法确认订阅商品配置；它不阻塞基础接入。'
+      offers === undefined && subscription === undefined
+        ? '当前无法确认商业 Offer/Price/Mapping readiness；它不阻塞基础接入。'
         : commerceConfigured
-          ? 'active paid Plan 已关联至少一种购买周期。'
-          : '免费平台可跳过；需要付费能力时再配置 Plan 与商品映射。',
+          ? '至少一个 active paid Plan 已有 active Offer + Price + ready Provider Mapping。'
+          : '免费平台可跳过；需要付费能力时再配置 paid Plan、Offer/Price 与 Provider Mapping。',
   };
 
   const externalSteps: IntegrationStep[] = [

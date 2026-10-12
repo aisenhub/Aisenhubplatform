@@ -46,6 +46,7 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import { CommerceOffersPanel } from './commerce-offers-panel';
 
 type Plan = {
   plan_id: string;
@@ -596,6 +597,10 @@ export function PlatformPlansPage() {
             </Table>
           </div>
         </section>
+      ) : null}
+
+      {state === 'success' ? (
+        <CommerceOffersPanel platformId={platform.platform_id} plans={plans} />
       ) : null}
 
       <Dialog

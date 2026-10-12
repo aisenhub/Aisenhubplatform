@@ -18,6 +18,7 @@ import {
   type ResourceError,
 } from '../resources/admin-resource-utils';
 import { BillingOrderWorkspace } from './billing-order-workspace';
+import { CommerceSummaryPanel } from './commerce-summary-panel';
 import {
   billingFiltersFromSearchParams,
   billingFiltersToSearchParams,
@@ -157,6 +158,8 @@ export function CentralBillingPage() {
         }
       />
 
+      <CommerceSummaryPanel title="全网经营摘要" />
+
       {platformsError ? (
         <Alert variant="destructive">
           <AlertTitle>{platformsError.title}</AlertTitle>
@@ -176,11 +179,11 @@ export function CentralBillingPage() {
 
       <section
         className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        aria-label="Billing 指标"
+        aria-label="支付运行指标"
       >
         {metricsLoading ? (
           <div className="col-span-full rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            正在读取中央 Billing 运行观测…
+            正在读取 Payment Operations 运行观测…
           </div>
         ) : metrics ? (
           [
@@ -217,7 +220,9 @@ export function CentralBillingPage() {
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold">运行观测</h2>
+                  <h2 className="font-semibold">
+                    Payment Operations · 运行观测
+                  </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     最近观测：{formatDate(metrics.observed_at)} · 阈值来源：
                     {metrics.alert_threshold_source === 'configured'

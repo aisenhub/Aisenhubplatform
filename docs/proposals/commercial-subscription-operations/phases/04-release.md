@@ -1,6 +1,6 @@
 # 阶段 04：Upgrade / Staging / Release
 
-状态：Not Started
+状态：In Progress
 
 关联：[总计划](../plan.md) · [设计](../design.md) · [验证记录](../verification-record.md)
 

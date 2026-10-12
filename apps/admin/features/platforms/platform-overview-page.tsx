@@ -33,6 +33,7 @@ import {
   platformOverviewPeriod,
   type PlatformOverviewMetrics,
 } from './platform-overview-model';
+import { CommerceSummaryPanel } from '../billing/commerce-summary-panel';
 
 const quickLinks = [
   ['accounts', '平台账户', '查找账户、查看状态与管理访问。'],
@@ -436,6 +437,11 @@ export function PlatformOverviewPage() {
           </section>
         </>
       ) : null}
+
+      <CommerceSummaryPanel
+        platformId={platform.platform_id}
+        title="商业摘要"
+      />
 
       <section className="panel gap-4" aria-label="平台元数据">
         <div className="flex flex-wrap items-center justify-between gap-3">

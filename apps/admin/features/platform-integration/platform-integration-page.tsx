@@ -19,6 +19,7 @@ import {
   derivePlatformIntegrationState,
   integrationStatusLabel,
   type IntegrationKeyFact,
+  type IntegrationCommerceOfferFact,
   type IntegrationOriginFact,
   type IntegrationStep,
   type IntegrationSubscriptionFact,
@@ -56,21 +57,39 @@ export function PlatformIntegrationPage() {
   const [subscription, setSubscription] = useState<
     IntegrationSubscriptionFact | null | undefined
   >();
+  const [offers, setOffers] = useState<
+    IntegrationCommerceOfferFact[] | undefined
+  >();
   const [refreshVersion, setRefreshVersion] = useState(0);
 
   const loadSubscription = useCallback(async () => {
     const epoch = adminAuthSession.getEpoch();
     try {
-      const subscriptionResponse = await adminAuthSession.request(
-        resourcePath(platform.platform_id, '/subscription-config'),
-        { cache: 'no-store' },
-      );
+      const [subscriptionResponse, offersResponse] = await Promise.all([
+        adminAuthSession.request(
+          resourcePath(platform.platform_id, '/subscription-config'),
+          {
+            cache: 'no-store',
+          },
+        ),
+        adminAuthSession.request(
+          `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platform.platform_id)}/commerce/offers`,
+          { cache: 'no-store' },
+        ),
+      ]);
       const subscriptionPayload =
         await readApiPayload<IntegrationSubscriptionFact>(subscriptionResponse);
+      const offersPayload =
+        await readApiPayload<IntegrationCommerceOfferFact[]>(offersResponse);
       if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       setSubscription(
         subscriptionResponse.ok
           ? (subscriptionPayload?.data ?? null)
+          : undefined,
+      );
+      setOffers(
+        offersResponse.ok && Array.isArray(offersPayload?.data)
+          ? offersPayload.data
           : undefined,
       );
     } catch {
@@ -103,6 +122,7 @@ export function PlatformIntegrationPage() {
     setOrigins(undefined);
     setKeys(undefined);
     setSubscription(undefined);
+    setOffers(undefined);
     setRefreshVersion((current) => current + 1);
     void loadSubscription();
   }
@@ -112,6 +132,7 @@ export function PlatformIntegrationPage() {
     origins,
     keys,
     subscription,
+    offers,
   });
   const encoded = encodeURIComponent(platform.platform_id);
   const nextHref =
@@ -247,15 +268,15 @@ export function PlatformIntegrationPage() {
             <h2>商业能力（按需）</h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
               免费平台不需要为了完成基础接入配置付费商品。需要售卖订阅时，再配置
-              paid Plan 与购买周期。
+              paid Plan、Offer/Price 与 Provider Mapping。
             </p>
           </div>
           <Button
             variant="outline"
             nativeButton={false}
-            render={<Link href={`/admin/platforms/${encoded}/settings`} />}
+            render={<Link href={`/admin/platforms/${encoded}/plans`} />}
           >
-            打开平台设置
+            打开商业目录
           </Button>
         </div>
       </section>

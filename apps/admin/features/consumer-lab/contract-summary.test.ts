@@ -10,7 +10,7 @@ describe('consumer lab contract summaries', () => {
   it('reads the current canonical Account contract', () => {
     expect(accountContractSummary.major).toBe('v1');
     expect(accountContractSummary.version).toBe('1.2.0');
-    expect(accountContractSummary.operations).toHaveLength(46);
+    expect(accountContractSummary.operations).toHaveLength(47);
     expect(accountContractSummary.operations).toContainEqual(
       expect.objectContaining({
         method: 'GET',
@@ -23,7 +23,7 @@ describe('consumer lab contract summaries', () => {
   it('reads the current canonical Admin contract', () => {
     expect(adminContractSummary.major).toBe('v1');
     expect(adminContractSummary.version).toBe('1.0.0');
-    expect(adminContractSummary.operations).toHaveLength(65);
+    expect(adminContractSummary.operations).toHaveLength(77);
     expect(adminContractSummary.operations).toContainEqual(
       expect.objectContaining({
         method: 'GET',
