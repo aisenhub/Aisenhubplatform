@@ -352,7 +352,7 @@ export function IdentityDetailPage({ userId }: { userId: string }) {
                       <ResourceId value={account.platform_account_id} />
                     </div>
                     <Link
-                      href={`/admin/platforms/${account.platform_id}/accounts?selected=${account.platform_account_id}`}
+                      href={`/admin/platforms/${account.platform_id}/accounts/${account.platform_account_id}`}
                       className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
                       进入平台账户

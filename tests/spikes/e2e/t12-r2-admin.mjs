@@ -44,10 +44,15 @@ const sql = postgres(databaseUrl, {
   onnotice: () => undefined,
 });
 const platformId = crypto.randomUUID();
+const otherPlatformId = crypto.randomUUID();
 const platformAccountId = crypto.randomUUID();
+const paginationAccountIds = Array.from({ length: 21 }, () =>
+  crypto.randomUUID(),
+);
 const configPlatformKeyId = crypto.randomUUID();
 const planId = crypto.randomUUID();
 const platformCode = `t12-r2-browser-${crypto.randomUUID()}`;
+const otherPlatformCode = `t12-r2-other-${crypto.randomUUID()}`;
 const email = `t12-r2-browser-${crypto.randomUUID()}@example.test`;
 const password = `T12-R2-${randomBytes(16).toString('hex')}!`;
 const lifecycleEmail = `t12-r2-lifecycle-${crypto.randomUUID()}@example.test`;
@@ -227,6 +232,10 @@ async function createFixtures() {
     values (${platformId}, ${platformCode}, 'T12 R2 Browser', 'active', true)
   `;
   await sql`
+    insert into public.platforms (id, code, name, status, allow_activation)
+    values (${otherPlatformId}, ${otherPlatformCode}, 'T12 R2 Other Platform', 'active', true)
+  `;
+  await sql`
     insert into public.plans (id, platform_id, code, name, kind, features)
     values (${planId}, ${platformId}, 'free', 'Free', 'free', ${sql.json({ config_slot_limit: 3 })})
   `;
@@ -234,6 +243,27 @@ async function createFixtures() {
     insert into public.platform_accounts (id, platform_id, user_id, status)
     values (${platformAccountId}, ${platformId}, ${userId}, 'active')
   `;
+  await sql`
+    insert into public.platform_profiles (
+      platform_account_id, display_name, avatar_url, bio, locale, timezone
+    ) values (
+      ${platformAccountId}, 'T12 Workbench User', 'https://example.invalid/t12-avatar.png',
+      'T12 Account 360 profile', 'zh-CN', 'Asia/Shanghai'
+    )
+  `;
+  for (const [index, accountId] of paginationAccountIds.entries()) {
+    await sql`
+      insert into public.platform_accounts (
+        id, platform_id, user_id, status, closed_at, anonymized_at, created_at, updated_at
+      ) values (
+        ${accountId}, ${platformId}, null, 'closed',
+        now() - (${index + 1} * interval '1 minute'),
+        now() - (${index + 1} * interval '1 minute'),
+        now() - (${index + 1} * interval '1 minute'),
+        now() - (${index + 1} * interval '1 minute')
+      )
+    `;
+  }
   await sql`
     update public.platforms
     set default_plan_id = ${planId}
@@ -1039,7 +1069,7 @@ async function runBrowserFlow(secret) {
   });
   await page.unroute(plansRoute);
 
-  const architectureBehavior = await runArchitectureBehaviorMatrix();
+  const architectureBehavior = await runArchitectureBehaviorMatrix(secret);
   const responsiveA11y = await runResponsiveA11yMatrix();
 
   await page.getByRole('button', { name: '退出登录' }).click();
@@ -1105,7 +1135,15 @@ async function runBrowserFlow(secret) {
   };
 }
 
-async function runArchitectureBehaviorMatrix() {
+async function runArchitectureBehaviorMatrix(secret) {
+  await sql`
+    insert into public.platform_feedback (
+      platform_id, platform_account_id, user_id, category, title, body, status, submitted_at
+    ) values (
+      ${platformId}, ${platformAccountId}, ${userId}, 'other',
+      'T12 Account 360 feedback', 'Account workbench summary fixture', 'new', now()
+    )
+  `;
   const identityRequests = [];
   const observeIdentityRequest = (request) => {
     if (
@@ -1211,11 +1249,331 @@ async function runArchitectureBehaviorMatrix() {
     await accountDeepLink.waitFor({ state: 'visible' });
     await accountDeepLink.click();
     await page.waitForURL(
-      `**/admin/platforms/${platformId}/accounts?selected=${platformAccountId}`,
+      `**/admin/platforms/${platformId}/accounts/${platformAccountId}`,
     );
+    await page.locator('[data-test="account-workbench-page"]').waitFor({
+      state: 'visible',
+    });
   } finally {
     page.off('request', observeIdentityRequest);
   }
+
+  assert.match(
+    await page.locator('[data-test="account-workbench-overview"]').innerText(),
+    /T12 Workbench User|Global Identity email/u,
+    'Account 360 must expose the platform profile and read-only identity summary',
+  );
+  assert.match(
+    await page
+      .locator('[data-test="account-workbench-entitlement"]')
+      .innerText(),
+    /Free|active/u,
+    'Account 360 must expose the current Plan/Subscription projection',
+  );
+  assert.match(
+    await page.locator('[data-test="account-workbench-config"]').innerText(),
+    /Active 1/u,
+    'Account 360 must expose the authoritative Config summary',
+  );
+  assert.match(
+    await page.locator('[data-test="account-workbench-feedback"]').innerText(),
+    /有效反馈 1/u,
+    'Account 360 must expose the authoritative Feedback summary',
+  );
+  const crossPlatformAccount = await browserRequest(
+    `/api/v1/admin/api/v1/platforms/${otherPlatformId}/accounts/${platformAccountId}`,
+  );
+  assertStatus(
+    crossPlatformAccount.status,
+    404,
+    'Account 360 cross-platform IDOR',
+  );
+
+  await page
+    .locator('[data-test="account-tags-input"]')
+    .fill(' VIP, follow-up ');
+  const [tagsResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/accounts/${platformAccountId}/tags`,
+          ) && response.request().method() === 'PUT',
+    ),
+    page.locator('[data-test="account-tags-save"]').click(),
+  ]);
+  assertStatus(tagsResponse.status(), 200, 'Account 360 tags replace');
+  const [supportTags] = await sql`
+    select array_agg(tag order by tag) as tags
+    from public.platform_account_admin_tags
+    where platform_id = ${platformId} and platform_account_id = ${platformAccountId}
+  `;
+  assert.deepEqual(supportTags.tags, ['follow-up', 'vip']);
+
+  await page
+    .locator('[data-test="account-note-input"]')
+    .fill('T12 support note');
+  const [noteResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/accounts/${platformAccountId}/notes`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="account-note-add"]').click(),
+  ]);
+  assertStatus(noteResponse.status(), 201, 'Account 360 note append');
+  await page.getByText('T12 support note', { exact: true }).waitFor({
+    state: 'visible',
+  });
+
+  await sql`
+    update private.admin_step_up
+    set expires_at = verified_at + interval '1 second'
+    where user_id = ${userId}
+  `;
+  await new Promise((resolve) => setTimeout(resolve, 1_200));
+  await page.locator('[data-test="account-workbench-toggle"]').click();
+  await page
+    .locator('[data-test="confirm-action-reason"]')
+    .fill('T12 account risk review');
+  const [expiredAccountProof] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/accounts/${platformAccountId}/suspend`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    expiredAccountProof.status(),
+    403,
+    'expired Account governance proof',
+  );
+  assert.equal(
+    (await expiredAccountProof.json()).error?.code,
+    'RECENT_MFA_REQUIRED',
+  );
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
+    state: 'visible',
+  });
+  const waitForAccountTotpMs = 31_000 - (Date.now() % 30_000);
+  await new Promise((resolve) => setTimeout(resolve, waitForAccountTotpMs));
+  await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
+  const [accountMfaResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/auth/mfa/verify'),
+    ),
+    page.locator('[data-test="recent-mfa-submit"]').click(),
+  ]);
+  assertStatus(
+    accountMfaResponse.status(),
+    200,
+    'Account governance recent MFA',
+  );
+  await page.locator('[data-test="recent-mfa-panel"]').waitFor({
+    state: 'detached',
+  });
+  const [accountBeforeExplicitSubmit] = await sql`
+    select status from public.platform_accounts where id = ${platformAccountId}
+  `;
+  assert.equal(
+    accountBeforeExplicitSubmit.status,
+    'active',
+    'Account step-up must not replay the governance write',
+  );
+  await page
+    .locator('[data-test="confirm-action-reason"]')
+    .fill('T12 account risk review');
+  const [accountSuspendResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/accounts/${platformAccountId}/suspend`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    accountSuspendResponse.status(),
+    200,
+    'explicit Account suspend resubmit',
+  );
+  await page.getByText('T12 account risk review', { exact: true }).waitFor({
+    state: 'visible',
+  });
+  const [governanceEvent] = await sql`
+    select action, reason
+    from public.platform_account_governance_events
+    where platform_id = ${platformId} and platform_account_id = ${platformAccountId}
+    order by created_at desc, id desc
+    limit 1
+  `;
+  assert.deepEqual(governanceEvent, {
+    action: 'suspend',
+    reason: 'T12 account risk review',
+  });
+
+  await page.locator('[data-test="account-workbench-toggle"]').click();
+  await page
+    .locator('[data-test="confirm-action-reason"]')
+    .fill('T12 account review completed');
+  const [accountRestoreResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/accounts/${platformAccountId}/restore`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    accountRestoreResponse.status(),
+    200,
+    'Account restore after governance test',
+  );
+
+  const [accountFilterFacts] = await sql`
+    select a.status as account_status, p.display_name, s.plan_id,
+      s.status as subscription_status, platform.default_plan_id
+    from public.platform_accounts a
+    join public.platforms platform on platform.id = a.platform_id
+    left join public.platform_profiles p on p.platform_account_id = a.id
+    left join public.subscriptions s
+      on s.platform_id = a.platform_id and s.platform_account_id = a.id
+    where a.platform_id = ${platformId} and a.id = ${platformAccountId}
+  `;
+  assert.deepEqual(accountFilterFacts, {
+    account_status: 'active',
+    display_name: 'T12 Workbench User',
+    plan_id: null,
+    subscription_status: 'active',
+    default_plan_id: planId,
+  });
+  const directFilteredAccounts = await browserRequest(
+    `/api/v1/admin/api/v1/platforms/${platformId}/accounts?limit=20&q=${encodeURIComponent('T12 Workbench User')}&status=active&plan_id=${planId}&subscription_status=active`,
+  );
+  assertStatus(
+    directFilteredAccounts.status,
+    200,
+    'Account list direct combined filters',
+  );
+  assert.equal(
+    directFilteredAccounts.payload?.data?.length,
+    1,
+    'Account list direct combined filters must return one account',
+  );
+  assert.equal(
+    directFilteredAccounts.payload?.data?.[0]?.platform_account_id,
+    platformAccountId,
+    'Account list direct combined filters must return the expected account',
+  );
+
+  const accountListResponse = page.waitForResponse(
+    (response) =>
+      response
+        .url()
+        .includes(`/api/v1/admin/api/v1/platforms/${platformId}/accounts?`) &&
+      response.request().method() === 'GET',
+  );
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/accounts`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await accountListResponse;
+  await page
+    .locator('[data-test="accounts-table"]')
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await page.locator('[data-test^="account-row-"]').count(),
+    20,
+    'Account list first page must be bounded to 20 rows',
+  );
+  const nextAccountPageResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).searchParams.has('cursor') &&
+      response
+        .url()
+        .includes(`/api/v1/admin/api/v1/platforms/${platformId}/accounts`) &&
+      response.request().method() === 'GET',
+  );
+  await page.locator('[data-test="accounts-next-page"]').click();
+  const secondPagePayload = await (await nextAccountPageResponse).json();
+  assert.equal(
+    secondPagePayload?.data?.length,
+    2,
+    'Account list API second page must advance without overlap',
+  );
+  await page.waitForURL((url) => Boolean(url.searchParams.get('cursor')));
+  await page
+    .locator('[data-test="accounts-table"]')
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await page.locator('[data-test^="account-row-"]').count(),
+    2,
+    'Account list second page must advance without overlap',
+  );
+  await page.getByRole('button', { name: '返回首页' }).click();
+  await page.waitForURL((url) => !url.searchParams.get('cursor'));
+
+  await page.locator('[data-test="accounts-query"]').fill('T12 Workbench User');
+  await page
+    .locator('[data-test="accounts-status-filter"]')
+    .selectOption('active');
+  await page.locator('[data-test="accounts-plan-filter"]').selectOption(planId);
+  await page
+    .locator('[data-test="accounts-subscription-filter"]')
+    .selectOption('active');
+  const filteredAccountsResponse = page.waitForResponse(
+    (response) =>
+      response
+        .url()
+        .includes(`/api/v1/admin/api/v1/platforms/${platformId}/accounts`) &&
+      new URL(response.url()).searchParams.get('q') === 'T12 Workbench User' &&
+      new URL(response.url()).searchParams.get('status') === 'active' &&
+      new URL(response.url()).searchParams.get('plan_id') === planId &&
+      new URL(response.url()).searchParams.get('subscription_status') ===
+        'active' &&
+      response.request().method() === 'GET',
+  );
+  await page.locator('[data-test="accounts-query-submit"]').click();
+  const filteredAccountsPayload = await (await filteredAccountsResponse).json();
+  assert.equal(
+    filteredAccountsPayload?.data?.length,
+    1,
+    'Account list API filters must return the single matching account',
+  );
+  assert.equal(
+    filteredAccountsPayload?.data?.[0]?.platform_account_id,
+    platformAccountId,
+    'Account list API filters must return the expected Platform Account',
+  );
+  await page.waitForURL(
+    (url) =>
+      url.searchParams.get('q') === 'T12 Workbench User' &&
+      url.searchParams.get('status') === 'active' &&
+      url.searchParams.get('plan_id') === planId &&
+      url.searchParams.get('subscription_status') === 'active',
+  );
+  await page
+    .locator(`[data-test="account-row-${platformAccountId}"]`)
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await page
+      .locator(`[data-test="account-row-${platformAccountId}"]`)
+      .count(),
+    1,
+    'Account filters must run server-side before cursor pagination',
+  );
 
   const lifecycleDetail = await browserRequest(
     `/api/v1/admin/api/v1/accounts/${lifecycleUserId}`,
@@ -1416,6 +1774,12 @@ async function runArchitectureBehaviorMatrix() {
     identitySubmitSingleRequest: 'PASS',
     identityPlatformScopeSingleRequest: 'PASS',
     identityUidDetailAccountDeepLink: 'PASS',
+    accountWorkbenchDetail: 'PASS',
+    accountWorkbenchSupport: 'PASS',
+    accountWorkbenchGovernance: 'PASS',
+    accountWorkbenchPagination: 'PASS',
+    accountWorkbenchFilters: 'PASS',
+    accountWorkbenchIdor: 'PASS',
     identityDeletionStart: 'PASS',
     identityDeletionRetry: 'PASS',
     operationsCompatibilityRedirect: 'PASS',
@@ -1442,6 +1806,10 @@ async function runResponsiveA11yMatrix() {
     {
       label: 'Accounts',
       path: `/admin/platforms/${platformId}/accounts`,
+    },
+    {
+      label: 'Account 360',
+      path: `/admin/platforms/${platformId}/accounts/${platformAccountId}`,
     },
     {
       label: 'Platform Billing',
@@ -1690,7 +2058,19 @@ try {
     await sql`delete from public.platform_file_policies where platform_id = ${platformId}`.catch(
       () => undefined,
     );
-    await sql`delete from public.platform_accounts where id = ${platformAccountId}`.catch(
+    await sql`delete from public.platform_account_admin_tags where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_account_admin_notes where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_account_governance_events where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.subscriptions where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_accounts where platform_id = ${platformId}`.catch(
       () => undefined,
     );
     await sql`delete from public.platform_subscription_config where platform_id = ${platformId}`.catch(
@@ -1706,6 +2086,9 @@ try {
       () => undefined,
     );
     await sql`delete from public.platforms where id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platforms where id = ${otherPlatformId}`.catch(
       () => undefined,
     );
   }

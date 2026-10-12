@@ -1,6 +1,6 @@
 begin;
 
-select plan(37);
+select plan(40);
 
 select has_table('public','platform_account_admin_tags','Account support tags table exists');
 select has_table('public','platform_account_admin_notes','Account support notes table exists');
@@ -29,7 +29,11 @@ insert into public.platforms(id,code,name,status,allow_activation) values
  ('00000000-0000-4000-8000-000000009020','account-workbench','Account Workbench','active',true),
  ('00000000-0000-4000-8000-000000009021','account-other','Account Other','active',true);
 insert into public.plans(id,platform_id,code,name,kind,status) values
- ('00000000-0000-4000-8000-000000009030','00000000-0000-4000-8000-000000009020','pro','Pro Plan','paid','active');
+ ('00000000-0000-4000-8000-000000009030','00000000-0000-4000-8000-000000009020','pro','Pro Plan','paid','active'),
+ ('00000000-0000-4000-8000-000000009031','00000000-0000-4000-8000-000000009020','free','Free Plan','free','active');
+update public.platforms
+set default_plan_id='00000000-0000-4000-8000-000000009031', default_plan_kind='free'
+where id='00000000-0000-4000-8000-000000009020';
 insert into public.platform_accounts(id,platform_id,user_id,status,activated_at,created_at,updated_at) values
  ('00000000-0000-4000-8000-000000009040','00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009001','active',now()-interval '10 days',now()-interval '10 days',now()-interval '1 day'),
  ('00000000-0000-4000-8000-000000009041','00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009002','active',now()-interval '5 days',now()-interval '5 days',now()-interval '2 days'),
@@ -78,6 +82,16 @@ select * from private.admin_account_list_v3(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009084')::private.admin_context,
  '00000000-0000-4000-8000-000000009020',null,20,'active',null,null,null,null,null,null
 );
+create temporary table free_account_filtered on commit drop as
+select * from private.admin_account_list_v3(
+ row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009072')::private.admin_context,
+ '00000000-0000-4000-8000-000000009020',null,20,'Free','active','00000000-0000-4000-8000-000000009031','none',null,null,null
+);
+create temporary table free_workbench_read on commit drop as
+select * from private.admin_account_workbench_read(
+ row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009073')::private.admin_context,
+ '00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009041'
+);
 create temporary table workbench_read on commit drop as
 select * from private.admin_account_workbench_read(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009085')::private.admin_context,
@@ -96,6 +110,9 @@ select is((select count(*)::integer from account_page_two),1,'second cursor page
 select is((select platform_account_id from account_filtered),'00000000-0000-4000-8000-000000009040'::uuid,'filters apply before pagination');
 select is((select count(*)::integer from account_status_search),2,'v3 text search preserves account status matching');
 select ok((select plan_code='pro' and subscription_status='active' and tags=array['beta','vip']::text[] from account_filtered),'list projects current plan subscription and tags');
+select is((select platform_account_id from free_account_filtered),'00000000-0000-4000-8000-000000009041'::uuid,'default free Plan participates in server-side Plan filtering and search');
+select ok((select plan_code='free' and plan_kind='free' and subscription_status='none' from free_account_filtered),'list projects effective default free Plan without inventing a subscription');
+select ok((select plan_code='free' and plan_kind='free' and subscription_status='none' from free_workbench_read),'Account 360 projects effective default free Plan');
 select ok((select display_name='Alice Workbench' and config_active_count=1 and feedback_count=1 and feedback_open_count=1 from workbench_read),'Account 360 aggregates profile Config and Feedback authority');
 select ok((select billing_order_count=0 and billing_attention_count=0 and billing_latest='{}'::jsonb from workbench_read),'Account 360 keeps Billing summary safe and bounded');
 select ok((select jsonb_array_length(notes)=1 and tags=array['beta','vip']::text[] from workbench_read),'Account 360 includes protected support context');

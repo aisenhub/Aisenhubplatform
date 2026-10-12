@@ -489,7 +489,7 @@ export function CentralAccountsPage() {
                               </div>
                             </div>
                             <Link
-                              href={`/admin/platforms/${account.platform_id}/accounts?selected=${account.platform_account_id}`}
+                              href={`/admin/platforms/${account.platform_id}/accounts/${account.platform_account_id}`}
                               className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                             >
                               进入账户

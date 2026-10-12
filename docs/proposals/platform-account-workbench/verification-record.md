@@ -26,7 +26,7 @@
 | --- | --- | --- | --- |
 | 01 Domain/read model | Completed | migration + `t31`、fresh/non-empty upgrade、canonical R3 全绿 | 无 |
 | 02 Admin API/contract | Completed | API 107/0、Admin unit 64/64、t31 37/37、OpenAPI 46/65、Consumer snapshot/compatibility、breaking、canonical R3 全绿 | 无 |
-| 03 Account 360 UI | In Progress | Phase 02 已通过串行退出门禁 | 无 |
+| 03 Account 360 UI | Completed | URL-backed cursor/filter 列表、独立 Account 360、support/governance、安全交互、100-route browser matrix、canonical R3 全绿 | 无 |
 | 04 Lifecycle/release | Not Started | - | 依赖 01–03 |
 
 ## 实施与验证日志
@@ -42,9 +42,14 @@
 | 2026-10-12 | Phase 02 DB forward-fix | `20261012054500_platform_account_workbench_search_fix.sql` + `t31` | PASS：恢复 list v3 对 status 的 q 搜索兼容；`t31` 37/37 |
 | 2026-10-12 | Phase 02 Admin/contract | Admin unit + `contracts:check` + `contracts:breaking` | PASS：Admin 14 files / 64 tests；OpenAPI account/admin 46/65；Consumer Lab snapshot 与 compatibility PASS；breaking 对 `origin/main` PASS |
 | 2026-10-12 | Phase 02 canonical R3 | `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1457、API 107/0、Admin T12 + 95-route responsive/a11y、docs 184、OpenAPI 46/65、Consumer/registry/runtime/contracts 全绿 |
+| 2026-10-12 | Phase 03 Admin UI/static | Account list + `/admin/platforms/:platformId/accounts/:accountId` + Admin unit/typecheck/build | PASS：列表改为 20 条 stable cursor、URL-backed q/status/Plan/subscription/tag/joined filters；独立 Account 360 汇总 Profile/Entitlement/Billing/Config/Feedback、tags/notes、governance timeline 与 Global Identity 深链；Admin unit 15 files / 67 tests、typecheck/build PASS |
+| 2026-10-12 | Phase 03 browser hardening | `tests/spikes/e2e/t12-r2-admin.mjs` | FIXED：扩展 T12 时依次暴露测试 fixture/等待条件问题（IDOR 平台 code 与旧 selector 前缀碰撞、原 Feedback 已在前序链隐私删除、cursor 导航 React loading/RSC 响应竞态）；均收窄为独立 fixture / 精确 BFF JSON 等待，不改变既有产品语义 |
+| 2026-10-12 | Phase 03 effective Plan forward-fix | `20261012070000_platform_account_workbench_effective_plan.sql` + fresh `db:reset` + `t31` | PASS：真实 browser 揭示 free subscription projection 经 entitlement recompute 后 `plan_id=null`；按 design/architecture 的“当前有效 Plan”语义修复 list v3 与 Account 360，使 active default free Plan 参与投影/搜索/Plan filter，subscription 状态保持独立；fresh 106 migrations 完整应用；`t31` 40/40；全 DB 71 files / 1460 tests PASS |
+| 2026-10-12 | Phase 03 real browser | Admin T12 | PASS：Global Identity→Account 360 deep link、Profile/effective Plan/Config/Feedback 摘要、tags/notes、reason timeline、recent-MFA 不自动重放 + 显式 resubmit、cross-platform IDOR、20-row cursor pagination、组合 server-side filters 全绿；responsive/a11y 5 viewports × 20 routes = 100 observations，overflow/semantic controls/dialog focus/tab navigation 全 PASS |
+| 2026-10-12 | Phase 03 canonical R3 | `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1460、API 107/0、Account workbench browser 六组 architecture behavior 全 PASS、100-route responsive/a11y、docs 184、OpenAPI account/admin 46/65、breaking/Consumer/registry/runtime/contracts 全绿 |
 
 ## 规则
 
 - 不预填 PASS。
 - 每个失败/修复/复测、migration/Edge/staging、commit/PR/main/branch 状态都追加到本文件。
-- Phase 01–02 已通过完整本地 R3；OPT-009 仍保持 In Progress，必须完成 Phase 03–04、适用 staging 与 GitHub main closeout 后才能标记 Completed。
+- Phase 01–03 已通过完整本地 R3；OPT-009 仍保持 In Progress，必须完成 Phase 04、适用 staging 与 GitHub main closeout 后才能标记 Completed。

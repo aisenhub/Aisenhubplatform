@@ -4,6 +4,15 @@ export type Account = {
   platform_account_id: string;
   user_id: string | null;
   status: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  plan_id?: string | null;
+  plan_code?: string | null;
+  plan_name?: string | null;
+  plan_kind?: string | null;
+  subscription_status?: string | null;
+  current_period_end?: string | null;
+  tags?: string[];
   activated_at?: string | null;
   suspended_at?: string | null;
   closed_at?: string | null;
@@ -12,6 +21,50 @@ export type Account = {
   platform_id?: string;
   platform_code?: string;
   platform_name?: string;
+};
+
+export type AccountIdentitySummary = {
+  user_id: string | null;
+  email: string | null;
+};
+
+export type AccountAdminNote = {
+  id: string;
+  body: string;
+  created_by: string | null;
+  created_at: string | null;
+  redacted_at: string | null;
+};
+
+export type AccountGovernanceEvent = {
+  id: string;
+  action: string;
+  reason: string;
+  actor_admin_user_id: string | null;
+  created_at: string | null;
+};
+
+export type AccountWorkbench = Account & {
+  anonymized_at?: string | null;
+  bio?: string | null;
+  locale?: string | null;
+  timezone?: string | null;
+  subscription_started_at?: string | null;
+  next_transition_at?: string | null;
+  billing_order_count: number | string;
+  billing_attention_count: number | string;
+  billing_latest: Record<string, unknown>;
+  config_active_count: number | string;
+  config_published_count: number | string;
+  config_pending_review_count: number | string;
+  config_latest_updated_at: string | null;
+  feedback_count: number | string;
+  feedback_open_count: number | string;
+  feedback_latest_submitted_at: string | null;
+  tags: string[];
+  notes: AccountAdminNote[];
+  governance_events: AccountGovernanceEvent[];
+  identity: AccountIdentitySummary;
 };
 
 export type GlobalIdentityAccount = {
