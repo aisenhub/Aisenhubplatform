@@ -1,6 +1,6 @@
 # OPT-004 单平台运营概览计划
 
-状态：Complete
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -35,4 +35,3 @@
 - paid account 必须依赖 Plan kind 与有效订阅区间，不能把任意 subscription row 算付费。
 - Billing 的订单事实与收入事实不同，本项不推导收入。
 - 后续 OPT-007/008/010 会扩展 Overview 数据源；本项 API 应保持向后兼容，未来用新字段/版本扩展而不是重解释已发布字段。
-
