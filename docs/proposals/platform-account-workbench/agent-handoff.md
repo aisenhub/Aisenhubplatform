@@ -2,8 +2,8 @@
 
 - 优化名称：OPT-009 单平台账户工作台与账户治理
 - 总计划：[plan.md](plan.md)
-- 当前阶段：Phase 02 / In Progress
-- 任务分支：`codex/opt-009-account-workbench`
+- 当前阶段：Completed / handoff to OPT-010
+- 任务分支：`codex/opt-009-account-workbench`（已合并并清理）
 - 基线：`main@e5376b6a4c626a9c55e86d64633491c20fdfde19`
 - 风险：R3
 
@@ -23,16 +23,18 @@
 5. suspend/restore/close 继续 recent-MFA、显式确认、reason、unknown-outcome 不自动重放。
 6. Config/Feedback/Billing 只读聚合，不修改其领域状态机。
 7. Global Delete/retention 必须最小化 Admin notes/reasons/tags。
-8. Production 未授权。
+8. Production 不属于 OPT-009 发布目标，NOT_RUN。
 
 ## 当前执行环境
 
-远端 GitHub 主线与 Actions 可用，本地 Runner 已恢复。Phase 01 已完成 fresh/non-empty upgrade、71/1456 DB 回归与 canonical `TASK-0801` 20/20 gates；当前从该已验证基线进入 Phase 02 Admin API/OpenAPI。
+OPT-009 四阶段已完成：最终本地 canonical `TASK-0801` 20/20 gates，DB 71/1472、API 107/0；`workendstaging` 已同步至 migration `20261012094715` 与 `account-api` v61；PR #15 的 GitHub Actions run #155 PASS，并以 rebase 合并至 `main@0bb6e7f835f75698b10cabdfebd59b5b7609e224`。原任务分支本地/远端均已清理。
+
+下一步只允许从最新 `main` 重新核对 OPT-010 的 intake/预研架构与现有商业代码，不沿用 OPT-009 分支或旧基线。
 
 ## 退出条件
 
-- [ ] 四阶段交付。
-- [ ] Local 或等价 GitHub CI canonical R3 无 FAIL/BLOCKED。
-- [ ] migration/API/OpenAPI/Browser/Privacy 证据完整。
-- [ ] 已授权 staging 与最终 main 对齐。
-- [ ] main/任务分支 closeout 完成，之后才进入 OPT-010。
+- [x] 四阶段交付。
+- [x] Local 与 GitHub CI canonical R3 无 FAIL/BLOCKED。
+- [x] migration/API/OpenAPI/Browser/Privacy 证据完整。
+- [x] 已授权 staging 与最终 main 对齐。
+- [x] main/原任务分支 closeout 完成，可以从最新 main 进入 OPT-010。
