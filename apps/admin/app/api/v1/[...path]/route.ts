@@ -31,6 +31,11 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/keys`) ||
       matches(`platforms/${id}/plans`) ||
       matches(`platforms/${id}/subscription-config`) ||
+      matches(`platforms/${id}/commerce/offers`) ||
+      matches(`platforms/${id}/commerce/provider-mappings`) ||
+      matches(`platforms/${id}/commerce/entitlements`) ||
+      matches(`platforms/${id}/commerce/campaigns`) ||
+      matches(`platforms/${id}/commerce/campaigns/${id}/codes`) ||
       matches(`platforms/${id}/config-resources`) ||
       matches(`platforms/${id}/config-resources/${id}`) ||
       matches(`platforms/${id}/config-resources/${id}/usage`) ||
@@ -49,6 +54,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       exact('billing/orders') ||
       matches(`billing/orders/${id}`) ||
       exact('billing/metrics') ||
+      exact('commerce/summary') ||
       exact('billing/provider-products') ||
       exact('deletion-jobs') ||
       matches(`deletion-jobs/${id}`)
@@ -64,6 +70,12 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/keys`) ||
       matches(`platforms/${id}/keys/${id}/(?:revoke|confirm-deployment)`) ||
       matches(`platforms/${id}/plans`) ||
+      matches(`platforms/${id}/commerce/offers`) ||
+      matches(`platforms/${id}/commerce/offers/${id}/commands`) ||
+      matches(`platforms/${id}/commerce/offers/${id}/prices`) ||
+      matches(`platforms/${id}/commerce/prices/${id}/publish`) ||
+      matches(`platforms/${id}/commerce/provider-mappings`) ||
+      matches(`platforms/${id}/commerce/provider-mappings/${id}/commands`) ||
       matches(`platforms/${id}/config-reviews/${id}/review`) ||
       matches(`platforms/${id}/config-resources/${id}/gallery-governance`) ||
       matches(`platforms/${id}/feedback/${id}/(?:status|flag|notes)`) ||

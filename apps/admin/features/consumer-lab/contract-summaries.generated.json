@@ -46,6 +46,14 @@
       },
       {
         "method": "GET",
+        "path": "/v1/commerce/offers",
+        "operationId": "listCommerceOffers",
+        "security": [
+          "platformKey"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/v1/config-files",
         "operationId": "listConfigFiles",
         "security": [
@@ -512,6 +520,14 @@
       },
       {
         "method": "GET",
+        "path": "/admin/api/v1/commerce/summary",
+        "operationId": "adminGetCommerceSummary",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/admin/api/v1/config-files",
         "operationId": "adminListConfigFiles",
         "security": [
@@ -666,6 +682,94 @@
         "method": "PUT",
         "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/tags",
         "operationId": "adminReplaceAccountTags",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/campaigns",
+        "operationId": "adminListCommerceCampaigns",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/campaigns/{batchId}/codes",
+        "operationId": "adminListCommerceCampaignCodes",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/entitlements",
+        "operationId": "adminListCommerceEntitlements",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/offers",
+        "operationId": "adminListCommerceOffers",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/offers",
+        "operationId": "adminUpsertCommerceOffer",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/offers/{offerId}/commands",
+        "operationId": "adminCommandCommerceOffer",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/offers/{offerId}/prices",
+        "operationId": "adminCreateCommercePrice",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/prices/{priceId}/publish",
+        "operationId": "adminPublishCommercePrice",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/provider-mappings",
+        "operationId": "adminListCommerceProviderMappings",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/provider-mappings",
+        "operationId": "adminUpsertCommerceProviderMapping",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/provider-mappings/{mappingId}/commands",
+        "operationId": "adminCommandCommerceProviderMapping",
         "security": [
           "adminBearer"
         ]

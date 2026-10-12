@@ -5,6 +5,7 @@ import postgres from 'npm:postgres@3.4.3';
 import { readBoundedJson, UploadFault, UploadGate } from '../_shared/upload.ts';
 import { type StorageAdapter } from '../_shared/storage.ts';
 import {
+  type CommerceOfferDto,
   isSubscriptionProductDto,
   type SubscriptionCheckoutDto,
   type SubscriptionProductDto,
@@ -1061,6 +1062,47 @@ export function subscriptionProductDto(row: Row): SubscriptionProductDto {
   return dto;
 }
 
+export function commerceOfferDto(row: Row): CommerceOfferDto {
+  const unit = stringValue(row.duration_unit);
+  const legacy = stringValue(row.legacy_product_code);
+  return {
+    offer_id: uuidValue(row.offer_id) ?? '',
+    code: stringValue(row.offer_code) ?? '',
+    name: stringValue(row.offer_name) ?? '',
+    description: stringValue(row.offer_description),
+    plan: {
+      id: uuidValue(row.plan_id) ?? '',
+      code: stringValue(row.plan_code) ?? '',
+      name: stringValue(row.plan_name) ?? '',
+    },
+    term: {
+      kind: 'finite',
+      duration_value: Number(row.duration_value),
+      duration_unit: unit === 'day' || unit === 'year' ? unit : 'month',
+    },
+    price: {
+      id: uuidValue(row.price_id),
+      amount:
+        row.price_amount === null || row.price_amount === undefined
+          ? null
+          : String(row.price_amount),
+      currency: 'CNY',
+      version:
+        row.price_version === null || row.price_version === undefined
+          ? null
+          : Number(row.price_version),
+    },
+    recommended: row.recommended === true,
+    legacy_product_code:
+      legacy === 'monthly' || legacy === 'yearly' || legacy === 'lifetime'
+        ? legacy
+        : null,
+    purchasable: row.purchasable === true,
+    reason: (stringValue(row.reason) ??
+      'provider_mapping_unavailable') as CommerceOfferDto['reason'],
+  };
+}
+
 export function subscriptionCheckoutDto(
   row: Row,
   paymentUrl: string | null = null,
@@ -1107,16 +1149,26 @@ export function subscriptionCheckoutDto(
   return {
     checkout_id: uuidValue(row.checkout_id ?? row.id) ?? '',
     status,
-    product_code: (stringValue(row.product_code) ??
-      'monthly') as SubscriptionCheckoutDto['product_code'],
+    product_code: (() => {
+      const value = stringValue(row.product_code);
+      return value === 'monthly' || value === 'yearly' || value === 'lifetime'
+        ? value
+        : null;
+    })(),
+    offer_id: uuidValue(row.offer_id ?? row.commercial_offer_id),
+    offer_code: stringValue(row.offer_code ?? row.offer_code_snapshot),
+    plan_id: uuidValue(row.plan_id ?? row.entitlement_plan_id) ?? '',
+    plan_name: stringValue(row.plan_name) ?? '',
+    price_version: Number(row.price_version ?? 0),
     price: String(row.price_amount ?? '0.00'),
     currency: 'CNY',
     term: {
       kind: 'finite',
       duration_value: Number(row.duration_value ?? 0),
-      duration_unit: (stringValue(row.duration_unit) ?? 'month') as
-        | 'month'
-        | 'year',
+      duration_unit: (() => {
+        const value = stringValue(row.duration_unit);
+        return value === 'day' || value === 'year' ? value : 'month';
+      })(),
     },
     expires_at: isoDate(row.expires_at) ?? new Date(0).toISOString(),
     provider_display_name: stringValue(row.provider_display_name),

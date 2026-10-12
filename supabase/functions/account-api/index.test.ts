@@ -296,6 +296,29 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           }
+          if (query.startsWith('select * from private.commerce_offers_list')) {
+            return [
+              {
+                offer_id: '00000000-0000-4000-8000-000000000021',
+                offer_code: 'pro-month',
+                offer_name: 'Pro Monthly',
+                offer_description: 'Pro entitlement for one month',
+                plan_id: '00000000-0000-4000-8000-000000000031',
+                plan_code: 'pro',
+                plan_name: 'Pro',
+                duration_value: 1,
+                duration_unit: 'month',
+                recommended: true,
+                legacy_product_code: null,
+                price_id: '00000000-0000-4000-8000-000000000041',
+                price_amount: '29.90',
+                currency: 'CNY',
+                price_version: 2,
+                purchasable: true,
+                reason: 'ready',
+              },
+            ] as unknown as R[];
+          }
           if (
             query.startsWith(
               'select * from private.subscription_lifetime_purchase_status',
@@ -346,11 +369,16 @@ function fakeDatabase(
                 checkout_id: '00000000-0000-4000-8000-000000000011',
                 status: 'pending',
                 product_code: 'monthly',
+                offer_id: null,
+                offer_code: null,
+                plan_id: '00000000-0000-4000-8000-000000000031',
+                plan_name: 'Pro',
                 price_amount: '19.90',
                 currency: 'CNY',
                 term_kind: 'finite',
                 duration_value: 1,
                 duration_unit: 'month',
+                price_version: 1,
                 expires_at: '2026-09-11T00:30:00.000Z',
                 provider_display_name: null,
                 paid_at: null,
@@ -1012,6 +1040,24 @@ Deno.test('Account API exposes products without a bearer session and preserves p
   assertEquals(payload.data[0].reason, 'provider_mapping_unavailable');
 });
 
+Deno.test('Account API exposes Offer-aware commerce catalog without a bearer session', async () => {
+  const response = await handleRequest(
+    new Request('http://local/functions/v1/account-api/v1/commerce/offers', {
+      headers: { 'X-Platform-Key': `phk_v1_${keyId}_fixture` },
+    }),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+    },
+  );
+  assertEquals(response.status, 200);
+  const payload = await response.json();
+  assertEquals(payload.data[0].code, 'pro-month');
+  assertEquals(payload.data[0].plan.code, 'pro');
+  assertEquals(payload.data[0].price.amount, '29.90');
+  assertEquals(payload.data[0].purchasable, true);
+});
+
 Deno.test('Account API fails closed when the catalog DTO is invalid', async () => {
   const response = await handleRequest(
     new Request(
@@ -1128,6 +1174,89 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
     (await recovered.json()).data.checkout_id,
     '00000000-0000-4000-8000-000000000011',
   );
+});
+
+Deno.test('Account API creates an Offer-aware checkout without accepting client price facts', async () => {
+  const offerId = '00000000-0000-4000-8000-000000000021';
+  let checkoutValues: readonly unknown[] | undefined;
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'offer-checkout-1',
+        },
+        body: JSON.stringify({ offer_id: offerId }),
+      },
+    ),
+    {
+      database: fakeDatabase(
+        (query, values) => {
+          if (query.includes('subscription_checkout_create_v2'))
+            checkoutValues = values;
+        },
+        [],
+        {
+          product_code: null,
+          offer_id: offerId,
+          offer_code: 'pro-month',
+          plan_id: '00000000-0000-4000-8000-000000000031',
+          plan_name: 'Pro',
+          price_amount: '29.90',
+          price_version: 2,
+        },
+      ),
+      platformKeySecret: 'm3-test-platform-secret',
+      checkoutSecret: 'checkout-test-secret',
+      checkoutKeyVersion: 1,
+      checkoutEnabled: true,
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 201);
+  const payload = await response.json();
+  assertEquals(payload.data.product_code, null);
+  assertEquals(payload.data.offer_id, offerId);
+  assertEquals(payload.data.offer_code, 'pro-month');
+  assertEquals(payload.data.plan_name, 'Pro');
+  assertEquals(payload.data.price, '29.90');
+  assertEquals(checkoutValues?.[6], null);
+  assertEquals(checkoutValues?.[7], offerId);
+});
+
+Deno.test('Account API rejects ambiguous checkout catalog selection', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/v1/subscription/checkout',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt()}`,
+          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'ambiguous-checkout',
+        },
+        body: JSON.stringify({
+          product_code: 'monthly',
+          offer_id: '00000000-0000-4000-8000-000000000021',
+        }),
+      },
+    ),
+    {
+      database: fakeDatabase(),
+      platformKeySecret: 'm3-test-platform-secret',
+      checkoutSecret: 'checkout-test-secret',
+      checkoutKeyVersion: 1,
+      checkoutEnabled: true,
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 400);
+  assertEquals((await response.json()).error.code, 'INVALID_INPUT');
 });
 
 Deno.test('Account API preserves paid progress even when the snapshot expiry is in the past', async () => {
@@ -2634,6 +2763,58 @@ Deno.test('Account API uses stable Billing cursors and server-side filters', asy
   assertEquals(nextCall?.values?.[4], keyId);
 });
 
+Deno.test('Account API exposes Commerce Admin reads with bounded server-side filters', async () => {
+  const calls: Array<{ query: string; values?: readonly unknown[] }> = [];
+  const database = fakeDatabase((query, values) =>
+    calls.push({ query, values }),
+  );
+  const dependencies = { database, verifyAccessToken: async () => userId };
+  const auth = { Authorization: `Bearer ${fakeJwt('aal2')}` };
+
+  const summary = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/commerce/summary?platform_id=${platformId}&from=2026-10-01T00:00:00Z&to=2026-10-12T00:00:00Z`,
+      { headers: auth },
+    ),
+    dependencies,
+  );
+  assertEquals(summary.status, 200);
+  const summaryCall = calls.find((call) =>
+    call.query.startsWith('select * from private.admin_commerce_summary'),
+  );
+  assertEquals(summaryCall?.values?.slice(3), [
+    platformId,
+    '2026-10-01T00:00:00.000Z',
+    '2026-10-12T00:00:00.000Z',
+  ]);
+
+  const entitlements = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/commerce/entitlements?limit=1&q=fixture&status=active&plan_id=${keyId}&source=admin&ending_from=2026-10-01T00:00:00Z&ending_to=2026-11-01T00:00:00Z`,
+      { headers: auth },
+    ),
+    dependencies,
+  );
+  assertEquals(entitlements.status, 200);
+  const entitlementCall = calls.find((call) =>
+    call.query.startsWith(
+      'select * from private.admin_commerce_entitlement_list',
+    ),
+  );
+  assertEquals(entitlementCall?.values?.slice(3), [
+    platformId,
+    null,
+    null,
+    1,
+    'fixture',
+    'active',
+    keyId,
+    'admin',
+    '2026-10-01T00:00:00.000Z',
+    '2026-11-01T00:00:00.000Z',
+  ]);
+});
+
 Deno.test('Account API allows subscription config mutation with AAL2 and no recent proof', async () => {
   const base =
     'http://local/functions/v1/account-api/admin/api/v1/platforms/' +
@@ -2672,6 +2853,66 @@ Deno.test('Account API allows subscription config mutation with AAL2 and no rece
 });
 
 Deno.test('Account API keeps recent MFA on critical Admin management operations', async () => {
+  const commerceOfferCreate = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/commerce/offers`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(commerceOfferCreate.status, 403);
+  assertEquals(
+    (await commerceOfferCreate.json()).error.code,
+    'RECENT_MFA_REQUIRED',
+  );
+
+  const redemptionBatchCreate = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/redemption-batches',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(redemptionBatchCreate.status, 403);
+  assertEquals(
+    (await redemptionBatchCreate.json()).error.code,
+    'RECENT_MFA_REQUIRED',
+  );
+
+  const entitlementCommand = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/subscriptions/${sessionId}/commands?platform_id=${platformId}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(entitlementCommand.status, 403);
+  assertEquals(
+    (await entitlementCommand.json()).error.code,
+    'RECENT_MFA_REQUIRED',
+  );
+
   const keyCreate = await handleRequest(
     new Request(
       `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/keys`,

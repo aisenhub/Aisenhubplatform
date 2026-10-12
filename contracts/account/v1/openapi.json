@@ -77,7 +77,7 @@
       "get": {
         "operationId": "listSubscriptionProducts",
         "tags": ["subscription"],
-        "description": "Returns the fixed product catalog and platform-specific availability. Provider checkout is not enabled in this phase.",
+        "description": "Returns the backward-compatible fixed product catalog and platform-specific purchase readiness.",
         "security": [
           {
             "platformKey": []
@@ -101,6 +101,21 @@
           "503": {
             "$ref": "#/components/responses/Unavailable"
           }
+        }
+      }
+    },
+    "/v1/commerce/offers": {
+      "get": {
+        "operationId": "listCommerceOffers",
+        "tags": ["subscription"],
+        "description": "Returns active platform commercial Offers with the current Price, target Plan and server-derived purchase readiness.",
+        "security": [{ "platformKey": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformKey" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/CommerceOffers" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
         }
       }
     },
@@ -2253,13 +2268,20 @@
           "application/json": {
             "schema": {
               "type": "object",
-              "required": ["product_code"],
               "properties": {
                 "product_code": {
                   "type": "string",
                   "enum": ["monthly", "yearly", "lifetime"]
+                },
+                "offer_id": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               },
+              "oneOf": [
+                { "required": ["product_code"] },
+                { "required": ["offer_id"] }
+              ],
               "additionalProperties": false
             }
           }
@@ -2654,12 +2676,106 @@
           }
         }
       },
+      "CommerceOffer": {
+        "type": "object",
+        "required": [
+          "offer_id",
+          "code",
+          "name",
+          "description",
+          "plan",
+          "term",
+          "price",
+          "recommended",
+          "legacy_product_code",
+          "purchasable",
+          "reason"
+        ],
+        "properties": {
+          "offer_id": { "type": "string", "format": "uuid" },
+          "code": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": ["string", "null"] },
+          "plan": {
+            "type": "object",
+            "required": ["id", "code", "name"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "code": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          },
+          "term": {
+            "type": "object",
+            "required": ["kind", "duration_value", "duration_unit"],
+            "properties": {
+              "kind": { "type": "string", "const": "finite" },
+              "duration_value": { "type": "integer", "minimum": 1 },
+              "duration_unit": {
+                "type": "string",
+                "enum": ["day", "month", "year"]
+              }
+            },
+            "additionalProperties": false
+          },
+          "price": {
+            "type": "object",
+            "required": ["id", "amount", "currency", "version"],
+            "properties": {
+              "id": { "type": ["string", "null"], "format": "uuid" },
+              "amount": {
+                "type": ["string", "null"],
+                "pattern": "^[0-9]+\\.[0-9]{2}$"
+              },
+              "currency": { "type": "string", "const": "CNY" },
+              "version": { "type": ["integer", "null"], "minimum": 1 }
+            },
+            "additionalProperties": false
+          },
+          "recommended": { "type": "boolean" },
+          "legacy_product_code": {
+            "type": ["string", "null"],
+            "enum": ["monthly", "yearly", "lifetime", null]
+          },
+          "purchasable": { "type": "boolean" },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "platform_disabled",
+              "purchases_paused",
+              "plan_unavailable",
+              "price_unavailable",
+              "provider_mapping_unavailable"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "CommerceOfferList": {
+        "type": "object",
+        "required": ["data", "request_id"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CommerceOffer" }
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
+      },
       "SubscriptionCheckout": {
         "type": "object",
         "required": ["data", "request_id"],
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/SubscriptionCheckoutData"
+            "oneOf": [
+              { "$ref": "#/components/schemas/SubscriptionCheckoutData" },
+              {
+                "$ref": "#/components/schemas/CommerceSubscriptionCheckoutData"
+              }
+            ]
           },
           "request_id": {
             "type": "string",
@@ -2674,6 +2790,11 @@
           "checkout_id",
           "status",
           "product_code",
+          "offer_id",
+          "offer_code",
+          "plan_id",
+          "plan_name",
+          "price_version",
           "price",
           "currency",
           "term",
@@ -2695,6 +2816,24 @@
           "product_code": {
             "type": "string",
             "enum": ["monthly", "yearly", "lifetime"]
+          },
+          "offer_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "offer_code": {
+            "type": ["string", "null"]
+          },
+          "plan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plan_name": {
+            "type": "string"
+          },
+          "price_version": {
+            "type": "integer",
+            "minimum": 1
           },
           "price": {
             "type": "string",
@@ -2742,6 +2881,65 @@
             "type": ["string", "null"],
             "format": "date-time"
           },
+          "progress": {
+            "$ref": "#/components/schemas/SubscriptionCheckoutProgress"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CommerceSubscriptionCheckoutData": {
+        "type": "object",
+        "required": [
+          "checkout_id",
+          "status",
+          "product_code",
+          "offer_id",
+          "offer_code",
+          "plan_id",
+          "plan_name",
+          "price_version",
+          "price",
+          "currency",
+          "term",
+          "expires_at",
+          "provider_display_name",
+          "payment_url",
+          "paid_at",
+          "granted_at",
+          "progress"
+        ],
+        "properties": {
+          "checkout_id": { "type": "string", "format": "uuid" },
+          "status": { "$ref": "#/components/schemas/BillingCheckoutStatus" },
+          "product_code": { "type": "null" },
+          "offer_id": { "type": "string", "format": "uuid" },
+          "offer_code": { "type": "string", "minLength": 1 },
+          "plan_id": { "type": "string", "format": "uuid" },
+          "plan_name": { "type": "string", "minLength": 1 },
+          "price_version": { "type": "integer", "minimum": 1 },
+          "price": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          },
+          "currency": { "type": "string", "const": "CNY" },
+          "term": {
+            "type": "object",
+            "required": ["kind", "duration_value", "duration_unit"],
+            "properties": {
+              "kind": { "type": "string", "const": "finite" },
+              "duration_value": { "type": "integer", "minimum": 1 },
+              "duration_unit": {
+                "type": "string",
+                "enum": ["day", "month", "year"]
+              }
+            },
+            "additionalProperties": false
+          },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "provider_display_name": { "type": ["string", "null"] },
+          "payment_url": { "type": ["string", "null"], "format": "uri" },
+          "paid_at": { "type": ["string", "null"], "format": "date-time" },
+          "granted_at": { "type": ["string", "null"], "format": "date-time" },
           "progress": {
             "$ref": "#/components/schemas/SubscriptionCheckoutProgress"
           }
@@ -4496,6 +4694,24 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/SubscriptionProductList"
+            }
+          }
+        }
+      },
+      "CommerceOffers": {
+        "description": "Active commercial Offers with immutable current Price references and server-derived purchase readiness.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CommerceOfferList"
             }
           }
         }

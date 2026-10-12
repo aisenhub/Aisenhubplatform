@@ -26,6 +26,7 @@ import {
   fileDto,
   fileBudgetDto,
   entitlementDto,
+  commerceOfferDto,
   subscriptionProductDto,
   subscriptionCheckoutDto,
   checkoutPaymentUrl,
@@ -48,12 +49,21 @@ export async function dispatchAccount(
   const path = requestPath(request);
 
   if (
-    (path === 'v1/plans' || path === 'v1/subscription/products') &&
+    (path === 'v1/plans' ||
+      path === 'v1/subscription/products' ||
+      path === 'v1/commerce/offers') &&
     request.method === 'GET'
   ) {
     const key = await verifyPlatformKey(transaction, request, dependencies);
     if (key.platformStatus !== 'active')
       throw new ApiFault(403, 'PLATFORM_DISABLED');
+    if (path === 'v1/commerce/offers') {
+      const rows = await transaction.unsafe<Row>(
+        'select * from private.commerce_offers_list($1::uuid, $2::uuid)',
+        [key.platformId, key.keyId],
+      );
+      return { status: 200, data: rows.map((item) => commerceOfferDto(item)) };
+    }
     if (path === 'v1/subscription/products') {
       const rows = await transaction.unsafe<Row>(
         'select * from private.subscription_products_list($1::uuid, $2::uuid)',
@@ -141,7 +151,7 @@ export async function dispatchAccount(
     if (!idempotencyKey || idempotencyKey.length > 128)
       throw new ApiFault(400, 'INVALID_INPUT');
     const [checkout] = await transaction.unsafe<Row>(
-      'select * from private.subscription_checkout_read_by_idempotency(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text)',
+      'select * from private.subscription_checkout_read_by_idempotency_v2(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text)',
       [...contextValues, idempotencyKey],
     );
     if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
@@ -171,11 +181,15 @@ export async function dispatchAccount(
     if (!idempotencyKey || idempotencyKey.length > 128)
       throw new ApiFault(400, 'INVALID_INPUT');
     const input = await body(request);
+    const productCode = stringValue(input.product_code);
+    const offerId = uuidValue(input.offer_id);
     if (
-      Object.keys(input).some((field) => field !== 'product_code') ||
-      !['monthly', 'yearly', 'lifetime'].includes(
-        stringValue(input.product_code) ?? '',
-      )
+      Object.keys(input).some(
+        (field) => field !== 'product_code' && field !== 'offer_id',
+      ) ||
+      (productCode === null) === (offerId === null) ||
+      (productCode !== null &&
+        !['monthly', 'yearly', 'lifetime'].includes(productCode))
     )
       throw new ApiFault(400, 'INVALID_INPUT');
     const checkoutId = crypto.randomUUID();
@@ -196,11 +210,12 @@ export async function dispatchAccount(
       tokenDigest = token.digest;
     }
     const [checkout] = await transaction.unsafe<Row>(
-      'select * from private.subscription_checkout_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::text, $9::smallint, $10::bytea)',
+      'select * from private.subscription_checkout_create_v2(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::uuid, $9::text, $10::smallint, $11::bytea)',
       [
         ...contextValues,
         checkoutId,
-        input.product_code,
+        productCode,
+        offerId,
         idempotencyKey,
         tokenKeyVersion,
         tokenDigest,
@@ -225,7 +240,7 @@ export async function dispatchAccount(
     const checkoutId = uuidValue(checkoutMatch[1]);
     if (!checkoutId) throw new ApiFault(400, 'INVALID_INPUT');
     const [checkout] = await transaction.unsafe<Row>(
-      'select * from private.subscription_checkout_read_v2(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+      'select * from private.subscription_checkout_read_v3(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
       [...contextValues, checkoutId],
     );
     if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');

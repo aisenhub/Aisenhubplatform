@@ -32,7 +32,9 @@ export async function handleRequest(
     const path = requestPath(request);
     const optionalSessionRead =
       request.method === 'GET' &&
-      (path === 'v1/plans' || path === 'v1/subscription/products');
+      (path === 'v1/plans' ||
+        path === 'v1/subscription/products' ||
+        path === 'v1/commerce/offers');
     let session =
       path.startsWith('admin/') ||
       (optionalSessionRead && request.headers.has('authorization')) ||

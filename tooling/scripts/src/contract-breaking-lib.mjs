@@ -76,6 +76,39 @@ function compareSchema(input) {
   }
   if (!isObject(before)) return;
 
+  // Adding a response/neutral union branch is backward-compatible when at
+  // least one branch still accepts the complete previous schema. This keeps
+  // the old response contract intact while allowing a new discriminated
+  // response shape. Request unions continue through the stricter request
+  // comparison below.
+  if (
+    direction !== 'request' &&
+    !Array.isArray(before.oneOf) &&
+    !Array.isArray(before.anyOf)
+  ) {
+    const union = Array.isArray(after.oneOf)
+      ? after.oneOf
+      : Array.isArray(after.anyOf)
+        ? after.anyOf
+        : null;
+    if (union) {
+      for (const branch of union) {
+        const branchFailures = [];
+        compareSchema({
+          ...input,
+          beforeSchema: before,
+          afterSchema: branch,
+          failures: branchFailures,
+        });
+        if (branchFailures.length === 0) return;
+      }
+      failures.push(
+        `${name}: response union removed prior schema at ${location}`,
+      );
+      return;
+    }
+  }
+
   if (schemaTypeSignature(before) !== schemaTypeSignature(after))
     failures.push(`${name}: changed type/format at ${location}`);
   if ('const' in before && !sameJson(before.const, after.const))
