@@ -15,8 +15,8 @@
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
 | 01 | Admin support/governance 数据模型、list v3、Account 360 聚合与 privacy cleanup | 最新 main + design 冻结 | 已完成 | [阶段 01](phases/01-domain-read-model.md) |
-| 02 | Admin API/OpenAPI、reason/tags/notes 命令与合同测试 | 01 | 进行中 | [阶段 02](phases/02-admin-api-contract.md) |
-| 03 | Platform Account 列表 + Account 360 UI、浏览器安全交互 | 02 | 未开始 | [阶段 03](phases/03-account-workbench-ui.md) |
+| 02 | Admin API/OpenAPI、reason/tags/notes 命令与合同测试 | 01 | 已完成 | [阶段 02](phases/02-admin-api-contract.md) |
+| 03 | Platform Account 列表 + Account 360 UI、浏览器安全交互 | 02 | 进行中 | [阶段 03](phases/03-account-workbench-ui.md) |
 | 04 | Global Delete/retention、fresh/upgrade、staging、canonical R3 与 Git closeout | 01–03 | 未开始 | [阶段 04](phases/04-lifecycle-release.md) |
 
 阶段串行交付。migration、OpenAPI、Account API、Admin 页面和 lifecycle helper 不并行修改。
@@ -36,9 +36,9 @@
 - [x] list v3 stable cursor / filters / Profile+Plan projection 完成。
 - [x] Account 360 权威聚合完成。
 - [x] tags/notes/governance events 与 transition v2 完成。
-- [ ] reason 不再在 API 层丢失。
+- [x] reason 不再在 API 层丢失。
 - [x] Global Delete/retention privacy cleanup 覆盖 tags/notes/reasons。
-- [ ] Admin OpenAPI additive、breaking gate PASS。
+- [x] Admin OpenAPI additive、breaking gate PASS。
 - [ ] Account list/detail UI 与真实 browser 安全交互通过。
 - [ ] fresh/non-empty upgrade、DB/API/contracts/unit/typecheck/build/lint/format/docs、canonical R3 全绿。
 - [ ] 已授权 staging migration/Edge 状态与最终 main 一致。
@@ -46,4 +46,4 @@
 
 ## 当前执行环境备注
 
-整改基线的远端 `main` 已通过完整 CI。本地 Runner 已恢复；Phase 01 fresh/non-empty upgrade 与 canonical `TASK-0801` 已完整通过。Phase 02 起继续同时保留 Local R3 与 PR/main CI 证据，不降低验证门槛。
+整改基线的远端 `main` 已通过完整 CI。本地 Runner 已恢复；Phase 01 fresh/non-empty upgrade 以及 Phase 01–02 canonical `TASK-0801` 已完整通过。Phase 03 起继续同时保留 Local R3 与 PR/main CI 证据，不降低验证门槛。

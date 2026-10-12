@@ -144,7 +144,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(63);
+    expect(operationCount).toBe(65);
   });
 
   it('proxies private Feedback images as binary and allows label replacement', async () => {
@@ -204,6 +204,55 @@ describe('admin BFF', () => {
       ]),
     );
     expect(labelResponse.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('allows OPT-009 account tags and notes mutations through the explicit proxy boundary', async () => {
+    const accountId = '11111111-1111-4111-8111-111111111113';
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ data: {} }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+    );
+    const tagsResponse = await PUT(
+      request(
+        'PUT',
+        `admin/api/v1/platforms/${SESSION_ID}/accounts/${accountId}/tags`,
+        { csrf: true, body: JSON.stringify({ tags: ['vip'] }) },
+      ),
+      context([
+        'admin',
+        'api',
+        'v1',
+        'platforms',
+        SESSION_ID,
+        'accounts',
+        accountId,
+        'tags',
+      ]),
+    );
+    expect(tagsResponse.status).toBe(200);
+
+    const noteResponse = await POST(
+      request(
+        'POST',
+        `admin/api/v1/platforms/${SESSION_ID}/accounts/${accountId}/notes`,
+        { csrf: true, body: JSON.stringify({ body: 'support note' }) },
+      ),
+      context([
+        'admin',
+        'api',
+        'v1',
+        'platforms',
+        SESSION_ID,
+        'accounts',
+        accountId,
+        'notes',
+      ]),
+    );
+    expect(noteResponse.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 

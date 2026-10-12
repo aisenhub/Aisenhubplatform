@@ -23,7 +23,7 @@ describe('consumer lab contract summaries', () => {
   it('reads the current canonical Admin contract', () => {
     expect(adminContractSummary.major).toBe('v1');
     expect(adminContractSummary.version).toBe('1.0.0');
-    expect(adminContractSummary.operations).toHaveLength(63);
+    expect(adminContractSummary.operations).toHaveLength(65);
     expect(adminContractSummary.operations).toContainEqual(
       expect.objectContaining({
         method: 'GET',

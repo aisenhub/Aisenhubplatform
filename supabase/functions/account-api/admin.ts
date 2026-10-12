@@ -69,6 +69,13 @@ function optionalTimestampQuery(value: string | null): string | null {
   return new Date(parsed).toISOString();
 }
 
+function hasControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.codePointAt(0);
+    return code !== undefined && (code < 32 || code === 127);
+  });
+}
+
 function feedbackExportIds(value: string | null): string[] | null {
   if (value === null || value.trim() === '') return null;
   const ids = value.split(',').map((item) => item.trim());
@@ -1341,16 +1348,106 @@ export async function dispatchAdmin(
     UUID.test(accountsMatch[1]!) &&
     request.method === 'GET'
   ) {
+    const cursorValue = url.searchParams.get('cursor');
+    const cursor = cursorValue === null ? null : uuidValue(cursorValue);
+    const planIdValue = url.searchParams.get('plan_id');
+    const planId = planIdValue === null ? null : uuidValue(planIdValue);
+    const query = url.searchParams.get('q')?.trim() || null;
+    const status = url.searchParams.get('status');
+    const subscriptionStatus = url.searchParams.get('subscription_status');
+    const tag = url.searchParams.get('tag')?.trim() || null;
+    const joinedFrom = optionalTimestampQuery(
+      url.searchParams.get('joined_from'),
+    );
+    const joinedTo = optionalTimestampQuery(url.searchParams.get('joined_to'));
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    if (
+      (cursorValue !== null && !cursor) ||
+      (planIdValue !== null && !planId) ||
+      (query !== null && query.length > 128) ||
+      (status !== null &&
+        !['active', 'suspended', 'closed'].includes(status)) ||
+      (subscriptionStatus !== null &&
+        !['active', 'suspended', 'none'].includes(subscriptionStatus)) ||
+      (tag !== null && (tag.length > 32 || hasControlCharacter(tag)))
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_account_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::integer)',
+      'select * from private.admin_account_list_v3(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::integer, $7::text, $8::text, $9::uuid, $10::text, $11::text, $12::timestamptz, $13::timestamptz)',
       [
         ...context,
         accountsMatch[1],
-        url.searchParams.get('q'),
-        boundedLimit(url.searchParams.get('limit')),
+        cursor,
+        limit,
+        query,
+        status,
+        planId,
+        subscriptionStatus,
+        tag,
+        joinedFrom,
+        joinedTo,
       ],
     );
-    return { status: 200, data: rows };
+    const nextCursor =
+      rows.length === limit
+        ? uuidValue(rows.at(-1)?.platform_account_id)
+        : null;
+    if (rows.length === limit && !nextCursor)
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return {
+      status: 200,
+      data: rows.map((row) => ({
+        ...row,
+        status: row.account_status ?? row.status,
+      })),
+      next_cursor: nextCursor,
+    };
+  }
+
+  const accountSupportMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/accounts\/([^/]+)\/(tags|notes)$/u.exec(
+      path,
+    );
+  if (
+    accountSupportMatch &&
+    UUID.test(accountSupportMatch[1]!) &&
+    UUID.test(accountSupportMatch[2]!)
+  ) {
+    const platformId = accountSupportMatch[1]!;
+    const accountId = accountSupportMatch[2]!;
+    if (accountSupportMatch[3] === 'tags' && request.method === 'PUT') {
+      const input = await body(request);
+      if (
+        !Array.isArray(input.tags) ||
+        input.tags.length > 20 ||
+        input.tags.some(
+          (tag) =>
+            typeof tag !== 'string' ||
+            tag.trim().length < 1 ||
+            tag.trim().length > 32 ||
+            hasControlCharacter(tag),
+        )
+      )
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_account_tags_replace(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text[])',
+        [...context, platformId, accountId, input.tags],
+      );
+      if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      return { status: 200, data: result };
+    }
+    if (accountSupportMatch[3] === 'notes' && request.method === 'POST') {
+      const input = await body(request);
+      const noteBody = stringValue(input.body)?.trim() ?? null;
+      if (!noteBody || noteBody.length > 2000)
+        throw new ApiFault(400, 'INVALID_INPUT');
+      const [result] = await transaction.unsafe<Row>(
+        'select * from private.admin_account_note_add(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
+        [...context, platformId, accountId, noteBody],
+      );
+      if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      return { status: 201, data: result };
+    }
   }
 
   const accountMatch =
@@ -1364,20 +1461,50 @@ export async function dispatchAdmin(
     const accountId = accountMatch[2]!;
     if (request.method === 'GET') {
       const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_account_get(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+        'select * from private.admin_account_workbench_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
         [...context, platformId, accountId],
       );
       if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
-      return { status: 200, data: result };
+      const identityUserId = uuidValue(result.user_id);
+      if (
+        result.user_id !== null &&
+        result.user_id !== undefined &&
+        !identityUserId
+      )
+        throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+      const authUser = identityUserId
+        ? await getAdminAuthUserById(dependencies, identityUserId)
+        : null;
+      return {
+        status: 200,
+        data: {
+          ...result,
+          status: result.account_status ?? result.status,
+          identity: {
+            user_id: identityUserId,
+            email: authUser?.email ?? null,
+          },
+        },
+      };
     }
     if (request.method === 'PATCH') {
       await adminStepUp(transaction, session, request);
       const input = await body(request);
       const status = stringValue(input.status);
-      if (!status) throw new ApiFault(400, 'INVALID_INPUT');
+      const reason = stringValue(input.reason)?.trim() ?? null;
+      const action =
+        status === 'suspended'
+          ? 'suspend'
+          : status === 'active'
+            ? 'restore'
+            : status === 'closed'
+              ? 'close'
+              : null;
+      if (!action || !reason || reason.length > 2000)
+        throw new ApiFault(400, 'INVALID_INPUT');
       const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_account_patch(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
-        [...context, platformId, accountId, status],
+        'select * from private.admin_account_transition_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::text)',
+        [...context, platformId, accountId, action, reason],
       );
       return { status: 200, data: result };
     }
@@ -1394,10 +1521,20 @@ export async function dispatchAdmin(
     request.method === 'POST'
   ) {
     await adminStepUp(transaction, session, request);
+    const input = await body(request);
     const action = accountActionMatch[3]!;
+    const reason = stringValue(input.reason)?.trim() ?? null;
+    if (!reason || reason.length > 2000)
+      throw new ApiFault(400, 'INVALID_INPUT');
     const [result] = await transaction.unsafe<Row>(
-      'select * from private.admin_account_transition(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
-      [...context, accountActionMatch[1], accountActionMatch[2], action],
+      'select * from private.admin_account_transition_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::text)',
+      [
+        ...context,
+        accountActionMatch[1],
+        accountActionMatch[2],
+        action,
+        reason,
+      ],
     );
     return { status: action === 'close' ? 202 : 200, data: result };
   }

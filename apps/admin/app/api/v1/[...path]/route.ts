@@ -60,6 +60,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       exact('platforms') ||
       matches(`platforms/${id}/origins`) ||
       matches(`platforms/${id}/accounts/${id}/(?:suspend|restore|close)`) ||
+      matches(`platforms/${id}/accounts/${id}/notes`) ||
       matches(`platforms/${id}/keys`) ||
       matches(`platforms/${id}/keys/${id}/(?:revoke|confirm-deployment)`) ||
       matches(`platforms/${id}/plans`) ||
@@ -84,7 +85,10 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
     );
   }
   if (method === 'PUT') {
-    return matches(`platforms/${id}/feedback/${id}/labels`);
+    return (
+      matches(`platforms/${id}/accounts/${id}/tags`) ||
+      matches(`platforms/${id}/feedback/${id}/labels`)
+    );
   }
   if (method === 'DELETE') return matches(`config-files/${id}`);
   return false;

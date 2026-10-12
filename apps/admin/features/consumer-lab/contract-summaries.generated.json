@@ -640,6 +640,14 @@
       },
       {
         "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/notes",
+        "operationId": "adminAddAccountNote",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
         "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/restore",
         "operationId": "adminRestoreAccount",
         "security": [
@@ -650,6 +658,14 @@
         "method": "POST",
         "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/suspend",
         "operationId": "adminSuspendAccount",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "PUT",
+        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/tags",
+        "operationId": "adminReplaceAccountTags",
         "security": [
           "adminBearer"
         ]
