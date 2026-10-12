@@ -1,6 +1,6 @@
 # OPT-009 单平台账户工作台与账户治理
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md) · [预研架构](../optimization-intake/platform-account-workbench-architecture.md)
 
@@ -138,9 +138,16 @@ OpenAPI 只做 additive 扩展，`contracts:breaking` 必须 PASS。
 6. Global Delete/retention redaction notes/reasons 并清理 tags；普通 close 不冒充隐私删除。
 7. IDOR、权限、recent-MFA、unknown-outcome、并发、stable cursor 回归通过。
 8. fresh + non-empty upgrade、DB/API/contracts、Admin unit/typecheck/build、真实 Browser、docs/lint/format、canonical R3 全绿。
-9. 已授权 staging 的 migration/Edge 同步并验证；Production 未授权则 NOT_RUN。
+9. 已授权 staging 的 migration/Edge 同步并验证；Production 不属于本项发布目标，NOT_RUN。
 10. GitHub task branch、main 与分支清理闭环后才开始 OPT-010。
 
 ## 待确认项
 
 无阻塞性产品决策。首版明确不展示平台最近活跃，未来存在真实 activity/telemetry contract 后再 additive 扩展。
+
+## Closeout
+
+- 产品与 release validation 已通过 PR #15 合并到 `main@0bb6e7f835f75698b10cabdfebd59b5b7609e224`。
+- GitHub Actions run #155 的 `TASK-0801 full local verification` PASS；最终本地 canonical 同样为 20/20 gates、DB 71/1472、API 107/0。
+- `workendstaging` 已对齐至 migration `20261012094715`，`account-api` v61；原任务分支 `codex/opt-009-account-workbench` 已完成本地/远端清理。
+- Production：NOT_RUN；本项没有定义或连接可执行的 Production 目标。
