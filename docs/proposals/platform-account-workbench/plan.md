@@ -1,6 +1,6 @@
 # OPT-009 单平台账户工作台与账户治理总计划
 
-状态：In Progress
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -17,7 +17,7 @@
 | 01 | Admin support/governance 数据模型、list v3、Account 360 聚合与 privacy cleanup | 最新 main + design 冻结 | 已完成 | [阶段 01](phases/01-domain-read-model.md) |
 | 02 | Admin API/OpenAPI、reason/tags/notes 命令与合同测试 | 01 | 已完成 | [阶段 02](phases/02-admin-api-contract.md) |
 | 03 | Platform Account 列表 + Account 360 UI、浏览器安全交互 | 02 | 已完成 | [阶段 03](phases/03-account-workbench-ui.md) |
-| 04 | Global Delete/retention、fresh/upgrade、staging、canonical R3 与 Git closeout | 01–03 | 进行中 | [阶段 04](phases/04-lifecycle-release.md) |
+| 04 | Global Delete/retention、fresh/upgrade、staging、canonical R3 与 Git closeout | 01–03 | 已完成 | [阶段 04](phases/04-lifecycle-release.md) |
 
 阶段串行交付。migration、OpenAPI、Account API、Admin 页面和 lifecycle helper 不并行修改。
 
@@ -29,7 +29,7 @@
 - Admin tags/notes 独立于用户 Profile；note/reason 不复制到通用 Audit metadata。
 - suspend/restore/close 继续 recent-MFA + 显式确认 + replay-never/unknown-outcome 恢复。
 - Config/Feedback/Billing 只读聚合，不改变各自领域状态机。
-- Production 未授权。
+- Production 不属于本项发布目标，NOT_RUN。
 
 ## 总体验收
 
@@ -42,8 +42,8 @@
 - [x] Account list/detail UI 与真实 browser 安全交互通过。
 - [x] fresh/non-empty upgrade、DB/API/contracts/unit/typecheck/build/lint/format/docs、canonical R3 全绿。
 - [x] 已授权 staging migration/Edge 状态与最终 main 一致。
-- [ ] task branch → GitHub main → 分支清理闭环后再进入 OPT-010。
+- [x] task branch → GitHub main → 分支清理闭环后再进入 OPT-010。
 
 ## 当前执行环境备注
 
-整改基线的远端 `main` 已通过完整 CI。本地 Runner 已恢复；Phase 01–04 的 fresh/non-empty upgrade 与 canonical `TASK-0801` 已完整通过，staging migration 与 `account-api` 也已同步验证。Phase 04 当前只剩 Git/PR/main closeout 证据，不降低验证门槛。
+OPT-009 已通过 PR #15 / GitHub Actions run #155 合并到 `main@0bb6e7f835f75698b10cabdfebd59b5b7609e224`；`workendstaging` 与最终仓库 migration/`account-api` 状态一致，原任务分支本地/远端均已清理。下一项必须从该最新 main 重新核验 OPT-010。
