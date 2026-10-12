@@ -1,6 +1,6 @@
 # OPT-008 平台用户反馈系统
 
-状态：Completed / Paused
+状态：Completed
 
 关联：[总计划](plan.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md) · [优化事项总清单](../optimization-intake/README.md)
 
