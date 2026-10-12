@@ -26,8 +26,8 @@
 
 | 阶段 | 状态 | 证据 | 阻塞 |
 | --- | --- | --- | --- |
-| 01 Domain/read model | In Progress | Formal design frozen | 无 |
-| 02 API/contract | Not Started | - | 依赖 01 |
+| 01 Domain/read model | Completed | Offer/Price + read models；fresh/non-empty；canonical R3；staging aligned | 无 |
+| 02 API/contract | In Progress | Phase 01 已满足进入条件 | 无 |
 | 03 Admin commerce UI | Not Started | - | 依赖 02 |
 | 04 Release | Not Started | - | 依赖 01–03 |
 
@@ -38,6 +38,12 @@
 | 2026-10-12 | OPT-009 predecessor | `main@a0e90373...` | PASS：OPT-009 product + docs closeout、CI、staging 与 branch cleanup 已完整闭环后才创建 OPT-010 分支 |
 | 2026-10-12 | OPT-010 revalidation | latest main source/migrations/contracts | PASS：完成 Plan/Offer/Price、Checkout、Grant source、Settlement/refund、Redemption、Admin UI/API 事实重核并冻结 design |
 | 2026-10-12 | Formal Proposal baseline | `docs:check` + `pnpm verify:task:0801 --reuse-local` | PASS：192 documents；canonical 20/20 gates；DB 71/1472、API 107/0、Admin/Consumer browser、100-route responsive/a11y、OpenAPI account/admin 46/65、breaking/registry/runtime/contracts 全绿 |
+| 2026-10-12 | Phase 01 implementation | worktree | PASS：新增 Offer/immutable Price domain、legacy bootstrap、Provider/Checkout/Redemption additive attribution、Commerce Summary、Entitlement stable cursor/filter、Campaign v2 masked detail 与 FK indexes；`t32_commercial_operations.sql` 43 assertions PASS |
+| 2026-10-12 | Phase 01 transient validation | Local | 首轮 canonical 曾在 `bill_13_admin_billing_pagination.sql` 的 tie-order 断言失败；随后 fresh DB 与重复 canonical 均 PASS，确认不是生产排序回归，因此未为偶发本地污染修改产品排序逻辑 |
+| 2026-10-12 | Phase 01 non-empty upgrade | Local Supabase | PASS：从 `20261012094715` 建立 legacy paid plan/provider/checkout/order/grant/redemption fixture 后前向应用三条 migration；生成 3 legacy Offer/Price；订单 `9.90`、`billing_order` Grant、active Campaign 保持；历史 Checkout/Batch attribution 维持 null 以保留历史解释 |
+| 2026-10-12 | Phase 01 fresh DB | Local Supabase | PASS：`pnpm db:reset --yes`；`pnpm test:db` = 72 files / 1515 tests |
+| 2026-10-12 | Phase 01 canonical R3 | Local | PASS：`pnpm verify:task:0801 --reuse-local` = 20/20 gates；API 107/107；DB 72/1515；settlement concurrency、contracts breaking、registry、Consumer/Admin browser、docs/OpenAPI 全绿 |
+| 2026-10-12 | Phase 01 staging migrations | `workendstaging / egsokuicabbxspkdccqe` | PASS：`20261012114256`、`20261012123209`、`20261012131422` 全部进入 remote migration history；只读 SQL 核验 Offer/Price、Commerce Summary、Entitlement list、Campaign v2 与 `billing_checkout_commercial_price_idx` 均存在；Production NOT_RUN |
 
 ## 规则
 
