@@ -17,7 +17,7 @@
 | 01 | Admin support/governance 数据模型、list v3、Account 360 聚合与 privacy cleanup | 最新 main + design 冻结 | 已完成 | [阶段 01](phases/01-domain-read-model.md) |
 | 02 | Admin API/OpenAPI、reason/tags/notes 命令与合同测试 | 01 | 已完成 | [阶段 02](phases/02-admin-api-contract.md) |
 | 03 | Platform Account 列表 + Account 360 UI、浏览器安全交互 | 02 | 已完成 | [阶段 03](phases/03-account-workbench-ui.md) |
-| 04 | Global Delete/retention、fresh/upgrade、staging、canonical R3 与 Git closeout | 01–03 | 未开始 | [阶段 04](phases/04-lifecycle-release.md) |
+| 04 | Global Delete/retention、fresh/upgrade、staging、canonical R3 与 Git closeout | 01–03 | 进行中 | [阶段 04](phases/04-lifecycle-release.md) |
 
 阶段串行交付。migration、OpenAPI、Account API、Admin 页面和 lifecycle helper 不并行修改。
 
@@ -40,10 +40,10 @@
 - [x] Global Delete/retention privacy cleanup 覆盖 tags/notes/reasons。
 - [x] Admin OpenAPI additive、breaking gate PASS。
 - [x] Account list/detail UI 与真实 browser 安全交互通过。
-- [ ] fresh/non-empty upgrade、DB/API/contracts/unit/typecheck/build/lint/format/docs、canonical R3 全绿。
-- [ ] 已授权 staging migration/Edge 状态与最终 main 一致。
+- [x] fresh/non-empty upgrade、DB/API/contracts/unit/typecheck/build/lint/format/docs、canonical R3 全绿。
+- [x] 已授权 staging migration/Edge 状态与最终 main 一致。
 - [ ] task branch → GitHub main → 分支清理闭环后再进入 OPT-010。
 
 ## 当前执行环境备注
 
-整改基线的远端 `main` 已通过完整 CI。本地 Runner 已恢复；Phase 01 fresh/non-empty upgrade 以及 Phase 01–03 canonical `TASK-0801` 已完整通过。Phase 04 继续同时保留 Local R3 与 staging/PR/main CI 证据，不降低验证门槛。
+整改基线的远端 `main` 已通过完整 CI。本地 Runner 已恢复；Phase 01–04 的 fresh/non-empty upgrade 与 canonical `TASK-0801` 已完整通过，staging migration 与 `account-api` 也已同步验证。Phase 04 当前只剩 Git/PR/main closeout 证据，不降低验证门槛。
