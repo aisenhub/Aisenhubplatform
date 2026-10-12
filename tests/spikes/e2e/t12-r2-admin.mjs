@@ -679,6 +679,9 @@ async function runBrowserFlow(secret) {
     `;
     assert.equal(entry.status, expectedStatus);
     await page.keyboard.press('Escape');
+    await page.locator('[data-test="confirm-action-submit"]').waitFor({
+      state: 'hidden',
+    });
   }
 
   await governConfig('remove', 'config-governance-remove', 'removed');
