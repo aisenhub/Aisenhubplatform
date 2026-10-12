@@ -2,7 +2,7 @@
 
 - 优化名称：OPT-010 全局商业治理与单平台订阅运营
 - 总计划：[plan.md](plan.md)
-- 当前阶段：Phase 01 / In Progress
+- 当前阶段：Phase 02 / In Progress
 - 任务分支：`codex/opt-010-commercial-operations`
 - 基线：`main@a0e903731333cdddeb20361064d9e3557ef5bd84`
 - 风险：R3
@@ -28,12 +28,12 @@
 
 ## 当前执行环境
 
-OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支已清理。OPT-010 已从该最新 main 创建独立分支，完成最新源码/迁移/合同重新核对，当前开始 Phase 01。
+OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支已清理。OPT-010 已从该最新 main 创建独立分支；Phase 01 的 Offer/Price domain、legacy bootstrap、经营/权益/Campaign read model、fresh/non-empty、canonical R3 与授权 staging 对齐均已完成，当前进入 Phase 02 API/Contract/Checkout。
 
 ## 阶段完成门槛
 
-- [ ] Phase 01 数据模型/读模型与权限已实施。
-- [ ] fresh + non-empty upgrade 与 pgTAP 真实通过。
-- [ ] 需要的 staging migration 已同步并核对。
-- [ ] verification record 已更新。
-- [ ] 阶段 commit 已 push 并核对后再进入 Phase 02。
+- [x] Phase 01 数据模型/读模型与权限已实施。
+- [x] fresh + non-empty upgrade 与 pgTAP 真实通过。
+- [x] 需要的 staging migration 已同步并核对。
+- [x] verification record 已更新。
+- [ ] Phase 01 阶段 commit 已 push 并核对。

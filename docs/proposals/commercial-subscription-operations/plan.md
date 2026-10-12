@@ -14,8 +14,8 @@
 
 | 阶段 | 目标 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- |
-| 01 | Offer/Price 数据模型、legacy bootstrap、经营/权益/Campaign 读模型 | 最新 main + design 冻结 | 进行中 | [阶段 01](phases/01-commerce-domain-read-model.md) |
-| 02 | Consumer/Admin API、OpenAPI、Checkout/Provider Mapping 兼容 | 01 | 未开始 | [阶段 02](phases/02-api-contract-checkout.md) |
+| 01 | Offer/Price 数据模型、legacy bootstrap、经营/权益/Campaign 读模型 | 最新 main + design 冻结 | 已完成 | [阶段 01](phases/01-commerce-domain-read-model.md) |
+| 02 | Consumer/Admin API、OpenAPI、Checkout/Provider Mapping 兼容 | 01 | 进行中 | [阶段 02](phases/02-api-contract-checkout.md) |
 | 03 | Global/Platform 商业 UI、套餐/Offer、权益用户、Campaign 与跨 OPT 集成 | 02 | 未开始 | [阶段 03](phases/03-admin-commerce-workspaces.md) |
 | 04 | lifecycle/upgrade/staging、完整 R3、GitHub/main closeout | 01–03 | 未开始 | [阶段 04](phases/04-release.md) |
 
