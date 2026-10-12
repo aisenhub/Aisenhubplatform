@@ -60,6 +60,9 @@
 | 2026-10-12 | GitHub main | PR #15 rebase merge | PASS：GitHub 返回 merged=true；远端 `main` 核对为 `0bb6e7f835f75698b10cabdfebd59b5b7609e224` |
 | 2026-10-12 | Task branch cleanup | `codex/opt-009-account-workbench` | PASS：worktree clean 后删除本地 branch；远端 ref 通过 GitHub API 删除并再次检索确认不存在 |
 
+| 2026-10-12 | Closeout PR CI race | PR #16 / Actions run #157 | FAIL → DIAGNOSED：完整门禁在 Admin T12 Config Gallery governance 连续操作处触发 dialog-overlay closing race；DB 71/1472、API 107/0、contracts 等此前 gates 全 PASS，失败仅为 `config-governance-restore` 点击被前一 ConfirmActionDialog overlay 暂时拦截 |
+| 2026-10-12 | Closeout browser hardening | `tests/spikes/e2e/t12-r2-admin.mjs` + `pnpm verify:task:0801 --reuse-local` | FIXED/PASS：保留成功后 Escape 关闭确认框，并在下一治理动作前等待 `confirm-action-submit` hidden；最终 canonical 20/20 gates PASS，DB 71/1472、API 107/0、Admin browser/100-route a11y 全绿 |
+
 ## 规则
 
 - 不预填 PASS。
