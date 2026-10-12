@@ -52,6 +52,8 @@ proposals/
 
 - [OPT-008 平台用户反馈系统](platform-feedback-system/design.md)：[计划](platform-feedback-system/plan.md)，新增独立 Feedback/图片附件领域、Account Consumer contract、单平台 Admin 处理中心、服务端导出/删除与 Global Delete/retention 生命周期集成。
 
+- [OPT-009 单平台账户工作台与账户治理](platform-account-workbench/design.md)：[计划](platform-account-workbench/plan.md)，将单平台账户页升级为 Platform Account 360，补齐服务端 cursor/filter、Admin-only tags/notes、权威治理 reason/timeline，以及 Profile/Subscription/Billing/Config/Feedback 摘要聚合。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
