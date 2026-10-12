@@ -54,6 +54,8 @@ proposals/
 
 - [OPT-009 单平台账户工作台与账户治理](platform-account-workbench/design.md)：[计划](platform-account-workbench/plan.md)，将单平台账户页升级为 Platform Account 360，补齐服务端 cursor/filter、Admin-only tags/notes、权威治理 reason/timeline，以及 Profile/Subscription/Billing/Config/Feedback 摘要聚合。
 
+- [OPT-010 全局商业治理与单平台订阅运营](commercial-subscription-operations/design.md)：[计划](commercial-subscription-operations/plan.md)，建立 Plan/Offer/immutable Price 商业目录与兼容 Checkout，升级经营摘要、权益用户、Redemption Campaign 和 Global/Platform 商业工作台，同时保留现有 Entitlement/Billing 安全账本。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
