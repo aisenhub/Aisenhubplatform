@@ -1,6 +1,6 @@
 # OPT-008 平台用户反馈系统总计划
 
-状态：Completed / Paused
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -8,7 +8,7 @@
 
 从 `main@67620082f43f2e608f24a5d301bb5adacbfc887f` 新增完整 Feedback 领域、专用 private Storage attachment ledger、Account v1 Consumer contract、Admin 处理中心、Overview 聚合与 Global Delete/retention/cleanup 集成。风险分级 **R3**。
 
-最终交付：产品提交 `fb6ec006bdba94b844a2635d5883dc0ec1dcc292` 已 fast-forward 到远端 `main`；任务分支本地/远端已删除。当前按用户要求暂停，OPT-009 未启动。
+最终交付：产品提交 `fb6ec006bdba94b844a2635d5883dc0ec1dcc292` 已 fast-forward 到远端 `main`；任务分支本地/远端已删除。OPT-008 已完成并收口，后续工作从最新 `main` 进入 OPT-009。
 
 ## 阶段与依赖
 
