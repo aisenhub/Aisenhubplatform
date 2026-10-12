@@ -1,12 +1,12 @@
 # OPT-008 实施与验证记录
 
-状态：Implementation Complete / Git Closeout Pending
+状态：Completed / Paused
 
 ## 项目与基线
 
 - 优化目标：平台用户反馈系统（Consumer + Admin + Storage + lifecycle）
 - GitHub：`https://github.com/aisenhub/Aisenhubplatform.git`
-- 工作分支：`codex/opt-008-feedback-system`
+- 工作分支：已清理；当前 `main`
 - 起始 commit：`67620082f43f2e608f24a5d301bb5adacbfc887f`
 - 初始工作区：PASS，main 与 origin/main 对齐且 clean；OPT-007 task branch 已删除
 - 运行环境：Windows Runner + Local Supabase/Docker；Production 未授权
@@ -18,9 +18,9 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | 领域/Storage | 已交付 | 3 条 migration、private bucket、Feedback/Attachment/Label/Event、领域 primitives、Storage bucket union、67-file DB 回归 | 无 | `0d3191e` | 已推送并由当前远端任务分支包含 |
-| 02 | Account/Consumer | 验收通过待推送 | Account v1 1.2.0 / 8 Feedback ops、Auth email snapshot、private image upload、Consumer Harness/E2E、fresh + upgrade | push/远端核对 | `3d1de0b` | 本地 commit 已存在，待本次 Git closeout 一并 push |
-| 03 | Admin Feedback Center | 验收通过待交付 | Admin 63-op contract、Feedback Center、筛选/详情/治理/CSV/MFA delete、Overview pending 聚合 | commit/push | 待生成 | 待推送 |
-| 04 | Lifecycle/Release | 验收通过待 Git closeout | Maintenance attachment cleanup、Global Delete/retention/backup barrier、fresh/non-empty upgrade、canonical R3 | final diff/hygiene/Git | 待生成 | 待推送 |
+| 02 | Account/Consumer | 已交付 | Account v1 1.2.0 / 8 Feedback ops、Auth email snapshot、private image upload、Consumer Harness/E2E、fresh + upgrade | 无 | `3d1de0b` | 已推送，且由最终 main 历史包含 |
+| 03 | Admin Feedback Center | 已交付 | Admin 63-op contract、Feedback Center、筛选/详情/治理/CSV/MFA delete、Overview pending 聚合 | 无 | `fb6ec00` | 已推送并由远端 main 包含 |
+| 04 | Lifecycle/Release | 已交付 | Maintenance attachment cleanup、Global Delete/retention/backup barrier、fresh/non-empty upgrade、canonical R3 | 无 | `fb6ec00` | 已推送并由远端 main 包含 |
 
 ## 事实与验证日志
 
@@ -50,9 +50,11 @@
 | 2026-10-12 | Final DB current/fresh | `pnpm test:db`; fresh `supabase db reset --local --yes`; `pnpm test:db` | Local Supabase | PASS：当前非空与 fresh 均为 70 files / 1420 tests；6 条 OPT-008 migration 从零重放 |
 | 2026-10-12 | Final non-empty upgrade | reset 到 `20261011140958`；插入 Feedback/label/event/active attachment；`migration up --local`；保留查询；t29+t30 | Local Supabase | PASS：title/body/email/client_context/label/event/active confirmed attachment 原样保留；升级库 52/52 targeted PASS |
 | 2026-10-12 | Final canonical R3 | `pnpm verify:task:0801 --reuse-local` | Local Supabase + Browser | PASS：20 executable gates；DB 70/1420、API 106/0、Consumer `feedbackSubmissionAndIsolation`、Admin `feedbackGovernance`/`feedbackDeleteStepUp`、95-route responsive/a11y、docs 176、contracts 全绿 |
+| 2026-10-12 | Git delivery | task push + `ls-remote` + `merge --ff-only` + main push + branch delete | Local/GitHub | PASS：产品提交 `fb6ec006bdba94b844a2635d5883dc0ec1dcc292` 已进入远端 main；task ref 与 main 曾核对同 SHA 后，本地/远端任务分支删除 |
+| 2026-10-12 | Production binding | repository workflow + Vercel Git context | Local/Vercel | PASS：workflow 无 deploy/production 自动化；Vercel Git context 返回 0 teams，无已知 main→Production 自动部署绑定；Production 仍 NOT_RUN |
 
 ## 当前交接
 
-- 下一步：只执行 final diff/hygiene、任务分支提交/push、main fast-forward/push、任务分支清理与最终 Completed 文档；之后暂停，不启动 OPT-009。
+- 下一步：暂停。OPT-009 未启动；恢复时从 `docs/proposals/optimization-intake/README.md` 的 OPT-009 行和 `docs/proposals/optimization-intake/platform-account-workbench-architecture.md` 开始。
 - 需要用户决定：无。
 - Production：NOT_RUN / 未授权。

@@ -1,6 +1,6 @@
 # OPT-008 平台用户反馈系统总计划
 
-状态：In Progress（实现与 Local R3 已验收，Git closeout 待完成）
+状态：Completed / Paused
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -8,7 +8,7 @@
 
 从 `main@67620082f43f2e608f24a5d301bb5adacbfc887f` 新增完整 Feedback 领域、专用 private Storage attachment ledger、Account v1 Consumer contract、Admin 处理中心、Overview 聚合与 Global Delete/retention/cleanup 集成。风险分级 **R3**。
 
-当前分支：`codex/opt-008-feedback-system`。
+最终交付：产品提交 `fb6ec006bdba94b844a2635d5883dc0ec1dcc292` 已 fast-forward 到远端 `main`；任务分支本地/远端已删除。当前按用户要求暂停，OPT-009 未启动。
 
 ## 阶段与依赖
 
@@ -16,8 +16,8 @@
 | --- | --- | --- | --- | --- |
 | 01 | Feedback/Attachment 数据模型、专用 Storage、领域状态机与权限 | 最新 main / 正式 design | 已完成 | [阶段 01](phases/01-domain-storage.md) |
 | 02 | Account v1 additive API、Auth 邮箱快照、Consumer Harness/E2E | 01 已完成 | 已完成 | [阶段 02](phases/02-account-consumer.md) |
-| 03 | Admin API/UI、筛选/治理/CSV/批量删除、Overview 聚合 | 01–02 已完成 | 验收通过待交付 | [阶段 03](phases/03-admin-feedback-center.md) |
-| 04 | Maintenance cleanup、Global Delete/retention/backup barrier、完整 R3 与 Git closeout | 01–03 已完成 | 验收通过待 Git closeout | [阶段 04](phases/04-lifecycle-release.md) |
+| 03 | Admin API/UI、筛选/治理/CSV/批量删除、Overview 聚合 | 01–02 已完成 | 已完成 | [阶段 03](phases/03-admin-feedback-center.md) |
+| 04 | Maintenance cleanup、Global Delete/retention/backup barrier、完整 R3 与 Git closeout | 01–03 已完成 | 已完成 | [阶段 04](phases/04-lifecycle-release.md) |
 
 阶段串行交付。共享 migration、OpenAPI、Account/Admin API、Harness 和 lifecycle 函数不并行修改。
 
@@ -38,7 +38,7 @@
 - [x] Admin feedback center 和 Overview 权威聚合完成。
 - [x] Global Delete/retention/backup barrier/Storage cleanup 失败恢复通过。
 - [x] contracts/API/unit/typecheck/build/lint/format/docs/DB/browser E2E 全绿。
-- [ ] final diff/hygiene、main/远端 SHA/任务分支清理闭环。
+- [x] final diff/hygiene、main/远端 SHA/任务分支清理闭环。
 
 ## 风险与阻塞
 

@@ -1,6 +1,6 @@
 # Phase 04 — 删除生命周期、恢复边界与发布收口
 
-状态：验收通过待 Git closeout
+状态：已完成
 
 ## 目标
 
@@ -30,4 +30,4 @@ fresh + non-empty upgrade、full pgTAP、API、maintenance、Consumer Harness、
 
 ## Git closeout
 
-满足仓库自动合并条件后 push 任务分支、核对 SHA、合并/fast-forward main、push main、核对远端 main，再删除无独有提交的本地/远端任务分支。Production 未明确授权则 NOT_RUN。
+已完成：任务分支产品提交 `fb6ec006bdba94b844a2635d5883dc0ec1dcc292` 已推送并 fast-forward 到远端 main；远端 main 核对一致后，本地/远端 `codex/opt-008-feedback-system` 均已删除。Production NOT_RUN。最终 docs-only closeout 后按用户要求暂停，不启动 OPT-009。

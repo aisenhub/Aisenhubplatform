@@ -3,8 +3,8 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：OPT-008 平台用户反馈系统
 - 总计划：[plan.md](plan.md)
-- 当前阶段：[Phase 04 — Git closeout](phases/04-lifecycle-release.md)
-- 当前分支：`codex/opt-008-feedback-system`
+- 当前阶段：Completed / Paused
+- 当前分支：`main`（OPT-008 任务分支已删除）
 - 基线：`main@67620082f43f2e608f24a5d301bb5adacbfc887f`
 - 风险：R3
 
@@ -29,12 +29,12 @@
 
 ## 执行规则
 
-实现与 Local R3 已完成；当前只执行 Git closeout 与完成状态文档。检查最终 diff/secret/hygiene，提交并 push 当前任务分支，核对远端 SHA，满足自动合并条件后 fast-forward main、push 并清理无独有提交的任务分支。完成后按用户要求暂停，不进入 OPT-009。
+OPT-008 已完成并进入 main。按用户要求当前暂停，不进入 OPT-009。后续恢复工作时先阅读 `docs/proposals/optimization-intake/README.md`，再阅读 `docs/proposals/optimization-intake/platform-account-workbench-architecture.md`，从最新 main 为 OPT-009 建立新的短期任务分支。
 
 ## 最终退出条件
 
-- [ ] 四阶段均已交付（当前只差 Git closeout）。
+- [x] 四阶段均已交付。
 - [x] Local canonical R3 无 FAIL/BLOCKED。
 - [x] Account/Admin v1 additive 且 breaking gate PASS。
 - [x] Storage/权限/并发/恢复/Global Delete/retention 证据完整。
-- [ ] main/远端/任务分支 closeout 完成。
+- [x] main/远端/任务分支 closeout 完成。

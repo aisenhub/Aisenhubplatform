@@ -1,6 +1,6 @@
 # OPT-008 平台用户反馈系统
 
-状态：In Progress（实现与 Local R3 已验收，Git closeout 待完成）
+状态：Completed / Paused
 
 关联：[总计划](plan.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md) · [优化事项总清单](../optimization-intake/README.md)
 
