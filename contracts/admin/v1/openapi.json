@@ -370,7 +370,64 @@
             "$ref": "#/components/parameters/PlatformId"
           },
           {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
             "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["active", "suspended", "closed"]
+            }
+          },
+          {
+            "name": "plan_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "subscription_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["active", "suspended", "none"]
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 32
+            }
+          },
+          {
+            "name": "joined_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "joined_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
           },
           {
             "$ref": "#/components/parameters/Limit"
@@ -413,6 +470,7 @@
       },
       "patch": {
         "operationId": "adminPatchAccount",
+        "description": "Compatibility status mutation surface. Runtime requires a non-empty reason and routes the status change through the same authoritative governance event as the explicit action endpoints.",
         "x-requires-step-up": true,
         "security": [
           {
@@ -446,9 +504,74 @@
         }
       }
     },
+    "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/tags": {
+      "put": {
+        "operationId": "adminReplaceAccountTags",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/notes": {
+      "post": {
+        "operationId": "adminAddAccountNote",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlatformId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Json"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Object"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/suspend": {
       "post": {
         "operationId": "adminSuspendAccount",
+        "description": "Suspends a Platform Account. Runtime requires a non-empty reason and recent-MFA step-up.",
         "x-requires-step-up": true,
         "security": [
           {
@@ -482,6 +605,7 @@
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/restore": {
       "post": {
         "operationId": "adminRestoreAccount",
+        "description": "Restores a Platform Account. Runtime requires a non-empty reason and recent-MFA step-up.",
         "x-requires-step-up": true,
         "security": [
           {
@@ -496,6 +620,24 @@
             "$ref": "#/components/parameters/AccountId"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "$ref": "#/components/responses/Object"
@@ -512,6 +654,7 @@
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/close": {
       "post": {
         "operationId": "adminCloseAccount",
+        "description": "Closes a Platform Account. Runtime requires a non-empty reason and recent-MFA step-up.",
         "x-requires-step-up": true,
         "security": [
           {

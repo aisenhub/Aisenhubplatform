@@ -666,14 +666,80 @@ function fakeDatabase(
               { origin_id: platformId, environment: 'local' },
             ] as unknown as R[];
           }
+          if (query.startsWith('select * from private.admin_account_list_v3')) {
+            return [
+              {
+                platform_account_id: sessionId,
+                user_id: userId,
+                account_status: 'active',
+                display_name: 'Fixture Account',
+                avatar_url: null,
+                plan_id: keyId,
+                plan_code: 'pro',
+                plan_name: 'Pro',
+                plan_kind: 'paid',
+                subscription_status: 'active',
+                current_period_end: '2026-10-31T00:00:00.000Z',
+                tags: ['vip'],
+                created_at: '2026-09-08T00:00:00.000Z',
+                updated_at: '2026-10-01T00:00:00.000Z',
+              },
+            ] as unknown as R[];
+          }
           if (query.startsWith('select * from private.admin_account_list')) {
             return [
               { platform_account_id: sessionId, status: 'active' },
             ] as unknown as R[];
           }
+          if (
+            query.startsWith(
+              'select * from private.admin_account_workbench_read',
+            )
+          ) {
+            return [
+              {
+                platform_account_id: sessionId,
+                user_id: userId,
+                account_status: 'active',
+                display_name: 'Fixture Account',
+                plan_code: 'pro',
+                plan_name: 'Pro',
+                subscription_status: 'active',
+                billing_order_count: 2,
+                billing_attention_count: 1,
+                billing_latest: { order_id: keyId, resolution_status: 'open' },
+                config_active_count: 1,
+                config_published_count: 1,
+                config_pending_review_count: 0,
+                feedback_count: 3,
+                feedback_open_count: 1,
+                tags: ['vip'],
+                notes: [],
+                governance_events: [],
+              },
+            ] as unknown as R[];
+          }
           if (query.startsWith('select * from private.admin_account_get')) {
             return [
               { platform_account_id: sessionId, status: 'active' },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_account_tags_replace')
+          ) {
+            return [
+              { platform_account_id: sessionId, tags: ['vip', 'beta'] },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith('select * from private.admin_account_note_add')
+          ) {
+            return [
+              {
+                note_id: keyId,
+                platform_account_id: sessionId,
+                created_at: '2026-10-12T00:00:00.000Z',
+              },
             ] as unknown as R[];
           }
           if (query.startsWith('select * from private.admin_account_patch')) {
@@ -695,6 +761,25 @@ function fakeDatabase(
           ) {
             return [
               { key_id: keyId, platform_id: platformId, status: 'active' },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
+              'select * from private.admin_account_transition_v2',
+            )
+          ) {
+            const action = values?.[5];
+            return [
+              {
+                platform_account_id: sessionId,
+                status:
+                  action === 'restore'
+                    ? 'active'
+                    : action === 'close'
+                      ? 'closed'
+                      : 'suspended',
+                governance_event_id: keyId,
+              },
             ] as unknown as R[];
           }
           if (
@@ -2240,6 +2325,203 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(deployment.status, 200);
   assertEquals((await deployment.json()).data.status, 'active');
+});
+
+Deno.test('Account API exposes the OPT-009 Account workbench contract', async () => {
+  const calls: Array<{ query: string; values?: readonly unknown[] }> = [];
+  const base = `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts`;
+  const auth = { Authorization: `Bearer ${fakeJwt('aal2')}` };
+  const list = await handleRequest(
+    new Request(
+      `${base}?limit=1&q=Fixture&status=active&plan_id=${keyId}&subscription_status=active&tag=VIP&joined_from=2026-09-01T00:00:00.000Z&joined_to=2026-10-12T00:00:00.000Z`,
+      { headers: auth },
+    ),
+    {
+      database: fakeDatabase((query, values) => calls.push({ query, values })),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(list.status, 200);
+  const listPayload = await list.json();
+  assertEquals(listPayload.next_cursor, sessionId);
+  assertEquals(listPayload.data[0].display_name, 'Fixture Account');
+  const listCall = calls.find((call) =>
+    call.query.startsWith('select * from private.admin_account_list_v3'),
+  );
+  assertEquals(Boolean(listCall), true);
+  assertEquals(listCall?.values?.slice(3), [
+    platformId,
+    null,
+    1,
+    'Fixture',
+    'active',
+    keyId,
+    'active',
+    'VIP',
+    '2026-09-01T00:00:00.000Z',
+    '2026-10-12T00:00:00.000Z',
+  ]);
+
+  const next = await handleRequest(
+    new Request(`${base}?limit=1&cursor=${sessionId}`, { headers: auth }),
+    {
+      database: fakeDatabase((query, values) => calls.push({ query, values })),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(next.status, 200);
+  const nextCall = calls.at(-1);
+  assertEquals(
+    nextCall?.query.startsWith('select * from private.admin_account_list_v3'),
+    true,
+  );
+  assertEquals(nextCall?.values?.[4], sessionId);
+
+  const invalidCursor = await handleRequest(
+    new Request(`${base}?cursor=not-a-uuid`, { headers: auth }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(invalidCursor.status, 400);
+
+  const detail = await handleRequest(
+    new Request(`${base}/${sessionId}`, { headers: auth }),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      getAdminAuthUserById: async (requestedUserId) => ({
+        id: requestedUserId,
+        email: 'identity@example.invalid',
+        created_at: '2026-09-08T00:00:00.000Z',
+        last_sign_in_at: '2026-10-12T00:00:00.000Z',
+      }),
+    },
+  );
+  assertEquals(detail.status, 200);
+  const detailPayload = await detail.json();
+  assertEquals(detailPayload.data.identity, {
+    user_id: userId,
+    email: 'identity@example.invalid',
+  });
+  assertEquals('last_sign_in_at' in detailPayload.data.identity, false);
+  assertEquals(detailPayload.data.billing_attention_count, 1);
+  assertEquals(detailPayload.data.feedback_open_count, 1);
+
+  const unavailableDetail = await handleRequest(
+    new Request(`${base}/${sessionId}`, { headers: auth }),
+    {
+      database: fakeDatabase(),
+      verifyAccessToken: async () => userId,
+      getAdminAuthUserById: async () => {
+        throw new Error('Auth Admin unavailable');
+      },
+    },
+  );
+  assertEquals(unavailableDetail.status, 503);
+  assertEquals(
+    (await unavailableDetail.json()).error.code,
+    'AUTHORIZATION_UNAVAILABLE',
+  );
+
+  const tags = await handleRequest(
+    new Request(`${base}/${sessionId}/tags`, {
+      method: 'PUT',
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: ['VIP', 'beta'] }),
+    }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(tags.status, 200);
+  assertEquals((await tags.json()).data.tags, ['vip', 'beta']);
+
+  const note = await handleRequest(
+    new Request(`${base}/${sessionId}/notes`, {
+      method: 'POST',
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: 'support context' }),
+    }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(note.status, 201);
+  assertEquals((await note.json()).data.platform_account_id, sessionId);
+
+  const actionCalls: Array<{ query: string; values?: readonly unknown[] }> = [];
+  const suspend = await handleRequest(
+    new Request(`${base}/${sessionId}/suspend`, {
+      method: 'POST',
+      headers: {
+        ...auth,
+        'X-Recent-Auth-Proof': keyId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason: 'manual risk review' }),
+    }),
+    {
+      database: fakeDatabase((query, values) =>
+        actionCalls.push({ query, values }),
+      ),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(suspend.status, 200);
+  const transitionCall = actionCalls.find((call) =>
+    call.query.startsWith('select * from private.admin_account_transition_v2'),
+  );
+  assertEquals(transitionCall?.values?.slice(3), [
+    platformId,
+    sessionId,
+    'suspend',
+    'manual risk review',
+  ]);
+
+  const patch = await handleRequest(
+    new Request(`${base}/${sessionId}`, {
+      method: 'PATCH',
+      headers: {
+        ...auth,
+        'X-Recent-Auth-Proof': keyId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'active', reason: 'review completed' }),
+    }),
+    {
+      database: fakeDatabase((query, values) =>
+        actionCalls.push({ query, values }),
+      ),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(patch.status, 200);
+  assertEquals(
+    actionCalls.some((call) =>
+      call.query.startsWith('select * from private.admin_account_patch'),
+    ),
+    false,
+  );
+  assertEquals(
+    actionCalls.some(
+      (call) =>
+        call.query.startsWith(
+          'select * from private.admin_account_transition_v2',
+        ) &&
+        call.values?.[5] === 'restore' &&
+        call.values?.[6] === 'review completed',
+    ),
+    true,
+  );
+
+  const blankReason = await handleRequest(
+    new Request(`${base}/${sessionId}/close`, {
+      method: 'POST',
+      headers: {
+        ...auth,
+        'X-Recent-Auth-Proof': keyId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason: '   ' }),
+    }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(blankReason.status, 400);
 });
 
 Deno.test('Account API exposes central Billing order and requery wrappers', async () => {

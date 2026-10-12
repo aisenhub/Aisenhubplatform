@@ -1,6 +1,6 @@
 begin;
 
-select plan(36);
+select plan(37);
 
 select has_table('public','platform_account_admin_tags','Account support tags table exists');
 select has_table('public','platform_account_admin_notes','Account support notes table exists');
@@ -73,6 +73,11 @@ select * from private.admin_account_list_v3(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009084')::private.admin_context,
  '00000000-0000-4000-8000-000000009020',null,20,'Alice',null,'00000000-0000-4000-8000-000000009030','active','vip',now()-interval '20 days',now()
 );
+create temporary table account_status_search on commit drop as
+select * from private.admin_account_list_v3(
+ row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009084')::private.admin_context,
+ '00000000-0000-4000-8000-000000009020',null,20,'active',null,null,null,null,null,null
+);
 create temporary table workbench_read on commit drop as
 select * from private.admin_account_workbench_read(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009085')::private.admin_context,
@@ -89,6 +94,7 @@ select is((select tags from tags_replaced),array['beta','vip']::text[],'tags nor
 select is((select count(*)::integer from account_page_one),1,'first cursor page is bounded');
 select is((select count(*)::integer from account_page_two),1,'second cursor page advances without overlap');
 select is((select platform_account_id from account_filtered),'00000000-0000-4000-8000-000000009040'::uuid,'filters apply before pagination');
+select is((select count(*)::integer from account_status_search),2,'v3 text search preserves account status matching');
 select ok((select plan_code='pro' and subscription_status='active' and tags=array['beta','vip']::text[] from account_filtered),'list projects current plan subscription and tags');
 select ok((select display_name='Alice Workbench' and config_active_count=1 and feedback_count=1 and feedback_open_count=1 from workbench_read),'Account 360 aggregates profile Config and Feedback authority');
 select ok((select billing_order_count=0 and billing_attention_count=0 and billing_latest='{}'::jsonb from workbench_read),'Account 360 keeps Billing summary safe and bounded');

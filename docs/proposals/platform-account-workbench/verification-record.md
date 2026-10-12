@@ -25,8 +25,8 @@
 | 阶段 | 状态 | 证据 | 阻塞 |
 | --- | --- | --- | --- |
 | 01 Domain/read model | Completed | migration + `t31`、fresh/non-empty upgrade、canonical R3 全绿 | 无 |
-| 02 Admin API/contract | In Progress | Phase 01 已通过串行退出门禁 | 无 |
-| 03 Account 360 UI | Not Started | - | 依赖 Phase 02 |
+| 02 Admin API/contract | Completed | API 107/0、Admin unit 64/64、t31 37/37、OpenAPI 46/65、Consumer snapshot/compatibility、breaking、canonical R3 全绿 | 无 |
+| 03 Account 360 UI | In Progress | Phase 02 已通过串行退出门禁 | 无 |
 | 04 Lifecycle/release | Not Started | - | 依赖 01–03 |
 
 ## 实施与验证日志
@@ -38,9 +38,13 @@
 | 2026-10-12 | Phase 01 DB | `pnpm ... supabase db --local` | PASS：新增 `t31` 36/36；全量 71 files / 1456 tests。首次仅 `plan(34)` 与实际 36 条断言不匹配，修正计划数后功能断言与全量回归全部通过 |
 | 2026-10-12 | Phase 01 non-empty upgrade | reset 到 `20261011175718` → 旧 Account/Profile/Subscription/Config/Feedback fixture → `migration up --local` | PASS：仅增量应用 OPT-009 migration；Profile、Subscription/Plan、Config、Feedback 旧事实均保持；升级库 `t31` 36/36、全量 71/1456 PASS |
 | 2026-10-12 | Phase 01 canonical R3 | `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1456、API 106/0、settlement concurrency、contracts/breaking、Consumer E2E、Admin T12、95-route responsive/a11y、docs 184、OpenAPI 46/63 全绿 |
+| 2026-10-12 | Phase 02 Account API | `pnpm test:api` | PASS：107/0；新增 Account workbench contract 覆盖 cursor/filter、Account 360 exact Auth email、Auth fail-closed、tags/notes、reason、recent-MFA、PATCH status governance 收口 |
+| 2026-10-12 | Phase 02 DB forward-fix | `20261012054500_platform_account_workbench_search_fix.sql` + `t31` | PASS：恢复 list v3 对 status 的 q 搜索兼容；`t31` 37/37 |
+| 2026-10-12 | Phase 02 Admin/contract | Admin unit + `contracts:check` + `contracts:breaking` | PASS：Admin 14 files / 64 tests；OpenAPI account/admin 46/65；Consumer Lab snapshot 与 compatibility PASS；breaking 对 `origin/main` PASS |
+| 2026-10-12 | Phase 02 canonical R3 | `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1457、API 107/0、Admin T12 + 95-route responsive/a11y、docs 184、OpenAPI 46/65、Consumer/registry/runtime/contracts 全绿 |
 
 ## 规则
 
 - 不预填 PASS。
 - 每个失败/修复/复测、migration/Edge/staging、commit/PR/main/branch 状态都追加到本文件。
-- Phase 01 已通过完整本地 R3；OPT-009 仍保持 In Progress，必须完成 Phase 02–04、适用 staging 与 GitHub main closeout 后才能标记 Completed。
+- Phase 01–02 已通过完整本地 R3；OPT-009 仍保持 In Progress，必须完成 Phase 03–04、适用 staging 与 GitHub main closeout 后才能标记 Completed。
