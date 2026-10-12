@@ -1,6 +1,6 @@
 # OPT-003 统一用户与身份删除生命周期治理计划
 
-状态：Complete
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
