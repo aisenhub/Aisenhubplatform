@@ -1,6 +1,6 @@
 # Phase 04 — 删除生命周期、恢复边界与发布收口
 
-状态：未开始
+状态：验收通过待 Git closeout
 
 ## 目标
 
@@ -25,6 +25,8 @@
 ## 最终验证
 
 fresh + non-empty upgrade、full pgTAP、API、maintenance、Consumer Harness、Admin browser/T12、unit/typecheck/build/lint/format/docs/contracts/breaking/toolchain、Supabase Advisors、final diff/hygiene/secret review。
+
+实际结果：fresh migration 全量重放 PASS；Phase 02 非空 Feedback/label/event/active attachment 数据向前升级到 Phase 03/04 后内容与状态原样保留，升级库 t29+t30 52/52 PASS；最终 Local DB 70 files / 1420 tests、API 106/106、Consumer `feedbackSubmissionAndIsolation=PASS`，canonical `TASK-0801` 20/20 executable gates PASS。Production NOT_RUN。
 
 ## Git closeout
 

@@ -156,7 +156,15 @@ actor_scope 对用户操作固定 user:账户ID，对 Admin 操作固定 admin:�
 
 Config delete 进入 `deleting` 时立即移出 Gallery、取消 pending submission，并把 Version files 标记 deleting。数据库 reconciliation trigger 只在所有 Version file 已被 file cleanup 证明为 `deleted` 后把 Config 收敛为 `deleted`；零 Version Config 可立即收敛。恢复数据集包含 Config/Version/Gallery/Like/Usage 数据库行与 file metadata，但 Storage object bytes 不在数据库备份中，未存在外部对象恢复介质时不得宣称“已备份”。
 
-## 5. 通用约束与维护
+## 5. Feedback / Attachment / Event
+
+`public.platform_feedback` 是平台账户提交的 Feedback 根；`platform_id/platform_account_id/user_id` 来自中央可信上下文，提交后的 display name/email 为服务端快照，浏览器不能指定归属或 email。生命周期为 `draft/new/reviewing/planned/resolved/closed/deleting/deleted`，Consumer 只修改 draft；Admin 治理使用 row_version/If-Match 防止静默覆盖。
+
+`public.platform_feedback_attachments` 是独立图片对象 ledger，固定使用 private `platform-feedback-attachments` bucket，不进入 `platform_config_files` 或 Config/legacy 配额。它持有声明/实际字节、SHA-256、write outcome、lease/fence 与删除重试事实；JPEG/PNG/WebP 单张最多 4 MiB，单条 Feedback 最多 5 张且总计不超过 12 MiB。`platform_feedback_labels` 保存可筛选规范化标签，`platform_feedback_events` 保存 submitted/status/labels/flag/note/delete 等时间线；internal note 正文不复制到 Audit metadata。
+
+进入 `deleting` 时正文、联系快照、client context、labels 和 note 内容立即最小化；Attachment 由 Maintenance 经 Storage API 异步删除，失败保持 retryable，全部附件被证明 deleted 后 Feedback 才收敛 deleted 并断开 identity/account 引用。Global Delete 的现有 `files_blocked` checkpoint 与 account retention cleanup 调用相同 privacy helper；数据库恢复范围包含 Feedback/attachment metadata/labels/events，但不包含 Storage object bytes。
+
+## 6. 通用约束与维护
 
 - 所有跨租户敏感关系使用复合 FK；同账户关系进一步包含 platform_account_id。事件中的非空 code/subscription/grant 引用必须能由数据库验证。
 - Platform、Plan、Account、Code 不物理删除；Global Purge 留墓碑账户并脱离身份，文件内容按保留策略实际清除。

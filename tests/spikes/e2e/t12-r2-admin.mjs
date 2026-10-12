@@ -59,6 +59,7 @@ let lifecycleJobId;
 let configId;
 let configVersionId;
 let configSubmissionId;
+let feedbackId;
 let previousSystemAdmin;
 let browser;
 let page;
@@ -322,6 +323,24 @@ async function createFixtures() {
     configSubmissionId,
     'T12 Gallery submission fixture must be pending',
   );
+  feedbackId = crypto.randomUUID();
+  await sql`
+    insert into public.platform_feedback (
+      id, platform_id, platform_account_id, user_id,
+      author_display_name_snapshot, contact_allowed, contact_email_snapshot,
+      category, title, body, status, client_context, submitted_at
+    ) values (
+      ${feedbackId}, ${platformId}, ${platformAccountId}, ${userId},
+      'T12 Feedback User', true, ${email},
+      'bug', 'T12 Feedback', 'T12 browser feedback governance fixture',
+      'new', ${sql.json({ route: '/t12-feedback' })}, now()
+    )
+  `;
+  await sql`
+    insert into public.platform_feedback_events (
+      platform_id, feedback_id, event_type, actor_user_id, metadata
+    ) values (${platformId}, ${feedbackId}, 'submitted', ${userId}, '{}'::jsonb)
+  `;
   const lifecycleSignup = await authRequest('/auth/v1/signup', null, {
     method: 'POST',
     body: JSON.stringify({ email: lifecycleEmail, password }),
@@ -641,6 +660,138 @@ async function runBrowserFlow(secret) {
   await governConfig('restore', 'config-governance-restore', 'approved');
   await governConfig('block', 'config-governance-block', 'blocked');
 
+  await page.goto(`${appUrl}/admin/platforms/${platformId}/feedback`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page
+    .locator('[data-test="feedback-page"]')
+    .waitFor({ state: 'visible' });
+  await page
+    .locator('[data-test="feedback-table"]')
+    .waitFor({ state: 'visible' });
+  assert.match(
+    await page.locator('[data-test="feedback-table"]').innerText(),
+    /T12 Feedback/u,
+  );
+  await page.locator('[data-test="feedback-open-detail"]').click();
+  await page
+    .locator('[data-test="feedback-detail"]')
+    .waitFor({ state: 'visible' });
+  await page
+    .locator('[data-test="feedback-status-reason"]')
+    .fill('T12 triage started');
+  const [feedbackStatusResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/feedback/${feedbackId}/status`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="feedback-status-update"]').click(),
+  ]);
+  assertStatus(feedbackStatusResponse.status(), 200, 'Feedback status update');
+  const [reviewingFeedback] = await sql`
+    select status, row_version
+    from public.platform_feedback
+    where id = ${feedbackId}
+  `;
+  assert.equal(reviewingFeedback.status, 'reviewing');
+  assert.equal(Number(reviewingFeedback.row_version), 2);
+  const crossPlatformFeedback = await browserRequest(
+    `/api/v1/admin/api/v1/platforms/${crypto.randomUUID()}/feedback/${feedbackId}`,
+  );
+  assertStatus(
+    crossPlatformFeedback.status,
+    404,
+    'Feedback cross-platform IDOR',
+  );
+  await page.keyboard.press('Escape');
+  await page
+    .locator('[data-test="feedback-row"] input[type="checkbox"]')
+    .check();
+  await sql`
+    update private.admin_step_up
+    set expires_at = verified_at + interval '1 second'
+    where user_id = ${userId}
+  `;
+  await new Promise((resolve) => setTimeout(resolve, 1_200));
+  await page.locator('[data-test="feedback-batch-delete"]').click();
+  await page
+    .locator('[data-test="confirm-action-reason"]')
+    .fill('T12 duplicate feedback');
+  const [feedbackDeleteExpired] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/feedback/batch-delete`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    feedbackDeleteExpired.status(),
+    403,
+    'expired recent proof on Feedback batch delete',
+  );
+  assert.equal(
+    (await feedbackDeleteExpired.json()).error?.code,
+    'RECENT_MFA_REQUIRED',
+  );
+  await page
+    .locator('[data-test="recent-mfa-panel"]')
+    .waitFor({ state: 'visible' });
+  const waitForFeedbackTotpMs = 31_000 - (Date.now() % 30_000);
+  await new Promise((resolve) => setTimeout(resolve, waitForFeedbackTotpMs));
+  await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
+  const [feedbackMfaResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith('/api/auth/mfa/verify'),
+    ),
+    page.locator('[data-test="recent-mfa-submit"]').click(),
+  ]);
+  assertStatus(feedbackMfaResponse.status(), 200, 'Feedback recent MFA');
+  await page
+    .locator('[data-test="recent-mfa-panel"]')
+    .waitFor({ state: 'detached' });
+  const [feedbackBeforeExplicitDelete] = await sql`
+    select status from public.platform_feedback where id = ${feedbackId}
+  `;
+  assert.equal(
+    feedbackBeforeExplicitDelete.status,
+    'reviewing',
+    'Feedback step-up must not replay the destructive write',
+  );
+  const [feedbackDeleteResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .endsWith(
+            `/api/v1/admin/api/v1/platforms/${platformId}/feedback/batch-delete`,
+          ) && response.request().method() === 'POST',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    feedbackDeleteResponse.status(),
+    202,
+    'explicit Feedback delete resubmit',
+  );
+  const [deletedFeedback] = await sql`
+    select status, body, contact_email_snapshot, platform_account_id, user_id
+    from public.platform_feedback where id = ${feedbackId}
+  `;
+  assert.equal(deletedFeedback.status, 'deleted');
+  assert.equal(deletedFeedback.body, null);
+  assert.equal(deletedFeedback.contact_email_snapshot, null);
+  assert.equal(deletedFeedback.platform_account_id, null);
+  assert.equal(deletedFeedback.user_id, null);
+  await page.keyboard.press('Escape');
+
   await sql`
     update private.admin_step_up
     set expires_at = verified_at + interval '1 second'
@@ -943,6 +1094,8 @@ async function runBrowserFlow(secret) {
     httpOnlyProof: 'PASS',
     sensitiveWrite: 'PASS',
     configReviewGovernance: 'PASS',
+    feedbackGovernance: 'PASS',
+    feedbackDeleteStepUp: 'PASS',
     globalCapacityStepUp: 'PASS',
     overCapacityNoDelete: 'PASS',
     architectureBehavior,
@@ -1496,6 +1649,18 @@ try {
       () => undefined,
     );
     await sql`delete from public.redemption_code_batches where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_feedback_labels where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_feedback_events where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_feedback_attachments where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from public.platform_feedback where platform_id = ${platformId}`.catch(
       () => undefined,
     );
     await sql`delete from public.platform_config_usage_events where platform_id = ${platformId}`.catch(

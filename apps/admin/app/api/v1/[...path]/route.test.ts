@@ -9,7 +9,7 @@ import {
   encodeAuthSessionAcknowledgement,
 } from '../../../_lib/auth/server';
 
-import { DELETE, GET, POST, isAllowedAdminPath } from './route';
+import { DELETE, GET, POST, PUT, isAllowedAdminPath } from './route';
 import { POST as login } from '../../auth/login/route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
@@ -23,7 +23,7 @@ const LOGIN_ACK = encodeAuthSessionAcknowledgement({
 });
 
 function request(
-  method: 'DELETE' | 'GET' | 'POST',
+  method: 'DELETE' | 'GET' | 'POST' | 'PUT',
   path: string,
   options: {
     readonly csrf?: boolean;
@@ -126,7 +126,7 @@ describe('admin BFF', () => {
     ) as {
       paths: Record<string, Record<string, unknown>>;
     };
-    const supportedMethods = new Set(['get', 'post', 'patch', 'delete']);
+    const supportedMethods = new Set(['get', 'post', 'put', 'patch', 'delete']);
     const fixtureId = '11111111-1111-4111-8111-111111111111';
     let operationCount = 0;
 
@@ -144,7 +144,67 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(54);
+    expect(operationCount).toBe(63);
+  });
+
+  it('proxies private Feedback images as binary and allows label replacement', async () => {
+    const feedbackId = '11111111-1111-4111-8111-111111111113';
+    const attachmentId = '11111111-1111-4111-8111-111111111114';
+    fetchMock.mockResolvedValueOnce(
+      new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), {
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+          'content-disposition': 'inline; filename="feedback.png"',
+        },
+      }),
+    );
+    const imageResponse = await GET(
+      request(
+        'GET',
+        `admin/api/v1/platforms/${SESSION_ID}/feedback/${feedbackId}/attachments/${attachmentId}/content`,
+      ),
+      context([
+        'admin',
+        'api',
+        'v1',
+        'platforms',
+        SESSION_ID,
+        'feedback',
+        feedbackId,
+        'attachments',
+        attachmentId,
+        'content',
+      ]),
+    );
+    expect(imageResponse.status).toBe(200);
+    expect(imageResponse.headers.get('content-type')).toBe('image/png');
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { labels: ['urgent'] } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const labelResponse = await PUT(
+      request(
+        'PUT',
+        `admin/api/v1/platforms/${SESSION_ID}/feedback/${feedbackId}/labels`,
+        { csrf: true, body: JSON.stringify({ labels: ['urgent'] }) },
+      ),
+      context([
+        'admin',
+        'api',
+        'v1',
+        'platforms',
+        SESSION_ID,
+        'feedback',
+        feedbackId,
+        'labels',
+      ]),
+    );
+    expect(labelResponse.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('preserves the central request ID for response and audit correlation', async () => {

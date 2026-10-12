@@ -22,6 +22,8 @@ const accountId = '22222222-2222-4222-8222-222222222222';
 const configId = '88888888-8888-4888-8888-888888888888';
 const configVersionId = '99999999-9999-4999-8999-999999999999';
 const configSubmissionId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const feedbackId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const feedbackAttachmentId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const platform = {
   platform_id: platformId,
   name: '示例平台 · 产品工作区',
@@ -80,6 +82,7 @@ const platformOverview = {
   attention_orders: 2,
   previous_attention_orders: 3,
   pending_config_reviews: 1,
+  pending_feedback: 2,
 };
 const configResource = {
   config_id: configId,
@@ -118,6 +121,55 @@ const configReview = {
   submitted_at: '2026-10-11T05:00:00Z',
   current_gallery_status: 'approved',
   current_published_version_id: configVersionId,
+};
+const feedbackItem = {
+  feedback_id: feedbackId,
+  platform_account_id: accountId,
+  user_id: account.user_id,
+  author_display_name: 'Harness User',
+  contact_allowed: true,
+  category: 'bug',
+  title: '上传按钮失效',
+  body_summary: '移动端点击上传按钮没有响应',
+  status: 'new',
+  flagged: false,
+  labels: ['mobile'],
+  attachment_count: 1,
+  row_version: 1,
+  submitted_at: '2026-10-11T06:00:00Z',
+  resolved_at: null,
+  created_at: '2026-10-11T06:00:00Z',
+  updated_at: '2026-10-11T06:00:00Z',
+};
+const feedbackDetail = {
+  ...feedbackItem,
+  platform_id: platformId,
+  contact_email: 'harness@example.invalid',
+  body: '移动端点击上传按钮没有响应。请通过邮件联系我。',
+  client_context: { route: '/upload', app_version: 'synthetic' },
+  attachments: [
+    {
+      attachment_id: feedbackAttachmentId,
+      original_name: 'screen.png',
+      mime_type: 'image/png',
+      actual_size_bytes: 128,
+      status: 'active',
+      write_outcome: 'confirmed',
+      created_at: '2026-10-11T05:59:00Z',
+      content_path: `/admin/api/v1/platforms/${platformId}/feedback/${feedbackId}/attachments/${feedbackAttachmentId}/content`,
+    },
+  ],
+  timeline: [
+    {
+      event_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      event_type: 'submitted',
+      actor_user_id: account.user_id,
+      note_body: null,
+      metadata: {},
+      created_at: '2026-10-11T06:00:00Z',
+    },
+  ],
+  delete_requested_at: null,
 };
 const filePolicy = {
   platform_id: platformId,
@@ -164,12 +216,40 @@ await context.route('**/*', async (route) => {
         json: { data: platform, request_id: 'synthetic-platform-create' },
       });
     }
+    if (path.includes(`/platforms/${platformId}/feedback`)) {
+      return route.fulfill({
+        status: path.endsWith('/batch-delete')
+          ? 202
+          : path.endsWith('/notes')
+            ? 201
+            : 200,
+        json: {
+          data: path.endsWith('/batch-delete')
+            ? {
+                operation_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                items: [],
+              }
+            : feedbackDetail,
+          request_id: 'synthetic-feedback-write',
+        },
+      });
+    }
     return route.fulfill({
       status: 503,
       json: { error: { code: 'AUTHORIZATION_UNAVAILABLE' } },
     });
   }
   reads.push({ path, search: url.search });
+  if (
+    path ===
+    `/platforms/${platformId}/feedback/${feedbackId}/attachments/${feedbackAttachmentId}/content`
+  ) {
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    });
+  }
   let data;
   if (path === '/security/status') {
     if (securityUnavailable)
@@ -227,6 +307,17 @@ await context.route('**/*', async (route) => {
     data = [configResource];
   else if (path === `/platforms/${platformId}/config-reviews`)
     data = [configReview];
+  else if (path === `/platforms/${platformId}/feedback`) {
+    const noMatch = url.searchParams.get('q') === 'no-match';
+    data = noMatch ? [] : [feedbackItem];
+  } else if (path === `/platforms/${platformId}/feedback/${feedbackId}`)
+    data = feedbackDetail;
+  else if (path === `/platforms/${platformId}/feedback/export`)
+    data = {
+      filename: 'feedback-synthetic.csv',
+      row_count: 1,
+      csv: 'feedback_id,title\r\n"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","上传按钮失效"',
+    };
   else if (path === '/config-files') data = [];
   else if (path === '/audit') {
     const noMatch =
@@ -351,10 +442,18 @@ try {
       .innerText(),
     /42/u,
   );
+  assert.match(
+    await page
+      .locator('[data-test="platform-overview-pending-feedback"]')
+      .innerText(),
+    /2/u,
+  );
   assert.equal(
-    await page.locator('[data-test="platform-overview-not-connected"]').count(),
-    1,
-    'Only the still-unimplemented Feedback domain remains explicit rather than a fake zero',
+    await page
+      .locator('[data-test="platform-overview-pending-feedback"]')
+      .getAttribute('href'),
+    `/admin/platforms/${platformId}/feedback`,
+    'Pending Feedback metric deep-links to the authoritative Feedback center',
   );
   assert.match(
     await page
@@ -414,7 +513,7 @@ try {
     .locator('[data-test="platform-overview-refresh-error"]')
     .waitFor({ state: 'detached' });
   console.log(
-    'PASS: Platform Overview authoritative metrics, pending Config reviews, period switching and refresh recovery',
+    'PASS: Platform Overview authoritative metrics, pending Config reviews/Feedback, period switching and refresh recovery',
   );
 
   await goto(`/admin/platforms/${platformId}/files`, 'platform-files-page');
@@ -436,6 +535,76 @@ try {
   );
   console.log(
     'PASS: Config resource center is primary while Storage remains a secondary diagnostic surface',
+  );
+
+  reads.length = 0;
+  writes.length = 0;
+  await goto(`/admin/platforms/${platformId}/feedback`, 'feedback-page');
+  await page.locator('[data-test="feedback-table"]').waitFor();
+  assert.match(
+    await page.locator('[data-test="feedback-table"]').innerText(),
+    /上传按钮失效/u,
+  );
+  await page.locator('[data-test="feedback-filter-q"]').fill('upload');
+  const filteredFeedbackResponse = page.waitForResponse(
+    (response) =>
+      response
+        .url()
+        .includes(`/api/v1/admin/api/v1/platforms/${platformId}/feedback?`) &&
+      new URL(response.url()).searchParams.get('q') === 'upload' &&
+      response.request().method() === 'GET',
+  );
+  await page.locator('[data-test="feedback-filter-submit"]').click();
+  await page.waitForURL(
+    (url) =>
+      url.pathname.endsWith('/feedback') &&
+      url.searchParams.get('q') === 'upload',
+  );
+  await filteredFeedbackResponse;
+  assert.ok(
+    reads.some(
+      (read) =>
+        read.path === `/platforms/${platformId}/feedback` &&
+        read.search.includes('q=upload'),
+    ),
+    'Feedback filters must be sent to the server before pagination',
+  );
+  await page.locator('[data-test="feedback-open-detail"]').click();
+  await page.locator('[data-test="feedback-detail"]').waitFor();
+  assert.match(
+    await page.locator('[data-test="feedback-detail"]').innerText(),
+    /harness@example.invalid/u,
+  );
+  await page
+    .locator('[data-test="feedback-status-reason"]')
+    .fill('Synthetic triage');
+  await page.locator('[data-test="feedback-status-update"]').click();
+  await page.waitForTimeout(100);
+  assert.ok(
+    writes.some(
+      (write) =>
+        write.method === 'POST' &&
+        write.path.endsWith(`/feedback/${feedbackId}/status`),
+    ),
+    'Feedback status mutation must use the protected Admin route',
+  );
+  await page.keyboard.press('Escape');
+  await page
+    .locator('[data-test="feedback-row"] input[type="checkbox"]')
+    .check();
+  const download = page.waitForEvent('download');
+  await page.locator('[data-test="feedback-export"]').click();
+  await download;
+  assert.ok(
+    reads.some(
+      (read) =>
+        read.path === `/platforms/${platformId}/feedback/export` &&
+        read.search.includes(`ids=${encodeURIComponent(feedbackId)}`),
+    ),
+    'Feedback selected export must be generated from the server-side selected-id scope',
+  );
+  console.log(
+    'PASS: Feedback center uses server filters, protected detail/mutations and server-generated export',
   );
 
   await goto(`/admin/platforms/${platformId}/plans`, 'platform-workspace');
@@ -567,6 +736,7 @@ try {
     [`/admin/platforms/${platformId}/plans`, 'platform-workspace'],
     [`/admin/platforms/${platformId}/subscriptions`, 'platform-workspace'],
     [`/admin/platforms/${platformId}/files`, 'platform-workspace'],
+    [`/admin/platforms/${platformId}/feedback`, 'feedback-page'],
     [`/admin/platforms/${platformId}/redemption-batches`, 'platform-workspace'],
     [
       `/admin/platforms/${platformId}/settings/integration`,

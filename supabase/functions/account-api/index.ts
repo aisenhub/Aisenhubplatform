@@ -15,6 +15,7 @@ import {
 import { dispatchAccount } from './account.ts';
 import { dispatchAdmin } from './admin.ts';
 import {
+  handleAdminFeedbackAttachmentDownload,
   handleConfigResourceDownload,
   handleConfigVersionUploadContent,
   handleFeedbackAttachmentUploadContent,
@@ -122,6 +123,19 @@ export async function handleRequest(
     ) {
       if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
       return await handleDownload(request, dependencies, session, true);
+    }
+    if (
+      /^admin\/api\/v1\/platforms\/[^/]+\/feedback\/[^/]+\/attachments\/[^/]+\/content$/u.test(
+        path,
+      ) &&
+      request.method === 'GET'
+    ) {
+      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
+      return await handleAdminFeedbackAttachmentDownload(
+        request,
+        dependencies,
+        session,
+      );
     }
     const executor = path.startsWith('admin/') ? 'admin' : 'account';
     const db = dependencies.database ?? database(executor);

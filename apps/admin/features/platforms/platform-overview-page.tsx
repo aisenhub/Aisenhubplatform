@@ -40,6 +40,7 @@ const quickLinks = [
   ['plans', '平台套餐', '管理免费与付费套餐。'],
   ['subscriptions', '平台订阅', '查看账户的订阅与权益。'],
   ['files', '配置资源', '审核配置、管理 Gallery 可见性与查看 Storage 状态。'],
+  ['feedback', '用户反馈', '处理用户反馈、图片附件与跟进状态。'],
   ['settings', '平台设置', '调整运行状态与激活策略。'],
 ] as const;
 
@@ -93,27 +94,6 @@ function MetricCard({
   ) : (
     <div className="panel gap-0" data-test={test}>
       {body}
-    </div>
-  );
-}
-
-function PlannedCard({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div
-      className="panel gap-2 border-dashed"
-      data-test="platform-overview-not-connected"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <strong className="text-sm">{title}</strong>
-        <StatusBadge label="尚未接入" tone="neutral" />
-      </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -440,9 +420,17 @@ export function PlatformOverviewPage() {
                 href={`${base}/files#config-reviews`}
                 test="platform-overview-pending-config-reviews"
               />
-              <PlannedCard
-                title="用户反馈"
-                description="OPT-008 Feedback 域落地后接入待处理反馈聚合。"
+              <MetricCard
+                label="待处理反馈"
+                value={metricNumber(metrics.pending_feedback)}
+                description="新反馈与处理中"
+                tone={
+                  metricNumber(metrics.pending_feedback) > 0
+                    ? 'warning'
+                    : 'neutral'
+                }
+                href={`${base}/feedback`}
+                test="platform-overview-pending-feedback"
               />
             </div>
           </section>

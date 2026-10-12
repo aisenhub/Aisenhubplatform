@@ -704,6 +704,78 @@
       },
       {
         "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback",
+        "operationId": "adminListFeedback",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/{feedbackId}",
+        "operationId": "adminGetFeedback",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/{feedbackId}/attachments/{attachmentId}/content",
+        "operationId": "adminGetFeedbackAttachmentContent",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/{feedbackId}/flag",
+        "operationId": "adminUpdateFeedbackFlag",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "PUT",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/{feedbackId}/labels",
+        "operationId": "adminReplaceFeedbackLabels",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/{feedbackId}/notes",
+        "operationId": "adminAddFeedbackNote",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/{feedbackId}/status",
+        "operationId": "adminUpdateFeedbackStatus",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/batch-delete",
+        "operationId": "adminBatchDeleteFeedback",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/feedback/export",
+        "operationId": "adminExportFeedback",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/admin/api/v1/platforms/{platformId}/file-policy",
         "operationId": "adminGetFilePolicy",
         "security": [

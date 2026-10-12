@@ -8,6 +8,12 @@
       "body": {}
     },
     {
+      "id": "feedback-attachment-cleanup",
+      "route": "/maintenance/v1/feedback-attachments/run",
+      "cadence": "every-minute",
+      "body": {}
+    },
+    {
       "id": "file-reconcile",
       "route": "/maintenance/v1/files/reconcile",
       "cadence": "hourly",

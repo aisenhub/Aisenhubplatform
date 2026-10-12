@@ -55,6 +55,61 @@ export function boundedLimit(value: string | null): number {
   return parsed;
 }
 
+function optionalBooleanQuery(value: string | null): boolean | null {
+  if (value === null || value === '') return null;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new ApiFault(400, 'INVALID_INPUT');
+}
+
+function optionalTimestampQuery(value: string | null): string | null {
+  if (value === null || value === '') return null;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) throw new ApiFault(400, 'INVALID_INPUT');
+  return new Date(parsed).toISOString();
+}
+
+function feedbackExportIds(value: string | null): string[] | null {
+  if (value === null || value.trim() === '') return null;
+  const ids = value.split(',').map((item) => item.trim());
+  if (ids.length < 1 || ids.length > 100 || ids.some((id) => !UUID.test(id)))
+    throw new ApiFault(400, 'INVALID_INPUT');
+  if (new Set(ids).size !== ids.length)
+    throw new ApiFault(400, 'INVALID_INPUT');
+  return ids;
+}
+
+function csvCell(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  let text = Array.isArray(value) ? value.join('|') : String(value);
+  if (/^[=+\-@]/u.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function feedbackCsv(rows: readonly Row[]): string {
+  const headers = [
+    'feedback_id',
+    'submitted_at',
+    'author_display_name',
+    'user_id',
+    'platform_account_id',
+    'contact_allowed',
+    'contact_email',
+    'category',
+    'status',
+    'flagged',
+    'labels',
+    'attachment_count',
+    'title',
+    'body',
+    'resolved_at',
+  ];
+  return [
+    headers.join(','),
+    ...rows.map((row) => headers.map((key) => csvCell(row[key])).join(',')),
+  ].join('\r\n');
+}
+
 const AUTH_ADMIN_PAGE_SIZE = 200;
 const MAX_AUTH_ADMIN_PAGES = 5;
 
@@ -926,6 +981,232 @@ export async function dispatchAdmin(
     if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
     return { status: 200, data: result };
   }
+
+  const feedbackListMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback$/u.exec(path);
+  if (
+    feedbackListMatch &&
+    UUID.test(feedbackListMatch[1]!) &&
+    request.method === 'GET'
+  ) {
+    const platformId = feedbackListMatch[1]!;
+    const cursorInput = url.searchParams.get('cursor');
+    const cursor = cursorInput ? uuidValue(cursorInput) : null;
+    if (cursorInput && !cursor) throw new ApiFault(400, 'INVALID_INPUT');
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::integer, $7::text, $8::text, $9::text, $10::text, $11::text, $12::text, $13::boolean, $14::timestamptz, $15::timestamptz)',
+      [
+        ...context,
+        platformId,
+        cursor,
+        limit,
+        url.searchParams.get('q'),
+        url.searchParams.get('status'),
+        url.searchParams.get('category'),
+        url.searchParams.get('label'),
+        url.searchParams.get('user'),
+        url.searchParams.get('email'),
+        optionalBooleanQuery(url.searchParams.get('has_attachments')),
+        optionalTimestampQuery(url.searchParams.get('from')),
+        optionalTimestampQuery(url.searchParams.get('to')),
+      ],
+    );
+    return {
+      status: 200,
+      data: rows,
+      next_cursor:
+        rows.length === limit ? uuidValue(rows.at(-1)?.feedback_id) : null,
+    };
+  }
+
+  const feedbackExportMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/export$/u.exec(path);
+  if (
+    feedbackExportMatch &&
+    UUID.test(feedbackExportMatch[1]!) &&
+    request.method === 'GET'
+  ) {
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_export_rows(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid[], $6::text, $7::text, $8::text, $9::text, $10::text, $11::text, $12::boolean, $13::timestamptz, $14::timestamptz, $15::integer)',
+      [
+        ...context,
+        feedbackExportMatch[1],
+        feedbackExportIds(url.searchParams.get('ids')),
+        url.searchParams.get('q'),
+        url.searchParams.get('status'),
+        url.searchParams.get('category'),
+        url.searchParams.get('label'),
+        url.searchParams.get('user'),
+        url.searchParams.get('email'),
+        optionalBooleanQuery(url.searchParams.get('has_attachments')),
+        optionalTimestampQuery(url.searchParams.get('from')),
+        optionalTimestampQuery(url.searchParams.get('to')),
+        5001,
+      ],
+    );
+    if (rows.length > 5000) throw new ApiFault(400, 'INVALID_INPUT');
+    return {
+      status: 200,
+      data: {
+        filename: `feedback-${feedbackExportMatch[1]}-${new Date().toISOString().slice(0, 10)}.csv`,
+        row_count: rows.length,
+        csv: feedbackCsv(rows),
+      },
+    };
+  }
+
+  const feedbackDetailMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/([^/]+)$/u.exec(path);
+  if (
+    feedbackDetailMatch &&
+    UUID.test(feedbackDetailMatch[1]!) &&
+    UUID.test(feedbackDetailMatch[2]!) &&
+    request.method === 'GET'
+  ) {
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid)',
+      [...context, feedbackDetailMatch[1], feedbackDetailMatch[2]],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
+  const feedbackStatusMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/([^/]+)\/status$/u.exec(
+      path,
+    );
+  if (
+    feedbackStatusMatch &&
+    UUID.test(feedbackStatusMatch[1]!) &&
+    UUID.test(feedbackStatusMatch[2]!) &&
+    request.method === 'POST'
+  ) {
+    const input = await body(request);
+    const status = stringValue(input.status);
+    const reason = stringValue(input.reason);
+    if (!status || !reason) throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_status_update(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::bigint, $7::text, $8::text)',
+      [
+        ...context,
+        feedbackStatusMatch[1],
+        feedbackStatusMatch[2],
+        expectedVersion(request),
+        status,
+        reason,
+      ],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
+  const feedbackLabelsMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/([^/]+)\/labels$/u.exec(
+      path,
+    );
+  if (
+    feedbackLabelsMatch &&
+    UUID.test(feedbackLabelsMatch[1]!) &&
+    UUID.test(feedbackLabelsMatch[2]!) &&
+    request.method === 'PUT'
+  ) {
+    const input = await body(request);
+    if (
+      !Array.isArray(input.labels) ||
+      input.labels.some((label) => typeof label !== 'string')
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_labels_replace(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::bigint, $7::text[])',
+      [
+        ...context,
+        feedbackLabelsMatch[1],
+        feedbackLabelsMatch[2],
+        expectedVersion(request),
+        input.labels,
+      ],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
+  const feedbackFlagMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/([^/]+)\/flag$/u.exec(path);
+  if (
+    feedbackFlagMatch &&
+    UUID.test(feedbackFlagMatch[1]!) &&
+    UUID.test(feedbackFlagMatch[2]!) &&
+    request.method === 'POST'
+  ) {
+    const input = await body(request);
+    const reason = stringValue(input.reason);
+    if (typeof input.flagged !== 'boolean' || !reason)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_flag_update(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::bigint, $7::boolean, $8::text)',
+      [
+        ...context,
+        feedbackFlagMatch[1],
+        feedbackFlagMatch[2],
+        expectedVersion(request),
+        input.flagged,
+        reason,
+      ],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 200, data: result };
+  }
+
+  const feedbackNoteMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/([^/]+)\/notes$/u.exec(
+      path,
+    );
+  if (
+    feedbackNoteMatch &&
+    UUID.test(feedbackNoteMatch[1]!) &&
+    UUID.test(feedbackNoteMatch[2]!) &&
+    request.method === 'POST'
+  ) {
+    const note = stringValue((await body(request)).note);
+    if (!note) throw new ApiFault(400, 'INVALID_INPUT');
+    const [result] = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_note_add(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text)',
+      [...context, feedbackNoteMatch[1], feedbackNoteMatch[2], note],
+    );
+    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+    return { status: 201, data: result };
+  }
+
+  const feedbackBatchDeleteMatch =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/batch-delete$/u.exec(path);
+  if (
+    feedbackBatchDeleteMatch &&
+    UUID.test(feedbackBatchDeleteMatch[1]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const ids = Array.isArray(input.feedback_ids)
+      ? input.feedback_ids.map((value) => uuidValue(value))
+      : [];
+    const reason = stringValue(input.reason);
+    const operationId = uuidValue(input.operation_id);
+    if (
+      ids.length < 1 ||
+      ids.length > 100 ||
+      ids.some((value) => !value) ||
+      !reason ||
+      !operationId
+    )
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_feedback_batch_delete(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid[], $6::text, $7::uuid)',
+      [...context, feedbackBatchDeleteMatch[1], ids, reason, operationId],
+    );
+    return { status: 202, data: { operation_id: operationId, items: rows } };
+  }
+
   const adminFileMatch = /^admin\/api\/v1\/config-files\/([^/]+)$/u.exec(path);
   if (adminFileMatch && request.method === 'GET') {
     const fileId = uuidValue(adminFileMatch[1]);

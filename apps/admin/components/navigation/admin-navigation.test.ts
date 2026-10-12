@@ -125,6 +125,7 @@ describe('admin navigation model', () => {
       'subscriptions',
       'redemption',
       'files',
+      'feedback',
       'integration',
       'settings',
     ]);

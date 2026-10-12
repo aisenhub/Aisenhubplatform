@@ -44,13 +44,21 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 | DELETE /v1/config-gallery/:configId/like | active账户 | 必需、平台active | 幂等 Unlike |
 | GET /v1/config-gallery/:configId/content | active账户 | 必需、平台active | 流完成后记录 download_completed |
 | POST /v1/config-gallery/:configId/apply | active账户 | 必需、平台active | Idempotency-Key 去重 apply_delivery_completed；只证明中央交付，不证明目标业务应用成功 |
+| GET /v1/feedback | active账户 | 必需、平台active | 自身 Feedback 列表；跨账户/平台资源不泄露 |
+| POST /v1/feedback | active账户 | 必需、平台active | `Idempotency-Key` 创建 draft；归属和邮箱不接受浏览器输入 |
+| GET /v1/feedback/:feedbackId | active账户 | 必需、平台active | 读取自身 draft/已提交 Feedback 与附件 metadata |
+| PATCH /v1/feedback/:feedbackId | active账户 | 必需、平台active | draft-only，`If-Match`；仅受控正文/category/contact/client context 字段 |
+| POST /v1/feedback/:feedbackId/attachments/upload-intent | active账户 | 必需、平台active | `Idempotency-Key`；最多 5 张/12 MiB，只接受 JPEG/PNG/WebP |
+| PUT /v1/feedback/:feedbackId/attachments/:attachmentId/content | active账户 | 必需、平台active | private binary upload；真实大小与 magic 由服务端校验 |
+| DELETE /v1/feedback/:feedbackId/attachments/:attachmentId | active账户 | 必需、平台active | draft-only；进入受控 attachment cleanup，不直删 Storage metadata |
+| POST /v1/feedback/:feedbackId/submit | active账户 | 必需、平台active | 所有附件必须结算 active；服务端 Auth 读取 email 快照并转为 new |
 | POST /v1/identity/delete-request | 有效会话、近期重新认证 | 必需、平台active | 全局删除请求；不立刻删除Auth User |
 
 principal为状态诊断接口，返回disabled时不表示授权通过；其余普通接口拒绝disabled。失效/revoked Key始终401，即使仅查询principal。system_admin和全局deleting身份不能构造普通Principal。平台已disabled时的关闭/删除申请通过受控支持/Admin路径处理，不为此开放一般业务API。
 
 旧公开Pricing通过 Browser → BFF → GET /plans；商品目录通过服务端BFF调用 GET /v1/subscription/products，不需要用户Bearer，但Platform Key只允许留在服务端。商品接口返回固定商品的价格、期限、启用和购买就绪原因，不返回provider ID、platform config、兑换库存或Secret；Free/paid展示不意味着用户已获得权益。结账接口只生成不可变快照；本阶段没有Provider配置时保持购买关闭，不伪造payment_url。
 
-Admin独立 /admin/api/v1：`GET /security/status` 在全局AAL2 gate前验证活动会话与单一管理员身份，返回当前AAL及当前session近期MFA proof到期时间；其他路由要求AAL2。其余资源包括 platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、legacy config-files、Config resources/reviews/Gallery governance/usage、audit、deletion-jobs。Config 资源列表与审核均先在 SQL 端按 platform 过滤；平台总容量通过 file-policy 的 `max_platform_total_bytes` 读取/修改，修改总容量要求近期 MFA。所有入口强制Admin鉴权；Grant/revoke/pause/resume、批次交付及Key操作的高风险规则不可由前端参数关闭。Admin文件列表的可选 `platform_id` 在受控SQL边界内先于分页过滤；Admin不提供直接更新Projection或任意SQL入口。
+Admin独立 /admin/api/v1：`GET /security/status` 在全局AAL2 gate前验证活动会话与单一管理员身份，返回当前AAL及当前session近期MFA proof到期时间；其他路由要求AAL2。其余资源包括 platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、legacy config-files、Config resources/reviews/Gallery governance/usage、Feedback、audit、deletion-jobs。Feedback 列表在 SQL 游标分页前组合 q/status/category/label/user/email/has_attachments/from/to；详情返回受保护正文、联系快照、图片 metadata 与 timeline，图片内容通过 Admin binary proxy 获取。status/labels/flag/note 使用受控领域命令；服务端 CSV export 不依赖当前浏览器页；批量删除要求 recent-MFA、reason 与 operation id。Config 资源列表与审核同样先在 SQL 端按 platform 过滤；平台总容量通过 file-policy 的 `max_platform_total_bytes` 读取/修改，修改总容量要求近期 MFA。所有入口强制Admin鉴权；高风险规则不可由前端参数关闭。
 
 兑换码批次创建重放以 `200` 返回 `batch_id`、`status=pending_delivery` 与 `creation_state=replayed_existing`，不返回 plaintext codes 或 delivery receipt；同一 `creation_operation_id` 参数不一致返回 `409 IDEMPOTENCY_CONFLICT`。新批次请求使用 `{product_code: monthly|yearly|lifetime}`，服务端从平台配置快照 Plan/期限；不接受 Free 或客户端自定义 duration。旧批次读取/兑换继续兼容。
 

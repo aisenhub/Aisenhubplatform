@@ -35,6 +35,10 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/config-resources/${id}`) ||
       matches(`platforms/${id}/config-resources/${id}/usage`) ||
       matches(`platforms/${id}/config-reviews`) ||
+      matches(`platforms/${id}/feedback`) ||
+      matches(`platforms/${id}/feedback/export`) ||
+      matches(`platforms/${id}/feedback/${id}`) ||
+      matches(`platforms/${id}/feedback/${id}/attachments/${id}/content`) ||
       exact('redemption-batches') ||
       matches(`subscriptions/${id}`) ||
       exact('config-files') ||
@@ -61,6 +65,8 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/plans`) ||
       matches(`platforms/${id}/config-reviews/${id}/review`) ||
       matches(`platforms/${id}/config-resources/${id}/gallery-governance`) ||
+      matches(`platforms/${id}/feedback/${id}/(?:status|flag|notes)`) ||
+      matches(`platforms/${id}/feedback/batch-delete`) ||
       exact('redemption-batches') ||
       matches(`redemption-batches/${id}/(?:confirm-delivery|disable)`) ||
       matches(`subscriptions/${id}/commands`) ||
@@ -76,6 +82,9 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/subscription-config`) ||
       matches(`platforms/${id}/file-policy`)
     );
+  }
+  if (method === 'PUT') {
+    return matches(`platforms/${id}/feedback/${id}/labels`);
   }
   if (method === 'DELETE') return matches(`config-files/${id}`);
   return false;
@@ -124,9 +133,12 @@ async function dispatch(
     }
     const binaryDownload =
       request.method === 'GET' &&
-      /^admin\/api\/v1\/config-files\/[^/]+\/content$/u.test(pathValue);
+      (/^admin\/api\/v1\/config-files\/[^/]+\/content$/u.test(pathValue) ||
+        /^admin\/api\/v1\/platforms\/[^/]+\/feedback\/[^/]+\/attachments\/[^/]+\/content$/u.test(
+          pathValue,
+        ));
     const headers: Record<string, string> = {
-      Accept: binaryDownload ? 'application/octet-stream' : 'application/json',
+      Accept: binaryDownload ? '*/*' : 'application/json',
       'Cache-Control': 'no-store',
     };
     const names = authCookieNames('admin');
@@ -213,6 +225,13 @@ export function POST(
 }
 
 export function PATCH(
+  request: NextRequest,
+  context: RouteContext,
+): Promise<Response> {
+  return dispatch(request, context);
+}
+
+export function PUT(
   request: NextRequest,
   context: RouteContext,
 ): Promise<Response> {

@@ -1,6 +1,6 @@
 # 配置文件与持久任务
 
-本文件描述当前文件、Storage 和持久任务实现，属于 [系统架构](../overview.md) 的文件模块。文件不解析、不执行、不预览、不解压，扩展名不限。单一私有 bucket 为 platform-config-files，路径为 platform_id/platform_account_id/file_id；原始文件名仅作为 metadata，不进入路径。
+本文件描述当前文件、Storage 和持久任务实现，属于 [系统架构](../overview.md) 的文件模块。Config/legacy 文件不解析、不执行、不预览、不解压，物理对象使用私有 `platform-config-files` bucket。Feedback 图片使用独立私有 `platform-feedback-attachments` bucket 与独立 attachment ledger，只接受 JPEG/PNG/WebP；两类对象都只能由受控服务端 Storage adapter 访问，浏览器不直连 Storage。
 
 ## 1. 受控上传与硬限制
 
@@ -177,3 +177,11 @@ HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算
 Global Delete 的 `files_blocked` 与 account retention cleanup 会同时停止 authored Gallery 可见性、把 Config 置为 deleting、删除目标账户作为 liker 的关系、把 Usage actor 置空并最小化 Config/Version 用户文本；Usage 计数事实本身保留。Gallery 查询还要求作者平台账户 `active`，因此账户关闭后无需等待对象物理删除即可 fail closed。
 
 恢复数据集必须把 `platform_configs`、`platform_config_versions`、Gallery submissions/entries、likes、usage events 与 `platform_config_files` 元数据作为同一数据库恢复边界考虑；Storage object bytes 仍是数据库之外的对象。现有 backup barrier 会阻止 Config Version 的物理删除，但当前仓库没有可证明的外部 Storage object backup/manifest 介质，因此 Admin 只能展示屏障/技术状态，不得把数据库快照或 metadata 冒充“已备份”。
+
+### 7.6 Feedback attachment 与删除生命周期
+
+Feedback 图片不进入 `platform_config_files`、Config slot 或 legacy 文件配额。`platform_feedback_attachments` 独立保存 feedback/platform/account 归属、固定 private bucket/path、声明/实际字节、SHA-256、lease/fence、write outcome 与删除重试证据；单图最多 4 MiB、单条 Feedback 最多 5 张且总计不超过 12 MiB。Account API 在有界读取后校验 JPEG/PNG/WebP magic，再通过受控 Storage adapter 写入不可复用对象路径；`unknown` 写入结果保持可恢复状态，不猜测失败或复用路径。
+
+Feedback 删除先由领域函数把正文、联系邮箱、client context、labels 与 internal note 内容最小化，并把未删除附件置为 `deleting`。Maintenance 的 files capability 再使用固定 candidate/claim/finish、lease/fence 和 Storage API `remove` 完成物理清理；失败保持 deleting 并退避重试，最后一个附件被证明删除后 Feedback 才收敛为 `deleted` 并断开 identity/account 引用。Global Delete 在既有 `files_blocked` checkpoint、account retention 在既有 cleanup 入口调用同一个 Feedback privacy helper，不增加第二套删除状态机。
+
+Feedback attachment cleanup 与 Config/file cleanup 共用持久 backup barrier。数据库恢复集包含 Feedback、attachment metadata、labels/events 与删除状态，但 Supabase 数据库备份不包含 Storage object bytes；当前没有可证明的外部 Feedback 图片恢复介质，因此任何页面和操作记录都不得把 metadata/数据库快照表述为“图片已备份”。

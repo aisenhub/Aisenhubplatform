@@ -5,6 +5,7 @@ import { assertEquals } from 'jsr:@std/assert@1';
 import { handleMaintenanceRequest } from './index.ts';
 
 const fileId = '00000000-0000-4000-8000-000000000001';
+const feedbackAttachmentId = '00000000-0000-4000-8000-000000000007';
 const jobId = '00000000-0000-4000-8000-000000000002';
 const accountId = '00000000-0000-4000-8000-000000000006';
 const userId = '00000000-0000-4000-8000-000000000003';
@@ -43,52 +44,78 @@ function database(): TestDatabase {
           events.push(
             query.startsWith('set local role')
               ? 'role'
-              : query.includes('file_cleanup_candidates')
-                ? 'candidates'
-                : query.includes('file_cleanup_claim')
-                  ? 'claim'
-                  : query.includes('deletion_job_claim')
-                    ? 'delete-claim'
-                    : query.includes('deletion_job_step')
-                      ? 'delete-step'
-                      : query.includes('deletion_job_auth_target')
-                        ? 'auth-target'
-                        : query.includes('deletion_job_auth_prepare')
-                          ? 'auth-prepare'
-                          : query.includes('account_retention_candidates')
-                            ? 'retention-candidates'
-                            : query.includes('account_retention_cleanup')
-                              ? 'retention-cleanup'
-                              : query.includes('idempotency_cleanup')
-                                ? 'idempotency-cleanup'
-                                : query.includes('billing_processing_job_claim')
-                                  ? 'billing-claim'
-                                  : query.includes(
-                                        'billing_processing_job_requeue(',
-                                      )
-                                    ? 'billing-requeue-generic'
-                                    : query.includes(
-                                          'billing_processing_job_requeue_contract',
-                                        )
-                                      ? 'billing-requeue'
+              : query.includes('feedback_attachment_cleanup_candidates')
+                ? 'feedback-candidates'
+                : query.includes('feedback_attachment_cleanup_claim')
+                  ? 'feedback-claim'
+                  : query.includes('feedback_attachment_cleanup_finish')
+                    ? 'feedback-finish'
+                    : query.includes('file_cleanup_candidates')
+                      ? 'candidates'
+                      : query.includes('file_cleanup_claim')
+                        ? 'claim'
+                        : query.includes('deletion_job_claim')
+                          ? 'delete-claim'
+                          : query.includes('deletion_job_step')
+                            ? 'delete-step'
+                            : query.includes('deletion_job_auth_target')
+                              ? 'auth-target'
+                              : query.includes('deletion_job_auth_prepare')
+                                ? 'auth-prepare'
+                                : query.includes('account_retention_candidates')
+                                  ? 'retention-candidates'
+                                  : query.includes('account_retention_cleanup')
+                                    ? 'retention-cleanup'
+                                    : query.includes('idempotency_cleanup')
+                                      ? 'idempotency-cleanup'
                                       : query.includes(
-                                            'billing_processing_job_finish',
+                                            'billing_processing_job_claim',
                                           )
-                                        ? 'billing-finish'
+                                        ? 'billing-claim'
                                         : query.includes(
-                                              'billing_order_query_target',
+                                              'billing_processing_job_requeue(',
                                             )
-                                          ? 'billing-target'
+                                          ? 'billing-requeue-generic'
                                           : query.includes(
-                                                'billing_order_verify_and_settle',
+                                                'billing_processing_job_requeue_contract',
                                               )
-                                            ? 'billing-verify'
+                                            ? 'billing-requeue'
                                             : query.includes(
-                                                  'deletion_job_backup_barrier_guard',
+                                                  'billing_processing_job_finish',
                                                 )
-                                              ? 'barrier-guard'
-                                              : 'finish',
+                                              ? 'billing-finish'
+                                              : query.includes(
+                                                    'billing_order_query_target',
+                                                  )
+                                                ? 'billing-target'
+                                                : query.includes(
+                                                      'billing_order_verify_and_settle',
+                                                    )
+                                                  ? 'billing-verify'
+                                                  : query.includes(
+                                                        'deletion_job_backup_barrier_guard',
+                                                      )
+                                                    ? 'barrier-guard'
+                                                    : 'finish',
           );
+          if (query.includes('feedback_attachment_cleanup_candidates'))
+            return [{ attachment_id: feedbackAttachmentId }] as unknown as T[];
+          if (query.includes('feedback_attachment_cleanup_claim'))
+            return [
+              {
+                action: 'remove',
+                storage_path: 'feedback/attachment',
+                fencing_token: fence,
+              },
+            ] as unknown as T[];
+          if (query.includes('feedback_attachment_cleanup_finish'))
+            return [
+              {
+                attachment_id: feedbackAttachmentId,
+                status: 'deleted',
+                retry_count: 0,
+              },
+            ] as unknown as T[];
           if (query.includes('file_cleanup_candidates'))
             return [{ file_id: fileId }] as unknown as T[];
           if (query.includes('file_cleanup_claim'))
@@ -258,6 +285,89 @@ Deno.test('maintenance scheduler uses the fixed candidate batch', async () => {
   assertEquals((await response.json()).data.processed, 1);
   assertEquals(events[0], 'begin');
   assertEquals(events[2], 'candidates');
+});
+
+Deno.test('maintenance removes Feedback images from the dedicated private bucket', async () => {
+  events.length = 0;
+  let removedBucket: string | null = null;
+  let removedPath: string | null = null;
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/feedback-attachments/cleanup', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ attachment_id: feedbackAttachmentId }),
+    }),
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+      storageAdapter: {
+        async putImmutable() {
+          throw new Error('unused');
+        },
+        async getInfo() {
+          throw new Error('unused');
+        },
+        async download() {
+          throw new Error('unused');
+        },
+        async remove(input) {
+          removedBucket = input.bucket;
+          removedPath = input.path;
+          events.push('feedback-storage-remove');
+        },
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(removedBucket, 'platform-feedback-attachments');
+  assertEquals(removedPath, 'feedback/attachment');
+  assertEquals(events, [
+    'begin',
+    'role',
+    'feedback-claim',
+    'feedback-storage-remove',
+    'begin',
+    'role',
+    'feedback-finish',
+  ]);
+});
+
+Deno.test('maintenance runs Feedback cleanup through the same files capability boundary', async () => {
+  events.length = 0;
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/feedback-attachments/run', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    }),
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: database(),
+      storageAdapter: {
+        async putImmutable() {
+          throw new Error('unused');
+        },
+        async getInfo() {
+          throw new Error('unused');
+        },
+        async download() {
+          throw new Error('unused');
+        },
+        async remove() {},
+      },
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data.processed, 1);
+  assertEquals(events[2], 'feedback-candidates');
 });
 
 Deno.test('maintenance worker rejects user-style requests and arbitrary routes', async () => {

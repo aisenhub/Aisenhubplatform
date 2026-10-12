@@ -112,6 +112,112 @@ export async function runCleanup(
   return response(failed ? 503 : 200, { processed: results.length, results });
 }
 
+export async function cleanupFeedbackAttachmentId(
+  dependencies: MaintenanceDependencies,
+  id: string,
+  attachmentId: string,
+): Promise<Response> {
+  const workerId =
+    dependencies.workerId ??
+    Deno.env.get('MAINTENANCE_WORKER_ID') ??
+    `maintenance-${crypto.randomUUID()}`;
+  const jobContext = context(workerId, id);
+  const db = dependencies.database ?? database();
+  const [claimed] = await withJobRole(db, async (transaction) => {
+    return transaction.unsafe<Row>(
+      'select * from private.feedback_attachment_cleanup_claim(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, 60)',
+      [...jobContext, attachmentId],
+    );
+  });
+  if (!claimed) return response(503, { error: { code: 'JOB_UNAVAILABLE' } });
+
+  const action = String(claimed.action ?? '');
+  if (action !== 'remove')
+    return response(action === 'busy' ? 409 : 200, {
+      attachment_id: attachmentId,
+      action,
+      status: claimed.status ?? null,
+      write_outcome: claimed.write_outcome ?? null,
+    });
+
+  let outcome: 'removed' | 'failed' | 'unknown' = 'removed';
+  let failure: string | null = null;
+  try {
+    await (dependencies.storageAdapter ?? storageAdapter()).remove({
+      bucket: 'platform-feedback-attachments',
+      path: String(claimed.storage_path),
+      timeoutMs: 5000,
+    });
+  } catch (error) {
+    failure = errorCode(error);
+    outcome = failure === 'PROVIDER_TIMEOUT' ? 'unknown' : 'failed';
+  }
+
+  const [finished] = await withJobRole(db, async (transaction) => {
+    return transaction.unsafe<Row>(
+      'select * from private.feedback_attachment_cleanup_finish(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text)',
+      [...jobContext, attachmentId, claimed.fencing_token, outcome, failure],
+    );
+  });
+  if (!finished)
+    return response(503, {
+      error: { code: 'JOB_UNAVAILABLE' },
+      attachment_id: attachmentId,
+    });
+  return response(outcome === 'removed' ? 200 : 503, {
+    attachment_id: finished.attachment_id ?? attachmentId,
+    status: finished.status ?? null,
+    outcome,
+    retry_count: finished.retry_count ?? null,
+    next_attempt_at: finished.next_attempt_at ?? null,
+  });
+}
+
+export async function cleanupFeedbackAttachment(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  const attachmentId = uuid(input.attachment_id);
+  if (
+    !attachmentId ||
+    Object.keys(input).some((key) => key !== 'attachment_id')
+  )
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  return cleanupFeedbackAttachmentId(dependencies, id, attachmentId);
+}
+
+export async function runFeedbackAttachmentCleanup(
+  request: Request,
+  dependencies: MaintenanceDependencies,
+  id: string,
+): Promise<Response> {
+  const input = await jsonBody(request);
+  if (Object.keys(input).length !== 0)
+    return response(400, { error: { code: 'INVALID_INPUT' }, request_id: id });
+  const db = dependencies.database ?? database();
+  const candidates = await withJobRole(db, (transaction) =>
+    transaction.unsafe<Row>(
+      'select * from private.feedback_attachment_cleanup_candidates(null::uuid, 20)',
+    ),
+  );
+  const results: unknown[] = [];
+  let failed = false;
+  for (const candidate of candidates) {
+    const attachmentId = uuid(candidate.attachment_id);
+    if (!attachmentId) continue;
+    const result = await cleanupFeedbackAttachmentId(
+      dependencies,
+      id,
+      attachmentId,
+    );
+    if (result.status >= 500) failed = true;
+    results.push(await result.json());
+  }
+  return response(failed ? 503 : 200, { processed: results.length, results });
+}
+
 export async function cleanupIdempotency(
   request: Request,
   dependencies: MaintenanceDependencies,

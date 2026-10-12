@@ -11,7 +11,9 @@ import {
 } from './core.ts';
 import { billingAlertsEvaluate } from './alerts.ts';
 import {
+  cleanupFeedbackAttachment,
   cleanupFile,
+  runFeedbackAttachmentCleanup,
   runCleanup,
   cleanupIdempotency,
   reconcile,
@@ -41,6 +43,8 @@ const MAINTENANCE_PATHS: Readonly<
     '/maintenance/v1/files/cleanup',
     '/maintenance/v1/files/run',
     '/maintenance/v1/files/reconcile',
+    '/maintenance/v1/feedback-attachments/cleanup',
+    '/maintenance/v1/feedback-attachments/run',
   ]),
   identity: new Set([
     '/maintenance/v1/idempotency/cleanup',
@@ -110,6 +114,10 @@ export async function handleMaintenanceRequest(
       return await runCleanup(request, dependencies, id);
     if (path === '/maintenance/v1/files/reconcile')
       return await reconcile(request, dependencies, id);
+    if (path === '/maintenance/v1/feedback-attachments/cleanup')
+      return await cleanupFeedbackAttachment(request, dependencies, id);
+    if (path === '/maintenance/v1/feedback-attachments/run')
+      return await runFeedbackAttachmentCleanup(request, dependencies, id);
     if (path === '/maintenance/v1/idempotency/cleanup')
       return await cleanupIdempotency(request, dependencies, id);
     if (path === '/maintenance/v1/deletion-jobs/claim')

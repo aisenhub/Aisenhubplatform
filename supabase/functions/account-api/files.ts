@@ -57,6 +57,25 @@ function downloadHeaders(filename: unknown): Record<string, string> {
   };
 }
 
+function inlineImageHeaders(
+  filename: unknown,
+  mimeType: unknown,
+): Record<string, string> {
+  const safeName = safeDownloadFilename(filename);
+  const contentType = stringValue(mimeType);
+  if (
+    !contentType ||
+    !['image/jpeg', 'image/png', 'image/webp'].includes(contentType)
+  )
+    throw new ApiFault(415, 'UNSUPPORTED_MEDIA_TYPE');
+  return {
+    'Cache-Control': 'private, no-store',
+    'Content-Type': contentType,
+    'Content-Disposition': `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+    'X-Content-Type-Options': 'nosniff',
+  };
+}
+
 async function uploadTransaction<T>(
   request: Request,
   dependencies: AccountApiDependencies,
@@ -1013,6 +1032,67 @@ export async function handleConfigResourceDownload(
     status: 200,
     headers: {
       ...downloadHeaders(target.original_name),
+      ...(session.requestId ? { 'X-Request-Id': session.requestId } : {}),
+    },
+  });
+}
+
+function adminFeedbackAttachmentTarget(
+  request: Request,
+): { platformId: string; feedbackId: string; attachmentId: string } | null {
+  const match =
+    /^admin\/api\/v1\/platforms\/([^/]+)\/feedback\/([^/]+)\/attachments\/([^/]+)\/content$/u.exec(
+      requestPath(request),
+    );
+  const platformId = uuidValue(match?.[1]);
+  const feedbackId = uuidValue(match?.[2]);
+  const attachmentId = uuidValue(match?.[3]);
+  return platformId && feedbackId && attachmentId
+    ? { platformId, feedbackId, attachmentId }
+    : null;
+}
+
+export async function handleAdminFeedbackAttachmentDownload(
+  request: Request,
+  dependencies: AccountApiDependencies,
+  session: SessionContext,
+): Promise<Response> {
+  if (request.method !== 'GET') throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const ids = adminFeedbackAttachmentTarget(request);
+  if (!ids) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  const target = await adminEventTransaction(
+    dependencies,
+    async (transaction) => {
+      const [row] = await transaction.unsafe<Row>(
+        'select * from private.admin_feedback_attachment_download_authorize(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid)',
+        [
+          ...adminContextValues(session),
+          ids.platformId,
+          ids.feedbackId,
+          ids.attachmentId,
+        ],
+      );
+      if (!row) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
+      return row;
+    },
+  );
+  const adapter = dependencies.storageAdapter ?? createSupabaseStorageAdapter();
+  let upstream: Response;
+  try {
+    upstream = await adapter.download({
+      bucket: 'platform-feedback-attachments',
+      path: String(target.storage_path),
+      timeoutMs: 30_000,
+    });
+  } catch {
+    throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+  }
+  if (!upstream.ok || !upstream.body)
+    throw new ApiFault(503, 'STORAGE_UNAVAILABLE');
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      ...inlineImageHeaders(target.original_name, target.mime_type),
       ...(session.requestId ? { 'X-Request-Id': session.requestId } : {}),
     },
   });
