@@ -3,7 +3,7 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：OPT-008 平台用户反馈系统
 - 总计划：[plan.md](plan.md)
-- 当前阶段：Completed / Paused
+- 当前阶段：Completed
 - 当前分支：`main`（OPT-008 任务分支已删除）
 - 基线：`main@67620082f43f2e608f24a5d301bb5adacbfc887f`
 - 风险：R3
@@ -29,7 +29,7 @@
 
 ## 执行规则
 
-OPT-008 已完成并进入 main。按用户要求当前暂停，不进入 OPT-009。后续恢复工作时先阅读 `docs/proposals/optimization-intake/README.md`，再阅读 `docs/proposals/optimization-intake/platform-account-workbench-architecture.md`，从最新 main 为 OPT-009 建立新的短期任务分支。
+OPT-008 已完成并进入 main。后续先阅读 `docs/proposals/optimization-intake/README.md`，再阅读 `docs/proposals/optimization-intake/platform-account-workbench-architecture.md`，从最新 main 为 OPT-009 建立新的短期任务分支。
 
 ## 最终退出条件
 
