@@ -2,7 +2,7 @@
 
 - 优化名称：OPT-009 单平台账户工作台与账户治理
 - 总计划：[plan.md](plan.md)
-- 当前阶段：Phase 01 / In Progress
+- 当前阶段：Phase 02 / In Progress
 - 任务分支：`codex/opt-009-account-workbench`
 - 基线：`main@e5376b6a4c626a9c55e86d64633491c20fdfde19`
 - 风险：R3
@@ -27,7 +27,7 @@
 
 ## 当前执行环境
 
-远端 GitHub 主线与 Actions 可用；本地 Runner 隧道当前不可用。若本地恢复，继续使用既有 MyCodex 工作流；若未恢复，任何远端实现都必须通过 PR 的完整 `TASK-0801`，不能跳过 R3 门禁。
+远端 GitHub 主线与 Actions 可用，本地 Runner 已恢复。Phase 01 已完成 fresh/non-empty upgrade、71/1456 DB 回归与 canonical `TASK-0801` 20/20 gates；当前从该已验证基线进入 Phase 02 Admin API/OpenAPI。
 
 ## 退出条件
 

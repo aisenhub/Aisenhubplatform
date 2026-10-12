@@ -24,13 +24,23 @@
 
 | 阶段 | 状态 | 证据 | 阻塞 |
 | --- | --- | --- | --- |
-| 01 Domain/read model | In Progress | 正式 design 已冻结 | 本地 Runner 隧道当前不可用；可使用 PR CI 作为等价 R3 门禁，但实施后仍需完整验证 |
-| 02 Admin API/contract | Not Started | - | 依赖 Phase 01 |
+| 01 Domain/read model | Completed | migration + `t31`、fresh/non-empty upgrade、canonical R3 全绿 | 无 |
+| 02 Admin API/contract | In Progress | Phase 01 已通过串行退出门禁 | 无 |
 | 03 Account 360 UI | Not Started | - | 依赖 Phase 02 |
 | 04 Lifecycle/release | Not Started | - | 依赖 01–03 |
+
+## 实施与验证日志
+
+| 日期 | 范围 | 来源 | 结果 |
+| --- | --- | --- | --- |
+| 2026-10-12 | Proposal baseline | `docs:check` + `pnpm verify:task:0801 --reuse-local` | PASS：补齐 `docs/proposals/README.md` 可达性后 184 documents；Proposal-only canonical 20/20 gates PASS，DB 70/1420、API 106/0、Admin 95 routes、OpenAPI 46/63、breaking PASS |
+| 2026-10-12 | Phase 01 fresh migration | `supabase db reset --local --no-seed --yes` | PASS：首次容器初始化瞬态失败发生在任何 migration 之前；debug 重试完整从零应用至 `20261012043000_platform_account_workbench_domain.sql` 成功 |
+| 2026-10-12 | Phase 01 DB | `pnpm ... supabase db --local` | PASS：新增 `t31` 36/36；全量 71 files / 1456 tests。首次仅 `plan(34)` 与实际 36 条断言不匹配，修正计划数后功能断言与全量回归全部通过 |
+| 2026-10-12 | Phase 01 non-empty upgrade | reset 到 `20261011175718` → 旧 Account/Profile/Subscription/Config/Feedback fixture → `migration up --local` | PASS：仅增量应用 OPT-009 migration；Profile、Subscription/Plan、Config、Feedback 旧事实均保持；升级库 `t31` 36/36、全量 71/1456 PASS |
+| 2026-10-12 | Phase 01 canonical R3 | `pnpm verify:task:0801 --reuse-local` | PASS：20 executable gates；DB 71/1456、API 106/0、settlement concurrency、contracts/breaking、Consumer E2E、Admin T12、95-route responsive/a11y、docs 184、OpenAPI 46/63 全绿 |
 
 ## 规则
 
 - 不预填 PASS。
 - 每个失败/修复/复测、migration/Edge/staging、commit/PR/main/branch 状态都追加到本文件。
-- 未通过完整 R3 与适用远端状态核对前不得把 OPT-009 或 Intake 标记 Completed。
+- Phase 01 已通过完整本地 R3；OPT-009 仍保持 In Progress，必须完成 Phase 02–04、适用 staging 与 GitHub main closeout 后才能标记 Completed。
