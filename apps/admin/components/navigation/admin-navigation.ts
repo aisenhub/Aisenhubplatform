@@ -67,7 +67,6 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         key: 'billing',
         label: '计费管理',
         href: '/admin/billing/orders',
-        aliases: ['/admin/billing'],
         description: '中央订单、结算、Provider 与人工处理',
         icon: CreditCard,
       },
@@ -287,7 +286,6 @@ export function mapAdminScopeRoute(
       return `${targetPrefix}/accounts`;
     }
     if (
-      pathname === '/admin/billing' ||
       pathname === '/admin/billing/orders' ||
       pathname.startsWith('/admin/billing/orders/')
     ) {

@@ -15,7 +15,7 @@
 | 阶段 | 状态 | 实施结果 | 验证 | commit/push |
 | --- | --- | --- | --- | --- |
 | 00 | 已交付 | 环境、canonical surface、删除清单和最小 seed 已冻结 | PASS | `a1b2a54` / 已推送任务分支 |
-| 01 | 未开始 | 未验证 | 未运行 | 未验证 |
+| 01 | 验收通过待推送 | 公共 Contract/Harness/runtime/旧 URL surface 已收敛；Account 40 ops / Admin 70 ops | PASS（breaking diff 为预期 28 项） | 未提交/未推送 |
 | 02 | 未开始 | 未验证 | 未运行 | 未验证 |
 | 03 | 未开始 | 未验证 | 未运行 | 未验证 |
 | 04 | 未开始 | 未验证 | 未运行 | 未验证 |
@@ -29,7 +29,7 @@
 
 ## LC-01～LC-13 关闭记录
 
-全部：未开始。
+LC-08、LC-09、LC-10、LC-11 的公共运行面已关闭；LC-03、LC-05、LC-13 的公共 surface 已关闭但数据库/历史测试清理继续由阶段 02/03/07 完成。其余 LC 项未开始。
 
 ## 实际验证记录
 
@@ -46,6 +46,17 @@
 | 2026-10-13 | 00 | `65c52fb` | `git diff --check` | Local | 0 | PASS；仅有既有 CRLF→LF 提示，无 whitespace error。 |
 | 2026-10-13 | 00 | `a1b2a54` | `git commit -m "docs: freeze prelaunch remediation baseline"` | Local | 0 | PASS：仅提交本任务 Proposal/审查文档；未暂存既有 `docs/README.md` 与 `project-review-2026-10-13.md`。 |
 | 2026-10-13 | 00 | `a1b2a54` | `git push -u origin codex/prelaunch-canonicalization-remediation` | GitHub | 0 | PASS：远端任务分支已建立并跟踪；仓库 workflow 仅在 main push / main PR 触发，不因普通任务分支 push 触发该 workflow。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm test:api` | Local | 0 | PASS：103/103；fixed-product/config-files 测试退出，Checkout/支付/MFA/Global Delete/Config/Feedback 有效场景均改为 canonical surface。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm test:unit` | Local | 0 | PASS：Domain 12、UI 36、Admin 64（14 files），合计 112 tests；Contract operation count 已重基线到 40/70。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm test:consumer-harness` | Local | 0 | PASS：37 canonical operations；dynamic route、workspace isolation、CSRF/origin 与 unsupported-route smoke 全绿。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm contracts:check` | Local | 0 | PASS：Account 40 / Admin 70；OpenAPI refs/sample/binary/no-store、Consumer Lab snapshot、3 contracts / 30 fields consumer manifest 全绿。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm contracts:breaking` | Local vs `origin/main` | 1（预期） | EXPECTED BREAKING：28 项，全部属于已批准删除清单：fixed products、product_code checkout、legacy attribution、generic config-files、account root PATCH、subscription-config 与 Admin config-files。阶段 07 建新 baseline 前保持该预期。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm typecheck` | Local | 0 | PASS：5/5 typecheck tasks。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm lint` | Local | 0 | PASS：344 files，0 warning / 0 error。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm format:check` | Local | 0 | PASS：409 files。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm test:tooling` | Local | 0 | PASS：9/9。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `pnpm docs:check` | Local | 0 | PASS：207 documents。 |
+| 2026-10-13 | 01 | `fef123f+worktree` | `git diff --check` | Local | 0 | PASS。 |
 
 工具记录：首次组合 Git 诊断使用 `&&` 被当前 Windows PowerShell 解析拒绝（退出码 1），未修改文件；改用 PowerShell 兼容分隔符后 PASS。`supabase status -o json` 仅用于确认 Local 服务存在，命令输出包含本地开发用 key/secret，因此这些值不写入验证记录或任务报告。
 

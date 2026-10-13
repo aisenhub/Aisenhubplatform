@@ -742,7 +742,7 @@ try {
       `/admin/platforms/${platformId}/settings/integration`,
       'platform-integration-page',
     ],
-    ['/admin/billing', 'admin-shell'],
+    ['/admin/billing/orders', 'central-billing-page'],
     ['/admin/accounts/deletion-jobs', 'admin-shell'],
     ['/admin/audit', 'admin-shell'],
     ['/admin/security', 'admin-shell'],

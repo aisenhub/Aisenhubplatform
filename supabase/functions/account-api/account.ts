@@ -22,12 +22,8 @@ import {
   principalDto,
   assertAllowed,
   accountContextValues,
-  isoDate,
-  fileDto,
-  fileBudgetDto,
   entitlementDto,
   commerceOfferDto,
-  subscriptionProductDto,
   subscriptionCheckoutDto,
   checkoutPaymentUrl,
   body,
@@ -35,7 +31,6 @@ import {
   withEtag,
   requestPath,
 } from './core.ts';
-import { boundedLimit } from './admin.ts';
 import { dispatchConfigResources } from './configs.ts';
 import { dispatchFeedback } from './feedback.ts';
 
@@ -49,9 +44,7 @@ export async function dispatchAccount(
   const path = requestPath(request);
 
   if (
-    (path === 'v1/plans' ||
-      path === 'v1/subscription/products' ||
-      path === 'v1/commerce/offers') &&
+    (path === 'v1/plans' || path === 'v1/commerce/offers') &&
     request.method === 'GET'
   ) {
     const key = await verifyPlatformKey(transaction, request, dependencies);
@@ -63,16 +56,6 @@ export async function dispatchAccount(
         [key.platformId, key.keyId],
       );
       return { status: 200, data: rows.map((item) => commerceOfferDto(item)) };
-    }
-    if (path === 'v1/subscription/products') {
-      const rows = await transaction.unsafe<Row>(
-        'select * from private.subscription_products_list($1::uuid, $2::uuid)',
-        [key.platformId, key.keyId],
-      );
-      return {
-        status: 200,
-        data: rows.map((row) => subscriptionProductDto(row)),
-      };
     }
     const rows = await transaction.unsafe<Row>(
       'select * from private.public_plans_list($1::uuid, $2::uuid)',
@@ -181,15 +164,10 @@ export async function dispatchAccount(
     if (!idempotencyKey || idempotencyKey.length > 128)
       throw new ApiFault(400, 'INVALID_INPUT');
     const input = await body(request);
-    const productCode = stringValue(input.product_code);
     const offerId = uuidValue(input.offer_id);
     if (
-      Object.keys(input).some(
-        (field) => field !== 'product_code' && field !== 'offer_id',
-      ) ||
-      (productCode === null) === (offerId === null) ||
-      (productCode !== null &&
-        !['monthly', 'yearly', 'lifetime'].includes(productCode))
+      Object.keys(input).some((field) => field !== 'offer_id') ||
+      offerId === null
     )
       throw new ApiFault(400, 'INVALID_INPUT');
     const checkoutId = crypto.randomUUID();
@@ -214,7 +192,7 @@ export async function dispatchAccount(
       [
         ...contextValues,
         checkoutId,
-        productCode,
+        null,
         offerId,
         idempotencyKey,
         tokenKeyVersion,
@@ -256,115 +234,6 @@ export async function dispatchAccount(
         ),
       ),
     };
-  }
-  if (path === 'v1/config-files' && request.method === 'GET') {
-    const cursorValue = new URL(request.url).searchParams.get('cursor');
-    const cursor = cursorValue === null ? null : uuidValue(cursorValue);
-    if (cursorValue !== null && !cursor)
-      throw new ApiFault(400, 'INVALID_INPUT');
-    const limit = boundedLimit(new URL(request.url).searchParams.get('limit'));
-    const rows = await transaction.unsafe<Row>(
-      'select * from private.file_list(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::integer)',
-      [...contextValues, cursor, limit],
-    );
-    const [budget] = await transaction.unsafe<Row>(
-      'select * from private.file_budget_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
-      contextValues,
-    );
-    return {
-      status: 200,
-      data: {
-        items: rows.map(fileDto),
-        next_cursor:
-          rows.length === limit ? uuidValue(rows.at(-1)?.file_id) : null,
-        budget: fileBudgetDto(budget ?? {}),
-      },
-    };
-  }
-  const getFileMatch = /^v1\/config-files\/([^/]+)$/u.exec(path);
-  if (getFileMatch && request.method === 'GET') {
-    const fileId = uuidValue(getFileMatch[1]);
-    if (!fileId) throw new ApiFault(400, 'INVALID_INPUT');
-    const [result] = await transaction.unsafe<Row>(
-      'select * from private.file_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
-      [...contextValues, fileId],
-    );
-    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
-    return { status: 200, data: fileDto(result) };
-  }
-  if (path === 'v1/config-files/upload-intent' && request.method === 'POST') {
-    assertAllowed(row);
-    const idempotencyKey = request.headers.get('idempotency-key');
-    if (!idempotencyKey || idempotencyKey.length > 128)
-      throw new ApiFault(400, 'INVALID_INPUT');
-    const input = await body(request);
-    const name = stringValue(input.name);
-    const contentType = stringValue(input.content_type);
-    const purpose = stringValue(input.purpose);
-    const size = Number(input.size);
-    const replacesFileId =
-      input.replaces_file_id === undefined || input.replaces_file_id === null
-        ? null
-        : uuidValue(input.replaces_file_id);
-    if (
-      !name ||
-      !contentType ||
-      purpose !== 'config' ||
-      !Number.isSafeInteger(size) ||
-      size < 1 ||
-      size > 1048576 ||
-      (input.replaces_file_id !== undefined &&
-        input.replaces_file_id !== null &&
-        !replacesFileId)
-    )
-      throw new ApiFault(400, 'INVALID_INPUT');
-    let result: Row | undefined;
-    try {
-      [result] = await transaction.unsafe<Row>(
-        'select * from private.file_intent_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text, $7::bigint, $8::text, $9::text, $10::uuid, $11::text)',
-        [
-          ...contextValues,
-          name,
-          size,
-          contentType,
-          purpose,
-          replacesFileId,
-          idempotencyKey,
-        ],
-      );
-    } catch (error) {
-      if (
-        replacesFileId &&
-        String((error as { message?: string }).message ?? '').includes(
-          'quota_exceeded',
-        )
-      )
-        throw new ApiFault(409, 'REPLACEMENT_CAPACITY_REQUIRED');
-      throw error;
-    }
-    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
-    return {
-      status: 201,
-      data: {
-        file_id: result.file_id,
-        upload_path: `/v1/config-files/${result.file_id}/content`,
-        expires_at: isoDate(result.intent_expires_at),
-      },
-    };
-  }
-  const deleteFileMatch = /^v1\/config-files\/([^/]+)$/u.exec(path);
-  if (deleteFileMatch && request.method === 'DELETE') {
-    assertAllowed(row);
-    const fileId = uuidValue(deleteFileMatch[1]);
-    const idempotencyKey = request.headers.get('idempotency-key');
-    if (!fileId || !idempotencyKey || idempotencyKey.length > 128)
-      throw new ApiFault(400, 'INVALID_INPUT');
-    const [result] = await transaction.unsafe<Row>(
-      'select * from private.file_delete_request(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text)',
-      [...contextValues, fileId, idempotencyKey],
-    );
-    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
-    return { status: 202, data: fileDto(result) };
   }
   if (path === 'v1/account/activate' && request.method === 'POST') {
     const [result] = await transaction.unsafe<Row>(

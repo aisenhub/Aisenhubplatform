@@ -49,20 +49,10 @@ export type {
   PreferencesDto,
   ProfileDto,
   RecentAuthProofDto,
-  SubscriptionConfigDto,
   SubscriptionCheckoutDto,
-  SubscriptionCheckoutStatus,
-  SubscriptionProductDto,
-  SubscriptionProductReason,
   UploadIntentDto,
 } from './api.ts';
-export {
-  API_ERROR_CODES,
-  SUBSCRIPTION_PRODUCT_REASONS,
-  isSubscriptionProductDto,
-  isSubscriptionProductList,
-  isSubscriptionProductReason,
-} from './api.ts';
+export { API_ERROR_CODES } from './api.ts';
 export {
   BILLING_CONTRACT_VERSION,
   BILLING_CURRENCY,

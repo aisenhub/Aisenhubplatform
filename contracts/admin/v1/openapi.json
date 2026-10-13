@@ -468,41 +468,7 @@
           }
         }
       },
-      "patch": {
-        "operationId": "adminPatchAccount",
-        "description": "Compatibility status mutation surface. Runtime requires a non-empty reason and routes the status change through the same authoritative governance event as the explicit action endpoints.",
-        "x-requires-step-up": true,
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformId"
-          },
-          {
-            "$ref": "#/components/parameters/AccountId"
-          }
-        ],
-        "requestBody": {
-          "$ref": "#/components/requestBodies/Json"
-        },
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/Object"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/StepUpRequired"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
+      "description": "Reads the platform-scoped account workbench. Status mutations use the explicit suspend, restore, or close command endpoints."
     },
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/tags": {
       "put": {
@@ -839,74 +805,6 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
-          }
-        }
-      }
-    },
-    "/admin/api/v1/platforms/{platformId}/subscription-config": {
-      "get": {
-        "operationId": "adminGetSubscriptionConfig",
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SubscriptionConfig"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      },
-      "patch": {
-        "operationId": "adminPatchSubscriptionConfig",
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformId"
-          },
-          {
-            "$ref": "#/components/parameters/IfMatch"
-          }
-        ],
-        "requestBody": {
-          "$ref": "#/components/requestBodies/Json"
-        },
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SubscriptionConfig"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          },
-          "412": {
-            "$ref": "#/components/responses/PreconditionFailed"
-          },
-          "428": {
-            "$ref": "#/components/responses/PreconditionRequired"
           }
         }
       }
@@ -1334,109 +1232,6 @@
         }
       }
     },
-    "/admin/api/v1/config-files": {
-      "get": {
-        "operationId": "adminListConfigFiles",
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
-          },
-          {
-            "name": "platform_id",
-            "in": "query",
-            "required": false,
-            "description": "精确平台范围；过滤在服务端游标分页前执行。提供时 cursor 必须属于同一平台。",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/SearchQuery"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/Page"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/admin/api/v1/config-files/{fileId}": {
-      "get": {
-        "operationId": "adminGetConfigFile",
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/FileId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/Object"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "adminDeleteConfigFile",
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/FileId"
-          }
-        ],
-        "responses": {
-          "202": {
-            "$ref": "#/components/responses/Object"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
     "/admin/api/v1/platforms/{platformId}/file-policy": {
       "get": {
         "operationId": "adminGetFilePolicy",
@@ -1493,29 +1288,6 @@
         },
         "description": "Updates legacy account file policy fields. max_platform_total_bytes is the global platform physical capacity; when supplied it requires Admin step-up.",
         "x-requires-step-up-when": "max_platform_total_bytes is supplied"
-      }
-    },
-    "/admin/api/v1/config-files/{fileId}/content": {
-      "get": {
-        "operationId": "adminDownloadConfigFileContent",
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/FileId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/Binary"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
       }
     },
     "/admin/api/v1/audit": {
@@ -2925,24 +2697,6 @@
       }
     },
     "responses": {
-      "SubscriptionConfig": {
-        "description": "Platform subscription configuration with an optimistic-concurrency validator.",
-        "headers": {
-          "Cache-Control": {
-            "$ref": "#/components/headers/NoStore"
-          },
-          "ETag": {
-            "$ref": "#/components/headers/ETag"
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/SubscriptionConfig"
-            }
-          }
-        }
-      },
       "BillingOrder": {
         "description": "Billing order detail with an ordered, read-only evidence timeline.",
         "headers": {

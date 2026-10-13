@@ -1810,17 +1810,9 @@ async function runArchitectureBehaviorMatrix(secret) {
   });
 
   await page.goto(
-    `${appUrl}/admin/operations?job_id=${lifecycleJobId}&q=retry&legacy=drop-me`,
+    `${appUrl}/admin/accounts/deletion-jobs?job_id=${lifecycleJobId}&q=retry`,
     { waitUntil: 'domcontentloaded' },
   );
-  await page.waitForURL((url) => {
-    return (
-      url.pathname === '/admin/accounts/deletion-jobs' &&
-      url.searchParams.get('job_id') === lifecycleJobId &&
-      url.searchParams.get('q') === 'retry' &&
-      url.searchParams.get('legacy') === null
-    );
-  });
   await page.locator('[data-test="deletion-jobs-page"]').waitFor({
     state: 'visible',
   });

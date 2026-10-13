@@ -1,6 +1,6 @@
 # 配置文件与持久任务
 
-本文件描述当前文件、Storage 和持久任务实现，属于 [系统架构](../overview.md) 的文件模块。Config/legacy 文件不解析、不执行、不预览、不解压，物理对象使用私有 `platform-config-files` bucket。Feedback 图片使用独立私有 `platform-feedback-attachments` bucket 与独立 attachment ledger，只接受 JPEG/PNG/WebP；两类对象都只能由受控服务端 Storage adapter 访问，浏览器不直连 Storage。
+本文件描述当前 Config Version、Storage 和持久任务实现，属于 [系统架构](../overview.md) 的文件模块。Config Version 内容不解析、不执行、不预览、不解压，物理对象使用私有 `platform-config-files` bucket。Feedback 图片使用独立私有 `platform-feedback-attachments` bucket 与独立 attachment ledger，只接受 JPEG/PNG/WebP；两类对象都只能由受控服务端 Storage adapter 访问，浏览器不直连 Storage。
 
 ## 1. 受控上传与硬限制
 
@@ -76,13 +76,13 @@ create unique index one_live_replacement_per_file
 
 过期时间只是任务触发条件，不自动从 SUM 排除。降低策略到已占用量以下时保留现有文件，标记 over_quota，禁止新增/Replace，仍允许读取与删除；不能偷偷删除用户数据或释放真实占用。
 
-## 3. 上传接口与状态机
+## 3. Config Version 上传与底层状态机
 
-1. POST /v1/config-files/upload-intent：JSON 为 name、size、content_type、purpose、可选 replaces_file_id；需要用户、平台凭据、Idempotency-Key。事务预约配额，创建10分钟有效 pending，返回 file_id、upload_path、expires_at，不返回任何 Storage URL。
-2. PUT /v1/config-files/:id/content：application/octet-stream 原始体，通过同源 BFF 按 canonical HTTP contract 转发；同一 file_id 同时只允许一个接收租约。pending→receiving 后在有界内存接收，收齐前不写 Storage。
+1. `POST /v1/configs/{configId}/versions/upload-intent` 创建 immutable Version 及对应物理对象意图；需要用户、平台凭据与 Idempotency-Key。事务检查 Config ownership、slot/容量和策略，返回 version/file 标识与受控 upload path，不返回 Storage URL。
+2. `PUT /v1/configs/{configId}/versions/{versionId}/content` 接收 `application/octet-stream` 原始体；同一底层对象同时只允许一个接收租约。pending→receiving 后在有界内存接收，收齐前不写 Storage。
 3. 收齐后在短事务中重新检查状态、账户、策略、租约；记录实际大小/hash、write attempt，receiving→storing，提交事务后上传独立路径，upsert=false。
-4. Storage成功后查询对象大小并校验，账户锁下storing→active，记Audit。若用户在storing后被Suspend，允许已经授权的存储操作结算并保留占用，但后续访问拒绝；若处于Close/Global Delete则转deleting补偿，不重新开放账户。返回文件信息；完成为后端内部步骤，**没有浏览器可调用的 /complete API**。
-5. active 的重复 PUT 验证实际字节/hash 与已提交内容一致时返回既有结果；不同内容返回 FILE_CONTENT_CONFLICT；不覆盖对象。请求中断后 GET 文件状态恢复进度，不能盲目生成另一个对象。
+4. Storage成功后查询对象大小并校验，账户锁下storing→active，记Audit并推进 Config `current_version_id`。若用户在storing后被Suspend，允许已经授权的存储操作结算并保留占用，但后续访问拒绝；若处于Close/Global Delete则转deleting补偿，不重新开放账户。完成为后端内部步骤，**没有浏览器可调用的 /complete API**。
+5. active Version content 的重复 PUT 只在实际字节/hash 与已提交内容一致时返回既有结果；不同内容返回冲突，不覆盖对象。请求中断后从 Config/Version 权威状态恢复，不能盲目生成另一个对象。
 
 接收超时15秒，单次存储调用预算30秒；host 最大请求时限须留出清理和返回余量，先在 Local 验证，Production 上线后通过观察确认。上传 worker 不能依赖未持久化的 fire-and-forget。
 
@@ -111,11 +111,11 @@ Replace 固定为新对象验证完成后，在同一数据库事务中将新行
 
 ## 5. 下载和删除
 
-GET /v1/config-files/:id/content 经 BFF/Account API 重新校验身份、平台、账户、文件 active 后代理私有对象。Admin 下载额外要求近期 MFA。响应固定 application/octet-stream、Content-Disposition: attachment、X-Content-Type-Options: nosniff、Cache-Control: private, no-store，文件名转义，不提供浏览器直接预览或永久 URL。GET /v1/config-files 使用 `limit`（默认20、最大100）和绑定账户/平台排序的 UUID `cursor`，返回 `items` 与 `next_cursor`；详情至少返回 status、write_outcome、reserved bytes/count、actual size、created/updated。
+Config owner 通过 `/v1/configs/{configId}/versions/{versionId}/content`、Gallery 通过批准 Version 的 content/apply 入口下载；Account API 每次重新校验身份、平台、账户、Config/Version/Gallery 可见性与底层 active 对象后代理私有字节。响应使用 `application/octet-stream`、安全下载头与 `no-store`，不提供浏览器 Storage URL。generic file list/read/download 产品面已经退出。
 
 下载审计区分 download_authorized、download_stream_completed、download_failed；服务端流完成不等于客户端已保存。已经开始的下载不承诺被后续 Suspend 瞬间撤回，新的下载请求必须拒绝。
 
-DELETE /v1/config-files/:id 在事务中标记 deleting 并审计，返回202；任务调用 Storage API remove（禁止直接删 storage.objects metadata），确认对象已删除且没有未结算写入后，同事务置 deleted、释放预算并记录删除完成事件。失败保持 deleting 与占用，指数退避重试；重复 DELETE 返回现有状态。
+Config 删除由 Config 领域入口先将业务对象置为 deleting、立即停止 Gallery 暴露，再让所有 Version 物理对象进入同一 cleanup 状态机；任务调用 Storage API remove（禁止直接删 storage.objects metadata），确认对象已删除且没有未结算写入后置 deleted、释放预算并记录完成事件。失败保持 deleting 与占用并退避重试。
 
 pending 且未写入可取消并释放；receiving/storing 有租约或未知写入时返回取消已请求，交给同一补偿流程，不能直接归零。已删除路径永不复用。
 
@@ -166,9 +166,9 @@ pending 且未写入可取消并释放；receiving/storing 有租约或未知写
 
 ### 7.4 HTTP/Consumer 映射冻结
 
-Account侧只保留现有六个文件操作：`POST /v1/config-files/upload-intent`、`PUT/GET /v1/config-files/{fileId}/content`、`GET /v1/config-files`、`GET/DELETE /v1/config-files/{fileId}`；不增加浏览器 `complete`、signed-upload或Storage直连路径。Admin侧的file-policy、files、deletion-jobs列表/详情/下载/受控delete/retry均必须调用同一领域入口；页面只能调用这些入口，不能在UI中重算预算或直接写表。
+Account 只通过 `/v1/configs`、Config Version content 与 `/v1/config-gallery` 暴露配置资源；generic `/v1/config-files` 已退出。Admin 配置资源页通过 Config/Gallery 治理 API 与 platform `file-policy` 读取物理容量事实，不再暴露 generic file 列表、详情、下载或删除 endpoint。页面不能在 UI 中重算预算或直接写表，浏览器始终不能直连 Storage。
 
-HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。分页默认20、上限100，游标绑定平台/过滤条件和排序；请求错误携带request_id，响应统一no-store。Admin 文件列表支持可选精确 `platform_id`：过滤在服务端游标分页前执行；无效 UUID 返回400、未知平台返回404、与平台范围不一致的 cursor 返回400 `INVALID_INPUT`。不带该参数仍保留全局列表语义。若需要变更字段，必须先同步本节、`docs/reference/contracts.md`、canonical OpenAPI、中央 DTO、Consumer conformance/实际消费者和测试，不能静默改名。
+HTTP 202只表示已接受或删除处理中，不表示对象已删除或预算已释放。Config/Gallery 分页和筛选必须由服务端在游标边界前执行；请求错误携带 request_id，响应统一 no-store。若需要变更字段，必须先同步本节、canonical OpenAPI、中央 DTO、Consumer conformance/实际消费者和测试，不能静默改名。
 
 ### 7.5 Config / Version / Gallery 与文件状态机
 

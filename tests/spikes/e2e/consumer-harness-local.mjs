@@ -406,19 +406,21 @@ async function exerciseHarness(
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   const publicPlans = await pageRequest(page, '/api/v1/plans');
   assert.equal(publicPlans.status, 200, 'public plans');
-  const products = await pageRequest(page, '/api/v1/subscription/products');
-  assert.equal(products.status, 200, 'public subscription products');
-  assert.ok(Array.isArray(products.body?.data), 'products must be an array');
+  const offers = await pageRequest(page, '/api/v1/commerce/offers');
+  assert.equal(offers.status, 200, 'public commerce offers');
+  assert.ok(Array.isArray(offers.body?.data), 'offers must be an array');
   assert.ok(
-    products.body.data.every(
+    offers.body.data.every(
       (item) =>
+        typeof item?.offer_id === 'string' &&
         typeof item?.code === 'string' &&
         typeof item?.name === 'string' &&
-        typeof item?.currency === 'string' &&
+        item?.price &&
+        typeof item?.price?.currency === 'string' &&
         item?.term &&
         typeof item?.reason === 'string',
     ),
-    'product contract fields must be readable through the Harness',
+    'Offer contract fields must be readable through the Harness',
   );
 
   await login(page, baseUrl);
@@ -542,60 +544,6 @@ async function exerciseHarness(
   });
   assert.equal(preferencePatch.status, 200, 'preferences PATCH');
 
-  const fileContent = 'consumer-harness-file';
-  const intent = await mutation(
-    page,
-    baseUrl,
-    '/api/v1/config-files/upload-intent',
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': randomUUID(),
-      },
-      body: JSON.stringify({
-        name: 'harness.ini',
-        size: fileContent.length,
-        content_type: 'text/plain',
-        purpose: 'config',
-      }),
-    },
-  );
-  assert.equal(intent.status, 201, 'file upload intent');
-  const fileId = intent.body?.data?.file_id;
-  const uploadPath = intent.body?.data?.upload_path;
-  assert.ok(fileId && uploadPath, 'upload intent must return file id/path');
-  const upload = await mutation(page, baseUrl, `/api${uploadPath}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'Idempotency-Key': randomUUID(),
-    },
-    body: fileContent,
-  });
-  assert.equal(upload.status, 202, 'binary upload');
-  const listed = await pageRequest(page, '/api/v1/config-files?limit=20');
-  assert.equal(listed.status, 200, 'file list');
-  assert.ok(
-    listed.body?.data?.items?.some((item) => item.file_id === fileId),
-    'uploaded file must be listed',
-  );
-  const downloaded = await pageRequest(
-    page,
-    `/api/v1/config-files/${fileId}/content`,
-  );
-  assert.equal(downloaded.status, 200, 'file download');
-  assert.equal(downloaded.body?.raw, fileContent, 'download content');
-  const removed = await mutation(
-    page,
-    baseUrl,
-    `/api/v1/config-files/${fileId}`,
-    {
-      method: 'DELETE',
-      headers: { 'Idempotency-Key': randomUUID() },
-    },
-  );
-  assert.equal(removed.status, 202, 'file delete request');
-
   const configCreate = await mutation(page, baseUrl, '/api/v1/configs', {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -714,22 +662,6 @@ async function exerciseHarness(
       (item) => item.version_id === versionId,
     ),
     'uploaded Version must be listed',
-  );
-  const legacyAfterVersion = await pageRequest(
-    page,
-    '/api/v1/config-files?limit=20',
-  );
-  assert.equal(
-    legacyAfterVersion.status,
-    200,
-    'legacy file list after Version upload',
-  );
-  assert.equal(
-    legacyAfterVersion.body?.data?.items?.some(
-      (item) => item.file_id === versionFileId,
-    ),
-    false,
-    'legacy file list must not expose Config Version physical files',
   );
   const ownerVersionContent = await pageRequest(
     page,

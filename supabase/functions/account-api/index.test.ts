@@ -4,7 +4,6 @@ import { assertEquals, assertMatch } from 'jsr:@std/assert@1';
 
 import { createAdminMfaAttestation } from '../../../packages/domain/src/admin-mfa-attestation.ts';
 import { handleRequest } from './index.ts';
-import { UploadGate } from '../_shared/upload.ts';
 
 Deno.test('Account API rejects oversized JSON at its HTTP boundary', async () => {
   const response = await handleRequest(
@@ -227,7 +226,6 @@ function fakeDatabase(
   onQuery?: (query: string, values?: readonly unknown[]) => void,
   checkoutFacts: readonly Record<string, unknown>[] = [],
   checkoutRow: Record<string, unknown> = {},
-  productRow: Record<string, unknown> = {},
   securityStatusRows: readonly Record<string, unknown>[] = [],
   configFault?: string,
 ) {
@@ -274,28 +272,6 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           }
-          if (
-            query.startsWith('select * from private.subscription_products_list')
-          ) {
-            return [
-              {
-                product_code: 'lifetime',
-                product_name: 'Lifetime',
-                product_description: '一次性购买，权益期限为 99 年',
-                price_amount: '999.00',
-                currency: 'CNY',
-                term_kind: 'finite',
-                duration_value: 99,
-                duration_unit: 'year',
-                price_version: 1,
-                recommended: false,
-                enabled: true,
-                purchasable: false,
-                reason: 'provider_mapping_unavailable',
-                ...productRow,
-              },
-            ] as unknown as R[];
-          }
           if (query.startsWith('select * from private.commerce_offers_list')) {
             return [
               {
@@ -309,7 +285,6 @@ function fakeDatabase(
                 duration_value: 1,
                 duration_unit: 'month',
                 recommended: true,
-                legacy_product_code: null,
                 price_id: '00000000-0000-4000-8000-000000000041',
                 price_amount: '29.90',
                 currency: 'CNY',
@@ -368,17 +343,16 @@ function fakeDatabase(
               {
                 checkout_id: '00000000-0000-4000-8000-000000000011',
                 status: 'pending',
-                product_code: 'monthly',
-                offer_id: null,
-                offer_code: null,
+                offer_id: '00000000-0000-4000-8000-000000000021',
+                offer_code: 'pro-month',
                 plan_id: '00000000-0000-4000-8000-000000000031',
                 plan_name: 'Pro',
-                price_amount: '19.90',
+                price_amount: '29.90',
                 currency: 'CNY',
                 term_kind: 'finite',
                 duration_value: 1,
                 duration_unit: 'month',
-                price_version: 1,
+                price_version: 2,
                 expires_at: '2026-09-11T00:30:00.000Z',
                 provider_display_name: null,
                 paid_at: null,
@@ -1022,24 +996,6 @@ Deno.test('Account API validates the Platform Key boundary before public plans',
   assertEquals(response.headers.get('cache-control'), 'no-store');
 });
 
-Deno.test('Account API exposes products without a bearer session and preserves purchase readiness', async () => {
-  const response = await handleRequest(
-    new Request(
-      'http://local/functions/v1/account-api/v1/subscription/products',
-      { headers: { 'X-Platform-Key': `phk_v1_${keyId}_fixture` } },
-    ),
-    {
-      database: fakeDatabase(),
-      platformKeySecret: 'm3-test-platform-secret',
-    },
-  );
-  assertEquals(response.status, 200);
-  const payload = await response.json();
-  assertEquals(payload.data[0].term.duration_value, 99);
-  assertEquals(payload.data[0].purchasable, false);
-  assertEquals(payload.data[0].reason, 'provider_mapping_unavailable');
-});
-
 Deno.test('Account API exposes Offer-aware commerce catalog without a bearer session', async () => {
   const response = await handleRequest(
     new Request('http://local/functions/v1/account-api/v1/commerce/offers', {
@@ -1058,52 +1014,6 @@ Deno.test('Account API exposes Offer-aware commerce catalog without a bearer ses
   assertEquals(payload.data[0].purchasable, true);
 });
 
-Deno.test('Account API fails closed when the catalog DTO is invalid', async () => {
-  const response = await handleRequest(
-    new Request(
-      'http://local/functions/v1/account-api/v1/subscription/products',
-      { headers: { 'X-Platform-Key': `phk_v1_${keyId}_fixture` } },
-    ),
-    {
-      database: fakeDatabase(undefined, [], {}, { price_amount: '999.9' }),
-      platformKeySecret: 'm3-test-platform-secret',
-    },
-  );
-  assertEquals(response.status, 503);
-  assertEquals((await response.json()).error.code, 'AUTHORIZATION_UNAVAILABLE');
-});
-
-Deno.test('Account API keeps repeat lifetime purchase available after prior purchase', async () => {
-  const response = await handleRequest(
-    new Request(
-      'http://local/functions/v1/account-api/v1/subscription/products',
-      {
-        headers: {
-          Authorization: `Bearer ${fakeJwt()}`,
-          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
-        },
-      },
-    ),
-    {
-      database: fakeDatabase(
-        undefined,
-        [],
-        {},
-        {
-          purchasable: true,
-          reason: 'ready',
-        },
-      ),
-      platformKeySecret: 'm3-test-platform-secret',
-      verifyAccessToken: async () => userId,
-    },
-  );
-  assertEquals(response.status, 200);
-  const payload = await response.json();
-  assertEquals(payload.data[0].purchasable, true);
-  assertEquals(payload.data[0].reason, 'ready');
-});
-
 Deno.test('Account API creates and reads a server-priced checkout snapshot', async () => {
   const headers = {
     Authorization: `Bearer ${fakeJwt()}`,
@@ -1119,7 +1029,9 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
           'Content-Type': 'application/json',
           'Idempotency-Key': 'checkout-test-1',
         },
-        body: JSON.stringify({ product_code: 'monthly' }),
+        body: JSON.stringify({
+          offer_id: '00000000-0000-4000-8000-000000000021',
+        }),
       },
     ),
     {
@@ -1134,7 +1046,7 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
   );
   assertEquals(created.status, 201);
   const createdPayload = await created.json();
-  assertEquals(createdPayload.data.price, '19.90');
+  assertEquals(createdPayload.data.price, '29.90');
   assertEquals(createdPayload.data.payment_url, null);
   assertEquals(createdPayload.data.progress.status, 'pending');
   assertEquals(createdPayload.data.progress.next_action, 'pay_provider');
@@ -1151,7 +1063,10 @@ Deno.test('Account API creates and reads a server-priced checkout snapshot', asy
     },
   );
   assertEquals(read.status, 200);
-  assertEquals((await read.json()).data.product_code, 'monthly');
+  assertEquals(
+    (await read.json()).data.offer_id,
+    '00000000-0000-4000-8000-000000000021',
+  );
 
   const recovered = await handleRequest(
     new Request(
@@ -1219,7 +1134,6 @@ Deno.test('Account API creates an Offer-aware checkout without accepting client 
   );
   assertEquals(response.status, 201);
   const payload = await response.json();
-  assertEquals(payload.data.product_code, null);
   assertEquals(payload.data.offer_id, offerId);
   assertEquals(payload.data.offer_code, 'pro-month');
   assertEquals(payload.data.plan_name, 'Pro');
@@ -1228,7 +1142,7 @@ Deno.test('Account API creates an Offer-aware checkout without accepting client 
   assertEquals(checkoutValues?.[7], offerId);
 });
 
-Deno.test('Account API rejects ambiguous checkout catalog selection', async () => {
+Deno.test('Account API rejects the removed product_code checkout selector', async () => {
   const response = await handleRequest(
     new Request(
       'http://local/functions/v1/account-api/v1/subscription/checkout',
@@ -1238,12 +1152,9 @@ Deno.test('Account API rejects ambiguous checkout catalog selection', async () =
           Authorization: `Bearer ${fakeJwt()}`,
           'X-Platform-Key': `phk_v1_${keyId}_fixture`,
           'Content-Type': 'application/json',
-          'Idempotency-Key': 'ambiguous-checkout',
+          'Idempotency-Key': 'legacy-selector-checkout',
         },
-        body: JSON.stringify({
-          product_code: 'monthly',
-          offer_id: '00000000-0000-4000-8000-000000000021',
-        }),
+        body: JSON.stringify({ product_code: 'monthly' }),
       },
     ),
     {
@@ -1304,7 +1215,9 @@ Deno.test('Account API returns a server-built Afdian payment URL', async () => {
           'Content-Type': 'application/json',
           'Idempotency-Key': 'checkout-afdian-link-1',
         },
-        body: JSON.stringify({ product_code: 'monthly' }),
+        body: JSON.stringify({
+          offer_id: '00000000-0000-4000-8000-000000000021',
+        }),
       },
     ),
     {
@@ -1348,7 +1261,9 @@ Deno.test('Account API can stop new checkout issuance independently', async () =
           'Content-Type': 'application/json',
           'Idempotency-Key': 'checkout-disabled-1',
         },
-        body: JSON.stringify({ product_code: 'monthly' }),
+        body: JSON.stringify({
+          offer_id: '00000000-0000-4000-8000-000000000021',
+        }),
       },
     ),
     {
@@ -1374,7 +1289,9 @@ Deno.test('Account API maps a purchase pause to the stable checkout error', asyn
           'Content-Type': 'application/json',
           'Idempotency-Key': 'checkout-paused-1',
         },
-        body: JSON.stringify({ product_code: 'monthly' }),
+        body: JSON.stringify({
+          offer_id: '00000000-0000-4000-8000-000000000021',
+        }),
       },
     ),
     {
@@ -1408,7 +1325,9 @@ Deno.test('Account API keeps checkout closed by default', async () => {
           'Content-Type': 'application/json',
           'Idempotency-Key': 'checkout-default-closed-1',
         },
-        body: JSON.stringify({ product_code: 'monthly' }),
+        body: JSON.stringify({
+          offer_id: '00000000-0000-4000-8000-000000000021',
+        }),
       },
     ),
     {
@@ -1555,7 +1474,7 @@ Deno.test('Account API sends current and previous redemption HMAC candidates ato
           'Idempotency-Key': 'rotation-test-1',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code: 'ABCD2345EFGHJKMP' }),
+        body: JSON.stringify({ code: 'A'.repeat(31) }),
       },
     ),
     {
@@ -1951,7 +1870,6 @@ Deno.test('Admin security status is available to an active AAL1 administrator', 
             statusArguments = values;
           }
         },
-        undefined,
         undefined,
         undefined,
         [{ current_aal: 'aal1', recent_mfa_expires_at: null }],
@@ -2355,24 +2273,6 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
   );
   assertEquals(accounts.status, 200);
 
-  const files = await handleRequest(
-    new Request(
-      'http://local/functions/v1/account-api/admin/api/v1/config-files?platform_id=00000000-0000-4000-8000-000000000001&q=fixture&limit=20',
-      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
-    ),
-    { database: fakeDatabase(), verifyAccessToken: async () => userId },
-  );
-  assertEquals(files.status, 200);
-
-  const invalidScopedFiles = await handleRequest(
-    new Request(
-      'http://local/functions/v1/account-api/admin/api/v1/config-files?platform_id=not-a-uuid',
-      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
-    ),
-    { database: fakeDatabase(), verifyAccessToken: async () => userId },
-  );
-  assertEquals(invalidScopedFiles.status, 400);
-
   let auditSql = '';
   let auditValues: readonly unknown[] = [];
   const audit = await handleRequest(
@@ -2613,15 +2513,15 @@ Deno.test('Account API exposes the OPT-009 Account workbench contract', async ()
     'manual risk review',
   ]);
 
-  const patch = await handleRequest(
-    new Request(`${base}/${sessionId}`, {
-      method: 'PATCH',
+  const restore = await handleRequest(
+    new Request(`${base}/${sessionId}/restore`, {
+      method: 'POST',
       headers: {
         ...auth,
         'X-Recent-Auth-Proof': keyId,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ status: 'active', reason: 'review completed' }),
+      body: JSON.stringify({ reason: 'review completed' }),
     }),
     {
       database: fakeDatabase((query, values) =>
@@ -2630,13 +2530,7 @@ Deno.test('Account API exposes the OPT-009 Account workbench contract', async ()
       verifyAccessToken: async () => userId,
     },
   );
-  assertEquals(patch.status, 200);
-  assertEquals(
-    actionCalls.some((call) =>
-      call.query.startsWith('select * from private.admin_account_patch'),
-    ),
-    false,
-  );
+  assertEquals(restore.status, 200);
   assertEquals(
     actionCalls.some(
       (call) =>
@@ -2958,23 +2852,6 @@ Deno.test('Account API keeps recent MFA on critical Admin management operations'
   assertEquals(accountSuspend.status, 403);
   assertEquals((await accountSuspend.json()).error.code, 'RECENT_MFA_REQUIRED');
 
-  const accountPatch = await handleRequest(
-    new Request(
-      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${sessionId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${fakeJwt('aal2')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'suspended' }),
-      },
-    ),
-    { database: fakeDatabase(), verifyAccessToken: async () => userId },
-  );
-  assertEquals(accountPatch.status, 403);
-  assertEquals((await accountPatch.json()).error.code, 'RECENT_MFA_REQUIRED');
-
   const accountSuspendRead = await handleRequest(
     new Request(
       `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/accounts/${sessionId}/suspend`,
@@ -3073,22 +2950,6 @@ Deno.test('Account API exposes Global Delete job start and list wrappers', async
   );
   assertEquals(list.status, 200);
   assertEquals((await list.json()).data[0].state, 'pending');
-
-  const fileDelete = await handleRequest(
-    new Request(
-      `http://local/functions/v1/account-api/admin/api/v1/config-files/${keyId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${fakeJwt('aal2')}`,
-          'Idempotency-Key': 'file-delete-aal2-fixture',
-        },
-      },
-    ),
-    { database: fakeDatabase(), verifyAccessToken: async () => userId },
-  );
-  assertEquals(fileDelete.status, 202);
-  assertEquals((await fileDelete.json()).data.status, 'deleting');
 });
 
 Deno.test('Account API refuses every other Admin route at AAL1', async () => {
@@ -3105,386 +2966,6 @@ Deno.test('Account API refuses every other Admin route at AAL1', async () => {
   );
   assertEquals(response.status, 403);
   assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
-});
-
-Deno.test('Account API settles a bounded upload through the injected Storage adapter', async () => {
-  const attemptId = '00000000-0000-4000-8000-000000000009';
-  const fileId = '00000000-0000-4000-8000-000000000010';
-  let storagePutCalls = 0;
-  const database = {
-    async begin<T>(
-      callback: (transaction: {
-        json: (value: unknown) => unknown;
-        unsafe: <R extends Record<string, unknown>>(
-          query: string,
-          values?: unknown[],
-        ) => Promise<R[]>;
-      }) => Promise<T>,
-    ) {
-      return callback({
-        json(value: unknown) {
-          return value;
-        },
-        async unsafe<R extends Record<string, unknown>>(
-          query: string,
-        ): Promise<R[]> {
-          if (
-            query.startsWith(
-              'select * from private.platform_key_verify_presented',
-            )
-          )
-            return [
-              {
-                key_id: keyId,
-                platform_id: platformId,
-                platform_status: 'active',
-              },
-            ] as unknown as R[];
-          if (query.startsWith('select * from private.file_upload_state'))
-            return [
-              {
-                file_id: fileId,
-                platform_account_id: userId,
-                requested_size_bytes: 5,
-                max_file_bytes: 5,
-                status: 'pending',
-                write_outcome: 'not_started',
-              },
-            ] as unknown as R[];
-          if (query.startsWith('select * from private.file_receive_claim'))
-            return [
-              {
-                file_id: fileId,
-                platform_account_id: userId,
-                requested_size_bytes: 5,
-                max_file_bytes: 5,
-                status: 'receiving',
-                write_outcome: 'not_started',
-                storage_path: `${platformId}/${userId}/${fileId}`,
-                mime_type: 'text/plain',
-              },
-            ] as unknown as R[];
-          if (query.startsWith('select * from private.file_prepare_store'))
-            return [
-              {
-                file_id: fileId,
-                status: 'storing',
-                write_outcome: 'in_flight',
-                storage_path: `${platformId}/${userId}/${fileId}`,
-                write_attempt_id: attemptId,
-              },
-            ] as unknown as R[];
-          if (
-            query.startsWith(
-              'select * from private.file_write_attempt_finalize',
-            )
-          )
-            return [
-              {
-                file_id: fileId,
-                status: 'active',
-                write_outcome: 'confirmed',
-                actual_size_bytes: 5,
-                sha256:
-                  '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
-                reserved_bytes: 5,
-                reserved_count: 1,
-                original_name: 'config.ini',
-                mime_type: 'text/plain',
-                created_at: new Date('2026-09-09T00:00:00Z'),
-              },
-            ] as unknown as R[];
-          return [] as unknown as R[];
-        },
-      });
-    },
-  };
-  const response = await handleRequest(
-    new Request(
-      `http://local/functions/v1/account-api/v1/config-files/${fileId}/content`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${fakeJwt()}`,
-          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
-          'Idempotency-Key': 'content-1',
-          'Content-Type': 'application/octet-stream',
-        },
-        body: 'hello',
-      },
-    ),
-    {
-      database,
-      verifyAccessToken: async () => userId,
-      platformKeySecret: 'm3-test-platform-secret',
-      uploadGate: new UploadGate(16, 2),
-      storageAdapter: {
-        async putImmutable() {
-          storagePutCalls += 1;
-          return { providerRequestId: 'provider-1' };
-        },
-        async getInfo() {
-          return { size: 5, etag: 'not-a-hash' };
-        },
-        async download() {
-          return new Response('hello');
-        },
-        async remove() {},
-      },
-    },
-  );
-  assertEquals(response.status, 202);
-  assertEquals((await response.json()).data.status, 'active');
-  assertEquals(storagePutCalls, 1);
-});
-
-Deno.test('Account API exposes idempotent file deletion through the account executor', async () => {
-  const response = await handleRequest(
-    new Request(
-      'http://local/functions/v1/account-api/v1/config-files/00000000-0000-4000-8000-000000000010',
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${fakeJwt()}`,
-          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
-          'Idempotency-Key': 'delete-1',
-        },
-      },
-    ),
-    {
-      database: fakeDatabase(),
-      platformKeySecret: 'm3-test-platform-secret',
-      verifyAccessToken: async () => userId,
-    },
-  );
-  assertEquals(response.status, 202);
-  assertEquals((await response.json()).data.status, 'deleting');
-});
-
-Deno.test('Account API streams an authorized file with download security headers', async () => {
-  let auditEvents = 0;
-  const database = {
-    async begin<T>(
-      callback: (transaction: {
-        json: (value: unknown) => unknown;
-        unsafe: <R extends Record<string, unknown>>(
-          query: string,
-          values?: unknown[],
-        ) => Promise<R[]>;
-      }) => Promise<T>,
-    ) {
-      return callback({
-        json(value: unknown) {
-          return value;
-        },
-        async unsafe<R extends Record<string, unknown>>(
-          query: string,
-        ): Promise<R[]> {
-          if (
-            query.startsWith(
-              'select * from private.platform_key_verify_presented',
-            )
-          )
-            return [
-              {
-                key_id: keyId,
-                platform_id: platformId,
-                platform_status: 'active',
-              },
-            ] as unknown as R[];
-          if (query.startsWith('select * from private.file_download_authorize'))
-            return [
-              {
-                file_id: keyId,
-                storage_bucket: 'platform-config-files',
-                storage_path: `${platformId}/account/${keyId}`,
-                original_name: 'settings.ini',
-                mime_type: 'text/plain',
-              },
-            ] as unknown as R[];
-          if (
-            query.startsWith(
-              'select * from private.account_principal_presented',
-            ) ||
-            query.startsWith('select * from private.account_principal')
-          )
-            return [
-              {
-                key_id: keyId,
-                platform_id: platformId,
-                platform_status: 'active',
-                authorization: 'allowed',
-                platform_account_id: userId,
-              },
-            ] as unknown as R[];
-          if (query.startsWith('select private.file_download_event')) {
-            auditEvents += 1;
-            return [] as unknown as R[];
-          }
-          return [] as unknown as R[];
-        },
-      });
-    },
-  };
-  const response = await handleRequest(
-    new Request(
-      `http://local/functions/v1/account-api/v1/config-files/${keyId}/content`,
-      {
-        headers: {
-          Authorization: `Bearer ${fakeJwt()}`,
-          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
-        },
-      },
-    ),
-    {
-      database,
-      platformKeySecret: 'm3-test-platform-secret',
-      verifyAccessToken: async () => userId,
-      storageAdapter: {
-        async putImmutable() {
-          return { providerRequestId: null };
-        },
-        async getInfo() {
-          return { size: 5, etag: null };
-        },
-        async download() {
-          return new Response('hello');
-        },
-        async remove() {},
-      },
-    },
-  );
-  assertEquals(response.status, 200);
-  assertEquals(
-    response.headers.get('content-type'),
-    'application/octet-stream',
-  );
-  assertMatch(response.headers.get('content-disposition') ?? '', /attachment/);
-  assertEquals(response.headers.get('x-content-type-options'), 'nosniff');
-  assertEquals(response.headers.get('cache-control'), 'private, no-store');
-  assertEquals(await response.text(), 'hello');
-  assertEquals(auditEvents, 1);
-});
-
-Deno.test('Account API requires AAL2 before an Admin file download', async () => {
-  let storageCalls = 0;
-  const response = await handleRequest(
-    new Request(
-      `http://local/functions/v1/account-api/admin/api/v1/config-files/${keyId}/content`,
-      {
-        headers: {
-          Authorization: `Bearer ${fakeJwt('aal1')}`,
-          'X-Recent-Auth-Proof': keyId,
-        },
-      },
-    ),
-    {
-      database: fakeDatabase(),
-      verifyAccessToken: async () => userId,
-      storageAdapter: {
-        async putImmutable() {
-          return { providerRequestId: null };
-        },
-        async getInfo() {
-          return { size: 5, etag: null };
-        },
-        async download() {
-          storageCalls += 1;
-          return new Response('hello');
-        },
-        async remove() {},
-      },
-    },
-  );
-  assertEquals(response.status, 403);
-  assertEquals((await response.json()).error.code, 'MFA_REQUIRED');
-  assertEquals(storageCalls, 0);
-});
-
-Deno.test('Account API maps replacement capacity failures to the stable contract code', async () => {
-  const database = {
-    async begin<T>(
-      callback: (transaction: {
-        json: (value: unknown) => unknown;
-        unsafe: <R extends Record<string, unknown>>(
-          query: string,
-          values?: unknown[],
-        ) => Promise<R[]>;
-      }) => Promise<T>,
-    ) {
-      return callback({
-        json(value: unknown) {
-          return value;
-        },
-        async unsafe<R extends Record<string, unknown>>(
-          query: string,
-        ): Promise<R[]> {
-          if (
-            query.startsWith(
-              'select * from private.platform_key_verify_presented',
-            )
-          )
-            return [
-              {
-                key_id: keyId,
-                platform_id: platformId,
-                platform_status: 'active',
-              },
-            ] as unknown as R[];
-          if (
-            query.startsWith(
-              'select * from private.account_principal_presented',
-            ) ||
-            query.startsWith('select * from private.account_principal')
-          )
-            return [
-              {
-                key_id: keyId,
-                platform_id: platformId,
-                platform_status: 'active',
-                authorization: 'allowed',
-                account_status: 'active',
-                platform_account_id: userId,
-              },
-            ] as unknown as R[];
-          if (query.startsWith('select * from private.file_intent_create'))
-            throw new Error('quota_exceeded');
-          return [] as R[];
-        },
-      });
-    },
-  };
-  const response = await handleRequest(
-    new Request(
-      'http://local/functions/v1/account-api/v1/config-files/upload-intent',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${fakeJwt()}`,
-          'X-Platform-Key': `phk_v1_${keyId}_fixture`,
-          'Idempotency-Key': 'replace-capacity-1',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: 'replacement.ini',
-          size: 5,
-          content_type: 'text/plain',
-          purpose: 'config',
-          replaces_file_id: '00000000-0000-4000-8000-000000000010',
-        }),
-      },
-    ),
-    {
-      database,
-      platformKeySecret: 'm3-test-platform-secret',
-      verifyAccessToken: async () => userId,
-    },
-  );
-  assertEquals(response.status, 409);
-  assertEquals(
-    (await response.json()).error.code,
-    'REPLACEMENT_CAPACITY_REQUIRED',
-  );
 });
 
 Deno.test('Account API creates Config resources on the additive v1 surface', async () => {
@@ -3561,7 +3042,6 @@ Deno.test('Account API maps platform Config storage exhaustion to its stable con
       database: fakeDatabase(
         undefined,
         [],
-        {},
         {},
         [],
         'platform_storage_quota_exceeded',

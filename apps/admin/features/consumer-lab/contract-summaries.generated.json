@@ -54,60 +54,6 @@
       },
       {
         "method": "GET",
-        "path": "/v1/config-files",
-        "operationId": "listConfigFiles",
-        "security": [
-          "bearerAuth",
-          "platformKey"
-        ]
-      },
-      {
-        "method": "DELETE",
-        "path": "/v1/config-files/{fileId}",
-        "operationId": "deleteConfigFile",
-        "security": [
-          "bearerAuth",
-          "platformKey"
-        ]
-      },
-      {
-        "method": "GET",
-        "path": "/v1/config-files/{fileId}",
-        "operationId": "getConfigFile",
-        "security": [
-          "bearerAuth",
-          "platformKey"
-        ]
-      },
-      {
-        "method": "GET",
-        "path": "/v1/config-files/{fileId}/content",
-        "operationId": "downloadConfigFileContent",
-        "security": [
-          "bearerAuth",
-          "platformKey"
-        ]
-      },
-      {
-        "method": "PUT",
-        "path": "/v1/config-files/{fileId}/content",
-        "operationId": "uploadConfigFileContent",
-        "security": [
-          "bearerAuth",
-          "platformKey"
-        ]
-      },
-      {
-        "method": "POST",
-        "path": "/v1/config-files/upload-intent",
-        "operationId": "createUploadIntent",
-        "security": [
-          "bearerAuth",
-          "platformKey"
-        ]
-      },
-      {
-        "method": "GET",
         "path": "/v1/config-gallery",
         "operationId": "listConfigGallery",
         "security": [
@@ -412,14 +358,6 @@
         ]
       },
       {
-        "method": "GET",
-        "path": "/v1/subscription/products",
-        "operationId": "listSubscriptionProducts",
-        "security": [
-          "platformKey"
-        ]
-      },
-      {
         "method": "POST",
         "path": "/v1/subscription/redeem",
         "operationId": "redeemSubscriptionCode",
@@ -528,38 +466,6 @@
       },
       {
         "method": "GET",
-        "path": "/admin/api/v1/config-files",
-        "operationId": "adminListConfigFiles",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "DELETE",
-        "path": "/admin/api/v1/config-files/{fileId}",
-        "operationId": "adminDeleteConfigFile",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "GET",
-        "path": "/admin/api/v1/config-files/{fileId}",
-        "operationId": "adminGetConfigFile",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "GET",
-        "path": "/admin/api/v1/config-files/{fileId}/content",
-        "operationId": "adminDownloadConfigFileContent",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "GET",
         "path": "/admin/api/v1/deletion-jobs",
         "operationId": "adminListDeletionJobs",
         "security": [
@@ -634,14 +540,6 @@
         "method": "GET",
         "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}",
         "operationId": "adminGetAccount",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "PATCH",
-        "path": "/admin/api/v1/platforms/{platformId}/accounts/{accountId}",
-        "operationId": "adminPatchAccount",
         "security": [
           "adminBearer"
         ]
@@ -978,22 +876,6 @@
         "method": "POST",
         "path": "/admin/api/v1/platforms/{platformId}/plans",
         "operationId": "adminCreatePlan",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "GET",
-        "path": "/admin/api/v1/platforms/{platformId}/subscription-config",
-        "operationId": "adminGetSubscriptionConfig",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "PATCH",
-        "path": "/admin/api/v1/platforms/{platformId}/subscription-config",
-        "operationId": "adminPatchSubscriptionConfig",
         "security": [
           "adminBearer"
         ]

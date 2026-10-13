@@ -260,7 +260,7 @@ async function logout(req, res, cookies) {
 function publicOperation(method, pathname) {
   return (
     method === 'GET' &&
-    (pathname === '/v1/plans' || pathname === '/v1/subscription/products')
+    (pathname === '/v1/plans' || pathname === '/v1/commerce/offers')
   );
 }
 

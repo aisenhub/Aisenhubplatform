@@ -14,7 +14,7 @@ const accountContractPath = path.join(
 
 export const SUPPORTED_OPERATIONS = [
   ['GET', '/v1/plans'],
-  ['GET', '/v1/subscription/products'],
+  ['GET', '/v1/commerce/offers'],
   ['GET', '/v1/subscription/checkout'],
   ['POST', '/v1/subscription/checkout'],
   ['GET', '/v1/subscription/checkout/{checkout_id}'],
@@ -26,12 +26,6 @@ export const SUPPORTED_OPERATIONS = [
   ['PATCH', '/v1/preferences'],
   ['GET', '/v1/subscription'],
   ['POST', '/v1/subscription/redeem'],
-  ['POST', '/v1/config-files/upload-intent'],
-  ['GET', '/v1/config-files'],
-  ['GET', '/v1/config-files/{fileId}'],
-  ['DELETE', '/v1/config-files/{fileId}'],
-  ['GET', '/v1/config-files/{fileId}/content'],
-  ['PUT', '/v1/config-files/{fileId}/content'],
   ['GET', '/v1/configs'],
   ['POST', '/v1/configs'],
   ['GET', '/v1/configs/{configId}'],

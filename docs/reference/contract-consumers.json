@@ -4,129 +4,10 @@
   "scope": "database-to-contract-first-consumer compatibility",
   "contracts": [
     {
-      "id": "subscription-product-catalog",
-      "producer": {
-        "path": "supabase/migrations/20260911161052_bill_08_purchase_readiness.sql",
-        "contains": "private.subscription_products_list"
-      },
-      "edge": {
-        "path": "supabase/functions/account-api/account.ts",
-        "contains": "subscriptionProductDto"
-      },
-      "openapi": {
-        "path": "contracts/account/v1/openapi.json",
-        "pointer": "#/components/schemas/SubscriptionProduct"
-      },
-      "consumers": [
-        {
-          "id": "consumer-bff",
-          "path": "tests/consumer-harness/server.mjs",
-          "contains": "publicOperation"
-        },
-        {
-          "id": "consumer-contract",
-          "path": "tests/consumer-harness/contract.mjs",
-          "contains": "/v1/subscription/products"
-        }
-      ],
-      "test_owners": [
-        {
-          "id": "TASK-0103-NEG",
-          "path": "packages/domain/tests/billing.test.ts",
-          "contains": "validates the product DTO"
-        },
-        {
-          "id": "account-api-public-products",
-          "path": "supabase/functions/account-api/index.test.ts",
-          "contains": "exposes products without a bearer session"
-        },
-        {
-          "id": "account-api-product-contract",
-          "path": "supabase/functions/account-api/index.test.ts",
-          "contains": "fails closed when the catalog DTO is invalid"
-        }
-      ],
-      "fields": [
-        {
-          "name": "code",
-          "consumers": ["consumer-contract"],
-          "tests": [
-            "TASK-0103-NEG",
-            "account-api-public-products",
-            "account-api-product-contract"
-          ]
-        },
-        {
-          "name": "name",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "description",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "price",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "currency",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "term.kind",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "term.duration_value",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "term.duration_unit",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "price_version",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "recommended",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "enabled",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG"]
-        },
-        {
-          "name": "purchasable",
-          "consumers": ["consumer-contract"],
-          "tests": [
-            "TASK-0103-NEG",
-            "account-api-public-products",
-            "account-api-product-contract"
-          ]
-        },
-        {
-          "name": "reason",
-          "consumers": ["consumer-contract"],
-          "tests": ["TASK-0103-NEG", "account-api-public-products"]
-        }
-      ]
-    },
-    {
       "id": "subscription-checkout",
       "producer": {
-        "path": "supabase/migrations/20260911130910_bill_04_checkout_order_inbox_jobs.sql",
-        "contains": "private.subscription_checkout_create"
+        "path": "supabase/migrations/20261012145252_commercial_operations_api_contract.sql",
+        "contains": "private.subscription_checkout_create_v2"
       },
       "edge": {
         "path": "supabase/functions/account-api/account.ts",
@@ -167,7 +48,27 @@
           "tests": ["checkout-api"]
         },
         {
-          "name": "product_code",
+          "name": "price_version",
+          "consumers": ["consumer-contract"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "plan_name",
+          "consumers": ["consumer-contract"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "plan_id",
+          "consumers": ["consumer-contract"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "offer_code",
+          "consumers": ["consumer-contract"],
+          "tests": ["checkout-api"]
+        },
+        {
+          "name": "offer_id",
           "consumers": ["consumer-contract"],
           "tests": ["checkout-api"]
         },

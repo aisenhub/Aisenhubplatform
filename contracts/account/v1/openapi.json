@@ -73,37 +73,6 @@
         }
       }
     },
-    "/v1/subscription/products": {
-      "get": {
-        "operationId": "listSubscriptionProducts",
-        "tags": ["subscription"],
-        "description": "Returns the backward-compatible fixed product catalog and platform-specific purchase readiness.",
-        "security": [
-          {
-            "platformKey": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformKey"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/SubscriptionProducts"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        }
-      }
-    },
     "/v1/commerce/offers": {
       "get": {
         "operationId": "listCommerceOffers",
@@ -625,257 +594,6 @@
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        }
-      }
-    },
-    "/v1/config-files/upload-intent": {
-      "post": {
-        "operationId": "createUploadIntent",
-        "tags": ["files"],
-        "security": [
-          {
-            "platformKey": [],
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformKey"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "$ref": "#/components/requestBodies/UploadIntent"
-        },
-        "responses": {
-          "201": {
-            "$ref": "#/components/responses/UploadIntent"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          },
-          "413": {
-            "$ref": "#/components/responses/PayloadTooLarge"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        }
-      }
-    },
-    "/v1/config-files/{fileId}/content": {
-      "put": {
-        "operationId": "uploadConfigFileContent",
-        "tags": ["files"],
-        "security": [
-          {
-            "platformKey": [],
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformKey"
-          },
-          {
-            "$ref": "#/components/parameters/FileId"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "$ref": "#/components/requestBodies/BinaryUpload"
-        },
-        "responses": {
-          "202": {
-            "$ref": "#/components/responses/File"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          },
-          "413": {
-            "$ref": "#/components/responses/PayloadTooLarge"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        }
-      },
-      "get": {
-        "operationId": "downloadConfigFileContent",
-        "tags": ["files"],
-        "security": [
-          {
-            "platformKey": [],
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformKey"
-          },
-          {
-            "$ref": "#/components/parameters/FileId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/BinaryFile"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        }
-      }
-    },
-    "/v1/config-files": {
-      "get": {
-        "operationId": "listConfigFiles",
-        "tags": ["files"],
-        "security": [
-          {
-            "platformKey": [],
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformKey"
-          },
-          {
-            "$ref": "#/components/parameters/FileCursor"
-          },
-          {
-            "$ref": "#/components/parameters/FileLimit"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/Files"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        }
-      }
-    },
-    "/v1/config-files/{fileId}": {
-      "get": {
-        "operationId": "getConfigFile",
-        "tags": ["files"],
-        "security": [
-          {
-            "platformKey": [],
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformKey"
-          },
-          {
-            "$ref": "#/components/parameters/FileId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/File"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "deleteConfigFile",
-        "tags": ["files"],
-        "security": [
-          {
-            "platformKey": [],
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlatformKey"
-          },
-          {
-            "$ref": "#/components/parameters/FileId"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "responses": {
-          "202": {
-            "$ref": "#/components/responses/File"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
           },
           "503": {
             "$ref": "#/components/responses/Unavailable"
@@ -2253,8 +1971,9 @@
               "properties": {
                 "code": {
                   "type": "string",
-                  "minLength": 26,
-                  "maxLength": 64
+                  "minLength": 31,
+                  "maxLength": 38,
+                  "description": "Canonical redemption code is 31 characters after removing display spaces or hyphens."
                 }
               },
               "additionalProperties": false
@@ -2268,20 +1987,13 @@
           "application/json": {
             "schema": {
               "type": "object",
+              "required": ["offer_id"],
               "properties": {
-                "product_code": {
-                  "type": "string",
-                  "enum": ["monthly", "yearly", "lifetime"]
-                },
                 "offer_id": {
                   "type": "string",
                   "format": "uuid"
                 }
               },
-              "oneOf": [
-                { "required": ["product_code"] },
-                { "required": ["offer_id"] }
-              ],
               "additionalProperties": false
             }
           }
@@ -2576,106 +2288,6 @@
           }
         }
       },
-      "SubscriptionProduct": {
-        "type": "object",
-        "required": [
-          "code",
-          "name",
-          "description",
-          "price",
-          "currency",
-          "term",
-          "price_version",
-          "recommended",
-          "enabled",
-          "purchasable",
-          "reason"
-        ],
-        "properties": {
-          "code": {
-            "type": "string",
-            "enum": ["free", "monthly", "yearly", "lifetime"]
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": ["string", "null"]
-          },
-          "price": {
-            "type": "string",
-            "pattern": "^[0-9]+\\.[0-9]{2}$"
-          },
-          "currency": {
-            "type": "string",
-            "const": "CNY"
-          },
-          "term": {
-            "type": "object",
-            "required": ["kind", "duration_value", "duration_unit"],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": ["free", "finite"]
-              },
-              "duration_value": {
-                "type": ["integer", "null"],
-                "minimum": 1
-              },
-              "duration_unit": {
-                "type": ["string", "null"],
-                "enum": ["month", "year", null]
-              }
-            },
-            "additionalProperties": false
-          },
-          "price_version": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "recommended": {
-            "type": "boolean"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "purchasable": {
-            "type": "boolean"
-          },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "ready",
-              "free_plan_source",
-              "free_plan_not_configured",
-              "paid_plan_not_configured",
-              "paid_plan_unavailable",
-              "product_disabled",
-              "provider_mapping_unavailable",
-              "lifetime_already_purchased",
-              "purchases_paused",
-              "platform_disabled"
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "SubscriptionProductList": {
-        "type": "object",
-        "required": ["data", "request_id"],
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SubscriptionProduct"
-            }
-          },
-          "request_id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
       "CommerceOffer": {
         "type": "object",
         "required": [
@@ -2687,7 +2299,6 @@
           "term",
           "price",
           "recommended",
-          "legacy_product_code",
           "purchasable",
           "reason"
         ],
@@ -2734,10 +2345,6 @@
             "additionalProperties": false
           },
           "recommended": { "type": "boolean" },
-          "legacy_product_code": {
-            "type": ["string", "null"],
-            "enum": ["monthly", "yearly", "lifetime", null]
-          },
           "purchasable": { "type": "boolean" },
           "reason": {
             "type": "string",
@@ -2770,12 +2377,7 @@
         "required": ["data", "request_id"],
         "properties": {
           "data": {
-            "oneOf": [
-              { "$ref": "#/components/schemas/SubscriptionCheckoutData" },
-              {
-                "$ref": "#/components/schemas/CommerceSubscriptionCheckoutData"
-              }
-            ]
+            "$ref": "#/components/schemas/SubscriptionCheckoutData"
           },
           "request_id": {
             "type": "string",
@@ -2789,110 +2391,6 @@
         "required": [
           "checkout_id",
           "status",
-          "product_code",
-          "offer_id",
-          "offer_code",
-          "plan_id",
-          "plan_name",
-          "price_version",
-          "price",
-          "currency",
-          "term",
-          "expires_at",
-          "provider_display_name",
-          "payment_url",
-          "paid_at",
-          "granted_at",
-          "progress"
-        ],
-        "properties": {
-          "checkout_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "status": {
-            "$ref": "#/components/schemas/BillingCheckoutStatus"
-          },
-          "product_code": {
-            "type": "string",
-            "enum": ["monthly", "yearly", "lifetime"]
-          },
-          "offer_id": {
-            "type": ["string", "null"],
-            "format": "uuid"
-          },
-          "offer_code": {
-            "type": ["string", "null"]
-          },
-          "plan_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "plan_name": {
-            "type": "string"
-          },
-          "price_version": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "price": {
-            "type": "string",
-            "pattern": "^[0-9]+\\.[0-9]{2}$"
-          },
-          "currency": {
-            "type": "string",
-            "const": "CNY"
-          },
-          "term": {
-            "type": "object",
-            "required": ["kind", "duration_value", "duration_unit"],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "const": "finite"
-              },
-              "duration_value": {
-                "type": "integer",
-                "minimum": 1
-              },
-              "duration_unit": {
-                "type": "string",
-                "enum": ["month", "year"]
-              }
-            },
-            "additionalProperties": false
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "provider_display_name": {
-            "type": ["string", "null"]
-          },
-          "payment_url": {
-            "type": ["string", "null"],
-            "format": "uri"
-          },
-          "paid_at": {
-            "type": ["string", "null"],
-            "format": "date-time"
-          },
-          "granted_at": {
-            "type": ["string", "null"],
-            "format": "date-time"
-          },
-          "progress": {
-            "$ref": "#/components/schemas/SubscriptionCheckoutProgress"
-          }
-        },
-        "additionalProperties": false
-      },
-      "CommerceSubscriptionCheckoutData": {
-        "type": "object",
-        "required": [
-          "checkout_id",
-          "status",
-          "product_code",
           "offer_id",
           "offer_code",
           "plan_id",
@@ -2911,7 +2409,6 @@
         "properties": {
           "checkout_id": { "type": "string", "format": "uuid" },
           "status": { "$ref": "#/components/schemas/BillingCheckoutStatus" },
-          "product_code": { "type": "null" },
           "offer_id": { "type": "string", "format": "uuid" },
           "offer_code": { "type": "string", "minLength": 1 },
           "plan_id": { "type": "string", "format": "uuid" },
@@ -4676,24 +4173,6 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/PlanList"
-            }
-          }
-        }
-      },
-      "SubscriptionProducts": {
-        "description": "Fixed subscription products with platform availability and explicit purchase readiness.",
-        "headers": {
-          "Cache-Control": {
-            "$ref": "#/components/headers/NoStore"
-          },
-          "X-Request-Id": {
-            "$ref": "#/components/headers/RequestId"
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/SubscriptionProductList"
             }
           }
         }

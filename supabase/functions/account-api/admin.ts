@@ -20,7 +20,6 @@ import {
   requestId,
   encodeBillingOrderCursor,
   parseBillingOrderCursor,
-  adminFileDto,
   adminAuditDto,
   deletionJobDto,
   body,
@@ -539,28 +538,6 @@ export async function dispatchAdmin(
     };
   }
 
-  if (path === 'admin/api/v1/config-files' && request.method === 'GET') {
-    const platformIdValue = url.searchParams.get('platform_id');
-    const platformId =
-      platformIdValue === null ? null : uuidValue(platformIdValue);
-    if (platformIdValue !== null && !platformId)
-      throw new ApiFault(400, 'INVALID_INPUT');
-    const cursorValue = url.searchParams.get('cursor');
-    const cursor = cursorValue === null ? null : uuidValue(cursorValue);
-    if (cursorValue !== null && !cursor)
-      throw new ApiFault(400, 'INVALID_INPUT');
-    const limit = boundedLimit(url.searchParams.get('limit'));
-    const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_file_list_v3(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::integer, $7::text)',
-      [...context, platformId, cursor, limit, url.searchParams.get('q')],
-    );
-    return {
-      status: 200,
-      data: rows.map(adminFileDto),
-      next_cursor:
-        rows.length === limit ? uuidValue(rows.at(-1)?.file_id) : null,
-    };
-  }
   if (path === 'admin/api/v1/deletion-jobs' && request.method === 'GET') {
     const rows = await transaction.unsafe<Row>(
       'select * from private.admin_deletion_job_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::integer)',
@@ -635,32 +612,19 @@ export async function dispatchAdmin(
       (cursorValue !== null && cursor === null)
     )
       throw new ApiFault(400, 'INVALID_INPUT');
-    if (
-      cursor &&
-      'legacyCreatedAt' in cursor &&
-      (platformId !== null ||
-        platformAccountId !== null ||
-        providerAccountId !== null ||
-        query !== null)
-    )
-      throw new ApiFault(400, 'INVALID_INPUT');
     const rows = await transaction.unsafe<Row>(
-      cursor && 'legacyCreatedAt' in cursor
-        ? 'select * from private.admin_billing_order_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::integer, $6::text)'
-        : 'select * from private.admin_billing_order_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::uuid, $6::integer, $7::text, $8::uuid, $9::uuid, $10::uuid, $11::text)',
-      cursor && 'legacyCreatedAt' in cursor
-        ? [...context, cursor.legacyCreatedAt, limit, status]
-        : [
-            ...context,
-            cursor && 'createdAt' in cursor ? cursor.createdAt : null,
-            cursor && 'createdAt' in cursor ? cursor.orderId : null,
-            limit,
-            status,
-            platformId === null ? null : uuidValue(platformId),
-            platformAccountId === null ? null : uuidValue(platformAccountId),
-            providerAccountId === null ? null : uuidValue(providerAccountId),
-            query,
-          ],
+      'select * from private.admin_billing_order_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::timestamptz, $5::uuid, $6::integer, $7::text, $8::uuid, $9::uuid, $10::uuid, $11::text)',
+      [
+        ...context,
+        cursor?.createdAt ?? null,
+        cursor?.orderId ?? null,
+        limit,
+        status,
+        platformId === null ? null : uuidValue(platformId),
+        platformAccountId === null ? null : uuidValue(platformAccountId),
+        providerAccountId === null ? null : uuidValue(providerAccountId),
+        query,
+      ],
     );
     const nextCursor =
       rows.length === limit ? encodeBillingOrderCursor(rows.at(-1)!) : null;
@@ -1269,29 +1233,6 @@ export async function dispatchAdmin(
     return { status: 202, data: { operation_id: operationId, items: rows } };
   }
 
-  const adminFileMatch = /^admin\/api\/v1\/config-files\/([^/]+)$/u.exec(path);
-  if (adminFileMatch && request.method === 'GET') {
-    const fileId = uuidValue(adminFileMatch[1]);
-    if (!fileId) throw new ApiFault(400, 'INVALID_INPUT');
-    const [result] = await transaction.unsafe<Row>(
-      'select * from private.admin_file_read(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid)',
-      [...context, fileId],
-    );
-    if (!result) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
-    return { status: 200, data: adminFileDto(result) };
-  }
-  if (adminFileMatch && request.method === 'DELETE') {
-    const fileId = uuidValue(adminFileMatch[1]);
-    const idempotencyKey = request.headers.get('idempotency-key');
-    if (!fileId || !idempotencyKey || idempotencyKey.length > 128)
-      throw new ApiFault(400, 'INVALID_INPUT');
-    const [result] = await transaction.unsafe<Row>(
-      'select * from private.admin_file_delete_request(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text)',
-      [...context, fileId, idempotencyKey],
-    );
-    if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
-    return { status: 202, data: adminFileDto(result) };
-  }
   if (path === 'admin/api/v1/platforms' && request.method === 'POST') {
     const input = await body(request);
     const [result] = await transaction.unsafe<Row>(
@@ -1541,27 +1482,6 @@ export async function dispatchAdmin(
           },
         },
       };
-    }
-    if (request.method === 'PATCH') {
-      await adminStepUp(transaction, session, request);
-      const input = await body(request);
-      const status = stringValue(input.status);
-      const reason = stringValue(input.reason)?.trim() ?? null;
-      const action =
-        status === 'suspended'
-          ? 'suspend'
-          : status === 'active'
-            ? 'restore'
-            : status === 'closed'
-              ? 'close'
-              : null;
-      if (!action || !reason || reason.length > 2000)
-        throw new ApiFault(400, 'INVALID_INPUT');
-      const [result] = await transaction.unsafe<Row>(
-        'select * from private.admin_account_transition_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::text)',
-        [...context, platformId, accountId, action, reason],
-      );
-      return { status: 200, data: result };
     }
   }
 
@@ -2150,7 +2070,6 @@ export async function dispatchAdmin(
       const inputPlatformId = uuidValue(input.platform_id);
       const planId = uuidValue(input.plan_id);
       const offerId = uuidValue(input.offer_id);
-      const productCode = stringValue(input.product_code)?.trim().toLowerCase();
       const batchName = stringValue(input.name);
       const quantity = Number(input.quantity);
       const creationOperationId = uuidValue(input.creation_operation_id);
@@ -2158,9 +2077,7 @@ export async function dispatchAdmin(
       const deliveryDeadline = stringValue(input.delivery_deadline);
       if (
         !inputPlatformId ||
-        [!!planId, !!offerId, !!productCode].filter(Boolean).length !== 1 ||
-        (productCode !== undefined &&
-          !['monthly', 'yearly', 'lifetime'].includes(productCode)) ||
+        [!!planId, !!offerId].filter(Boolean).length !== 1 ||
         !batchName ||
         !creationOperationId ||
         !expiresAt ||
@@ -2216,39 +2133,23 @@ export async function dispatchAdmin(
               codePayload,
             ],
           )
-        : productCode
-          ? await transaction.unsafe<Row>(
-              'select * from private.admin_batch_create_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::text, $6::text, $7::integer, $8::timestamptz, $9::timestamptz, $10::uuid, $11::text, $12::jsonb)',
-              [
-                ...context,
-                inputPlatformId,
-                productCode,
-                batchName,
-                quantity,
-                expiresAt,
-                deliveryDeadline,
-                creationOperationId,
-                receiptHmac,
-                codePayload,
-              ],
-            )
-          : await transaction.unsafe<Row>(
-              'select * from private.admin_batch_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::integer, $8::integer, $9::text, $10::timestamptz, $11::timestamptz, $12::uuid, $13::text, $14::jsonb)',
-              [
-                ...context,
-                inputPlatformId,
-                planId,
-                batchName,
-                quantity,
-                Number(input.duration_value),
-                input.duration_unit,
-                expiresAt,
-                deliveryDeadline,
-                creationOperationId,
-                receiptHmac,
-                codePayload,
-              ],
-            );
+        : await transaction.unsafe<Row>(
+            'select * from private.admin_batch_create(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::integer, $8::integer, $9::text, $10::timestamptz, $11::timestamptz, $12::uuid, $13::text, $14::jsonb)',
+            [
+              ...context,
+              inputPlatformId,
+              planId,
+              batchName,
+              quantity,
+              Number(input.duration_value),
+              input.duration_unit,
+              expiresAt,
+              deliveryDeadline,
+              creationOperationId,
+              receiptHmac,
+              codePayload,
+            ],
+          );
       if (result?.creation_state === 'replayed_existing') {
         return {
           status: 200,

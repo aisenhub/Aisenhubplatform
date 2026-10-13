@@ -1,6 +1,6 @@
 # 阶段 01：Contract / Harness / URL Surface 清理
 
-状态：未开始
+状态：验收通过待推送
 
 前置：阶段 00。
 
@@ -49,3 +49,13 @@
 - Harness 不再要求已删除 operation。
 - 没有 compatibility redirect/alias 页面。
 - runtime 尚未完成收敛的部分允许暂时编译失败，只能在同一任务分支继续进入阶段 02/03，不能把阶段 01 独立发布到共享 staging。
+
+## 实施结果（2026-10-13）
+
+- Account 公共合同从 47 个 operation 收敛到 40 个：删除 fixed-product catalog 与 generic `config-files`；Checkout 只接受 `offer_id`；Checkout response 只保留 Offer/Plan/Price attribution；`CommerceOffer` 不再输出 `legacy_product_code`；Redemption code contract 对齐 canonical 31 字符。
+- Admin 公共合同从 77 个 operation 收敛到 70 个：删除账户 root `PATCH` 兼容写入口、fixed subscription-config contract 与 generic config-file contract；账户状态只通过显式 suspend/restore/close command。
+- Account/Admin runtime 与 BFF allowlist 同步删除上述兼容入口；Billing cursor 不再接受 raw timestamp；Redemption batch API 不再接受 `product_code`。
+- 删除 `/admin/operations`、`/admin/deletion-jobs`、`/admin/billing` compatibility 页面/helper/alias；canonical 路由为 `/admin/accounts/deletion-jobs` 与 `/admin/billing/orders`。
+- Admin 配置资源页不再请求 generic config-file list/read/download/delete；只保留 Config/Gallery 业务中心与 platform Storage policy。
+- Consumer Harness、Consumer Lab snapshot、contract consumer manifest、API/unit/E2E 脚本和当前架构/接入指南已同步到 canonical surface。
+- `contracts:breaking` 对 `origin/main` 报告 28 项预期 breaking change；逐项核对均属于本 Proposal 冻结的删除清单。阶段 07 建立新 baseline 前不把该命令失败视为回归。

@@ -46,10 +46,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/feedback/${id}/attachments/${id}/content`) ||
       exact('redemption-batches') ||
       matches(`subscriptions/${id}`) ||
-      exact('config-files') ||
-      matches(`config-files/${id}`) ||
       matches(`platforms/${id}/file-policy`) ||
-      matches(`config-files/${id}/content`) ||
       exact('audit') ||
       exact('billing/orders') ||
       matches(`billing/orders/${id}`) ||
@@ -91,7 +88,6 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
   if (method === 'PATCH') {
     return (
       matches(`platforms/${id}`) ||
-      matches(`platforms/${id}/accounts/${id}`) ||
       matches(`platforms/${id}/subscription-config`) ||
       matches(`platforms/${id}/file-policy`)
     );
@@ -102,7 +98,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/feedback/${id}/labels`)
     );
   }
-  if (method === 'DELETE') return matches(`config-files/${id}`);
+  if (method === 'DELETE') return false;
   return false;
 }
 
@@ -149,10 +145,9 @@ async function dispatch(
     }
     const binaryDownload =
       request.method === 'GET' &&
-      (/^admin\/api\/v1\/config-files\/[^/]+\/content$/u.test(pathValue) ||
-        /^admin\/api\/v1\/platforms\/[^/]+\/feedback\/[^/]+\/attachments\/[^/]+\/content$/u.test(
-          pathValue,
-        ));
+      /^admin\/api\/v1\/platforms\/[^/]+\/feedback\/[^/]+\/attachments\/[^/]+\/content$/u.test(
+        pathValue,
+      );
     const headers: Record<string, string> = {
       Accept: binaryDownload ? '*/*' : 'application/json',
       'Cache-Control': 'no-store',

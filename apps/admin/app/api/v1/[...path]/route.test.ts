@@ -9,7 +9,7 @@ import {
   encodeAuthSessionAcknowledgement,
 } from '../../../_lib/auth/server';
 
-import { DELETE, GET, POST, PUT, isAllowedAdminPath } from './route';
+import { GET, POST, PUT, isAllowedAdminPath } from './route';
 import { POST as login } from '../../auth/login/route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
@@ -23,7 +23,7 @@ const LOGIN_ACK = encodeAuthSessionAcknowledgement({
 });
 
 function request(
-  method: 'DELETE' | 'GET' | 'POST' | 'PUT',
+  method: 'GET' | 'POST' | 'PUT',
   path: string,
   options: {
     readonly csrf?: boolean;
@@ -78,22 +78,6 @@ describe('admin BFF', () => {
     vi.unstubAllGlobals();
   });
 
-  it('forwards an empty streamed DELETE body while keeping its byte limit', async () => {
-    const response = await DELETE(
-      request('DELETE', `admin/api/v1/config-files/${SESSION_ID}`, {
-        csrf: true,
-        body: '',
-      }),
-      context(['admin', 'api', 'v1', 'config-files', SESSION_ID]),
-    );
-    expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
-      method: 'DELETE',
-      body: '',
-    });
-  });
-
   it('rejects oversized business and login JSON before contacting upstream', async () => {
     const oversized = 'x'.repeat(65_537);
     const response = await POST(
@@ -144,7 +128,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(77);
+    expect(operationCount).toBe(70);
   });
 
   it('proxies private Feedback images as binary and allows label replacement', async () => {

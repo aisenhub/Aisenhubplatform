@@ -13,11 +13,7 @@ const REDEMPTION_CODE_PATTERN = new RegExp(
 export function normalizeRedemptionCode(value: string): string {
   if (typeof value !== 'string') throw new Error('INVALID_REDEMPTION_CODE');
   const normalized = value.trim().toUpperCase().replaceAll(/[\s-]/gu, '');
-  if (
-    normalized.length < 16 ||
-    normalized.length > 128 ||
-    !REDEMPTION_CODE_PATTERN.test(normalized)
-  ) {
+  if (normalized.length !== 31 || !REDEMPTION_CODE_PATTERN.test(normalized)) {
     throw new Error('INVALID_REDEMPTION_CODE');
   }
   return normalized;
@@ -86,9 +82,8 @@ export async function generateRedemptionCodes(input: {
   readonly hmacSecret: string;
   readonly hmacKeyVersion: number;
   readonly quantity: number;
-  readonly length?: number;
 }): Promise<readonly RedemptionCodeMaterial[]> {
-  const length = input.length ?? 31;
+  const length = 31;
   if (
     !input.platformId ||
     input.hmacSecret.length < 16 ||
@@ -96,10 +91,7 @@ export async function generateRedemptionCodes(input: {
     input.hmacKeyVersion < 1 ||
     !Number.isInteger(input.quantity) ||
     input.quantity < 1 ||
-    input.quantity > 1000 ||
-    !Number.isInteger(length) ||
-    length < 16 ||
-    length > 128
+    input.quantity > 1000
   )
     throw new Error('INVALID_REDEMPTION_CODE_INPUT');
 

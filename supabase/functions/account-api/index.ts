@@ -19,8 +19,6 @@ import {
   handleConfigResourceDownload,
   handleConfigVersionUploadContent,
   handleFeedbackAttachmentUploadContent,
-  handleDownload,
-  handleUploadContent,
 } from './files.ts';
 
 export async function handleRequest(
@@ -32,9 +30,7 @@ export async function handleRequest(
     const path = requestPath(request);
     const optionalSessionRead =
       request.method === 'GET' &&
-      (path === 'v1/plans' ||
-        path === 'v1/subscription/products' ||
-        path === 'v1/commerce/offers');
+      (path === 'v1/plans' || path === 'v1/commerce/offers');
     let session =
       path.startsWith('admin/') ||
       (optionalSessionRead && request.headers.has('authorization')) ||
@@ -49,30 +45,6 @@ export async function handleRequest(
             dependencies,
           )
         : undefined;
-    if (
-      path.startsWith('v1/config-files/') &&
-      path.endsWith('/content') &&
-      request.method === 'PUT'
-    ) {
-      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
-      return response(
-        {
-          data: (await handleUploadContent(request, dependencies, session))
-            .data,
-          request_id: id,
-        },
-        202,
-        id,
-      );
-    }
-    if (
-      path.startsWith('v1/config-files/') &&
-      path.endsWith('/content') &&
-      request.method === 'GET'
-    ) {
-      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
-      return await handleDownload(request, dependencies, session, false);
-    }
     if (
       /^v1\/configs\/[^/]+\/versions\/[^/]+\/content$/u.test(path) &&
       request.method === 'PUT'
@@ -117,14 +89,6 @@ export async function handleRequest(
     ) {
       if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
       return await handleConfigResourceDownload(request, dependencies, session);
-    }
-    if (
-      path.startsWith('admin/api/v1/config-files/') &&
-      path.endsWith('/content') &&
-      request.method === 'GET'
-    ) {
-      if (!session) throw new ApiFault(401, 'UNAUTHORIZED');
-      return await handleDownload(request, dependencies, session, true);
     }
     if (
       /^admin\/api\/v1\/platforms\/[^/]+\/feedback\/[^/]+\/attachments\/[^/]+\/content$/u.test(

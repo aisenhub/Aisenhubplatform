@@ -15,8 +15,6 @@ import {
   isMoneyAmount,
   isProviderOrderStatus,
   isProviderOrderSnapshot,
-  isSubscriptionProductDto,
-  isSubscriptionProductList,
   toMoneyAmount,
 } from '../src/index.ts';
 import {
@@ -94,35 +92,6 @@ describe('billing contract foundation', () => {
     expect(getBillingProductSpec('unknown')).toBeNull();
   });
 
-  it('validates the product DTO before consumers render or act on it', () => {
-    const product = {
-      code: 'monthly',
-      name: 'Monthly',
-      description: null,
-      price: '19.90',
-      currency: 'CNY',
-      term: { kind: 'finite', duration_value: 1, duration_unit: 'month' },
-      price_version: 1,
-      recommended: false,
-      enabled: true,
-      purchasable: true,
-      reason: 'ready',
-    } as const;
-
-    expect(isSubscriptionProductDto(product)).toBe(true);
-    expect(isSubscriptionProductList([product])).toBe(true);
-    expect(isSubscriptionProductDto({ ...product, price: '19.9' })).toBe(false);
-    expect(
-      isSubscriptionProductDto({
-        ...product,
-        term: { kind: 'finite', duration_value: 1, duration_unit: 'year' },
-      }),
-    ).toBe(false);
-    expect(isSubscriptionProductList([product, { malformed: true }])).toBe(
-      false,
-    );
-  });
-
   it('accepts fixed-point money strings and rejects floating-point ambiguity', () => {
     expect(isMoneyAmount('0.00')).toBe(true);
     expect(isMoneyAmount('9999999999999.99')).toBe(true);
@@ -187,11 +156,17 @@ describe('billing contract foundation', () => {
     });
   });
 
-  it('normalizes and formats V2 codes without changing their HMAC material', () => {
-    const code = 'ABCD-EFGH-JKMP-QRST';
-    expect(normalizeRedemptionCode(code)).toBe('ABCDEFGHJKMPQRST');
-    expect(formatRedemptionCode('abcdefghjkmpqrst')).toBe(code);
-    expect(validateRedemptionCode('ABCD EFGH JKMP QRST')).toBe(true);
+  it('normalizes and formats canonical 31-character codes without changing their HMAC material', async () => {
+    const [material] = await generateRedemptionCodes({
+      platformId: '00000000-0000-4000-8000-000000000701',
+      hmacSecret: 'a-local-test-secret-with-16-chars',
+      hmacKeyVersion: 1,
+      quantity: 1,
+    });
+    const code = material!.code;
+    const formatted = formatRedemptionCode(code);
+    expect(normalizeRedemptionCode(formatted)).toBe(code);
+    expect(validateRedemptionCode(formatted)).toBe(true);
     expect(validateRedemptionCode('ABCD-I0GH-JKMP-QRST')).toBe(false);
     expect(validateRedemptionCode('ABCD-EFGH')).toBe(false);
     expect(() => normalizeRedemptionCode('ABCD/EFGH/JKMP/QRST')).toThrow(
@@ -199,31 +174,15 @@ describe('billing contract foundation', () => {
     );
   });
 
-  it('uses the 31-character default while retaining legacy length bounds', async () => {
+  it('always generates the canonical 31-character redemption code', async () => {
     const [current] = await generateRedemptionCodes({
       platformId: '00000000-0000-4000-8000-000000000701',
       hmacSecret: 'a-local-test-secret-with-16-chars',
       hmacKeyVersion: 1,
       quantity: 1,
     });
-    const [legacyShort] = await generateRedemptionCodes({
-      platformId: '00000000-0000-4000-8000-000000000701',
-      hmacSecret: 'a-local-test-secret-with-16-chars',
-      hmacKeyVersion: 1,
-      quantity: 1,
-      length: 16,
-    });
-    const [legacyLong] = await generateRedemptionCodes({
-      platformId: '00000000-0000-4000-8000-000000000701',
-      hmacSecret: 'a-local-test-secret-with-16-chars',
-      hmacKeyVersion: 1,
-      quantity: 1,
-      length: 128,
-    });
     expect(current?.code).toHaveLength(31);
-    expect(legacyShort?.code).toHaveLength(16);
-    expect(legacyLong?.code).toHaveLength(128);
-    expect(validateRedemptionCode(legacyShort?.code)).toBe(true);
-    expect(validateRedemptionCode(legacyLong?.code)).toBe(true);
+    expect(validateRedemptionCode('A'.repeat(30))).toBe(false);
+    expect(validateRedemptionCode('A'.repeat(32))).toBe(false);
   });
 });

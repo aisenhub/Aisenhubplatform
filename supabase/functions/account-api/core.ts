@@ -6,9 +6,7 @@ import { readBoundedJson, UploadFault, UploadGate } from '../_shared/upload.ts';
 import { type StorageAdapter } from '../_shared/storage.ts';
 import {
   type CommerceOfferDto,
-  isSubscriptionProductDto,
   type SubscriptionCheckoutDto,
-  type SubscriptionProductDto,
 } from '../../../packages/domain/src/contracts/api.ts';
 import {
   isBillingCheckoutStatus,
@@ -869,9 +867,10 @@ export function isoDate(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-type BillingOrderCursor =
-  | { readonly createdAt: string; readonly orderId: string }
-  | { readonly legacyCreatedAt: string };
+type BillingOrderCursor = {
+  readonly createdAt: string;
+  readonly orderId: string;
+};
 
 export function encodeBillingOrderCursor(row: Row): string | null {
   const createdAt = isoDate(row.created_at);
@@ -889,12 +888,7 @@ export function encodeBillingOrderCursor(row: Row): string | null {
 export function parseBillingOrderCursor(
   value: string,
 ): BillingOrderCursor | null {
-  if (!value.startsWith('v1.')) {
-    const legacyDate = new Date(value);
-    return Number.isNaN(legacyDate.getTime())
-      ? null
-      : { legacyCreatedAt: legacyDate.toISOString() };
-  }
+  if (!value.startsWith('v1.')) return null;
   try {
     const decoded = objectValue(JSON.parse(base64UrlDecode(value.slice(3))));
     const createdAt = stringValue(decoded.created_at);
@@ -1039,35 +1033,8 @@ export function entitlementDto(row: Row) {
   };
 }
 
-export function subscriptionProductDto(row: Row): SubscriptionProductDto {
-  const dto: unknown = {
-    code: stringValue(row.product_code),
-    name: stringValue(row.product_name),
-    description: stringValue(row.product_description),
-    price: stringValue(row.price_amount),
-    currency: stringValue(row.currency),
-    term: {
-      kind: stringValue(row.term_kind),
-      duration_value:
-        row.duration_value === null || row.duration_value === undefined
-          ? null
-          : Number(row.duration_value),
-      duration_unit: stringValue(row.duration_unit),
-    },
-    price_version: Number(row.price_version),
-    recommended: row.recommended === true,
-    enabled: row.enabled === true,
-    purchasable: row.purchasable === true,
-    reason: stringValue(row.reason),
-  };
-  if (!isSubscriptionProductDto(dto))
-    throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
-  return dto;
-}
-
 export function commerceOfferDto(row: Row): CommerceOfferDto {
   const unit = stringValue(row.duration_unit);
-  const legacy = stringValue(row.legacy_product_code);
   return {
     offer_id: uuidValue(row.offer_id) ?? '',
     code: stringValue(row.offer_code) ?? '',
@@ -1096,10 +1063,6 @@ export function commerceOfferDto(row: Row): CommerceOfferDto {
           : Number(row.price_version),
     },
     recommended: row.recommended === true,
-    legacy_product_code:
-      legacy === 'monthly' || legacy === 'yearly' || legacy === 'lifetime'
-        ? legacy
-        : null,
     purchasable: row.purchasable === true,
     reason: (stringValue(row.reason) ??
       'provider_mapping_unavailable') as CommerceOfferDto['reason'],
@@ -1152,14 +1115,8 @@ export function subscriptionCheckoutDto(
   return {
     checkout_id: uuidValue(row.checkout_id ?? row.id) ?? '',
     status,
-    product_code: (() => {
-      const value = stringValue(row.product_code);
-      return value === 'monthly' || value === 'yearly' || value === 'lifetime'
-        ? value
-        : null;
-    })(),
-    offer_id: uuidValue(row.offer_id ?? row.commercial_offer_id),
-    offer_code: stringValue(row.offer_code ?? row.offer_code_snapshot),
+    offer_id: uuidValue(row.offer_id ?? row.commercial_offer_id) ?? '',
+    offer_code: stringValue(row.offer_code ?? row.offer_code_snapshot) ?? '',
     plan_id: uuidValue(row.plan_id ?? row.entitlement_plan_id) ?? '',
     plan_name: stringValue(row.plan_name) ?? '',
     price_version: Number(row.price_version ?? 0),
