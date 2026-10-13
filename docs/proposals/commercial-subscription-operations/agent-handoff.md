@@ -28,7 +28,7 @@
 
 ## 当前执行环境
 
-OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支已清理。OPT-010 已从该最新 main 创建独立分支；Phase 01 的 Offer/Price domain/read model 与 Phase 02 Consumer/Admin API、Offer-aware Checkout、OpenAPI/compatibility 已完成。Phase 02 local fresh/DB **73/1536**、API **111/111**、contracts/breaking/typecheck/lint 全绿；授权 staging 已对齐 `20261012145252 commercial_operations_api_contract`，`account-api` 为 **v62 ACTIVE**；task branch 已同步远端，当前 HEAD 基线为 `5f20f1e`。Phase 03 Admin commerce UI / cross-OPT integration 已完成：真实 Local Admin browser、5 viewport × 20 route responsive/a11y、Consumer harness、Admin unit/typecheck/build/lint/format 全绿；当前进入 Phase 04 lifecycle/upgrade/staging/R3/GitHub closeout。Production 仍为 NOT_RUN。
+OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支已清理。OPT-010 Phase 01–03 已完成；Phase 04 的 fresh DB **73/1536**、真实 non-empty upgrade、commerce lifecycle、retention / Global Delete compatibility 与 canonical `TASK-0801` **20/20** 已全绿。授权 staging 已对齐 `20261012145252 commercial_operations_api_contract`，`account-api` 为 **v63 ACTIVE** 且保持 `verify_jwt=false`；最终 runtime bundle 已包含 JWT issuer 分离与 Commerce VOLATILE 写函数单次求值修复，HTTP fail-closed 与 Security advisor 核验通过。当前仅剩 GitHub PR/CI/main/branch cleanup；Production 仍为 NOT_RUN。
 
 ## 阶段完成门槛
 
@@ -39,4 +39,5 @@ OPT-009 已完成并 closeout 到 `main@a0e90373...`，原任务/closeout 分支
 - [x] Phase 02 local + staging 技术验证已完成。
 - [x] task branch commits 已 push 并核对：远端 Proposal `43891ca` + Phase 01 `056e881` + Phase 02 `5f20f1e`；无 force push。
 - [x] Phase 03 Admin commerce UI / cross-OPT integration + 真实 browser / responsive-a11y / Consumer harness 已完成。
-- [ ] Phase 04 fresh/non-empty/full R3、staging、PR/CI/main/branch cleanup 待完成。
+- [x] Phase 04 fresh/non-empty/full R3、lifecycle/retention 与 staging v63 已完成。
+- [ ] Phase 04 GitHub PR/CI/main/branch cleanup 待完成。

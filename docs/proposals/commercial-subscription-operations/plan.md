@@ -42,7 +42,7 @@
 - [x] Admin direct entitlement governance API 保持安全语义。
 - [x] Redemption Campaign v2 stats/detail API 安全完成。
 - [x] OPT-004/006/009 集成完成。
-- [ ] fresh/non-empty upgrade、DB/API/contracts/browser/canonical R3 全绿。
+- [x] fresh/non-empty upgrade、DB/API/contracts/browser/canonical R3 全绿。
 - [ ] staging 与最终 main 一致。
 - [ ] PR/CI/main/branch cleanup 闭环。
 
