@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
@@ -22,6 +22,10 @@ import {
   statusTone,
   type ResourceError,
 } from '../resources/admin-resource-utils';
+import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 
 type Plan = {
   plan_id: string;
@@ -92,25 +96,38 @@ export function CommerceOffersPanel({
   const [mutationError, setMutationError] = useState<ResourceError | null>(
     null,
   );
+  const loadGeneration = useRef(0);
+  const scopeRef = useRef(platformId);
+  scopeRef.current = platformId;
 
   const load = useCallback(async () => {
+    const token = beginScopedLoad(loadGeneration, platformId);
     const epoch = adminAuthSession.getEpoch();
     setLoading(true);
     setError(null);
+    setOffers([]);
     try {
       const response = await adminAuthSession.request(
         `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}/commerce/offers`,
         { cache: 'no-store' },
       );
       const payload = await readApiPayload<Offer[]>(response);
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       if (!response.ok || !Array.isArray(payload?.data)) {
         setError(resourceError(response, payload, 'Offer / Price 目录'));
         return;
       }
       setOffers(payload.data);
     } catch (caught) {
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       setError({
         title: 'Offer / Price 读取失败',
         description: sessionErrorMessage(caught),
@@ -118,7 +135,11 @@ export function CommerceOffersPanel({
         technicalDetail: null,
       });
     } finally {
-      if (adminAuthSession.isCurrentEpoch(epoch)) setLoading(false);
+      if (
+        isScopedLoadCurrent(loadGeneration, scopeRef, token) &&
+        adminAuthSession.isCurrentEpoch(epoch)
+      )
+        setLoading(false);
     }
   }, [platformId]);
 

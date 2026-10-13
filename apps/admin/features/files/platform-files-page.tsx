@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
@@ -24,6 +24,10 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 import { ConfigResourceCenter } from './config-resource-center';
 
 type Policy = {
@@ -50,18 +54,28 @@ export function PlatformFilesPage() {
   const [policyError, setPolicyError] = useState<ResourceError | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<ResourceError | null>(null);
+  const policyGeneration = useRef(0);
+  const policyScopeRef = useRef(platform.platform_id);
+  policyScopeRef.current = platform.platform_id;
 
   const loadPolicy = useCallback(async () => {
+    const token = beginScopedLoad(policyGeneration, platform.platform_id);
     const epoch = adminAuthSession.getEpoch();
+    setPolicy(null);
     setPolicyState('loading');
     setPolicyError(null);
+    setMessage(null);
     try {
       const response = await adminAuthSession.request(
         resourcePath(platform.platform_id, '/file-policy'),
         { cache: 'no-store' },
       );
       const payload = await readApiPayload<Policy>(response);
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(policyGeneration, policyScopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       if (!response.ok || !payload?.data) {
         setPolicyError(resourceError(response, payload, 'Storage 策略'));
         setPolicyState('error');
@@ -70,7 +84,11 @@ export function PlatformFilesPage() {
       setPolicy(payload.data);
       setPolicyState('success');
     } catch (caught) {
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(policyGeneration, policyScopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       setPolicyError({
         title: 'Storage 策略读取失败',
         description: sessionErrorMessage(caught),

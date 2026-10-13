@@ -1291,6 +1291,54 @@ Deno.test('maintenance gates Auth deletion on provider success before checkpoint
   ]);
 });
 
+Deno.test('Auth deletion retries temporary failures and blocks permanent failures', async () => {
+  for (const [failure, expected] of [
+    ['PROVIDER_TIMEOUT', 'retry'],
+    ['AUTH_DELETE_FAILED_408', 'retry'],
+    ['AUTH_DELETE_FAILED_429', 'retry'],
+    ['AUTH_DELETE_FAILED_503', 'retry'],
+    ['AUTH_DELETE_FAILED_401', 'blocked'],
+    ['AUTH_NOT_CONFIGURED', 'blocked'],
+  ]) {
+    let outcome: unknown;
+    const db = database();
+    const wrapped: TestDatabase = {
+      begin: (callback) =>
+        db.begin((transaction) =>
+          callback({
+            ...transaction,
+            async unsafe<T extends TestRow>(query: string, values?: unknown[]) {
+              if (query.includes('deletion_job_step')) outcome = values?.[7];
+              return transaction.unsafe<T>(query, values);
+            },
+          }),
+        ),
+    };
+    const response = await handleMaintenanceRequest(
+      new Request('http://local/maintenance/v1/deletion-jobs/auth', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test-job',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ job_id: jobId, fence: 2, lease_fence: 1 }),
+      }),
+      {
+        capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+        workerId: 'test-worker',
+        database: wrapped,
+        authAdapter: {
+          async deleteUser() {
+            throw new Error(failure);
+          },
+        },
+      },
+    );
+    assertEquals(response.status, 503);
+    assertEquals(outcome, expected, failure);
+  }
+});
+
 Deno.test('maintenance evaluates and delivers billing observability alerts', async () => {
   const alertId = '00000000-0000-4000-8000-000000000009';
   const alertEvents: string[] = [];

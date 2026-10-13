@@ -40,7 +40,7 @@ export async function dispatchAccount(
   dependencies: AccountApiDependencies,
   session?: SessionContext,
   reauthSession?: SessionContext,
-): Promise<DispatchResult> {
+): Promise<DispatchResult | ApiFault> {
   const path = requestPath(request);
 
   if (
@@ -358,7 +358,15 @@ export async function dispatchAccount(
     if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     if (result.outcome === 'rejected') {
       const errorCode = stringValue(result.error_code) ?? 'INVALID_INPUT';
-      throw new ApiFault(errorCode === 'CODE_EXPIRED' ? 410 : 409, errorCode);
+      // Commit the SQL rejection, idempotency response and attempt counter first.
+      return new ApiFault(
+        errorCode === 'RATE_LIMITED'
+          ? 429
+          : errorCode === 'CODE_EXPIRED'
+            ? 410
+            : 409,
+        errorCode,
+      );
     }
     const [entitlement] = await transaction.unsafe<Row>(
       'select * from private.entitlement_current_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',

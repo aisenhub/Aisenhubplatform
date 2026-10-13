@@ -374,7 +374,7 @@ function fakeDatabase(
           }
           if (query.startsWith('select * from private.admin_security_status'))
             return securityStatusRows as R[];
-          if (query.startsWith('select * from private.admin_platform_list')) {
+          if (query.includes('from private.admin_platform_list')) {
             return [
               {
                 platform_id: platformId,
@@ -382,6 +382,8 @@ function fakeDatabase(
                 name: 'Fixture',
                 status: 'active',
                 allow_activation: true,
+                created_at: '2026-09-08T00:00:00.123456Z',
+                cursor_created_at: '2026-09-08T00:00:00.123456Z',
               },
             ] as unknown as R[];
           }
@@ -2077,6 +2079,8 @@ Deno.test('Account API exposes the M2 account close and delete-request wrappers'
 });
 
 Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async () => {
+  const platformCalls: Array<{ query: string; values?: readonly unknown[] }> =
+    [];
   const list = await handleRequest(
     new Request(
       'http://local/functions/v1/account-api/admin/api/v1/platforms',
@@ -2085,27 +2089,100 @@ Deno.test('Account API exposes the AAL2 M2 platform management wrappers', async 
       },
     ),
     {
-      database: fakeDatabase(),
+      database: fakeDatabase((query, values) =>
+        platformCalls.push({ query, values }),
+      ),
       verifyAccessToken: async () => userId,
     },
   );
   assertEquals(list.status, 200);
-  assertEquals((await list.json()).data[0].code, 'fixture');
+  const listPayload = await list.json();
+  assertEquals(listPayload.data[0].code, 'fixture');
+  assertEquals(listPayload.next_cursor, null);
 
   const searchedList = await handleRequest(
     new Request(
-      'http://local/functions/v1/account-api/admin/api/v1/platforms?q=fixture&limit=20',
+      'http://local/functions/v1/account-api/admin/api/v1/platforms?q=fixture&limit=1',
       {
         headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
       },
     ),
     {
-      database: fakeDatabase(),
+      database: fakeDatabase((query, values) =>
+        platformCalls.push({ query, values }),
+      ),
       verifyAccessToken: async () => userId,
     },
   );
   assertEquals(searchedList.status, 200);
-  assertEquals((await searchedList.json()).data[0].code, 'fixture');
+  const searchedPayload = await searchedList.json();
+  assertEquals(searchedPayload.data[0].code, 'fixture');
+  assertEquals('cursor_created_at' in searchedPayload.data[0], false);
+  assertEquals(typeof searchedPayload.next_cursor, 'string');
+  const searchedCall = platformCalls.at(-1);
+  assertEquals(
+    searchedCall?.query.includes('from private.admin_platform_list_v3'),
+    true,
+  );
+  assertEquals(searchedCall?.values?.slice(3), ['fixture', 1, null, null]);
+
+  const nextPlatformPage = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms?q=fixture&limit=1&cursor=${encodeURIComponent(searchedPayload.next_cursor)}`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase((query, values) =>
+        platformCalls.push({ query, values }),
+      ),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(nextPlatformPage.status, 200);
+  assertEquals(platformCalls.at(-1)?.values?.slice(3), [
+    'fixture',
+    1,
+    '2026-09-08T00:00:00.123456Z',
+    platformId,
+  ]);
+
+  const mismatchedPlatformCursor = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms?q=other&limit=1&cursor=${encodeURIComponent(searchedPayload.next_cursor)}`,
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(mismatchedPlatformCursor.status, 400);
+
+  const unicodeQuery = '平台😀';
+  const unicodeList = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms?q=${encodeURIComponent(unicodeQuery)}&limit=1`,
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+      },
+    ),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(unicodeList.status, 200);
+  const unicodePayload = await unicodeList.json();
+  const unicodeNext = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms?q=${encodeURIComponent(unicodeQuery)}&limit=1&cursor=${encodeURIComponent(unicodePayload.next_cursor)}`,
+      {
+        headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+      },
+    ),
+    {
+      database: fakeDatabase((query, values) =>
+        platformCalls.push({ query, values }),
+      ),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(unicodeNext.status, 200);
+  assertEquals(platformCalls.at(-1)?.values?.[3], unicodeQuery);
 
   const platformOverview = await handleRequest(
     new Request(

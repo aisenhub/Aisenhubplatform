@@ -205,6 +205,10 @@ export async function deletionJobAuth(
   } catch (error) {
     failureCode = errorCode(error);
   }
+  const retryable =
+    failureCode !== null &&
+    (failureCode === 'PROVIDER_TIMEOUT' ||
+      /^AUTH_DELETE_FAILED_(?:408|429|5\d{2})$/u.test(failureCode));
   const [step] = await withJobRole(db, (transaction) =>
     transaction.unsafe<Row>(
       'select * from private.deletion_job_step(row($1::uuid,$2::text,$3::bigint,$4::uuid)::private.job_context, $5::uuid, $6::bigint, $7::text, $8::text, $9::text)',
@@ -213,7 +217,7 @@ export async function deletionJobAuth(
         jobId,
         leaseFence,
         'auth_deleted',
-        failureCode ? 'blocked' : 'completed',
+        failureCode ? (retryable ? 'retry' : 'blocked') : 'completed',
         failureCode,
       ],
     ),

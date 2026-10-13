@@ -6,14 +6,14 @@
 
 - 数据库返回字段先由 Edge DTO 归一化，再由 OpenAPI 和 Domain DTO 定义公共形状；Consumer 不复制金额、期限、权益或授权算法。
 - 新增、删除或改名字段必须同时更新 JSON 清单中的 producer、edge、OpenAPI、每个 consumer 和 test owner。
-- 兼容发布采用 expand-first：旧字段继续存在，新增字段先可选或以同一 `/v1` 合同安全读取；未验证旧 Consumer 前不得删除字段或改变 `/v1/plans`、`/v1/subscription/products` 语义。
+- 兼容发布采用 expand-first：旧字段继续存在，新增字段先可选或以同一 `/v1` 合同安全读取；未验证旧 Consumer 前不得删除字段或改变 `/v1/plans`、`/v1/commerce/offers` 语义。
 - `pnpm contracts:check` 同时执行 OpenAPI 检查和清单检查；清单检查只证明静态映射完整，不代替本地 API、浏览器或 Provider 验证。
 
 ## 当前映射
 
 | 合同 | 唯一生产者/Edge | 主要 Consumer | 失败与恢复责任 |
 | --- | --- | --- | --- |
-| 商品目录 `SubscriptionProduct` | `subscription_products_list` → `subscriptionProductDto` | Harness BFF/contract、外部 Consumer | 中央 DTO/OpenAPI 定义金额、期限、购买原因；Account API 无 Bearer 仍需 Platform Key；响应 no-store；Local E2E 验证字段可读 |
+| Offer 目录 | `commerce_offers_list` → Account API | Harness BFF/contract、外部 Consumer | OpenAPI 定义价格、期限、购买原因；无 Bearer 仍需 Platform Key，响应 no-store；Local E2E 验证真实目录 |
 | 结账快照 `SubscriptionCheckoutData` | `subscription_checkout_create` → `subscriptionCheckoutDto` | Harness contract、外部 Consumer | 服务端定价和 Idempotency-Key；Harness 固定 method/path contract，不在本地重算支付状态 |
 | 权益投影 `Entitlement` | `entitlement_read` → `entitlementDto` | Harness BFF/contract、外部 Consumer | `none` 保留 NULL/空 features 语义；protected route 只按中央 effective status/features fail closed |
 | Admin 账单证据 | `admin_billing_order_read_v2/v3` → Account API | Admin BFF、中央 Billing 页面 | Webhook 签名、Job 租约、重试预算和审计时间线分开呈现；hash/owner 只返回脱敏摘要 |

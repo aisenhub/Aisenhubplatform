@@ -129,6 +129,8 @@ pending 且未写入可取消并释放；receiving/storing 有租约或未知写
 
 ## 7. 领域入口、状态和恢复屏障
 
+Global Delete 的 Auth 删除使用有界请求；404 视为已删除，超时、408、429 和 5xx 返回既有 retry 状态并由 SQL 安排退避。永久权限或配置错误保持 blocked，不在外部删除成功前推进 checkpoint。
+
 本节定义文件 API、受控 SQL 入口和备份屏障之间的公共边界。具体表、函数和任务以当前 migrations/functions 为准；HTTP 层不能自行拼接第二套配额或删除算法。
 
 ### 7.1 领域SQL入口

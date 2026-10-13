@@ -58,6 +58,9 @@ const configPlatformKeyId = crypto.randomUUID();
 const planId = crypto.randomUUID();
 const platformCode = `t12-r2-browser-${crypto.randomUUID()}`;
 const otherPlatformCode = `t12-r2-other-${crypto.randomUUID()}`;
+const scalePlatformTargetId = crypto.randomUUID();
+const scalePlatformPrefix = `t12-r2-scale-${crypto.randomUUID()}`;
+const scalePlatformTargetCode = `${scalePlatformPrefix}-target`;
 const email = `t12-r2-browser-${crypto.randomUUID()}@example.test`;
 const password = `T12-R2-${randomBytes(16).toString('hex')}!`;
 const lifecycleEmail = `t12-r2-lifecycle-${crypto.randomUUID()}@example.test`;
@@ -482,6 +485,36 @@ async function createFixtures() {
   `;
 }
 
+async function createPlatformScaleFixtures() {
+  await sql`
+    insert into public.platforms (
+      id, code, name, status, allow_activation, created_at, updated_at
+    ) values (
+      ${scalePlatformTargetId}, ${scalePlatformTargetCode}, 'T12 Scale Target',
+      'active', true, now() - interval '3 years', now() - interval '3 years'
+    )
+  `;
+  await sql`
+    insert into public.platforms (
+      id, code, name, status, allow_activation, created_at, updated_at
+    )
+    select gen_random_uuid(),
+      ${scalePlatformPrefix} || '-' || lpad(series::text, 3, '0'),
+      'T12 Scale ' || lpad(series::text, 3, '0'),
+      'active', true,
+      now() - (series * interval '1 minute'),
+      now() - (series * interval '1 minute')
+    from generate_series(1, 105) as series
+  `;
+  const [scaleFacts] = await sql`
+    select count(*)::integer as platform_count,
+      count(*) filter (where id = ${scalePlatformTargetId})::integer as target_count
+    from public.platforms
+    where code like ${`${scalePlatformPrefix}%`}
+  `;
+  assert.deepEqual(scaleFacts, { platform_count: 106, target_count: 1 });
+}
+
 async function runBrowserFlow(secret) {
   browser = await chromium.launch({
     channel: process.env.T12_BROWSER_CHANNEL ?? 'chrome',
@@ -887,11 +920,16 @@ async function runBrowserFlow(secret) {
   });
 
   async function governConfig(action, buttonTest, expectedStatus) {
-    await page
-      .locator('[data-test="config-governance-reason"]')
-      .fill(`T12 ${action} fixture`);
+    const governanceReason = page.locator(
+      '[data-test="config-governance-reason"]',
+    );
+    if (!(await governanceReason.isVisible())) {
+      await page.locator('[data-test="config-resource-open"]').click();
+      await governanceReason.waitFor({ state: 'visible' });
+    }
+    await governanceReason.fill(`T12 ${action} fixture`);
     await page.locator(`[data-test="${buttonTest}"]`).click();
-    const [response] = await Promise.all([
+    const [response, detailRefreshResponse] = await Promise.all([
       page.waitForResponse(
         (candidate) =>
           candidate
@@ -900,15 +938,35 @@ async function runBrowserFlow(secret) {
               `/api/v1/admin/api/v1/platforms/${platformId}/config-resources/${configId}/gallery-governance`,
             ) && candidate.request().method() === 'POST',
       ),
+      page.waitForResponse(
+        (candidate) =>
+          candidate
+            .url()
+            .endsWith(
+              `/api/v1/admin/api/v1/platforms/${platformId}/config-resources/${configId}`,
+            ) && candidate.request().method() === 'GET',
+      ),
       page.locator('[data-test="confirm-action-submit"]').click(),
     ]);
     assertStatus(response.status(), 200, `Config Gallery ${action}`);
+    assertStatus(
+      detailRefreshResponse.status(),
+      200,
+      `Config Gallery ${action} detail refresh`,
+    );
     const [entry] = await sql`
       select status
       from public.platform_config_gallery_entries
       where platform_id = ${platformId} and config_id = ${configId}
     `;
     assert.equal(entry.status, expectedStatus);
+    const expectedGovernanceButton =
+      expectedStatus === 'approved'
+        ? 'config-governance-remove'
+        : 'config-governance-restore';
+    await page
+      .locator(`[data-test="${expectedGovernanceButton}"]`)
+      .waitFor({ state: 'visible' });
     await page.keyboard.press('Escape');
     await page.locator('[data-test="confirm-action-submit"]').waitFor({
       state: 'hidden',
@@ -1992,6 +2050,83 @@ async function runArchitectureBehaviorMatrix(secret) {
     .click();
   await page.waitForURL('**/admin/accounts');
 
+  await page.goto(
+    `${appUrl}/admin/platforms/${platformId}/accounts/${platformAccountId}`,
+    { waitUntil: 'domcontentloaded' },
+  );
+  await page.locator('[data-test="account-workbench-page"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page.getByLabel('搜索平台').fill(otherPlatformCode);
+  const otherPlatformOption = page
+    .locator('[data-test="platform-switcher-dropdown"]')
+    .getByRole('option')
+    .filter({ hasText: otherPlatformCode });
+  await otherPlatformOption.waitFor({ state: 'visible' });
+  await otherPlatformOption.click();
+  await page.waitForURL(`**/admin/platforms/${otherPlatformId}/accounts`);
+  assert.ok(
+    !page.url().includes(platformAccountId),
+    'Entity-level platform switch must never carry the old Platform Account id',
+  );
+
+  await createPlatformScaleFixtures();
+  await page.goto(`${appUrl}/admin/billing/orders`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  const scaleDropdown = page.locator(
+    '[data-test="platform-switcher-dropdown"]',
+  );
+  await scaleDropdown.getByRole('option').first().waitFor({ state: 'visible' });
+  assert.equal(
+    await scaleDropdown.getByRole('option').count(),
+    20,
+    'Platform switcher initial page must stay bounded to 20 platforms',
+  );
+  const nextPlatformPageResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith('/api/v1/admin/api/v1/platforms') &&
+      url.searchParams.has('cursor') &&
+      response.request().method() === 'GET'
+    );
+  });
+  await scaleDropdown
+    .locator('[data-test="platform-switcher-load-more"]')
+    .click();
+  assertStatus(
+    (await nextPlatformPageResponse).status(),
+    200,
+    'Platform switcher cursor page',
+  );
+  assert.ok(
+    (await scaleDropdown.getByRole('option').count()) > 20,
+    'Platform switcher must append a second cursor page',
+  );
+
+  const scaledSearchResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith('/api/v1/admin/api/v1/platforms') &&
+      url.searchParams.get('q') === scalePlatformTargetCode &&
+      response.request().method() === 'GET'
+    );
+  });
+  await page.getByLabel('搜索平台').fill(scalePlatformTargetCode);
+  assertStatus(
+    (await scaledSearchResponse).status(),
+    200,
+    'Platform switcher server-side scale search',
+  );
+  const scaledTargetOption = scaleDropdown
+    .getByRole('option')
+    .filter({ hasText: scalePlatformTargetCode });
+  await scaledTargetOption.waitFor({ state: 'visible' });
+  await scaledTargetOption.click();
+  await page.waitForURL(`**/admin/platforms/${scalePlatformTargetId}/billing`);
+
   await page.goto(`${appUrl}/admin/platforms/${platformId}`, {
     waitUntil: 'domcontentloaded',
   });
@@ -2048,7 +2183,90 @@ async function runArchitectureBehaviorMatrix(secret) {
     .click();
   await page.waitForURL('**/admin/billing/orders');
 
+  let releaseSlowOffer;
+  let markSlowOfferStarted;
+  let markSlowOfferFinished;
+  const slowOfferGate = new Promise((resolve) => {
+    releaseSlowOffer = resolve;
+  });
+  const slowOfferStarted = new Promise((resolve) => {
+    markSlowOfferStarted = resolve;
+  });
+  const slowOfferFinished = new Promise((resolve) => {
+    markSlowOfferFinished = resolve;
+  });
+  const slowOfferPath = `**/api/v1/admin/api/v1/platforms/${platformId}/commerce/offers`;
+  const fastOfferPath = `**/api/v1/admin/api/v1/platforms/${otherPlatformId}/commerce/offers`;
+  await page.route(slowOfferPath, async (route) => {
+    markSlowOfferStarted();
+    await slowOfferGate;
+    await route
+      .fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              status: 'active',
+              price_status: 'active',
+              mapping_status: 'ready',
+            },
+          ],
+        }),
+      })
+      .catch(() => undefined);
+    markSlowOfferFinished();
+  });
+  await page.route(fastOfferPath, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    }),
+  );
+  try {
+    await page.goto(
+      `${appUrl}/admin/platforms/${platformId}/settings/integration`,
+      { waitUntil: 'domcontentloaded' },
+    );
+    await slowOfferStarted;
+    await page.locator('[data-test="platform-switcher-trigger"]').click();
+    await page.getByLabel('搜索平台').fill(otherPlatformCode);
+    await page
+      .locator('[data-test="platform-switcher-dropdown"]')
+      .getByRole('option')
+      .filter({ hasText: otherPlatformCode })
+      .click();
+    await page.waitForURL(
+      `**/admin/platforms/${otherPlatformId}/settings/integration`,
+    );
+    const commerceStep = page.locator(
+      '[data-test="platform-integration-step-commerce"]',
+    );
+    await commerceStep
+      .getByText('按需配置', { exact: true })
+      .waitFor({ state: 'visible' });
+    releaseSlowOffer();
+    await slowOfferFinished;
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    assert.equal(
+      await commerceStep.getByText('按需配置', { exact: true }).isVisible(),
+      true,
+      'Slow platform A offer response must not overwrite the ready platform B state',
+    );
+  } finally {
+    releaseSlowOffer();
+    await page.unroute(slowOfferPath);
+    await page.unroute(fastOfferPath);
+  }
+
   return {
+    stalePlatformOfferResponse: 'PASS',
     identitySubmitSingleRequest: 'PASS',
     identityPlatformScopeSingleRequest: 'PASS',
     identityUidDetailAccountDeepLink: 'PASS',
@@ -2060,11 +2278,13 @@ async function runArchitectureBehaviorMatrix(secret) {
     accountWorkbenchIdor: 'PASS',
     identityDeletionStart: 'PASS',
     identityDeletionRetry: 'PASS',
-    operationsCompatibilityRedirect: 'PASS',
+    canonicalDeletionJobsNavigation: 'PASS',
     billingUrlHydration: 'PASS',
     billingRefreshPersistence: 'PASS',
     accountsEquivalentScopeSwitch: 'PASS',
     billingEquivalentScopeSwitch: 'PASS',
+    entityScopeSwitchDropsOldId: 'PASS',
+    platformSwitcherScalePagination: 'PASS',
     commerceSummarySurfaces: 'PASS',
     commerceCatalogSurface: 'PASS',
     commerceEntitlementSurface: 'PASS',
@@ -2283,6 +2503,9 @@ try {
   console.log(JSON.stringify(result));
 } finally {
   if (browser) await browser.close().catch(() => undefined);
+  await sql`delete from public.platforms where code like ${`${scalePlatformPrefix}%`}`.catch(
+    () => undefined,
+  );
   if (platformId) {
     await sql`delete from public.audit_logs where platform_id = ${platformId}`.catch(
       () => undefined,

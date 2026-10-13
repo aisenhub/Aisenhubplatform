@@ -82,8 +82,8 @@ const platformACode = `harness-a-${platformAId.slice(0, 8)}`;
 const platformBCode = `harness-b-${platformBId.slice(0, 8)}`;
 const presentedKeyA = `phk_v1_${platformAKeyId}_harness-a`;
 const presentedKeyB = `phk_v1_${platformBKeyId}_harness-b`;
-const redemptionCodeA = 'HARNESSA23456789';
-const redemptionCodeB = 'HARNESSB23456789';
+const redemptionCodeA = 'A'.repeat(31);
+const redemptionCodeB = 'B'.repeat(31);
 
 const sql = postgres(databaseUrl, {
   max: 4,
@@ -238,12 +238,12 @@ async function createFixtures() {
       values
         (${fixture.redemptionCodeId}, ${fixture.platformId}, ${fixture.batchId}, ${fixture.paidPlanId},
          ${redemptionHmac(fixture.platformId, fixture.redemptionCode)}, 1,
-         ${fixture.redemptionCode.slice(0, 8)}, ${fixture.redemptionCode.slice(-4)})
+         ${fixture.redemptionCode.slice(0, 4)}, ${fixture.redemptionCode.slice(-4)})
     `;
     await sql`
       insert into public.platform_file_policies
-        (platform_id, max_file_bytes, max_files, max_total_bytes)
-      values (${fixture.platformId}, 128, 10, 1280)
+        (platform_id, enabled, max_file_bytes, max_platform_total_bytes)
+      values (${fixture.platformId}, true, 128, 1048576)
     `;
   }
 }
@@ -486,15 +486,116 @@ async function exerciseHarness(
   const subscriptionBefore = await pageRequest(page, '/api/v1/subscription');
   assert.equal(subscriptionBefore.status, 200, 'subscription read');
   assert.equal(subscriptionBefore.body?.data?.plan?.code, 'free');
+  const redeemKey = randomUUID();
   const redeem = await mutation(page, baseUrl, '/api/v1/subscription/redeem', {
     headers: {
       'Content-Type': 'application/json',
-      'Idempotency-Key': randomUUID(),
+      'Idempotency-Key': redeemKey,
     },
     body: JSON.stringify({ code }),
   });
   assert.equal(redeem.status, 200, 'subscription redeem');
   assert.equal(redeem.body?.data?.plan?.code, 'pro');
+
+  const invalidKey = `harness-invalid-${expectedPlatformId}`;
+  const invalidOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': invalidKey,
+    },
+    body: JSON.stringify({ code: 'C'.repeat(31) }),
+  };
+  const invalidRedeem = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    invalidOptions,
+  );
+  assert.equal(invalidRedeem.body?.error?.code, 'INVALID_CODE');
+  const [account] =
+    await sql`select id from public.platform_accounts where platform_id = ${expectedPlatformId}`;
+  const [firstLimit] =
+    await sql`select sum(hit_count) as hit_count from private.rate_limit_windows
+    where key_hash = extensions.digest(convert_to(${`${expectedPlatformId}:${account.id}:redeem_subscription_code`}, 'utf8'), 'sha256')`;
+  assert.equal(
+    Number(firstLimit?.hit_count),
+    2,
+    'failed redemption persists its rate-limit count',
+  );
+  await mutation(page, baseUrl, '/api/v1/subscription/redeem', invalidOptions);
+  const [replayedLimit] =
+    await sql`select sum(hit_count) as hit_count from private.rate_limit_windows
+    where key_hash = extensions.digest(convert_to(${`${expectedPlatformId}:${account.id}:redeem_subscription_code`}, 'utf8'), 'sha256')`;
+  assert.equal(
+    Number(replayedLimit?.hit_count),
+    2,
+    'same rejected intent replays without recounting',
+  );
+  async function exhaustWindow(key, limit) {
+    await sql`insert into private.rate_limit_windows
+      (key_hash, window_started_at, window_seconds, hit_count, limit_count, expires_at)
+      select extensions.digest(convert_to(${key}, 'utf8'), 'sha256'),
+        date_trunc('minute', now()) + minute * interval '1 minute', 60, ${limit}, ${limit},
+        date_trunc('minute', now()) + (minute + 1) * interval '1 minute'
+      from generate_series(0, 2) as minute
+      on conflict (key_hash, window_started_at) do update set hit_count = excluded.hit_count`;
+  }
+  // Cover adjacent windows so the assertion does not race the wall-clock minute.
+  await exhaustWindow(
+    `${expectedPlatformId}:${account.id}:redeem_subscription_code`,
+    5,
+  );
+  const limitedRedeem = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    {
+      ...invalidOptions,
+      headers: {
+        ...invalidOptions.headers,
+        'Idempotency-Key': `${invalidKey}-limited`,
+      },
+    },
+  );
+  assert.equal(limitedRedeem.status, 429, 'redemption limit fails closed');
+  assert.equal(limitedRedeem.body?.error?.code, 'RATE_LIMITED');
+  await sql`update private.rate_limit_windows set hit_count = 0
+    where key_hash = extensions.digest(convert_to(${`${expectedPlatformId}:${account.id}:redeem_subscription_code`}, 'utf8'), 'sha256')`;
+  await exhaustWindow(`${expectedPlatformId}:redeem_subscription_code`, 300);
+  const platformLimited = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    {
+      ...invalidOptions,
+      headers: {
+        ...invalidOptions.headers,
+        'Idempotency-Key': `${invalidKey}-platform-limit`,
+      },
+    },
+  );
+  assert.equal(
+    platformLimited.status,
+    429,
+    'platform limit protects other accounts too',
+  );
+  const successReplay = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': redeemKey,
+      },
+      body: JSON.stringify({ code }),
+    },
+  );
+  assert.equal(
+    successReplay.status,
+    200,
+    'completed success replays after counters are exhausted',
+  );
 
   const protectedFeature = await pageRequest(
     page,
@@ -1006,6 +1107,13 @@ async function exerciseSessionTerminal(page, context, baseUrl) {
 
 async function cleanup() {
   cleaningUp = true;
+  await sql`delete from private.rate_limit_windows
+    where key_hash = extensions.digest(convert_to(${`${platformAId}:redeem_subscription_code`}, 'utf8'), 'sha256')
+       or key_hash = extensions.digest(convert_to(${`${platformBId}:redeem_subscription_code`}, 'utf8'), 'sha256')
+       or key_hash in (
+      select extensions.digest(convert_to(platform_id::text || ':' || id::text || ':redeem_subscription_code', 'utf8'), 'sha256')
+      from public.platform_accounts where platform_id = ${platformAId} or platform_id = ${platformBId}
+    )`.catch(() => {});
   await sql`delete from public.audit_logs where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );

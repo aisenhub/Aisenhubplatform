@@ -120,6 +120,7 @@ export async function handleRequest(
         reauthSession,
       );
     });
+    if (result instanceof ApiFault) throw result;
     return response(
       {
         data: result.data,

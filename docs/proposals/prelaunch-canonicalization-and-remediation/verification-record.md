@@ -16,20 +16,20 @@
 | --- | --- | --- | --- | --- |
 | 00 | 已交付 | 环境、canonical surface、删除清单和最小 seed 已冻结 | PASS | `a1b2a54` / 已推送任务分支 |
 | 01 | 已交付 | 公共 Contract/Harness/runtime/旧 URL surface 已收敛；Account 40 ops / Admin 70 ops | PASS（breaking diff 为预期 28 项） | `2ed8d5f` / 已推送任务分支 |
-| 02 | 本地已完成 | Commerce 已收敛为 Plan→Offer→Price→Mapping→Checkout；Plan lifecycle、Mapping switch、operation replay、Price/Mapping 并发与 Price retire 已闭环 | PASS | 待 checkpoint |
-| 03 | 本地已完成 | Config / Storage 已收敛为 Config-Version-only ledger；generic file 产品、旧 account quota、legacy storage 分支与 mutable Config cursor 已闭环 | PASS | 待 checkpoint |
-| 04 | 本地已完成 | Account transition 已收敛为严格单入口状态机；Feedback batch delete 使用真实 Admin idempotency，unknown outcome 可安全重放 | PASS | 待 checkpoint |
-| 05 | 本地已完成 | Overview / Commerce Summary 已共享 canonical paid-entitlement helper；Entitlement 与 Billing cursor 均为 opaque immutable boundary；历史 false-positive 已追加 errata，浏览器反例 fixture 可区分旧/新算法 | PASS（`contracts:breaking` 对旧 `origin/main` baseline 的 37 项 breaking 为阶段 07 前预期） | 待 checkpoint |
-| 06 | 未开始 | 未验证 | 未运行 | 未验证 |
-| 07 | 未开始 | 未验证 | 未运行 | 未验证 |
+| 02 | 本地已完成 | Commerce 已收敛为 Plan→Offer→Price→Mapping→Checkout；Plan lifecycle、Mapping switch、operation replay、Price/Mapping 并发与 Price retire 已闭环 | PASS | `ab27712` / 本轮补推送 |
+| 03 | 本地已完成 | Config / Storage 已收敛为 Config-Version-only ledger；generic file 产品、旧 account quota、legacy storage 分支与 mutable Config cursor 已闭环 | PASS | `ab27712` / 本轮补推送 |
+| 04 | 本地已完成 | Account transition 已收敛为严格单入口状态机；Feedback batch delete 使用真实 Admin idempotency，unknown outcome 可安全重放 | PASS | `ab27712` / 本轮补推送 |
+| 05 | 本地已完成 | Overview / Commerce Summary 已共享 canonical paid-entitlement helper；Entitlement 与 Billing cursor 均为 opaque immutable boundary；历史 false-positive 已追加 errata，浏览器反例 fixture 可区分旧/新算法 | PASS（`contracts:breaking` 对旧 `origin/main` baseline 的 37 项 breaking 为阶段 07 前预期） | `ab27712` / 本轮补推送 |
+| 06 | 本地已完成 | request scope + subtree isolation、服务端 UTF-8 query-bound cursor、实体路由切换 | PASS | 本轮 checkpoint |
+| 07 | PARTIAL | forward runtime cleanup 与 Local reuse gate 已验收；fresh reset/schema squash 和整体远端晋升待授权/配置访问 | Local PASS；发布 BLOCKED | 本轮 checkpoint |
 
 ## R-01～R-15 关闭记录
 
-已关闭：R-01、R-02、R-03、R-04、R-05、R-06、R-07、R-08、R-09、R-10、R-11、R-12。其余 R-13～R-15 由阶段 06 继续。
+已关闭：R-01、R-02、R-03、R-04、R-05、R-06、R-07、R-08、R-09、R-10、R-11、R-12。R-13～R-15 由阶段 06 的真实迟到 Offer response、106 平台分页搜索与实体切换浏览器用例关闭。
 
 ## LC-01～LC-13 关闭记录
 
-阶段 02 已关闭 Commerce 域 LC-01、LC-02、LC-03、LC-04、LC-06、LC-07、LC-12；阶段 03 已关闭 Config/Storage 域 LC-05、LC-07、LC-10；LC-08、LC-09、LC-10、LC-11 的公共运行面已由阶段 01 关闭。最终 migration rebaseline 由阶段 07 完成。
+阶段 02 已关闭 Commerce 域 LC-01、LC-02、LC-03、LC-04、LC-06、LC-07、LC-12；阶段 03 已关闭 Config/Storage 域 LC-05、LC-07、LC-10；LC-08、LC-09、LC-10、LC-11 的公共运行面已由阶段 01 关闭。LC-13 的历史 squash/fresh reset 尚未完成，不以 forward cleanup 或 reuse-local PASS 代替。
 
 ## 实际验证记录
 
@@ -85,3 +85,34 @@
 ## GitHub / Staging
 
 未开始。不得预填成功记录。
+
+## 2026-10-14 继续实施与审查
+
+- 起始 HEAD：ab27712；沿用任务分支，已有 Phase 06 代码和三份审查报告均保留，用户本轮要求包含全部项目修改提交。整次 R3，消费者为 SQL → Account/Admin Edge → OpenAPI → Admin BFF/UI、Harness/Registry；不新增 Provider/费用或真实支付。
+- 文档先同步：移除当前 architecture/reference 中 fixed products、product_code Checkout、generic file 产品说明，历史审查/Proposal 保留历史意义。
+- 失败反例：API 摘要字段边界与 Auth 删除 transient retry 两项先 FAIL，修复后 109/109 PASS；中文/emoji 搜索曾 503，UTF-8 cursor 修复后 200；失败兑换回滚导致计数 1（应为 2），修复后真实 Harness PASS。
+- 清理：删除无调用者的 admin_account_list_v2、admin_platform_key_list_v2；Billing v2 read 仍是 v3 的内部 helper，收回所有 executor 直接 execute。旧有 t16 fixture 同批迁往 canonical v3，未删除失败行为断言。
+- 兑换限流遵循已记录的账户 5/min、平台 300/min；拒绝与同意图重放在 SQL 唯一写入口持久化，API 提交拒绝后再返回错误。原文档的 IP 限流没有可信 IP 传播合同，改为明确未实现，禁止相信客户端转发头。
+
+| 检查 | 实际命令/范围 | 结果 |
+| --- | --- | --- |
+| 工具链/静态/构建/单元 | pnpm verify:task:0801 --reuse-local；CONTRACT_BASE_REF=HEAD（ab27712，批准 breaking 后的候选合同） | PASS：21 executable gates；Node/pnpm/Deno/Supabase 固定版本、format/lint/typecheck/build、118 unit、9 tooling |
+| SQL/权限/非法状态/幂等/分页 | pnpm test:db，候选包含 20261013180004 | PASS：62 files / 1357 tests |
+| 真并发 | settlement 与 prelaunch Commerce 双连接脚本，runner 自动 Local env | PASS：2 settlements / 1 Grant；Price/Mapping versions [1,2]，concurrent publish 仅一个 active Price |
+| Edge/API/Provider Mock | pnpm test:api | PASS：109/109 |
+| Consumer 真 HTTP | pnpm test:e2e:consumer-harness（最新单独复验） | PASS：Auth/CSRF/隔离、Offer/兑换、失败计数/replay/账户及平台 429、Config/Feedback、logout/invalid refresh |
+| Admin 浏览器 | pnpm test:e2e:t12-r2（总 runner） | PASS：A 慢/B 快的实际页面请求 race、106 平台搜索/分页、实体 ID 退出、MFA/治理；5 viewports × 20 routes=100 responsive/a11y observations |
+| 合同/Registry/运行时 | contracts:check、test:registry、test:consumer-harness、runtime:probe | PASS：Account 40 / Admin 72 ops；3 contracts / 30 fields；独立 Consumer、Node/Deno 导入 |
+| 当前 main breaking 差异 | pnpm contracts:breaking（origin/main@65c52fb） | FAIL：37 项已批准 prelaunch breaking；新起点比较仍保持严格 gate，不把此结果写 PASS |
+| 文档/差异/敏感扫描 | docs:check、git diff --check；新增行 private-key/provider-credential pattern 扫描 | PASS：209 docs；无 whitespace；0 真实凭据候选（非全面 Secret scanner） |
+| Local advisor | supabase db advisors --local --type security --level error --fail-on error | PASS：0 error |
+| fresh reset/squash | Local/Test/Staging | BLOCKED：本轮重置问题尚无答复；不得复用昨日授权静默重置 |
+| 远端整体 schema/Account/Webhook | workendstaging / egsokuicabbxspkdccqe | BLOCKED：6 retired mappings、8 retired checkouts 不满足 canonical NOT NULL；重置或另行明确数据处理决定前不部署不兼容 runtime |
+| main/自动 Admin 发布 | GitHub main → Vercel aisenhubplatform-admin | BLOCKED：连接器 403；现有 CLI scope-not-accessible，无法核对配置；不绕过 G2、也不先合并触发部署 |
+| 远端 security advisor | workendstaging 只读 | PARTIAL：无 error；pg_net in public、leaked-password-protection disabled 两项 WARN，未作费用/环境配置变更 |
+
+最初并发脚本缺 Local env（FAIL）后由总 runner 注入后 PASS；首次总 gate 格式失败修正后 PASS；一次重复 Harness 与总 runner 重叠导致端口占用/401（FAIL），待总 runner 退出串行重跑后 PASS。失败证据保留于 E:/AppData/Codex/prelaunch，不用基础设施失败冒充产品通过。
+
+原三个历史静态审查报告中的结论须按当前源码复核：Promise.race 为参与 promise 安装拒绝处理器，不单因 race 失败推断 unhandled rejection；现有 upload releaseLock 防护已有回归。Config create 先锁账户再查 slot；旧建议不构成目前并发漏洞证据。单例 Admin 离线恢复已经存在，不增加第二套管理员模型。
+
+G0/G1：候选范围与适用 Local reuse 检查 PASS；G2/G3：整体发布 BLOCKED，目标数据和自动 Admin 配置未通过；G4：禁止回到 retired runtime，forward-fix 保留账本，测试环境 reset 必须有授权；G5：本轮明确授权代码/Git 合并与 Supabase 更新，不自动等于数据库数据重置；G6：整体未部署 NOT_RUN，真实 Provider/Production 交易观察 NOT_RUN。

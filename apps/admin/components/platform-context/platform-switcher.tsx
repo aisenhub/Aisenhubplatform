@@ -28,6 +28,8 @@ type PlatformSwitcherProps = {
 };
 
 const ALL_PLATFORMS_VALUE = '__ALL_PLATFORMS__';
+const PLATFORM_PAGE_SIZE = 20;
+const PLATFORM_SEARCH_DEBOUNCE_MS = 250;
 
 function statusDotClass(status: string): string {
   return status === 'active' ? 'bg-emerald-500' : 'bg-slate-400';
@@ -43,8 +45,14 @@ export function PlatformSwitcher({
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const loadGeneration = useRef(0);
+  const controllerRef = useRef<AbortController | null>(null);
 
   // 点击外部自动收起下拉面板
   useEffect(() => {
@@ -75,57 +83,109 @@ export function PlatformSwitcher({
     };
   }, [open]);
 
-  const loadPlatforms = useCallback(async () => {
-    const epoch = adminAuthSession.getEpoch();
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setDebouncedQuery(query.trim()),
+      PLATFORM_SEARCH_DEBOUNCE_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
-    try {
-      const response = await adminAuthSession.request(
-        '/api/v1/admin/api/v1/platforms?limit=100',
-        { cache: 'no-store' },
-      );
-      const payload = (await response
-        .json()
-        .catch(() => null)) as PlatformListResponse | null;
+  const loadPlatforms = useCallback(
+    async (search: string, cursor: string | null = null) => {
+      const append = cursor !== null;
+      const generation = ++loadGeneration.current;
+      const epoch = adminAuthSession.getEpoch();
+      controllerRef.current?.abort();
+      const controller = new AbortController();
+      controllerRef.current = controller;
 
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
-      if (!response.ok) {
-        setState('error');
-        setErrorMessage(
-          apiErrorDescription(response, payload, '平台切换列表暂时不可用。'),
-        );
-        return;
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setSearching(true);
+        setPlatforms([]);
+        setNextCursor(null);
+        setErrorMessage('');
       }
 
-      setPlatforms(Array.isArray(payload?.data) ? payload.data : []);
-      setState('ready');
-      setErrorMessage('');
-    } catch (error) {
-      setState('error');
-      setErrorMessage(sessionErrorMessage(error));
-    }
-  }, []);
+      try {
+        const params = new URLSearchParams({
+          limit: String(PLATFORM_PAGE_SIZE),
+        });
+        if (search) params.set('q', search);
+        if (cursor) params.set('cursor', cursor);
+        const response = await adminAuthSession.request(
+          `/api/v1/admin/api/v1/platforms?${params.toString()}`,
+          { cache: 'no-store', signal: controller.signal },
+        );
+        const payload = (await response
+          .json()
+          .catch(() => null)) as PlatformListResponse | null;
+
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        if (!response.ok) {
+          setState('error');
+          setErrorMessage(
+            apiErrorDescription(response, payload, '平台切换列表暂时不可用。'),
+          );
+          return;
+        }
+
+        const rows = Array.isArray(payload?.data) ? payload.data : [];
+        setPlatforms((current) => {
+          if (!append) return rows;
+          const byId = new Map(
+            current.map((platform) => [platform.platform_id, platform]),
+          );
+          for (const platform of rows) byId.set(platform.platform_id, platform);
+          return [...byId.values()];
+        });
+        setNextCursor(payload?.next_cursor ?? null);
+        setState('ready');
+        setErrorMessage('');
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (
+          generation !== loadGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        setState('error');
+        setErrorMessage(sessionErrorMessage(error));
+      } finally {
+        if (generation === loadGeneration.current) {
+          setSearching(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    void loadPlatforms();
-  }, [loadPlatforms]);
+    void loadPlatforms(debouncedQuery);
+    return () => controllerRef.current?.abort();
+  }, [debouncedQuery, loadPlatforms]);
 
   const options = useMemo(() => {
     if (!current) return platforms;
+    const normalized = debouncedQuery.toLocaleLowerCase();
+    const currentMatches =
+      !normalized ||
+      `${current.name} ${current.code}`
+        .toLocaleLowerCase()
+        .includes(normalized);
+    if (!currentMatches) return platforms;
     const hasCurrent = platforms.some(
       (platform) => platform.platform_id === current.platform_id,
     );
     return hasCurrent ? platforms : [current, ...platforms];
-  }, [current, platforms]);
-
-  const filteredOptions = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return options;
-    return options.filter((platform) =>
-      `${platform.name} ${platform.code}`
-        .toLocaleLowerCase()
-        .includes(normalized),
-    );
-  }, [options, query]);
+  }, [current, debouncedQuery, platforms]);
 
   function changePlatform(nextId: string) {
     if (!nextId) return;
@@ -255,14 +315,19 @@ export function PlatformSwitcher({
 
           <div role="listbox" aria-label="平台工作区">
             <div className="px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wider text-slate-400">
-              已加载平台 ({filteredOptions.length}/{options.length})
+              已加载平台 ({options.length})
             </div>
-            {filteredOptions.length === 0 ? (
+            {searching ? (
+              <div className="px-2 py-3 text-center text-xs text-slate-400">
+                正在搜索平台…
+              </div>
+            ) : null}
+            {!searching && options.length === 0 ? (
               <div className="px-2 py-3 text-center text-xs text-slate-400">
                 没有匹配的平台
               </div>
             ) : null}
-            {filteredOptions.map((platform) => {
+            {options.map((platform) => {
               const isSelected = current?.platform_id === platform.platform_id;
               return (
                 <button
@@ -296,6 +361,17 @@ export function PlatformSwitcher({
                 </button>
               );
             })}
+            {nextCursor ? (
+              <button
+                type="button"
+                className="mt-1 flex w-full items-center justify-center rounded-md border border-slate-200 px-2 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                data-test="platform-switcher-load-more"
+                disabled={loadingMore || searching}
+                onClick={() => void loadPlatforms(debouncedQuery, nextCursor)}
+              >
+                {loadingMore ? '正在加载…' : '加载更多'}
+              </button>
+            ) : null}
           </div>
         </div>
       )}
@@ -306,7 +382,7 @@ export function PlatformSwitcher({
             <span>{errorMessage}</span>
             <button
               type="button"
-              onClick={() => void loadPlatforms()}
+              onClick={() => void loadPlatforms(debouncedQuery)}
               className="text-xs underline hover:opacity-80"
               aria-label="重试加载平台列表"
             >

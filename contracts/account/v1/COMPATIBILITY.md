@@ -7,3 +7,7 @@
 公共字段演进采用 expand → migrate → contract；`/v1` 默认只执行 expand/migrate。Consumer 必须把未知 response 字段视为可忽略扩展，对文档明确允许扩展的状态值提供 unknown fallback。
 
 AisenHubPlatform 保证 HTTP wire compatibility，不保证由任意 OpenAPI generator 生成的客户端源码兼容。Consumer 自己拥有 integration adapter 和生成代码，并记录其最近验收的 contract revision。
+
+## 预上线基线（2026-10-14）
+
+本次授权的一次性 rebaseline 删除未发布的 fixed products、product_code Checkout、generic config-files 与旧 URL surface。Phase 07 候选提交中的 OpenAPI 是新的 v1 起点；预期 breaking diff 记录在 Proposal 验证记录。合并后仍使用 origin/main 作严格兼容比较，不取消或放宽 breaking gate。

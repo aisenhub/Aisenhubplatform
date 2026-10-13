@@ -277,7 +277,14 @@ export function mapAdminScopeRoute(
   if (targetPlatformId) {
     const targetPrefix = `/admin/platforms/${encodeURIComponent(targetPlatformId)}`;
     if (currentPlatform) {
-      return `${targetPrefix}${currentPlatform.suffix}`;
+      const entityCollection = [
+        [/^\/accounts\/[^/]+(?:\/.*)?$/u, '/accounts'],
+        [/^\/config-resources\/[^/]+(?:\/.*)?$/u, '/files'],
+        [/^\/files\/[^/]+(?:\/.*)?$/u, '/files'],
+        [/^\/billing\/orders\/[^/]+(?:\/.*)?$/u, '/billing'],
+        [/^\/feedback\/[^/]+(?:\/.*)?$/u, '/feedback'],
+      ].find(([pattern]) => (pattern as RegExp).test(currentPlatform.suffix));
+      return `${targetPrefix}${entityCollection?.[1] ?? currentPlatform.suffix}`;
     }
     if (
       pathname === '/admin/accounts' ||

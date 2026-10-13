@@ -182,7 +182,12 @@ export function PlatformWorkspace({
     [load, platform],
   );
 
-  if (state !== 'success' || !platform || !contextValue) {
+  if (
+    state !== 'success' ||
+    !platform ||
+    platform.platform_id !== platformId ||
+    !contextValue
+  ) {
     return (
       <main className="shell wide-shell" data-test="platform-workspace-state">
         <AdminPageHeader
@@ -243,7 +248,7 @@ export function PlatformWorkspace({
   }
 
   return (
-    <PlatformWorkspaceContext.Provider value={contextValue}>
+    <PlatformWorkspaceContext.Provider key={platformId} value={contextValue}>
       <main className="shell wide-shell" data-test="platform-workspace">
         <PlatformHeader platform={platform} />
         {error ? (

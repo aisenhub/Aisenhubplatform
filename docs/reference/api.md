@@ -9,8 +9,8 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 | 方法与路径 | 用户条件 | 平台凭据 | 说明 |
 |---|---|---|---|
 | GET /v1/plans | 不需要用户；不建立账户 | 必需、平台active | 仅公开active套餐字段 |
-| GET /v1/subscription/products | 不需要用户；不建立账户 | 必需、平台active | 固定四商品、平台启用状态和明确的purchasable reason；无Provider映射时不可购买 |
-| POST /v1/subscription/checkout | active账户 | 必需、平台active、未暂停购买 | 仅提交固定product_code和Idempotency-Key；服务端锁定价格/期限快照；无verified Provider mapping时返回CHECKOUT_UNAVAILABLE；购买暂停时返回PURCHASES_PAUSED |
+| GET /v1/commerce/offers | 不需要用户；不建立账户 | 必需、平台active | Offer、immutable Price 与明确的 purchasable reason；无 verified Provider mapping 时不可购买 |
+| POST /v1/subscription/checkout | active账户 | 必需、平台active、未暂停购买 | 仅提交 offer_id 和 Idempotency-Key；服务端锁定价格/期限快照；无verified Provider mapping时返回CHECKOUT_UNAVAILABLE；购买暂停时返回PURCHASES_PAUSED |
 | GET /v1/subscription/checkout/:id | active账户 | 必需、平台active | 只读自身结账状态；不返回Provider ID、token或Secret，始终no-store |
 | GET /v1/account/principal | 有效用户/会话 | 必需 | 可返回not_activated/suspended/closed/disabled状态供界面提示 |
 | POST /v1/account/activate | 有效用户、非Admin、非deleting | 必需、平台active | 仅首次需要allow_activation |
@@ -22,12 +22,6 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 | PATCH /v1/preferences | active账户 | 必需、平台active | JSON Merge Patch |
 | GET /v1/subscription | active账户 | 必需、平台active | 标准权益；权益暂停可返回suspended且features={} |
 | POST /v1/subscription/redeem | active账户、权益未暂停 | 必需、平台active | Idempotency-Key必填 |
-| POST /v1/config-files/upload-intent | active账户 | 必需、平台active | 预约；支持replaces_file_id |
-| PUT /v1/config-files/:id/content | active账户 | 必需、平台active | 有界原始字节；内部完成上传 |
-| GET /v1/config-files | active账户 | 必需、平台active | 自身列表、预算、状态 |
-| GET /v1/config-files/:id | active账户 | 必需、平台active | 查询上传/删除进度 |
-| GET /v1/config-files/:id/content | active账户 | 必需、平台active | 授权后端下载代理 |
-| DELETE /v1/config-files/:id | active账户 | 必需、平台active | 202异步删除，重复请求幂等 |
 | GET /v1/configs | active账户 | 必需、平台active | 自身 Config 列表；slot 由 entitlement `config_slot_limit` 服务端强约束 |
 | POST /v1/configs | active账户 | 必需、平台active | 创建业务 Config，不创建第二套 Storage ledger |
 | GET /v1/configs/:configId | active账户 | 必需、平台active | 只读自身 Config；跨账户统一 404 |
@@ -56,11 +50,11 @@ Central API路径以 /v1 为前缀；Edge部署的 /functions/v1/account-api 外
 
 principal为状态诊断接口，返回disabled时不表示授权通过；其余普通接口拒绝disabled。失效/revoked Key始终401，即使仅查询principal。system_admin和全局deleting身份不能构造普通Principal。平台已disabled时的关闭/删除申请通过受控支持/Admin路径处理，不为此开放一般业务API。
 
-旧公开Pricing通过 Browser → BFF → GET /plans；商品目录通过服务端BFF调用 GET /v1/subscription/products，不需要用户Bearer，但Platform Key只允许留在服务端。商品接口返回固定商品的价格、期限、启用和购买就绪原因，不返回provider ID、platform config、兑换库存或Secret；Free/paid展示不意味着用户已获得权益。结账接口只生成不可变快照；本阶段没有Provider配置时保持购买关闭，不伪造payment_url。
+旧公开Pricing通过 Browser → BFF → GET /plans；商品目录通过服务端BFF调用 GET /v1/commerce/offers，不需要用户Bearer，但Platform Key只允许留在服务端。商品接口返回 Offer 的服务端价格、期限和购买就绪原因，不返回provider ID、platform config、兑换库存或Secret；Free/paid展示不意味着用户已获得权益。结账接口只生成不可变快照；本阶段没有Provider配置时保持购买关闭，不伪造payment_url。
 
-Admin独立 /admin/api/v1：`GET /security/status` 在全局AAL2 gate前验证活动会话与单一管理员身份，返回当前AAL及当前session近期MFA proof到期时间；其他路由要求AAL2。其余资源包括 platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、legacy config-files、Config resources/reviews/Gallery governance/usage、Feedback、audit、deletion-jobs。Feedback 列表在 SQL 游标分页前组合 q/status/category/label/user/email/has_attachments/from/to；详情返回受保护正文、联系快照、图片 metadata 与 timeline，图片内容通过 Admin binary proxy 获取。status/labels/flag/note 使用受控领域命令；服务端 CSV export 不依赖当前浏览器页；批量删除要求 recent-MFA、reason 与 operation id。Config 资源列表与审核同样先在 SQL 端按 platform 过滤；平台总容量通过 file-policy 的 `max_platform_total_bytes` 读取/修改，修改总容量要求近期 MFA。所有入口强制Admin鉴权；高风险规则不可由前端参数关闭。
+Admin独立 /admin/api/v1：`GET /security/status` 在全局AAL2 gate前验证活动会话与单一管理员身份，返回当前AAL及当前session近期MFA proof到期时间；其他路由要求AAL2。其余资源包括 platforms、origins、plans、platform-accounts、keys、redemption-batches、subscriptions、Config resources/reviews/Gallery governance/usage、Feedback、audit、deletion-jobs。Feedback 列表在 SQL 游标分页前组合 q/status/category/label/user/email/has_attachments/from/to；详情返回受保护正文、联系快照、图片 metadata 与 timeline，图片内容通过 Admin binary proxy 获取。status/labels/flag/note 使用受控领域命令；服务端 CSV export 不依赖当前浏览器页；批量删除要求 recent-MFA、reason 与 operation id。Config 资源列表与审核同样先在 SQL 端按 platform 过滤；平台总容量通过 file-policy 的 `max_platform_total_bytes` 读取/修改，修改总容量要求近期 MFA。所有入口强制Admin鉴权；高风险规则不可由前端参数关闭。
 
-兑换码批次创建重放以 `200` 返回 `batch_id`、`status=pending_delivery` 与 `creation_state=replayed_existing`，不返回 plaintext codes 或 delivery receipt；同一 `creation_operation_id` 参数不一致返回 `409 IDEMPOTENCY_CONFLICT`。新批次请求使用 `{product_code: monthly|yearly|lifetime}`，服务端从平台配置快照 Plan/期限；不接受 Free 或客户端自定义 duration。旧批次读取/兑换继续兼容。
+兑换码批次创建重放以 `200` 返回 `batch_id`、`status=pending_delivery` 与 `creation_state=replayed_existing`，不返回 plaintext codes 或 delivery receipt；同一 `creation_operation_id` 参数不一致返回 `409 IDEMPOTENCY_CONFLICT`。新批次使用 Offer-based 或 Admin-defined Plan + duration；服务端冻结 Plan/Offer/期限快照，不接受 product_code，不建立 Free 或永久权益兑换批次。请求字段以 Admin OpenAPI 为准。
 
 ## 2. 请求与返回
 
@@ -95,7 +89,7 @@ Profile PATCH仅允许display_name/avatar_url/bio/locale/timezone/metadata，拒
 
 兑换请求：{code} + Idempotency-Key。统一示例 AISEN-V1-7KM9-2XQ8-F3DP-V7RW-K6CY-MZTA-9H；plan、期限和账户不由请求指定。
 
-上传意图：{name,size,content_type,purpose,replaces_file_id?}；返回{file_id,upload_path,expires_at}。path为受控 /v1/config-files/:id/content，非Storage URL。不提供旧版 /complete、/download-url 或浏览器Signed Upload。
+Version 上传意图通过 `/v1/configs/:configId/versions/upload-intent` 创建；返回受控的 Version content 路径，不返回 Storage URL。原始字节、内容类型与大小以 Account OpenAPI 为准，预算由 Config slot 和平台总容量强约束。
 
 ## 3. 错误、超时与缓存
 

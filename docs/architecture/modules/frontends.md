@@ -12,6 +12,8 @@ Admin 使用深色导航与浅色数据工作区，平台目录提供紧凑的�
 
 ## Admin Consumer Lab
 
+平台切换器使用服务端搜索和游标分页，每页 20 个平台；游标保存 UTF-8 搜索条件并绑定查询。切换平台时实体详情回到目标平台对应集合，不携带原实体 ID。平台工作区按 platformId 隔离子树，异步读取同时校验会话与请求范围，迟到响应不能覆盖新平台。
+
 `/admin/consumer-lab` 是维护者只读页面。页面 build-time 直接读取根目录 Account/Admin canonical OpenAPI，展示 contract major、spec version、operationId、method/path 和 security，并明确列出 Harness 命令与 server-only Platform Key 边界。它不接受 Consumer Secret，不代理任意 Account 请求，也不把页面展示当作 conformance PASS。
 
 ## Consumer Conformance Harness

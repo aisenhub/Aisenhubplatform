@@ -1,6 +1,6 @@
 # 阶段 07：Schema Rebaseline、Reset 与完整验收
 
-状态：未开始
+状态：In Progress；完整验收与合同基线核对中，reset/squash 等待本次明确的数据重置授权。
 
 前置：阶段 02～06 全部代码行为已经稳定。
 
@@ -23,6 +23,8 @@
 7. 不运行 legacy non-empty upgrade fixture。
 
 如果环境门槛变化、Staging 出现必须保留的数据，则改为 forward destructive cleanup migration，不进行 history squash，但仍必须删除运行 compatibility surfaces。
+
+2026-10-14 核对：远端保有测试账户与订单，本次重置授权尚未答复。继续准备非破坏性 forward cleanup：删除无调用者的旧 Account/Key list wrapper；Billing v2 detail 仍被唯一 v3 detail 调用，保留为内部 helper 并收回 executor 直接授权。未经数据重置确认不执行 reset/squash。
 
 ## Contract baseline
 

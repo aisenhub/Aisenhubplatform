@@ -13,6 +13,10 @@ import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { readApiPayload } from '../resources/admin-resource-utils';
 import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
+import {
   derivePlatformIntegrationState,
   integrationStatusLabel,
   type IntegrationKeyFact,
@@ -55,19 +59,22 @@ export function PlatformIntegrationPage() {
   >();
   const [refreshVersion, setRefreshVersion] = useState(0);
   const commerceLoadGeneration = useRef(0);
+  const commerceScopeRef = useRef(platform.platform_id);
+  commerceScopeRef.current = platform.platform_id;
 
   const loadCommerce = useCallback(async () => {
-    const generation = ++commerceLoadGeneration.current;
+    const token = beginScopedLoad(commerceLoadGeneration, platform.platform_id);
     const epoch = adminAuthSession.getEpoch();
+    setOffers(undefined);
     try {
       const offersResponse = await adminAuthSession.request(
-        `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platform.platform_id)}/commerce/offers`,
+        `/api/v1/admin/api/v1/platforms/${encodeURIComponent(token.scope)}/commerce/offers`,
         { cache: 'no-store' },
       );
       const offersPayload =
         await readApiPayload<IntegrationCommerceOfferFact[]>(offersResponse);
       if (
-        generation !== commerceLoadGeneration.current ||
+        !isScopedLoadCurrent(commerceLoadGeneration, commerceScopeRef, token) ||
         !adminAuthSession.isCurrentEpoch(epoch)
       )
         return;
@@ -78,7 +85,7 @@ export function PlatformIntegrationPage() {
       );
     } catch {
       if (
-        generation !== commerceLoadGeneration.current ||
+        !isScopedLoadCurrent(commerceLoadGeneration, commerceScopeRef, token) ||
         !adminAuthSession.isCurrentEpoch(epoch)
       )
         return;

@@ -1,8 +1,12 @@
 # 订阅、权益与兑换
 
+爱发电 Webhook 的 hash-only Inbox 使用有序 JSON 数组编码已签名订单事实，再计算摘要；状态变化不改变事实摘要，字段边界不允许无分隔拼接歧义。Provider 签名算法保持原协议。
+
 本文件描述当前订阅、权益和兑换实现，属于 [系统架构](../overview.md) 的权益模块，依赖 [核心数据模型](../../reference/data-model.md)。Admin 与 Account API 必须共用数据库领域写入口。
 
 ## 1. 唯一权益规则
+
+兑换按平台账户限制每分钟 5 个新意图，并限制每平台每分钟 300 个新意图；已完成的同 key 重放不重复计数。失败兑换仍提交拒绝事件和幂等结果，再在 HTTP 层返回错误；超过额度返回 RATE_LIMITED，不消耗兑换码，不回滚限流记录。
 
 | 当前状态 | 请求 | 结果 |
 |---|---|---|
@@ -20,9 +24,9 @@ V1 不做自动升级/降级。Admin 如需换 Plan，先撤销阻塞的未结�
 
 暂停是访问控制，不冻结时钟、不自动补时；恢复只移除暂停，过期照常回退。Admin Grant 也遵守暂停限制，应先恢复或明确执行撤销。Plan 归档拒绝新 Grant，历史有效 Grant 仍提供该 Plan 当前 features。
 
-商业商品目录由 `public.subscription_products` 固定为 Free、Monthly、Yearly、Lifetime；Lifetime 是 `finite/99/year`，不是永久权益。平台只通过 `platform_subscription_config` 选择同平台的 active paid Plan 并控制付费商品开关，Free 仍唯一来自 `platforms.default_plan_id`。`purchases_paused` 是独立的购买闸门：暂停立即拒绝新的付费 Checkout，但不阻断已有有限期权益读取或让其提前到期；Products API 返回 `purchases_paused` reason。Products API 在没有可验证 Provider 映射时返回 `purchasable=false`，不把商品展示误报为可付款；切换标准 paid Plan 前，SQL 共享 preflight 会检查当前/未来 Grant 与仍可兑换旧批次。
+商业目录只有 `Plan → Offer → immutable Price → Provider Mapping → Checkout snapshot → Order/Settlement → Grant`。Plan 定义权益，Offer 定义期限，Price 定义不可变金额与币种；Consumer 读取 `/v1/commerce/offers`，Checkout 仅接受 offer_id。Free 来自平台默认 Plan。`purchases_paused` 位于独立 Commerce policy，只阻止新购买；没有 verified Provider mapping 时保持不可购买。Plan lifecycle 由共享 preflight 检查 active Offer、当前/未来 Grant 与仍可兑换批次。
 
-BILL-03 起新兑换批次使用 `model_version=2`，保存不可变的 `product_code`、`term_kind`、duration 与 Plan snapshot；只允许 Monthly、Yearly、Lifetime（Lifetime 固定 99 年），Free 不建立 claim 批次。旧批次保持 `model_version=1` 的原 Plan/duration/HMAC 解释，读取和兑换不反推新商品。通用 Admin correction 通过独立 `operation_id`、原 Grant/替代 Grant 强 FK、预览事件版本和同事务 revoke+grant 形成单一有效替代链，失败整体回滚。
+兑换批次只支持 Offer-based 或 Admin-defined Plan + duration，保存不可变 Plan/Offer/期限快照；不保留 product_code、model_version 或旧批次解释分支。通用 Admin correction 通过 operation_id、原 Grant/替代 Grant 强 FK、预览事件版本和同事务 revoke+grant 形成单一有效替代链，失败整体回滚。
 
 时间统一 UTC，由数据库生成一次 operation_now。区间为 [starts_at,ends_at)，end=now 已过期。day=24小时；month/year 使用 UTC 日历加法，月末夹到目标月最后一天，2月29日加一年为次年2月28日。每个 Grant 独立计算，不做隐式月底锚定或补偿。
 

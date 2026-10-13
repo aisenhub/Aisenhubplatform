@@ -1,5 +1,7 @@
 # 测试
 
+全量 Local runner `pnpm verify:task:0801` 包含 settlement 与 Commerce Price/Mapping 的独立连接并发验证；`--reuse-local` 保留数据库数据，只运行检查。Consumer Local E2E 同时验证失败兑换提交计数、同意图重放和 429；Admin E2E 覆盖超过 100 个平台的搜索分页及实体路由切换。
+
 命令以[根 package.json](../../package.json)为准；下表说明入口做什么，不记录历史运行结果。
 
 ## 环境约定

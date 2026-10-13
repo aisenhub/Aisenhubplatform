@@ -254,6 +254,11 @@ async function main() {
     ['run', 'test:sql:bill-05-concurrency'],
     localEnv,
   );
+  runPnpm(
+    'prelaunch Commerce Price/Mapping concurrency',
+    ['test:sql:prelaunch-commerce-concurrency'],
+    localEnv,
+  );
   runPnpm('admin typecheck', ['--filter', 'admin', 'typecheck'], localEnv);
   runPnpm('contract breaking compatibility', ['contracts:breaking']);
   runPnpm('registry contract test', ['test:registry']);

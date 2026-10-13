@@ -255,6 +255,22 @@ Deno.test('Afdian adapter queries an order by out_trade_no without exposing cred
   assert(!JSON.stringify(body).includes('fixture-token'));
 });
 
+Deno.test('Afdian fact digest distinguishes signed field boundaries', () => {
+  const first = afdianCanonicalFactBytes({
+    out_trade_no: 'order-a',
+    user_id: 'bc',
+    plan_id: 'plan',
+    total_amount: '9.90',
+  });
+  const second = afdianCanonicalFactBytes({
+    out_trade_no: 'order-ab',
+    user_id: 'c',
+    plan_id: 'plan',
+    total_amount: '9.90',
+  });
+  assert(new TextDecoder().decode(first) !== new TextDecoder().decode(second));
+});
+
 Deno.test('Afdian adapter treats missing orders as not found and API failures as retryable', async () => {
   const missing = createAfdianProviderAdapter({
     userId: 'creator-user',

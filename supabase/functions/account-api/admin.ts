@@ -92,6 +92,59 @@ function parseCommerceCursor(
   }
 }
 
+function platformQuery(value: string | null): string | null {
+  const query = value?.trim() || null;
+  if (query !== null && query.length > 128)
+    throw new ApiFault(400, 'INVALID_INPUT');
+  return query;
+}
+
+function encodePlatformCursor(row: Row, query: string | null): string | null {
+  const id = uuidValue(row.platform_id);
+  const at =
+    typeof row.cursor_created_at === 'string' &&
+    Number.isFinite(Date.parse(row.cursor_created_at))
+      ? row.cursor_created_at
+      : null;
+  if (!id || !at) return null;
+  return btoa(
+    String.fromCharCode(
+      ...new TextEncoder().encode(JSON.stringify({ at, id, q: query })),
+    ),
+  )
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '');
+}
+
+function parsePlatformCursor(
+  value: string | null,
+  query: string | null,
+): { at: string; id: string } | null {
+  if (!value) return null;
+  try {
+    const normalized = value.replaceAll('-', '+').replaceAll('_', '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    const parsed = JSON.parse(
+      new TextDecoder('utf-8', { fatal: true }).decode(
+        Uint8Array.from(atob(padded), (character) => character.charCodeAt(0)),
+      ),
+    ) as Record<string, unknown>;
+    const id = uuidValue(parsed.id);
+    const at =
+      typeof parsed.at === 'string' && Number.isFinite(Date.parse(parsed.at))
+        ? parsed.at
+        : null;
+    const cursorQuery =
+      parsed.q === null || typeof parsed.q === 'string' ? parsed.q : undefined;
+    if (!id || !at || cursorQuery === undefined || cursorQuery !== query)
+      throw new Error('invalid cursor');
+    return { at, id };
+  } catch {
+    throw new ApiFault(400, 'INVALID_INPUT');
+  }
+}
+
 function optionalBooleanQuery(value: string | null): boolean | null {
   if (value === null || value === '') return null;
   if (value === 'true') return true;
@@ -470,15 +523,29 @@ export async function dispatchAdmin(
   }
   if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
   if (path === 'admin/api/v1/platforms' && request.method === 'GET') {
+    const query = platformQuery(url.searchParams.get('q'));
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const cursor = parsePlatformCursor(url.searchParams.get('cursor'), query);
     const rows = await transaction.unsafe<Row>(
-      'select * from private.admin_platform_list_v2(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::text, $5::integer)',
-      [
-        ...context,
-        url.searchParams.get('q'),
-        boundedLimit(url.searchParams.get('limit')),
-      ],
+      `select listed.*,
+        to_char(
+          listed.created_at at time zone 'UTC',
+          'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+        ) as cursor_created_at
+       from private.admin_platform_list_v3(
+         row($1::uuid, $2::uuid, $3::uuid)::private.admin_context,
+         $4::text, $5::integer, $6::timestamptz, $7::uuid
+       ) listed`,
+      [...context, query, limit, cursor?.at ?? null, cursor?.id ?? null],
     );
-    return { status: 200, data: rows };
+    const nextCursor =
+      rows.length === limit ? encodePlatformCursor(rows.at(-1)!, query) : null;
+    if (rows.length === limit && !nextCursor)
+      throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    const data = rows.map(
+      ({ cursor_created_at: _cursorCreatedAt, ...row }) => row,
+    );
+    return { status: 200, data, next_cursor: nextCursor };
   }
 
   if (path === 'admin/api/v1/accounts' && request.method === 'GET') {

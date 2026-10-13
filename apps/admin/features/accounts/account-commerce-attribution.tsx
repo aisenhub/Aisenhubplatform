@@ -1,11 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@kit/ui/button';
 
 import { adminAuthSession } from '../../app/_lib/auth-session';
+import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 
 type Attribution = {
   platform_account_id: string;
@@ -25,9 +29,14 @@ export function AccountCommerceAttribution({
   accountId: string;
 }) {
   const [fact, setFact] = useState<Attribution | null>(null);
+  const generationRef = useRef(0);
+  const scopeRef = useRef(`${platformId}:${accountId}`);
+  scopeRef.current = `${platformId}:${accountId}`;
 
   useEffect(() => {
+    const token = beginScopedLoad(generationRef, `${platformId}:${accountId}`);
     const epoch = adminAuthSession.getEpoch();
+    setFact(null);
     const params = new URLSearchParams({ q: accountId, limit: '20' });
     void adminAuthSession
       .request(
@@ -38,7 +47,12 @@ export function AccountCommerceAttribution({
         const payload = (await response.json().catch(() => null)) as {
           data?: Attribution[];
         } | null;
-        if (!adminAuthSession.isCurrentEpoch(epoch) || !response.ok) return;
+        if (
+          !isScopedLoadCurrent(generationRef, scopeRef, token) ||
+          !adminAuthSession.isCurrentEpoch(epoch) ||
+          !response.ok
+        )
+          return;
         setFact(
           payload?.data?.find((row) => row.platform_account_id === accountId) ??
             null,

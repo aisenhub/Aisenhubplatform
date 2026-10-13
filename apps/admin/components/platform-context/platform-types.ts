@@ -19,6 +19,7 @@ export type PlatformResponse = {
 
 export type PlatformListResponse = {
   data?: Platform[];
+  next_cursor?: string | null;
   error?: {
     code?: string;
     message?: string;

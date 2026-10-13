@@ -285,7 +285,7 @@ export function afdianCanonicalFactBytes(order: ObjectValue): Uint8Array {
     order.total_amount ?? '',
   ];
   return new TextEncoder().encode(
-    signedValues.map((item) => String(item ?? '')).join(''),
+    JSON.stringify(signedValues.map((item) => String(item ?? ''))),
   );
 }
 
