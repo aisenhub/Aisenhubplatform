@@ -29,7 +29,7 @@
 | 01 Domain/read model | Completed | Offer/Price + read models；fresh/non-empty；canonical R3；staging aligned | 无 |
 | 02 API/contract | Completed | Offer-aware Consumer/Admin API + OpenAPI；DB 73/1536；API 111/111；contracts/breaking；staging migration + account-api v62；task branch 已 push | 无 |
 | 03 Admin commerce UI | Completed | Global/Platform summary、Offer/Price、Entitlement stable cursor、Campaign stats/detail、OPT-004/006/009 集成；Admin unit 15/68、typecheck/build/lint/format、Consumer harness、真实 Local browser 与 100-observation responsive/a11y 全 PASS | 无 |
-| 04 Release | In Progress | Phase 03 已满足依赖门槛 | fresh/non-empty/full R3、staging smoke、GitHub/main/branch closeout |
+| 04 Release | In Progress | fresh/non-empty/full R3 + lifecycle/retention + staging v63 已完成 | GitHub PR/CI/main/branch closeout |
 
 ## 实施与验证日志
 
@@ -54,6 +54,11 @@
 | 2026-10-13 | Phase 03 browser recovery + product fix | Local | PASS：Local Auth + Local Edge + built Admin 同源环境完成；发现 Commerce composite 写函数使用 select (volatile_function(...)).* 会重复求值并导致 Offer 首次写入 23505/409，已统一改为 select * from function(...) as result，API **111/111** 保持 PASS。 |
 | 2026-10-13 | Phase 03 real browser / a11y | Local | PASS：完整 T12 browser 输出所有顶层治理场景 PASS；commerceSummarySurfaces、commerceCatalogSurface、commerceEntitlementSurface、commerceCampaignSurface、commerceRecentMfaNoReplay 全 PASS；responsive/a11y **5 viewports × 20 routes = 100 observations** 全 PASS。 |
 | 2026-10-13 | Phase 03 final static/harness | Local | PASS：Admin unit **15 files / 68 tests**、typecheck、production build、workspace lint **0/0**、format PASS；Consumer harness contract（含 **43 canonical operations**）+ smoke 全 PASS。 |
+| 2026-10-13 | Phase 04 fresh/full DB | Local Supabase | PASS：最终 schema `pnpm db:reset --yes` 明确 exit 0；`pnpm test:db` = **73 files / 1536 tests**。 |
+| 2026-10-13 | Phase 04 non-empty upgrade | Local Supabase | PASS：reset 到 `20261012094715`，构造真实 legacy paid plan / monthly Provider Mapping / granted Checkout / verified+linked Order / `billing_order` Grant / active Campaign 后前向应用 `20261012114256`、`20261012123209`、`20261012131422`、`20261012145252`。生成 3 个 active legacy Offer/Price；金额保持 monthly `9.90`、yearly `39.90`、lifetime `49.90`；历史 Checkout / Provider Mapping / Campaign 新 attribution 保持 null，Order / Grant 解释不变。 |
+| 2026-10-13 | Phase 04 lifecycle / retention | Local upgraded fixture | PASS：Purchases Paused 对目录全量 fail-closed；commercial Mapping publish→disable；Offer archive 后 `commercial_offer_archived` 且 Consumer catalog 不再返回；历史 Checkout/Order/Grant 不变。Retention cleanup 与 Global Delete `auth_prepare` identity detach 均成功匿名化账户，同时保留 Checkout / Order / Grant / 3 legacy Offer，probe 全部事务回滚。 |
+| 2026-10-13 | Phase 04 canonical R3 | Local | PASS：`pnpm verify:task:0801 --reuse-local` = **20/20 executable gates**；API **111/111**、DB **73/1536**、settlement concurrency、contracts/breaking、Consumer harness/browser、Admin T12、5 viewports × 20 routes responsive/a11y、docs **192**、OpenAPI Account/Admin **47/77** 全绿。 |
+| 2026-10-13 | Phase 04 final staging | `workendstaging / egsokuicabbxspkdccqe` | PASS：remote migration history 完整到 `20261012145252 commercial_operations_api_contract`；商业表/索引/函数与 `account_executor` / `admin_executor` 权限核验通过；`account-api` **v63 ACTIVE**（from v62，`verify_jwt=false` 保持），部署 bundle 反查 `ACCOUNT_API_JWT_ISSUER` 与六条 Commerce 写函数单次求值修复均存在。Consumer Commerce 无 Platform Key = `401 PLATFORM_CREDENTIAL_INVALID`；Admin Commerce Summary 无会话 = `401 UNAUTHORIZED`。Security advisor 仅既有 pg_net/leaked-password WARN，无 OPT-010 新 finding；Production NOT_RUN。 |
 
 ## 规则
 
