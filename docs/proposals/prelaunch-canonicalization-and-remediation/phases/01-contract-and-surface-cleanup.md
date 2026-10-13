@@ -1,6 +1,6 @@
 # 阶段 01：Contract / Harness / URL Surface 清理
 
-状态：验收通过待推送
+状态：已交付
 
 前置：阶段 00。
 

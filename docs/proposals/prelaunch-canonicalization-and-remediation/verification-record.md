@@ -15,7 +15,7 @@
 | 阶段 | 状态 | 实施结果 | 验证 | commit/push |
 | --- | --- | --- | --- | --- |
 | 00 | 已交付 | 环境、canonical surface、删除清单和最小 seed 已冻结 | PASS | `a1b2a54` / 已推送任务分支 |
-| 01 | 验收通过待推送 | 公共 Contract/Harness/runtime/旧 URL surface 已收敛；Account 40 ops / Admin 70 ops | PASS（breaking diff 为预期 28 项） | 未提交/未推送 |
+| 01 | 已交付 | 公共 Contract/Harness/runtime/旧 URL surface 已收敛；Account 40 ops / Admin 70 ops | PASS（breaking diff 为预期 28 项） | `2ed8d5f` / 已推送任务分支 |
 | 02 | 未开始 | 未验证 | 未运行 | 未验证 |
 | 03 | 未开始 | 未验证 | 未运行 | 未验证 |
 | 04 | 未开始 | 未验证 | 未运行 | 未验证 |
@@ -57,6 +57,8 @@ LC-08、LC-09、LC-10、LC-11 的公共运行面已关闭；LC-03、LC-05、LC-1
 | 2026-10-13 | 01 | `fef123f+worktree` | `pnpm test:tooling` | Local | 0 | PASS：9/9。 |
 | 2026-10-13 | 01 | `fef123f+worktree` | `pnpm docs:check` | Local | 0 | PASS：207 documents。 |
 | 2026-10-13 | 01 | `fef123f+worktree` | `git diff --check` | Local | 0 | PASS。 |
+| 2026-10-13 | 01 | `2ed8d5f` | `git commit -m "feat: remove prelaunch compatibility surfaces"` | Local | 0 | PASS：41 files，345 insertions / 4066 deletions；既有 `docs/README.md` 与 `project-review-2026-10-13.md` 明确排除。 |
+| 2026-10-13 | 01 | `2ed8d5f` | `git push` | GitHub | 0 | PASS：远端任务分支已更新到 Phase 01 代码提交。 |
 
 工具记录：首次组合 Git 诊断使用 `&&` 被当前 Windows PowerShell 解析拒绝（退出码 1），未修改文件；改用 PowerShell 兼容分隔符后 PASS。`supabase status -o json` 仅用于确认 Local 服务存在，命令输出包含本地开发用 key/secret，因此这些值不写入验证记录或任务报告。
 

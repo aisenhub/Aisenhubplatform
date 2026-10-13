@@ -17,7 +17,7 @@
 | 阶段 | 目标 | 主要覆盖 | 前置依赖 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- | --- |
 | 00 | 冻结预上线 breaking rebaseline 与环境删除边界 | 全局 | 无 | 已交付 | [阶段 00](phases/00-freeze-prelaunch-rebaseline.md) |
-| 01 | 清理公共 Contract、Harness 与旧 URL surface | LC-03/05/08/09/10/11/13 | 00 | 验收通过待推送 | [阶段 01](phases/01-contract-and-surface-cleanup.md) |
+| 01 | 清理公共 Contract、Harness 与旧 URL surface | LC-03/05/08/09/10/11/13 | 00 | 已交付 | [阶段 01](phases/01-contract-and-surface-cleanup.md) |
 | 02 | Commerce 数据模型与写路径单轨化 | LC-01/02/03/04/06/07/12；R-02/03/04/08/09/10 | 01 | 未开始 | [阶段 02](phases/02-commerce-canonicalization.md) |
 | 03 | Config / Storage 单轨化 | LC-05/07/10；R-12 | 01 | 未开始 | [阶段 03](phases/03-config-storage-canonicalization.md) |
 | 04 | 状态机、治理事件与幂等统一 | R-01/R-04/R-11；LC-07 | 02、03 | 未开始 | [阶段 04](phases/04-governance-idempotency.md) |
