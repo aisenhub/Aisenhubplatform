@@ -906,6 +906,3 @@ revoke all on function private.admin_storage_policy_update(private.admin_context
 from public, anon, authenticated, account_executor, job_executor, recovery_executor;
 grant execute on function private.admin_storage_policy_read(private.admin_context, uuid) to admin_executor;
 grant execute on function private.admin_storage_policy_update(private.admin_context, uuid, boolean, bigint, bigint) to admin_executor;
-
-
-

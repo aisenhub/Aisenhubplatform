@@ -10,4 +10,4 @@ AisenHubPlatform 保证 HTTP wire compatibility，不保证由任意 OpenAPI gen
 
 ## 预上线基线（2026-10-14）
 
-本次授权的一次性 rebaseline 删除未发布的 fixed products、product_code Checkout、generic config-files 与旧 URL surface。Phase 07 候选提交中的 OpenAPI 是新的 v1 起点；预期 breaking diff 记录在 Proposal 验证记录。合并后仍使用 origin/main 作严格兼容比较，不取消或放宽 breaking gate。
+本次授权的一次性 rebaseline 删除未发布的 fixed products、product_code Checkout、generic config-files 与旧 URL surface。候选提交 `b7de3ef` 中的 OpenAPI 是新的 v1 起点；预期 breaking diff 记录在 Proposal 验证记录。合并后仍使用 origin/main 作严格兼容比较，不取消或放宽 breaking gate。

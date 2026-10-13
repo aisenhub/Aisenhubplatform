@@ -116,3 +116,15 @@
 原三个历史静态审查报告中的结论须按当前源码复核：Promise.race 为参与 promise 安装拒绝处理器，不单因 race 失败推断 unhandled rejection；现有 upload releaseLock 防护已有回归。Config create 先锁账户再查 slot；旧建议不构成目前并发漏洞证据。单例 Admin 离线恢复已经存在，不增加第二套管理员模型。
 
 G0/G1：候选范围与适用 Local reuse 检查 PASS；G2/G3：整体发布 BLOCKED，目标数据和自动 Admin 配置未通过；G4：禁止回到 retired runtime，forward-fix 保留账本，测试环境 reset 必须有授权；G5：本轮明确授权代码/Git 合并与 Supabase 更新，不自动等于数据库数据重置；G6：整体未部署 NOT_RUN，真实 Provider/Production 交易观察 NOT_RUN。
+
+### 候选基线与独立 Maintenance 更新
+
+- Phase 06 / audit source checkpoint：`b7de3ef`；`pnpm contracts:breaking b7de3ef` PASS，新 canonical 起点为此提交的 Account/Admin OpenAPI；默认对旧 origin/main 的 37 项差异仍 FAIL，不放宽比较器。
+- 提交前检查曾发现新增 SQL 文件尾空行（先前 git diff 不包含 untracked 文件）；随后扫描完整 origin/main 差异发现 Phase 03 同类尾空行，均仅移除 EOF 空白，最终 `git diff origin/main --check` PASS。两份均未应用远端，未重写已部署迁移语义。
+- 完整差异重新执行 private-key/provider-credential pattern 扫描，0 命中；不宣称全面 Secret scanner。
+- 独立发布范围：只有 Maintenance，bundle 来源 b7de3ef；Auth 删除 404 幂等成功与 transient retry 修复，不依赖本 Proposal 新 schema，不改 Secret、Provider mapping 或数据。G0/G1 针对此 bundle PASS；G2 已确认 linked ref = workendstaging，角色、capability 路由不变；G3 无新迁移/数据写入；G4 保持失败 checkpoint，可停止 identity capability 外部调用并 forward-fix，禁止恢复已知死锁代码；G5 用户本轮明确要求涉及 Supabase 及时部署。
+- `pnpm exec supabase functions deploy maintenance --project-ref egsokuicabbxspkdccqe --use-api`：PASS，已核对 ACTIVE v40 / verify_jwt=false；ezbr SHA256 `888dc58eebd3bc334123a66a7aef16da64bafb7f94126e480a6c497b0793d43b`。Account API 仍 v63，Webhook 仍 v31。
+- G6 只读/拒绝式 probe：正确 Hosted URL 的 anonymous 和 invalid capability 均 401 PASS，未调用真实删除任务。首次 probe 重复 maintenance 路由前缀得到 404 FAIL，按已核实路由纠正后 401，不把错误 URL 解释为产品缺陷。两个实际任务周期和真实删除恢复观察 NOT_RUN。
+- 最新单独 Harness 复验包含账户 5/min、平台 300/min、失败计数、拒绝 replay 和超限后的成功 replay，PASS；窗口 fixture 同时填充相邻分钟，避免 wall-clock 边界造成假失败。测试计数 hash 按本次合成平台范围清理。
+
+整体 schema/reset、Account/Webhook 更新、main 合并与分支删除仍 BLOCKED；不以独立 worker 发布充当全项目上线完成。

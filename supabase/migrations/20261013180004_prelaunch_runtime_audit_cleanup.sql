@@ -204,5 +204,3 @@ begin
   return query select 'applied'::text, v_grant.grant_id, v_code.plan_id, null::text;
 end;
 $function$
-
-
