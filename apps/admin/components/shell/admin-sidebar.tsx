@@ -55,9 +55,15 @@ export function AdminSidebar() {
         <Link
           href="/admin"
           data-test="admin-brand"
+          aria-label="Aisenhub 管理控制台首页"
           className="admin-sidebar-brand flex min-w-0 items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          <span className="admin-sidebar-brand-mark shrink-0">A</span>
+          <span
+            className="admin-sidebar-brand-mark shrink-0"
+            aria-hidden="true"
+          >
+            A
+          </span>
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
             <span className="admin-sidebar-brand-name block truncate">
               Aisenhub
@@ -80,8 +86,8 @@ export function AdminSidebar() {
       <SidebarSeparator />
       <SidebarFooter className="p-3">
         <div className="admin-sidebar-footer-card rounded-lg p-2.5 text-xs group-data-[collapsible=icon]:hidden">
-          <div className="font-semibold text-slate-700">操作保护</div>
-          <div className="mt-0.5 text-slate-500 leading-normal">
+          <div className="font-semibold text-sidebar-foreground">操作保护</div>
+          <div className="mt-0.5 text-sidebar-foreground/70 leading-normal">
             敏感操作前可能需要再次验证身份。
           </div>
         </div>

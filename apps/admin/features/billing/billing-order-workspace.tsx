@@ -496,7 +496,11 @@ export function BillingOrderWorkspace({
                   : undefined;
                 return (
                   <button
-                    className="grid w-full gap-2 p-4 text-left transition hover:bg-muted/40"
+                    className={`grid w-full gap-2 p-4 text-left transition ${
+                      selected?.order_id === order.order_id
+                        ? 'bg-primary-soft/40 border-l-3 border-l-primary font-medium'
+                        : 'hover:bg-muted/40 border-l-3 border-l-transparent'
+                    }`}
                     key={order.order_id}
                     onClick={() => chooseOrder(order.order_id)}
                     type="button"

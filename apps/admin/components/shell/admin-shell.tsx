@@ -8,6 +8,7 @@ import { SessionExpiredError } from '../../app/_lib/auth/browser';
 import { Button } from '@kit/ui/button';
 import { SidebarProvider } from '@kit/ui/sidebar';
 import { SupportErrorId } from '@kit/ui/support-error-id';
+import { Loader2 } from 'lucide-react';
 
 import { adminAuthSession } from '../../app/_lib/auth-session';
 import {
@@ -171,9 +172,20 @@ export function AdminShell({ children }: AdminShellProps) {
         aria-busy="true"
         data-test="admin-security-loading"
       >
-        <main className="panel stack-form admin-auth-card" role="status">
-          <h1>正在检查管理员安全状态</h1>
-          <p className="muted">确认完成前不会加载管理数据。</p>
+        <main
+          className="panel stack-form admin-auth-card flex flex-col items-center justify-center p-8 text-center gap-3"
+          role="status"
+        >
+          <Loader2
+            className="size-8 animate-spin text-primary"
+            aria-hidden="true"
+          />
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+            正在检查管理员安全状态
+          </h1>
+          <p className="muted text-xs">
+            确认完成前不会加载管理数据，正在核验双因子会话凭据…
+          </p>
         </main>
       </div>
     );

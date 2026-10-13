@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { Loader2 } from 'lucide-react';
+
+import { Button } from '@kit/ui/button';
 
 import {
   adminAuthSession,
@@ -14,11 +17,14 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => setHydrated(true), []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     setStatus('正在登录…');
     let response: Response;
     try {
@@ -28,15 +34,24 @@ export default function AdminLoginPage() {
       });
     } catch (error) {
       setStatus(sessionErrorMessage(error));
+      setSubmitting(false);
       return;
     }
     if (!response.ok) {
       setStatus(`登录失败：${await responseErrorCode(response)}`);
+      setSubmitting(false);
       return;
     }
     adminAuthSession.markStepUpRequired('admin_mfa');
     window.location.assign('/admin/mfa');
   }
+
+  const isError = Boolean(
+    status &&
+    (status.includes('失败') ||
+      status.includes('错误') ||
+      status.includes('UNAVAILABLE')),
+  );
 
   return (
     <main className="admin-auth-layout" data-test="admin-login-page">
@@ -67,6 +82,7 @@ export default function AdminLoginPage() {
           autoComplete="username"
           placeholder="admin@example.test"
           required
+          disabled={submitting}
         />
         <label htmlFor="password">密码</label>
         <input
@@ -77,17 +93,38 @@ export default function AdminLoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="current-password"
           required
+          disabled={submitting}
         />
-        <button
+        <Button
           type="submit"
           data-test="admin-login-submit"
-          disabled={!hydrated}
+          disabled={!hydrated || submitting}
+          className="w-full"
         >
-          登录
-        </button>
-        <span className="muted" role="status">
-          {status}
-        </span>
+          {submitting ? (
+            <>
+              <Loader2
+                className="mr-2 size-4 animate-spin"
+                aria-hidden="true"
+              />
+              <span>正在登录…</span>
+            </>
+          ) : (
+            <span>登录</span>
+          )}
+        </Button>
+        {status ? (
+          <span
+            className={
+              isError
+                ? 'rounded-md border border-destructive/20 bg-destructive/10 p-2.5 text-xs text-destructive'
+                : 'muted text-xs'
+            }
+            role={isError ? 'alert' : 'status'}
+          >
+            {status}
+          </span>
+        ) : null}
       </form>
     </main>
   );
