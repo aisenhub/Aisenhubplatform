@@ -1,6 +1,6 @@
 # OPT-010 全局商业治理与单平台订阅运营
 
-状态：In Progress
+状态：Completed
 
 关联：[总计划](plan.md) · [优化事项总清单](../optimization-intake/README.md) · [预研架构](../optimization-intake/commercial-subscription-operations-architecture.md)
 

@@ -1,6 +1,6 @@
 # OPT-010 全局商业治理与单平台订阅运营总计划
 
-状态：In Progress
+状态：Completed
 
 关联：[优化设计](design.md) · [实施交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -17,7 +17,7 @@
 | 01 | Offer/Price 数据模型、legacy bootstrap、经营/权益/Campaign 读模型 | 最新 main + design 冻结 | 已完成 | [阶段 01](phases/01-commerce-domain-read-model.md) |
 | 02 | Consumer/Admin API、OpenAPI、Checkout/Provider Mapping 兼容 | 01 | 已完成 | [阶段 02](phases/02-api-contract-checkout.md) |
 | 03 | Global/Platform 商业 UI、套餐/Offer、权益用户、Campaign 与跨 OPT 集成 | 02 | 已完成 | [阶段 03](phases/03-admin-commerce-workspaces.md) |
-| 04 | lifecycle/upgrade/staging、完整 R3、GitHub/main closeout | 01–03 | 进行中 | [阶段 04](phases/04-release.md) |
+| 04 | lifecycle/upgrade/staging、完整 R3、GitHub/main closeout | 01–03 | 已完成 | [阶段 04](phases/04-release.md) |
 
 阶段串行交付。数据库目录/Checkout/OpenAPI 属共享契约，不并行修改。
 
@@ -43,8 +43,8 @@
 - [x] Redemption Campaign v2 stats/detail API 安全完成。
 - [x] OPT-004/006/009 集成完成。
 - [x] fresh/non-empty upgrade、DB/API/contracts/browser/canonical R3 全绿。
-- [ ] staging 与最终 main 一致。
-- [ ] PR/CI/main/branch cleanup 闭环。
+- [x] staging 与最终 main 一致。
+- [x] PR/CI/main/branch cleanup 闭环。
 
 ## 风险与阻塞
 
