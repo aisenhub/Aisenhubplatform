@@ -56,6 +56,8 @@ proposals/
 
 - [OPT-010 全局商业治理与单平台订阅运营](commercial-subscription-operations/design.md)：[计划](commercial-subscription-operations/plan.md)，建立 Plan/Offer/immutable Price 商业目录与兼容 Checkout，升级经营摘要、权益用户、Redemption Campaign 和 Global/Platform 商业工作台，同时保留现有 Entitlement/Billing 安全账本。
 
+- [预上线单轨化清理与缺陷修复](prelaunch-canonicalization-and-remediation/design.md)：[计划](prelaunch-canonicalization-and-remediation/plan.md)，基于项目尚未正式上线、无正式数据的前提，删除旧数据/旧接口兼容双轨，收敛 Commerce 与 Config 权威模型，并分阶段修复 OPT-001～OPT-010 已确认缺陷。
+
 - [Admin 操作体验改进](admin-ux-review/design.md)：[计划](admin-ux-review/plan.md)，平台与账户优先的工作区、任务文案和可访问性交互改进，仅进行本地验证。
 
 - [Admin 安全管理与 MFA 整改设计](admin-security-mfa-hardening/design.md)：[总计划](admin-security-mfa-hardening/plan.md)，分为 Auth 行为探针、操作语义、审计可信度、MFA 完整性、可观测性与浏览器加固、总体验收六个阶段。
