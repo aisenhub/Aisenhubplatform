@@ -1,18 +1,17 @@
 begin;
 
-select plan(41);
+select plan(40);
 
 select has_column('public', 'billing_orders', 'admin_version', 'orders have an optimistic admin version');
 select has_column('public', 'billing_processing_jobs', 'operation_id', 'billing jobs have operation identity');
 select ok(exists (select 1 from pg_class where relname = 'billing_processing_jobs_operation_idx' and relkind = 'i'), 'billing operations are idempotent');
 select has_function('private', 'billing_admin_assert', array['private.admin_context'], 'billing admin guard exists');
-select has_function('private', 'admin_billing_order_list', array['private.admin_context', 'timestamp with time zone', 'integer', 'text'], 'billing order list exists');
+select ok(to_regprocedure('private.admin_billing_order_list(private.admin_context, timestamptz, integer, text)') is null, 'legacy timestamp-only billing order list is retired');
 select has_function('private', 'admin_billing_order_read', array['private.admin_context', 'uuid'], 'billing order read exists');
 select has_function('private', 'admin_billing_metrics', array['private.admin_context'], 'billing metrics exists');
-select has_function('private', 'admin_billing_provider_product_list', array['private.admin_context', 'uuid'], 'provider product list exists');
 select has_function('private', 'admin_billing_order_requery', array['private.admin_context', 'uuid', 'uuid', 'bigint', 'text'], 'billing requery exists');
 select has_function('private', 'admin_billing_order_resolve', array['private.admin_context', 'uuid', 'uuid', 'bigint', 'text', 'text'], 'billing resolve exists');
-select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_list(private.admin_context, timestamp with time zone, integer, text)', 'execute'), 'admin can list billing orders');
+select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_list_v2(private.admin_context, timestamptz, uuid, integer, text, uuid, uuid, uuid, text)', 'execute'), 'admin can list billing orders through the composite cursor boundary');
 select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_read(private.admin_context, uuid)', 'execute'), 'admin can read billing orders');
 select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_requery(private.admin_context, uuid, uuid, bigint, text)', 'execute'), 'admin can requery billing orders');
 select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)', 'execute'), 'admin can resolve billing orders');
@@ -28,7 +27,7 @@ select ok(
   'resolve checks version and persists idempotent operation'
 );
 select ok(pg_get_functiondef('private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)'::regprocedure) like '%settlement_required%', 'resolve requires a settlement');
-select ok((select array_to_string(proconfig, ',') like 'search_path=pg_catalog%' from pg_proc where oid = 'private.admin_billing_order_list(private.admin_context, timestamp with time zone, integer, text)'::regprocedure), 'billing list pins search path');
+select ok((select array_to_string(proconfig, ',') like 'search_path=pg_catalog%' from pg_proc where oid = 'private.admin_billing_order_list_v2(private.admin_context, timestamptz, uuid, integer, text, uuid, uuid, uuid, text)'::regprocedure), 'billing list pins search path');
 select ok((select relforcerowsecurity from pg_class where oid = 'public.billing_orders'::regclass), 'billing orders keep forced RLS');
 select ok((select relforcerowsecurity from pg_class where oid = 'public.billing_processing_jobs'::regclass), 'billing jobs keep forced RLS');
 select ok(exists (select 1 from pg_trigger where tgname = 'billing_orders_admin_version'), 'billing order versions advance in one trigger');
@@ -45,7 +44,7 @@ select ok(
   'settlements explicitly separate unlinked scope from linked scope'
 );
 select ok(
-  pg_get_functiondef('private.admin_billing_order_list(private.admin_context, timestamp with time zone, integer, text)'::regprocedure) like '%unlinked%',
+  pg_get_functiondef('private.admin_billing_order_list_v2(private.admin_context, timestamptz, uuid, integer, text, uuid, uuid, uuid, text)'::regprocedure) like '%unlinked%',
   'admin list exposes an unlinked filter'
 );
 select ok(
@@ -91,9 +90,9 @@ insert into public.billing_settlements (
 );
 
 select is(
-  (select linkage_status from private.admin_billing_order_list(
+  (select linkage_status from private.admin_billing_order_list_v2(
     row('00000000-0000-4000-8000-000000000601', '00000000-0000-4000-8000-000000000602', '00000000-0000-4000-8000-000000000607')::private.admin_context,
-    null, 50, 'unlinked'
+    null, null, 50, 'unlinked', null, null, null, null
   ) where order_id = '00000000-0000-4000-8000-000000000604'),
   'unlinked', 'admin list returns unlinked payments in the dedicated queue'
 );

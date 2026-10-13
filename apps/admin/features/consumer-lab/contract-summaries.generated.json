@@ -450,14 +450,6 @@
       },
       {
         "method": "GET",
-        "path": "/admin/api/v1/billing/provider-products",
-        "operationId": "adminListBillingProviderProducts",
-        "security": [
-          "adminBearer"
-        ]
-      },
-      {
-        "method": "GET",
         "path": "/admin/api/v1/commerce/summary",
         "operationId": "adminGetCommerceSummary",
         "security": [
@@ -641,9 +633,25 @@
         ]
       },
       {
+        "method": "GET",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/policy",
+        "operationId": "adminGetCommercePolicy",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/policy",
+        "operationId": "adminPatchCommercePolicy",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
         "method": "POST",
-        "path": "/admin/api/v1/platforms/{platformId}/commerce/prices/{priceId}/publish",
-        "operationId": "adminPublishCommercePrice",
+        "path": "/admin/api/v1/platforms/{platformId}/commerce/prices/{priceId}/commands",
+        "operationId": "adminCommandCommercePrice",
         "security": [
           "adminBearer"
         ]
@@ -876,6 +884,14 @@
         "method": "POST",
         "path": "/admin/api/v1/platforms/{platformId}/plans",
         "operationId": "adminCreatePlan",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/platforms/{platformId}/plans/{planId}/commands",
+        "operationId": "adminCommandPlan",
         "security": [
           "adminBearer"
         ]

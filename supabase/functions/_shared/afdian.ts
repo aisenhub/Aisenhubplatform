@@ -277,6 +277,18 @@ export function parseAfdianWebhook(
   return { order, orderNo, eventKey };
 }
 
+export function afdianCanonicalFactBytes(order: ObjectValue): Uint8Array {
+  const signedValues = [
+    order.out_trade_no ?? order.order_no ?? '',
+    order.user_id ?? '',
+    order.plan_id ?? '',
+    order.total_amount ?? '',
+  ];
+  return new TextEncoder().encode(
+    signedValues.map((item) => String(item ?? '')).join(''),
+  );
+}
+
 async function fetchAfdianOrder(
   config: AfdianApiConfig,
   providerOrderNo: string,

@@ -46,7 +46,12 @@ const sql = postgres(databaseUrl, {
 const platformId = crypto.randomUUID();
 const otherPlatformId = crypto.randomUUID();
 const platformAccountId = crypto.randomUUID();
-const paginationAccountIds = Array.from({ length: 21 }, () =>
+const paidPlanId = crypto.randomUUID();
+const paidActiveUserId = crypto.randomUUID();
+const paidSuspendedUserId = crypto.randomUUID();
+const paidActiveAccountId = crypto.randomUUID();
+const paidSuspendedAccountId = crypto.randomUUID();
+const paginationAccountIds = Array.from({ length: 19 }, () =>
   crypto.randomUUID(),
 );
 const configPlatformKeyId = crypto.randomUUID();
@@ -264,6 +269,90 @@ async function createFixtures() {
       )
     `;
   }
+  await sql`
+    insert into public.plans (id, platform_id, code, name, kind, status, features)
+    values (
+      ${paidPlanId}, ${platformId}, 't12-paid', 'T12 Paid', 'paid', 'active',
+      ${sql.json({ config_slot_limit: 10 })}
+    )
+  `;
+  await sql`
+    insert into auth.users (
+      id, aud, role, email, encrypted_password, created_at, updated_at
+    ) values
+      (
+        ${paidActiveUserId}, 'authenticated', 'authenticated',
+        ${`paid-active-${paidActiveUserId}@example.invalid`}, 'x', now(), now()
+      ),
+      (
+        ${paidSuspendedUserId}, 'authenticated', 'authenticated',
+        ${`paid-suspended-${paidSuspendedUserId}@example.invalid`}, 'x', now(), now()
+      )
+  `;
+  await sql`
+    insert into public.platform_accounts (
+      id, platform_id, user_id, status, activated_at, suspended_at, created_at, updated_at
+    ) values
+      (
+        ${paidActiveAccountId}, ${platformId}, ${paidActiveUserId}, 'active',
+        now() - interval '1 year', null, now() - interval '1 year', now() - interval '1 year'
+      ),
+      (
+        ${paidSuspendedAccountId}, ${platformId}, ${paidSuspendedUserId}, 'suspended',
+        now() - interval '2 years', now() - interval '1 year',
+        now() - interval '2 years', now() - interval '1 year'
+      )
+  `;
+  await sql`
+    insert into public.subscriptions (
+      id, platform_id, platform_account_id, plan_id, status, started_at, current_period_end
+    ) values
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidActiveAccountId}, ${paidPlanId},
+        'active', now() - interval '30 days', now() + interval '30 days'
+      ),
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidSuspendedAccountId}, ${paidPlanId},
+        'active', now() - interval '30 days', now() + interval '30 days'
+      )
+  `;
+  await sql`
+    insert into public.subscription_grants (
+      id, platform_id, platform_account_id, plan_id, source, operation_id,
+      starts_at, ends_at, created_by, reason
+    ) values
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidActiveAccountId}, ${paidPlanId}, 'admin',
+        ${crypto.randomUUID()}, now() - interval '30 days', now() + interval '30 days',
+        ${userId}, 'T12 active paid summary fixture'
+      ),
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidSuspendedAccountId}, ${paidPlanId}, 'admin',
+        ${crypto.randomUUID()}, now() - interval '30 days', now() + interval '30 days',
+        ${userId}, 'T12 suspended paid summary fixture'
+      )
+  `;
+  const [paidFixtureFacts] = await sql`
+    select
+      (
+        select count(distinct s.platform_account_id)::integer
+        from public.subscriptions s
+        join public.plans p on p.platform_id = s.platform_id and p.id = s.plan_id
+        where s.platform_id = ${platformId}
+          and s.status = 'active' and p.kind = 'paid'
+          and s.started_at <= now()
+          and (s.current_period_end is null or s.current_period_end > now())
+      ) as retired_subscription_only_count,
+      (
+        select count(*)::integer
+        from private.commerce_active_paid_entitlements(${platformId}, now())
+      ) as canonical_paid_count
+  `;
+  assert.deepEqual(
+    paidFixtureFacts,
+    { retired_subscription_only_count: 2, canonical_paid_count: 1 },
+    'T12 paid fixture must distinguish the retired subscription-only algorithm from canonical paid facts',
+  );
   await sql`
     update public.platforms
     set default_plan_id = ${planId}
@@ -1903,6 +1992,23 @@ async function runArchitectureBehaviorMatrix(secret) {
     .click();
   await page.waitForURL('**/admin/accounts');
 
+  await page.goto(`${appUrl}/admin/platforms/${platformId}`, {
+    waitUntil: 'domcontentloaded',
+  });
+  const overviewPaidAccounts = page.locator(
+    '[data-test="platform-overview-paid-accounts"] strong',
+  );
+  const summaryPaidAccounts = page.locator(
+    '[data-test="commerce-summary-paid-accounts"] strong',
+  );
+  await overviewPaidAccounts.waitFor({ state: 'visible' });
+  await summaryPaidAccounts.waitFor({ state: 'visible' });
+  assert.equal(
+    (await overviewPaidAccounts.textContent())?.trim(),
+    (await summaryPaidAccounts.textContent())?.trim(),
+    'Overview paid accounts must match Commerce Summary paid entitlement facts',
+  );
+
   await page.goto(`${appUrl}/admin/platforms/${platformId}/billing`, {
     waitUntil: 'domcontentloaded',
   });
@@ -2244,10 +2350,16 @@ try {
     await sql`delete from public.platform_account_governance_events where platform_id = ${platformId}`.catch(
       () => undefined,
     );
+    await sql`delete from public.subscription_grants where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
     await sql`delete from public.subscriptions where platform_id = ${platformId}`.catch(
       () => undefined,
     );
     await sql`delete from public.platform_accounts where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from auth.users where id in (${paidActiveUserId}, ${paidSuspendedUserId})`.catch(
       () => undefined,
     );
     await sql`delete from public.platform_subscription_config where platform_id = ${platformId}`.catch(

@@ -70,6 +70,24 @@ Deno.test('bounded reader times out stalled input and cancels its stream', async
   );
 });
 
+Deno.test('bounded reader suppresses releaseLock error during timeout or stream failure', async () => {
+  const customStream = new ReadableStream({
+    start() {
+      // Never enqueue or close to simulate pending read on timeout
+    },
+    cancel() {},
+  });
+  const customRequest = new Request('http://local/upload', {
+    method: 'PUT',
+    body: customStream,
+  });
+  await assertRejects(
+    () => readBoundedBody(customRequest, 100, 10),
+    UploadFault,
+    'STORAGE_UNAVAILABLE',
+  );
+});
+
 function request(body: BodyInit | null, headers: HeadersInit = {}): Request {
   return new Request('http://local/upload', { method: 'PUT', body, headers });
 }

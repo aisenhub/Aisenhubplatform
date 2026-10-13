@@ -25,7 +25,7 @@ describe('platform integration model', () => {
       keys: [
         { status: 'active', deployment_confirmed_at: '2026-10-11T00:00:00Z' },
       ],
-      subscription: null,
+      offers: [],
     });
 
     expect(state.centralReady).toBe(true);
@@ -54,7 +54,7 @@ describe('platform integration model', () => {
       platform,
       origins: [],
       keys: [{ status: 'active', deployment_confirmed_at: null }],
-      subscription: null,
+      offers: [],
     });
 
     expect(state.centralSteps.find((step) => step.key === 'key')?.status).toBe(
@@ -66,21 +66,15 @@ describe('platform integration model', () => {
     expect(state.nextStep?.key).toBe('origins');
   });
 
-  it('treats paid catalog setup as optional rather than universal readiness', () => {
+  it('does not infer Commerce readiness without canonical Offers', () => {
     const state = derivePlatformIntegrationState({
       platform,
       origins: [],
       keys: [],
-      subscription: {
-        paid_plan_id: '22222222-2222-4222-8222-222222222222',
-        paid_plan_status: 'active',
-        monthly_enabled: true,
-        yearly_enabled: false,
-        lifetime_enabled: false,
-      },
+      offers: [],
     });
 
-    expect(state.commerceStep.status).toBe('complete');
+    expect(state.commerceStep.status).toBe('optional');
     expect(state.totalCentralSteps).toBe(4);
   });
 
@@ -89,7 +83,6 @@ describe('platform integration model', () => {
       platform,
       origins: [],
       keys: [],
-      subscription: null,
       offers: [
         { status: 'active', price_status: 'active', mapping_status: 'ready' },
       ],
@@ -100,13 +93,6 @@ describe('platform integration model', () => {
       platform,
       origins: [],
       keys: [],
-      subscription: {
-        paid_plan_id: '22222222-2222-4222-8222-222222222222',
-        paid_plan_status: 'active',
-        monthly_enabled: true,
-        yearly_enabled: true,
-        lifetime_enabled: true,
-      },
       offers: [
         { status: 'active', price_status: 'active', mapping_status: 'missing' },
       ],

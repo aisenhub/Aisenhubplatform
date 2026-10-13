@@ -1,6 +1,6 @@
 # 阶段 03：Config / Storage 单轨化
 
-状态：未开始
+状态：本地已完成 / 待 checkpoint
 
 前置：阶段 01。
 

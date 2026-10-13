@@ -470,6 +470,22 @@ function fakeDatabase(
           }
           if (
             query.startsWith(
+              'select * from private.admin_commerce_entitlement_list',
+            )
+          ) {
+            return [
+              {
+                platform_account_id: sessionId,
+                account_created_at: '2026-09-10T00:00:00.000Z',
+                updated_at: '2026-10-11T00:00:00.000Z',
+                subscription_status: 'active',
+                plan_id: keyId,
+                entitlement_source: 'admin',
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
               'select * from private.admin_billing_observability',
             )
           )
@@ -639,27 +655,18 @@ function fakeDatabase(
           }
           if (
             query.startsWith(
-              'select * from private.admin_subscription_config_read_v2',
+              'select * from private.admin_commerce_policy_read',
             ) ||
             query.startsWith(
-              'select * from private.admin_subscription_config_patch_v2',
+              'select * from private.admin_commerce_policy_patch',
             )
           ) {
             return [
               {
                 platform_id: platformId,
-                paid_plan_id: keyId,
-                paid_plan_code: 'pro',
-                paid_plan_name: 'Pro',
-                paid_plan_status: 'active',
                 purchases_paused: false,
-                monthly_enabled: true,
-                yearly_enabled: false,
-                lifetime_enabled: true,
                 subscription_copy_override: null,
                 row_version: 3,
-                preflight_blocked_reason: null,
-                preflight_blocking_count: 0,
               },
             ] as unknown as R[];
           }
@@ -766,9 +773,7 @@ function fakeDatabase(
             ] as unknown as R[];
           }
           if (
-            query.startsWith(
-              'select * from private.admin_account_transition_v2',
-            )
+            query.startsWith('select * from private.admin_account_transition')
           ) {
             const action = values?.[5];
             return [
@@ -782,13 +787,6 @@ function fakeDatabase(
                       : 'suspended',
                 governance_event_id: keyId,
               },
-            ] as unknown as R[];
-          }
-          if (
-            query.startsWith('select * from private.admin_account_transition')
-          ) {
-            return [
-              { platform_account_id: sessionId, status: 'suspended' },
             ] as unknown as R[];
           }
           if (
@@ -821,7 +819,9 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           }
-          if (query.startsWith('select * from private.entitlement_read')) {
+          if (
+            query.startsWith('select * from private.entitlement_current_read')
+          ) {
             return [
               {
                 effective_status: 'active',
@@ -829,8 +829,8 @@ function fakeDatabase(
                 code: 'free',
                 name: 'Free',
                 description: null,
-                subscription_product_code: 'free',
-                subscription_product_name: 'Free',
+                offer_code: null,
+                offer_name: null,
                 features: { quota: 1 },
                 started_at: null,
                 current_period_end: null,
@@ -1111,7 +1111,7 @@ Deno.test('Account API creates an Offer-aware checkout without accepting client 
     {
       database: fakeDatabase(
         (query, values) => {
-          if (query.includes('subscription_checkout_create_v2'))
+          if (query.includes('private.subscription_checkout_create('))
             checkoutValues = values;
         },
         [],
@@ -1138,8 +1138,8 @@ Deno.test('Account API creates an Offer-aware checkout without accepting client 
   assertEquals(payload.data.offer_code, 'pro-month');
   assertEquals(payload.data.plan_name, 'Pro');
   assertEquals(payload.data.price, '29.90');
-  assertEquals(checkoutValues?.[6], null);
-  assertEquals(checkoutValues?.[7], offerId);
+  assertEquals(checkoutValues?.[6], offerId);
+  assertEquals(checkoutValues?.length, 10);
 });
 
 Deno.test('Account API rejects the removed product_code checkout selector', async () => {
@@ -1383,10 +1383,8 @@ Deno.test('Account API maps an entitlement read to the stable DTO', async () => 
   assertEquals(response.status, 200);
   const entitlement = (await response.json()).data;
   assertEquals(entitlement.entitlement_kind, 'free');
-  assertEquals(entitlement.subscription_product, {
-    code: 'free',
-    name: 'Free',
-  });
+  assertEquals(entitlement.offer, null);
+  assertEquals('subscription_product' in entitlement, false);
 });
 
 Deno.test('Account API sends current and previous redemption HMAC candidates atomically', async () => {
@@ -1444,7 +1442,9 @@ Deno.test('Account API sends current and previous redemption HMAC candidates ato
             return [
               { outcome: 'applied', plan_id: platformId },
             ] as unknown as R[];
-          if (query.startsWith('select * from private.entitlement_read'))
+          if (
+            query.startsWith('select * from private.entitlement_current_read')
+          )
             return [
               {
                 effective_status: 'active',
@@ -2504,7 +2504,7 @@ Deno.test('Account API exposes the OPT-009 Account workbench contract', async ()
   );
   assertEquals(suspend.status, 200);
   const transitionCall = actionCalls.find((call) =>
-    call.query.startsWith('select * from private.admin_account_transition_v2'),
+    call.query.startsWith('select * from private.admin_account_transition'),
   );
   assertEquals(transitionCall?.values?.slice(3), [
     platformId,
@@ -2535,7 +2535,7 @@ Deno.test('Account API exposes the OPT-009 Account workbench contract', async ()
     actionCalls.some(
       (call) =>
         call.query.startsWith(
-          'select * from private.admin_account_transition_v2',
+          'select * from private.admin_account_transition',
         ) &&
         call.values?.[5] === 'restore' &&
         call.values?.[6] === 'review completed',
@@ -2666,6 +2666,14 @@ Deno.test('Account API uses stable Billing cursors and server-side filters', asy
   );
   assertEquals(nextCall?.values?.[3], '2026-09-11T00:00:00.000Z');
   assertEquals(nextCall?.values?.[4], keyId);
+
+  const legacyCursor = await handleRequest(
+    new Request(`${base}/orders?cursor=2026-09-11T00:00:00.000Z`, {
+      headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
+    }),
+    { database: fakeDatabase(), verifyAccessToken: async () => userId },
+  );
+  assertEquals(legacyCursor.status, 400);
 });
 
 Deno.test('Account API exposes Commerce Admin reads with bounded server-side filters', async () => {
@@ -2718,12 +2726,31 @@ Deno.test('Account API exposes Commerce Admin reads with bounded server-side fil
     '2026-10-01T00:00:00.000Z',
     '2026-11-01T00:00:00.000Z',
   ]);
+  const entitlementPayload = await entitlements.json();
+  assertEquals(typeof entitlementPayload.next_cursor, 'string');
+  const entitlementNext = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/platforms/${platformId}/commerce/entitlements?limit=1&cursor=${encodeURIComponent(entitlementPayload.next_cursor)}`,
+      { headers: auth },
+    ),
+    dependencies,
+  );
+  assertEquals(entitlementNext.status, 200);
+  const entitlementNextCall = calls.at(-1);
+  assertEquals(
+    entitlementNextCall?.query.startsWith(
+      'select * from private.admin_commerce_entitlement_list',
+    ),
+    true,
+  );
+  assertEquals(entitlementNextCall?.values?.[4], '2026-09-10T00:00:00.000Z');
+  assertEquals(entitlementNextCall?.values?.[5], sessionId);
 });
 
-Deno.test('Account API allows subscription config mutation with AAL2 and no recent proof', async () => {
+Deno.test('Account API allows Commerce policy mutation with AAL2 and no recent proof', async () => {
   const base =
     'http://local/functions/v1/account-api/admin/api/v1/platforms/' +
-    `${platformId}/subscription-config`;
+    `${platformId}/commerce/policy`;
   const get = await handleRequest(
     new Request(base, {
       headers: { Authorization: `Bearer ${fakeJwt('aal2')}` },
@@ -2742,11 +2769,7 @@ Deno.test('Account API allows subscription config mutation with AAL2 and no rece
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        paid_plan_id: keyId,
         purchases_paused: false,
-        monthly_enabled: true,
-        yearly_enabled: false,
-        lifetime_enabled: true,
         subscription_copy_override: null,
         reason: 'fixture update',
       }),

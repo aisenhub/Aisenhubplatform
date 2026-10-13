@@ -8,6 +8,7 @@ import {
   createAfdianProviderAdapter,
   normalizeAfdianOrder,
   parseAfdianWebhook,
+  afdianCanonicalFactBytes,
   toBillingOrderFacts,
   verifyAfdianWebhookSignature,
   providerUrlsRequireHttps,
@@ -178,6 +179,40 @@ Deno.test('Afdian webhook event identity excludes unsigned mutable status', () =
   assert(first !== null && later !== null);
   assertEquals(first.eventKey, 'afdian:order-stable-1');
   assertEquals(later.eventKey, first.eventKey);
+});
+
+Deno.test('Afdian canonical fact bytes are stable across status changes but detect fact conflicts', () => {
+  const orderA = {
+    out_trade_no: 'order-1',
+    user_id: 'user-1',
+    plan_id: 'plan-monthly',
+    total_amount: '9.90',
+    status: 1,
+    remark: 'first-attempt',
+  };
+  const orderB = {
+    out_trade_no: 'order-1',
+    user_id: 'user-1',
+    plan_id: 'plan-monthly',
+    total_amount: '9.90',
+    status: 2,
+    remark: 'paid-attempt',
+  };
+  const orderConflict = {
+    out_trade_no: 'order-1',
+    user_id: 'user-1',
+    plan_id: 'plan-monthly',
+    total_amount: '19.90',
+    status: 2,
+  };
+  const bytesA = afdianCanonicalFactBytes(orderA);
+  const bytesB = afdianCanonicalFactBytes(orderB);
+  const bytesConflict = afdianCanonicalFactBytes(orderConflict);
+  assertEquals(bytesA, bytesB);
+  assert(
+    new TextDecoder().decode(bytesA) !==
+      new TextDecoder().decode(bytesConflict),
+  );
 });
 
 Deno.test('Afdian adapter queries an order by out_trade_no without exposing credentials', async () => {

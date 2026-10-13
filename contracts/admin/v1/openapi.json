@@ -809,6 +809,60 @@
         }
       }
     },
+    "/admin/api/v1/platforms/{platformId}/plans/{planId}/commands": {
+      "post": {
+        "operationId": "adminCommandPlan",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "description": "Runs an idempotent Plan lifecycle command. Archive is rejected while an active Offer or a current/future non-revoked Grant still depends on the Plan.",
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/platforms/{platformId}/commerce/policy": {
+      "get": {
+        "operationId": "adminGetCommercePolicy",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PlatformId" }],
+        "description": "Reads the platform Commerce policy. Product selection lives exclusively in Offer/Price/Provider Mapping, not in this policy.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "operationId": "adminPatchCommercePolicy",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PlatformId" },
+          { "$ref": "#/components/parameters/IfMatch" }
+        ],
+        "description": "Updates purchase pause and subscription presentation copy with optimistic concurrency.",
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" },
+          "428": { "$ref": "#/components/responses/PreconditionRequired" }
+        }
+      }
+    },
     "/admin/api/v1/platforms/{platformId}/commerce/offers": {
       "get": {
         "operationId": "adminListCommerceOffers",
@@ -886,9 +940,9 @@
         }
       }
     },
-    "/admin/api/v1/platforms/{platformId}/commerce/prices/{priceId}/publish": {
+    "/admin/api/v1/platforms/{platformId}/commerce/prices/{priceId}/commands": {
       "post": {
-        "operationId": "adminPublishCommercePrice",
+        "operationId": "adminCommandCommercePrice",
         "x-requires-step-up": true,
         "security": [{ "adminBearer": [] }],
         "parameters": [
@@ -900,7 +954,7 @@
             "schema": { "type": "string", "format": "uuid" }
           }
         ],
-        "description": "Publishes an immutable Price version and retires the previous active Price for the same Offer.",
+        "description": "Publishes or independently retires an immutable Price version. Commands are idempotent by operation_id and serialized on the Offer scope.",
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
@@ -960,7 +1014,7 @@
             "schema": { "type": "string", "format": "uuid" }
           }
         ],
-        "description": "Publishes or disables a Price-scoped Provider Mapping with a reason and operation id.",
+        "description": "Atomically switches the current Price-scoped Provider Mapping or disables the target Mapping, with a reason and idempotent operation id.",
         "requestBody": { "$ref": "#/components/requestBodies/Json" },
         "responses": {
           "200": { "$ref": "#/components/responses/Object" },
@@ -1514,24 +1568,6 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/BillingObservability"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/admin/api/v1/billing/provider-products": {
-      "get": {
-        "operationId": "adminListBillingProviderProducts",
-        "security": [
-          {
-            "adminBearer": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/Page"
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
@@ -3643,52 +3679,20 @@
           }
         }
       },
-      "SubscriptionConfig": {
+      "CommercePolicy": {
         "type": "object",
         "required": [
           "platform_id",
-          "paid_plan_id",
-          "paid_plan_code",
-          "paid_plan_name",
-          "paid_plan_status",
           "purchases_paused",
-          "monthly_enabled",
-          "yearly_enabled",
-          "lifetime_enabled",
           "subscription_copy_override",
-          "row_version",
-          "preflight_blocked_reason",
-          "preflight_blocking_count"
+          "row_version"
         ],
         "properties": {
           "platform_id": {
             "type": "string",
             "format": "uuid"
           },
-          "paid_plan_id": {
-            "type": ["string", "null"],
-            "format": "uuid"
-          },
-          "paid_plan_code": {
-            "type": ["string", "null"]
-          },
-          "paid_plan_name": {
-            "type": ["string", "null"]
-          },
-          "paid_plan_status": {
-            "type": ["string", "null"],
-            "enum": ["active", "archived", null]
-          },
           "purchases_paused": {
-            "type": "boolean"
-          },
-          "monthly_enabled": {
-            "type": "boolean"
-          },
-          "yearly_enabled": {
-            "type": "boolean"
-          },
-          "lifetime_enabled": {
             "type": "boolean"
           },
           "subscription_copy_override": {
@@ -3697,18 +3701,6 @@
           "row_version": {
             "type": "integer",
             "minimum": 1
-          },
-          "preflight_blocked_reason": {
-            "type": ["string", "null"],
-            "enum": [
-              "active_or_future_grant",
-              "redeemable_old_plan_batch",
-              null
-            ]
-          },
-          "preflight_blocking_count": {
-            "type": "integer",
-            "minimum": 0
           }
         },
         "additionalProperties": false

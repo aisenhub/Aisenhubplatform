@@ -280,3 +280,64 @@ Deno.test('billing webhook can require a secret Afdian callback path', async () 
   );
   assertEquals(accepted.status, 200);
 });
+
+Deno.test('Afdian webhook payload hash is identical across status updates and prevents false conflicts', async () => {
+  const valuesSeen: unknown[][] = [];
+  const first = await handleBillingWebhookRequest(
+    afdianRequest(
+      JSON.stringify({
+        ec: 200,
+        em: 'ok',
+        data: {
+          type: 'order',
+          order: {
+            out_trade_no: 'afdian-order-dup-1',
+            user_id: 'afdian-user-dup-1',
+            plan_id: 'plan-monthly',
+            total_amount: '9.90',
+            status: 1,
+          },
+        },
+      }),
+    ),
+    {
+      providerAccountId,
+      database: database(valuesSeen, false),
+      verifyAfdianSignature: async () => true,
+    },
+  );
+  assertEquals(first.status, 200);
+  assertEquals(valuesSeen.length, 1);
+  const firstHash = valuesSeen[0]![2];
+
+  const retryValuesSeen: unknown[][] = [];
+  const second = await handleBillingWebhookRequest(
+    afdianRequest(
+      JSON.stringify({
+        ec: 200,
+        em: 'ok',
+        data: {
+          type: 'order',
+          order: {
+            out_trade_no: 'afdian-order-dup-1',
+            user_id: 'afdian-user-dup-1',
+            plan_id: 'plan-monthly',
+            total_amount: '9.90',
+            status: 2,
+            remark: 'payment succeeded',
+          },
+        },
+      }),
+    ),
+    {
+      providerAccountId,
+      database: database(retryValuesSeen, true),
+      verifyAfdianSignature: async () => true,
+    },
+  );
+  assertEquals(second.status, 200);
+  assertEquals(retryValuesSeen.length, 1);
+  const secondHash = retryValuesSeen[0]![2];
+
+  assertEquals(firstHash, secondHash);
+});

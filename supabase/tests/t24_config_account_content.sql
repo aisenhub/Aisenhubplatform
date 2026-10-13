@@ -1,6 +1,6 @@
 begin;
 
-select plan(21);
+select plan(19);
 
 select has_function(
   'private', 'config_version_upload_state',
@@ -23,10 +23,10 @@ select ok(
 select ok(
   not has_function_privilege(
     'account_executor',
-    'private.file_upload_state_by_kind(private.account_context, uuid, text)',
+    'private.config_storage_upload_state(private.account_context, uuid, text)',
     'execute'
   ),
-  'resource-kind helper stays internal'
+  'Config storage primitive stays internal'
 );
 select ok(
   not has_function_privilege(
@@ -75,9 +75,9 @@ insert into private.platform_api_keys (
 );
 
 insert into public.platform_file_policies (
-  platform_id, enabled, max_file_bytes, max_files, max_total_bytes, max_platform_total_bytes
+  platform_id, enabled, max_file_bytes, max_platform_total_bytes
 ) values (
-  '00000000-0000-4000-8000-000000006120', true, 1048576, 10, 10485760, 1073741824
+  '00000000-0000-4000-8000-000000006120', true, 1048576, 1073741824
 );
 
 insert into public.platform_configs (
@@ -114,18 +114,6 @@ insert into public.platform_config_versions (
   1, 'example.config', '1', 'phase 02'
 );
 
-select throws_ok(
-  $$select * from private.file_upload_state(row(
-    '00000000-0000-4000-8000-000000006100',
-    '00000000-0000-4000-8000-000000006110',
-    '00000000-0000-4000-8000-000000006120',
-    '00000000-0000-4000-8000-000000006150',
-    '00000000-0000-4000-8000-000000006200'
-  )::private.account_context, '00000000-0000-4000-8000-000000006180')$$,
-  'P0002', 'resource_not_found',
-  'legacy upload state cannot resolve a Config Version file'
-);
-
 select is(
   (select resource_kind from public.platform_config_files where id = '00000000-0000-4000-8000-000000006180'),
   'config_version',
@@ -158,19 +146,6 @@ select throws_ok(
     '00000000-0000-4000-8000-000000006190')$$,
   'P0002', 'resource_not_found',
   'another account cannot resolve the owner Config Version'
-);
-
-select throws_ok(
-  $$select * from private.file_receive_claim(row(
-    '00000000-0000-4000-8000-000000006100',
-    '00000000-0000-4000-8000-000000006110',
-    '00000000-0000-4000-8000-000000006120',
-    '00000000-0000-4000-8000-000000006150',
-    '00000000-0000-4000-8000-000000006203'
-  )::private.account_context,
-    '00000000-0000-4000-8000-000000006180', 'legacy-handler', 15)$$,
-  'P0002', 'resource_not_found',
-  'legacy receive claim cannot claim a Config Version file'
 );
 
 select is(

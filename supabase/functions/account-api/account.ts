@@ -134,7 +134,7 @@ export async function dispatchAccount(
     if (!idempotencyKey || idempotencyKey.length > 128)
       throw new ApiFault(400, 'INVALID_INPUT');
     const [checkout] = await transaction.unsafe<Row>(
-      'select * from private.subscription_checkout_read_by_idempotency_v2(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text)',
+      'select * from private.subscription_checkout_read_by_idempotency(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::text)',
       [...contextValues, idempotencyKey],
     );
     if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
@@ -188,11 +188,10 @@ export async function dispatchAccount(
       tokenDigest = token.digest;
     }
     const [checkout] = await transaction.unsafe<Row>(
-      'select * from private.subscription_checkout_create_v2(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::text, $8::uuid, $9::text, $10::smallint, $11::bytea)',
+      'select * from private.subscription_checkout_create(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid, $7::uuid, $8::text, $9::smallint, $10::bytea)',
       [
         ...contextValues,
         checkoutId,
-        null,
         offerId,
         idempotencyKey,
         tokenKeyVersion,
@@ -218,7 +217,7 @@ export async function dispatchAccount(
     const checkoutId = uuidValue(checkoutMatch[1]);
     if (!checkoutId) throw new ApiFault(400, 'INVALID_INPUT');
     const [checkout] = await transaction.unsafe<Row>(
-      'select * from private.subscription_checkout_read_v3(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
+      'select * from private.subscription_checkout_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context, $6::uuid)',
       [...contextValues, checkoutId],
     );
     if (!checkout) throw new ApiFault(404, 'RESOURCE_NOT_FOUND');
@@ -321,7 +320,7 @@ export async function dispatchAccount(
   }
   if (path === 'v1/subscription' && request.method === 'GET') {
     const [result] = await transaction.unsafe<Row>(
-      'select * from private.entitlement_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
+      'select * from private.entitlement_current_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
       contextValues,
     );
     if (!result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
@@ -362,7 +361,7 @@ export async function dispatchAccount(
       throw new ApiFault(errorCode === 'CODE_EXPIRED' ? 410 : 409, errorCode);
     }
     const [entitlement] = await transaction.unsafe<Row>(
-      'select * from private.entitlement_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
+      'select * from private.entitlement_current_read(row($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid)::private.account_context)',
       contextValues,
     );
     return { status: 200, data: entitlementDto(entitlement ?? {}) };

@@ -29,8 +29,6 @@ import { ConfigResourceCenter } from './config-resource-center';
 type Policy = {
   enabled: boolean;
   max_file_bytes: number;
-  max_files: number;
-  max_total_bytes: number;
   max_platform_total_bytes?: number;
   platform_reserved_bytes?: number;
   platform_actual_bytes?: number;
@@ -101,8 +99,6 @@ export function PlatformFilesPage() {
           body: JSON.stringify({
             enabled: policy.enabled,
             max_file_bytes: policy.max_file_bytes,
-            max_files: policy.max_files,
-            max_total_bytes: policy.max_total_bytes,
           }),
         },
         { replay: 'never' },
@@ -224,29 +220,13 @@ export function PlatformFilesPage() {
               />
               允许新的 Config Version Storage 写入
             </label>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:max-w-md">
               <PolicyNumber
                 id="file-policy-max-bytes"
                 label="单对象上限（字节）"
                 value={policy.max_file_bytes}
                 onChange={(value) =>
                   setPolicy({ ...policy, max_file_bytes: value })
-                }
-                disabled={saving}
-              />
-              <PolicyNumber
-                id="file-policy-max-files"
-                label="账户对象上限"
-                value={policy.max_files}
-                onChange={(value) => setPolicy({ ...policy, max_files: value })}
-                disabled={saving}
-              />
-              <PolicyNumber
-                id="file-policy-max-total"
-                label="账户字节上限"
-                value={policy.max_total_bytes}
-                onChange={(value) =>
-                  setPolicy({ ...policy, max_total_bytes: value })
                 }
                 disabled={saving}
               />

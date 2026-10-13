@@ -8,8 +8,8 @@ select has_function('private', 'admin_config_review_list', array['private.admin_
 select has_function('private', 'admin_config_gallery_review_v2', array['private.admin_context','uuid','uuid','text','text'], 'Admin platform-scoped review mutation exists');
 select has_function('private', 'admin_config_gallery_govern', array['private.admin_context','uuid','uuid','text','text'], 'Admin Gallery governance mutation exists');
 select has_function('private', 'admin_config_usage_summary', array['private.admin_context','uuid','uuid'], 'Admin Config usage summary exists');
-select has_function('private', 'admin_file_policy_read_v2', array['private.admin_context','uuid'], 'Admin platform capacity read exists');
-select has_function('private', 'admin_file_policy_update_v2', array['private.admin_context','uuid','boolean','bigint','integer','bigint','bigint'], 'Admin platform capacity update exists');
+select has_function('private', 'admin_storage_policy_read', array['private.admin_context','uuid'], 'Admin platform capacity read exists');
+select has_function('private', 'admin_storage_policy_update', array['private.admin_context','uuid','boolean','bigint','bigint'], 'Admin platform capacity update exists');
 select ok(has_function_privilege('admin_executor', 'private.admin_config_resource_list(private.admin_context, uuid, uuid, integer, text, text)', 'execute'), 'admin executor can list Config resources');
 select ok(not has_function_privilege('account_executor', 'private.admin_config_gallery_govern(private.admin_context, uuid, uuid, text, text)', 'execute'), 'account executor cannot invoke Admin Gallery governance');
 select ok((select prosecdef and array_to_string(proconfig, ',') like 'search_path=pg_catalog%'
@@ -47,8 +47,8 @@ values
   ('00000000-0000-4000-8000-000000006141', '00000000-0000-4000-8000-000000006120', '00000000-0000-4000-8000-000000006102', 'active', now());
 insert into private.platform_api_keys(id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix, creation_operation_id)
 values ('00000000-0000-4000-8000-000000006150', '00000000-0000-4000-8000-000000006120', 'Govern key', repeat('a',64), 1, 'govern', 'fixture', '00000000-0000-4000-8000-000000006151');
-insert into public.platform_file_policies(platform_id, enabled, max_file_bytes, max_files, max_total_bytes, max_platform_total_bytes)
-values ('00000000-0000-4000-8000-000000006120', true, 1048576, 10, 10485760, 2097152);
+insert into public.platform_file_policies(platform_id, enabled, max_file_bytes, max_platform_total_bytes)
+values ('00000000-0000-4000-8000-000000006120', true, 1048576, 2097152);
 
 create temporary table govern_config on commit drop as
 select * from private.config_create(row(
@@ -137,18 +137,23 @@ select * from private.admin_config_gallery_govern(row(
 set local role postgres;
 select is((select status from public.platform_config_gallery_entries where config_id=(select config_id from govern_config)), 'blocked', 'restore then block keeps governance separate from Config deletion');
 
-insert into public.platform_config_files(
-  id, platform_id, platform_account_id, original_name, requested_size_bytes,
-  reserved_bytes, reserved_count, status, write_outcome, storage_bucket, storage_path,
-  intent_expires_at, fencing_token, resource_kind
-) values
-  ('00000000-0000-4000-8000-000000006180', '00000000-0000-4000-8000-000000006120', '00000000-0000-4000-8000-000000006140', 'capacity-a.bin', 700000, 700000, 1, 'pending', 'not_started', 'platform-config-files', 'govern/capacity-a', now()+interval '1 day', 0, 'legacy'),
-  ('00000000-0000-4000-8000-000000006181', '00000000-0000-4000-8000-000000006120', '00000000-0000-4000-8000-000000006140', 'capacity-b.bin', 700000, 700000, 1, 'pending', 'not_started', 'platform-config-files', 'govern/capacity-b', now()+interval '1 day', 0, 'legacy');
+select * from private.config_version_intent_create(row(
+  '00000000-0000-4000-8000-000000006101','00000000-0000-4000-8000-000000006111',
+  '00000000-0000-4000-8000-000000006120','00000000-0000-4000-8000-000000006150',
+  '00000000-0000-4000-8000-000000006187'
+)::private.account_context, (select config_id from govern_config), 'capacity-a.json', 700000,
+  'application/json', 'govern.capacity', '1', 'capacity a', 'govern-capacity-a');
+select * from private.config_version_intent_create(row(
+  '00000000-0000-4000-8000-000000006101','00000000-0000-4000-8000-000000006111',
+  '00000000-0000-4000-8000-000000006120','00000000-0000-4000-8000-000000006150',
+  '00000000-0000-4000-8000-000000006188'
+)::private.account_context, (select config_id from govern_config), 'capacity-b.json', 700000,
+  'application/json', 'govern.capacity', '2', 'capacity b', 'govern-capacity-b');
 set local role admin_executor;
 create temporary table lowered_capacity on commit drop as
-select * from private.admin_file_policy_update_v2(row(
+select * from private.admin_storage_policy_update(row(
   '00000000-0000-4000-8000-000000006100','00000000-0000-4000-8000-000000006110','00000000-0000-4000-8000-000000006177'
-)::private.admin_context, '00000000-0000-4000-8000-000000006120', true, 1048576, 10, 10485760, 1048576);
+)::private.admin_context, '00000000-0000-4000-8000-000000006120', true, 1048576, 1048576);
 set local role postgres;
 select is((select max_platform_total_bytes from lowered_capacity), 1048576::bigint, 'Global capacity update persists requested platform cap');
 select ok((select platform_reserved_bytes > max_platform_total_bytes and platform_over_capacity from lowered_capacity), 'capacity may be lowered below reserved bytes and reports over-capacity without deleting data');
@@ -158,15 +163,15 @@ where platform_id = '00000000-0000-4000-8000-000000006120';
 
 set local role postgres;
 select throws_ok(
-  $$select * from private.admin_plan_upsert(row(
+  $$select * from private.admin_plan_save(row(
     '00000000-0000-4000-8000-000000006100','00000000-0000-4000-8000-000000006110','00000000-0000-4000-8000-000000006178'
-  )::private.admin_context, '00000000-0000-4000-8000-000000006120', null, 'bad-slot', 'Bad Slot', null, 'paid', '{"config_slot_limit":"3","other_feature":true}'::jsonb, 'active', false, false)$$,
+  )::private.admin_context, '00000000-0000-4000-8000-000000006120', null, 'bad-slot', 'Bad Slot', null, 'paid', '{"config_slot_limit":"3","other_feature":true}'::jsonb)$$,
   '22023', 'invalid_input', 'Plan SQL rejects non-numeric config_slot_limit'
 );
 create temporary table valid_plan on commit drop as
-select * from private.admin_plan_upsert(row(
+select result.id as plan_id, result.* from private.admin_plan_save(row(
   '00000000-0000-4000-8000-000000006100','00000000-0000-4000-8000-000000006110','00000000-0000-4000-8000-000000006179'
-)::private.admin_context, '00000000-0000-4000-8000-000000006120', null, 'valid-slot', 'Valid Slot', null, 'paid', '{"config_slot_limit":5,"other_feature":true}'::jsonb, 'active', false, false);
+)::private.admin_context, '00000000-0000-4000-8000-000000006120', null, 'valid-slot', 'Valid Slot', null, 'paid', '{"config_slot_limit":5,"other_feature":true}'::jsonb) as result;
 set local role postgres;
 select is((select features->>'config_slot_limit' from public.plans where id=(select plan_id from valid_plan)), '5', 'Plan upsert accepts numeric config_slot_limit');
 select is((select features->>'other_feature' from public.plans where id=(select plan_id from valid_plan)), 'true', 'Plan upsert preserves unrelated feature keys');

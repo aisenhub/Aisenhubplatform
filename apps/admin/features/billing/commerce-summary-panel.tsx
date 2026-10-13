@@ -145,8 +145,14 @@ export function CommerceSummaryPanel({
                 '30 天内即将到期',
                 count(summary.expiring_paid_entitlement_accounts),
               ],
-            ].map(([label, value]) => (
-              <article className="panel gap-1" key={label}>
+            ].map(([label, value], index) => (
+              <article
+                className="panel gap-1"
+                key={label}
+                data-test={
+                  index === 0 ? 'commerce-summary-paid-accounts' : undefined
+                }
+              >
                 <span className="text-xs text-muted-foreground">{label}</span>
                 <strong className="text-xl tabular-nums">{value}</strong>
               </article>

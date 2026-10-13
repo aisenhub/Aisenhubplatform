@@ -128,7 +128,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(70);
+    expect(operationCount).toBe(72);
   });
 
   it('proxies private Feedback images as binary and allows label replacement', async () => {
@@ -306,5 +306,66 @@ describe('admin BFF', () => {
       context(['admin', 'api', 'v1', 'platforms']),
     );
     expect(response.status).toBe(503);
+  });
+
+  it('omits Content-Type header when mutation request has no body', async () => {
+    const response = await POST(
+      request('POST', 'admin/api/v1/platforms', { csrf: true }),
+      context(['admin', 'api', 'v1', 'platforms']),
+    );
+    expect(response.status).toBe(200);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBeUndefined();
+    expect(
+      (init.headers as Record<string, string>)['Content-Type'],
+    ).toBeUndefined();
+  });
+
+  it('normalizes uppercase UUID path segments to lowercase before upstream fetch', async () => {
+    const uppercaseId = 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA';
+    const response = await GET(
+      request('GET', `admin/api/v1/platforms/${uppercaseId}/keys`),
+      context(['admin', 'api', 'v1', 'platforms', uppercaseId, 'keys']),
+    );
+    expect(response.status).toBe(200);
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      `https://account.example/admin/api/v1/platforms/${uppercaseId.toLowerCase()}/keys`,
+    );
+  });
+
+  it('attaches Content-Security-Policy sandbox header to binary download responses', async () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    fetchMock.mockResolvedValueOnce(
+      new Response(new Uint8Array([1, 2, 3]), {
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+          'content-disposition': 'attachment; filename="test.png"',
+        },
+      }),
+    );
+    const response = await GET(
+      request(
+        'GET',
+        `admin/api/v1/platforms/${id}/feedback/${id}/attachments/${id}/content`,
+      ),
+      context([
+        'admin',
+        'api',
+        'v1',
+        'platforms',
+        id,
+        'feedback',
+        id,
+        'attachments',
+        id,
+        'content',
+      ]),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-security-policy')).toBe(
+      "sandbox; default-src 'none'",
+    );
   });
 });

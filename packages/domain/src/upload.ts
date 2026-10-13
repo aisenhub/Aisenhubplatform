@@ -99,7 +99,11 @@ export async function readBoundedBody(
     throw new UploadFault('STORAGE_UNAVAILABLE', 503);
   } finally {
     if (timer !== undefined) clearTimeout(timer);
-    reader.releaseLock();
+    try {
+      reader.releaseLock();
+    } catch {
+      // Ignore errors when releasing lock on stream with pending read operations
+    }
   }
 }
 

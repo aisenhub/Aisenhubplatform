@@ -6,8 +6,8 @@
     {
       "id": "subscription-checkout",
       "producer": {
-        "path": "supabase/migrations/20261012145252_commercial_operations_api_contract.sql",
-        "contains": "private.subscription_checkout_create_v2"
+        "path": "supabase/migrations/20261013041332_prelaunch_commerce_canonicalization.sql",
+        "contains": "private.subscription_checkout_create"
       },
       "edge": {
         "path": "supabase/functions/account-api/account.ts",
@@ -117,8 +117,8 @@
     {
       "id": "entitlement-projection",
       "producer": {
-        "path": "supabase/migrations/20260913124532_bill_18_entitlement_subscription_product.sql",
-        "contains": "private.entitlement_read"
+        "path": "supabase/migrations/20261013041332_prelaunch_commerce_canonicalization.sql",
+        "contains": "private.entitlement_current_read"
       },
       "edge": {
         "path": "supabase/functions/account-api/account.ts",
@@ -169,7 +169,7 @@
           "tests": ["entitlement-api", "domain-entitlement"]
         },
         {
-          "name": "subscription_product",
+          "name": "offer",
           "consumers": ["consumer-contract"],
           "tests": ["entitlement-api"]
         },

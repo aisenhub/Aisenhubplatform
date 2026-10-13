@@ -30,7 +30,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/accounts/${id}`) ||
       matches(`platforms/${id}/keys`) ||
       matches(`platforms/${id}/plans`) ||
-      matches(`platforms/${id}/subscription-config`) ||
+      matches(`platforms/${id}/commerce/policy`) ||
       matches(`platforms/${id}/commerce/offers`) ||
       matches(`platforms/${id}/commerce/provider-mappings`) ||
       matches(`platforms/${id}/commerce/entitlements`) ||
@@ -52,7 +52,6 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`billing/orders/${id}`) ||
       exact('billing/metrics') ||
       exact('commerce/summary') ||
-      exact('billing/provider-products') ||
       exact('deletion-jobs') ||
       matches(`deletion-jobs/${id}`)
     );
@@ -67,10 +66,11 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
       matches(`platforms/${id}/keys`) ||
       matches(`platforms/${id}/keys/${id}/(?:revoke|confirm-deployment)`) ||
       matches(`platforms/${id}/plans`) ||
+      matches(`platforms/${id}/plans/${id}/commands`) ||
       matches(`platforms/${id}/commerce/offers`) ||
       matches(`platforms/${id}/commerce/offers/${id}/commands`) ||
       matches(`platforms/${id}/commerce/offers/${id}/prices`) ||
-      matches(`platforms/${id}/commerce/prices/${id}/publish`) ||
+      matches(`platforms/${id}/commerce/prices/${id}/commands`) ||
       matches(`platforms/${id}/commerce/provider-mappings`) ||
       matches(`platforms/${id}/commerce/provider-mappings/${id}/commands`) ||
       matches(`platforms/${id}/config-reviews/${id}/review`) ||
@@ -88,7 +88,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
   if (method === 'PATCH') {
     return (
       matches(`platforms/${id}`) ||
-      matches(`platforms/${id}/subscription-config`) ||
+      matches(`platforms/${id}/commerce/policy`) ||
       matches(`platforms/${id}/file-policy`)
     );
   }
@@ -131,7 +131,14 @@ async function dispatch(
     if (!baseUrl || !origin)
       return errorResponse(503, 'AUTHORIZATION_UNAVAILABLE', id);
     const { path } = await context.params;
-    const pathValue = path.join('/');
+    const normalizedPath = path.map((segment) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        segment,
+      )
+        ? segment.toLowerCase()
+        : segment,
+    );
+    const pathValue = normalizedPath.join('/');
     if (!isAllowedAdminPath(request.method, pathValue))
       return errorResponse(404, 'NOT_FOUND', id);
     const target = `${baseUrl}/${pathValue}${request.nextUrl.search}`;
@@ -165,8 +172,20 @@ async function dispatch(
     const proof = cookie(request, names.recentProof);
     if (token) headers.Authorization = `Bearer ${token}`;
     if (proof) headers['X-Recent-Auth-Proof'] = proof;
-    const contentType = request.headers.get('content-type');
-    if (contentType) headers['Content-Type'] = contentType;
+    const forwardedBody =
+      mutation && request.body
+        ? new TextDecoder().decode(
+            (await readBoundedBody(request, 65_536, 15_000, true)).bytes,
+          )
+        : undefined;
+    const bodyToSend =
+      forwardedBody !== undefined && forwardedBody.length > 0
+        ? forwardedBody
+        : undefined;
+    if (bodyToSend !== undefined) {
+      const contentType = request.headers.get('content-type');
+      if (contentType) headers['Content-Type'] = contentType;
+    }
     for (const name of ['if-match', 'if-none-match', 'idempotency-key']) {
       const value = request.headers.get(name);
       if (value) headers[name] = value;
@@ -174,12 +193,7 @@ async function dispatch(
     const upstream = await fetch(target, {
       method: request.method,
       headers,
-      body:
-        mutation && request.body
-          ? new TextDecoder().decode(
-              (await readBoundedBody(request, 65_536, 15_000, true)).bytes,
-            )
-          : undefined,
+      body: bodyToSend,
       signal: accountApiSignal(),
     });
     const upstreamRequestId = upstream.headers.get('x-request-id') ?? id;
@@ -193,6 +207,7 @@ async function dispatch(
             upstream.headers.get('content-type') ?? 'application/octet-stream',
           'Content-Disposition':
             upstream.headers.get('content-disposition') ?? 'attachment',
+          'Content-Security-Policy': "sandbox; default-src 'none'",
           'X-Content-Type-Options':
             upstream.headers.get('x-content-type-options') ?? 'nosniff',
           'X-Request-Id': upstreamRequestId,

@@ -17,38 +17,17 @@ import {
   type ResourceError,
 } from '../resources/admin-resource-utils';
 
-type Plan = {
-  plan_id: string;
-  code: string;
-  name: string;
-  kind: 'free' | 'paid';
-  status: 'active' | 'archived';
-};
-
-type SubscriptionConfig = {
+type CommercePolicy = {
   platform_id: string;
-  paid_plan_id: string | null;
-  paid_plan_code: string | null;
-  paid_plan_name: string | null;
-  paid_plan_status: 'active' | 'archived' | null;
   purchases_paused: boolean;
-  monthly_enabled: boolean;
-  yearly_enabled: boolean;
-  lifetime_enabled: boolean;
   subscription_copy_override: string | null;
   row_version: number;
-  preflight_blocked_reason:
-    | 'active_or_future_grant'
-    | 'redeemable_old_plan_batch'
-    | null;
-  preflight_blocking_count: number;
 };
 
 type Props = { platformId: string; platformStatus: string };
 
 export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
-  const [config, setConfig] = useState<SubscriptionConfig | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [config, setConfig] = useState<CommercePolicy | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [unknownOutcome, setUnknownOutcome] = useState(false);
@@ -60,36 +39,24 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
       if (!preserveMessage) setMessage(null);
       setUnknownOutcome(false);
       try {
-        const [configResponse, plansResponse] = await Promise.all([
-          adminAuthSession.request(
-            resourcePath(platformId, '/subscription-config'),
-            { cache: 'no-store' },
-          ),
-          adminAuthSession.request(resourcePath(platformId, '/plans'), {
-            cache: 'no-store',
-          }),
-        ]);
+        const configResponse = await adminAuthSession.request(
+          resourcePath(platformId, '/commerce/policy'),
+          { cache: 'no-store' },
+        );
         const configPayload =
-          await readApiPayload<SubscriptionConfig>(configResponse);
-        const plansPayload = await readApiPayload<Plan[]>(plansResponse);
+          await readApiPayload<CommercePolicy>(configResponse);
         if (!configResponse.ok) {
           setConfig(null);
-          setMessage(resourceError(configResponse, configPayload, '订阅配置'));
-          return;
-        }
-        if (!plansResponse.ok) {
-          setConfig(configPayload?.data ?? null);
-          setMessage(resourceError(plansResponse, plansPayload, 'Plan 列表'));
+          setMessage(resourceError(configResponse, configPayload, '商业策略'));
           return;
         }
         setConfig(configPayload?.data ?? null);
-        setPlans(Array.isArray(plansPayload?.data) ? plansPayload.data : []);
         if (!configPayload?.data) {
-          setMessage(caughtResourceError('订阅配置', '服务端返回了空配置。'));
+          setMessage(caughtResourceError('商业策略', '服务端返回了空策略。'));
         }
       } catch {
         setConfig(null);
-        setMessage(caughtResourceError('订阅配置'));
+        setMessage(caughtResourceError('商业策略'));
       } finally {
         setLoading(false);
       }
@@ -109,7 +76,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
     const epoch = adminAuthSession.getEpoch();
     try {
       const response = await adminAuthSession.request(
-        resourcePath(platformId, '/subscription-config'),
+        resourcePath(platformId, '/commerce/policy'),
         {
           method: 'PATCH',
           headers: {
@@ -117,28 +84,24 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
             'If-Match': `W/"${config.row_version}"`,
           },
           body: JSON.stringify({
-            paid_plan_id: config.paid_plan_id,
             purchases_paused: config.purchases_paused,
-            monthly_enabled: config.monthly_enabled,
-            yearly_enabled: config.yearly_enabled,
-            lifetime_enabled: config.lifetime_enabled,
             subscription_copy_override: config.subscription_copy_override,
-            reason: 'Admin 更新订阅商品配置',
+            reason: 'Admin 更新 Commerce policy',
           }),
         },
         { replay: 'never' },
       );
-      const payload = await readApiPayload<SubscriptionConfig>(response);
+      const payload = await readApiPayload<CommercePolicy>(response);
       if (!adminAuthSession.isCurrentEpoch(epoch)) return;
       if (!response.ok) {
-        setMessage(resourceError(response, payload, '订阅配置更新'));
+        setMessage(resourceError(response, payload, '商业策略更新'));
         return;
       }
       if (payload?.data) setConfig(payload.data);
       setSaving(false);
       setMessage({
-        title: '订阅配置已保存',
-        description: '服务端已保存；页面正在后台刷新最新配置。',
+        title: '商业策略已保存',
+        description: '购买开关和展示文案已保存；页面正在后台刷新最新策略。',
         requestId: response.headers.get('x-request-id'),
         technicalDetail: null,
       });
@@ -146,7 +109,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
     } catch {
       setUnknownOutcome(true);
       setMessage({
-        title: '订阅配置结果待确认',
+        title: '商业策略结果待确认',
         description:
           '网络在服务端响应前中断。请先重新读取并核对版本号，不要立即重复提交。',
         requestId: null,
@@ -160,7 +123,9 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
   if (loading) {
     return (
       <section className="panel" data-test="subscription-config-loading">
-        <p className="text-sm text-muted-foreground">正在读取订阅商品配置…</p>
+        <p className="text-sm text-muted-foreground">
+          正在读取 Commerce policy…
+        </p>
       </section>
     );
   }
@@ -170,12 +135,13 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Subscription catalog
+            Commerce policy
           </p>
-          <h2 className="mt-2">订阅商品配置</h2>
+          <h2 className="mt-2">商业购买策略</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            商品目录固定为 Free、Monthly、Yearly、Lifetime。Lifetime 是有限的 99
-            年权益；当前没有渠道映射时，商品仍会明确显示不可购买。
+            Offer / Price / Provider Mapping
+            决定真实销售目录；这里仅控制是否暂停新购买，
+            以及订阅页展示文案，不再维护第二套 fixed-product 开关。
           </p>
         </div>
         {config ? (
@@ -205,17 +171,6 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
               </AlertDescription>
             </Alert>
           ) : null}
-          {config.preflight_blocked_reason ? (
-            <Alert variant="destructive">
-              <AlertTitle>当前映射存在切换阻塞</AlertTitle>
-              <AlertDescription>
-                {config.preflight_blocked_reason === 'active_or_future_grant'
-                  ? '存在当前或未来生效的旧 Plan 权益，不能静默重映射。'
-                  : '存在仍可兑换的旧 Plan 批次，不能静默重映射。'}{' '}
-                阻塞数量：{config.preflight_blocking_count}。
-              </AlertDescription>
-            </Alert>
-          ) : null}
           {config.purchases_paused ? (
             <Alert>
               <AlertTitle>新购买已暂停</AlertTitle>
@@ -226,90 +181,12 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
             </Alert>
           ) : null}
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="grid gap-2 md:col-span-2">
-              <Label htmlFor="paid-plan">标准付费 Plan</Label>
-              <select
-                id="paid-plan"
-                className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
-                value={config.paid_plan_id ?? ''}
-                onChange={(event) =>
-                  setConfig((current) =>
-                    current
-                      ? {
-                          ...current,
-                          paid_plan_id: event.target.value || null,
-                          paid_plan_code:
-                            plans.find(
-                              (plan) => plan.plan_id === event.target.value,
-                            )?.code ?? null,
-                          paid_plan_name:
-                            plans.find(
-                              (plan) => plan.plan_id === event.target.value,
-                            )?.name ?? null,
-                        }
-                      : current,
-                  )
-                }
-              >
-                <option value="">未配置（付费商品关闭）</option>
-                {config.paid_plan_id &&
-                config.paid_plan_status === 'archived' &&
-                !plans.some((plan) => plan.plan_id === config.paid_plan_id) ? (
-                  <option value={config.paid_plan_id}>
-                    {config.paid_plan_code ?? '已归档 Plan'}（已归档）
-                  </option>
-                ) : null}
-                {plans
-                  .filter((plan) => plan.kind === 'paid')
-                  .map((plan) => (
-                    <option
-                      key={plan.plan_id}
-                      value={plan.plan_id}
-                      disabled={plan.status !== 'active'}
-                    >
-                      {plan.name}（{plan.code}）
-                      {plan.status === 'archived' ? '（已归档）' : ''}
-                    </option>
-                  ))}
-              </select>
-              <p className="text-xs text-muted-foreground">
-                只能选择当前平台的 active paid
-                Plan；切换会执行权益和旧批次前置检查。
-              </p>
-            </div>
             <Toggle
               label="暂停新购买"
               checked={config.purchases_paused}
               onChange={(checked) =>
                 setConfig((current) =>
                   current ? { ...current, purchases_paused: checked } : current,
-                )
-              }
-            />
-            <Toggle
-              label="Monthly"
-              checked={config.monthly_enabled}
-              onChange={(checked) =>
-                setConfig((current) =>
-                  current ? { ...current, monthly_enabled: checked } : current,
-                )
-              }
-            />
-            <Toggle
-              label="Yearly"
-              checked={config.yearly_enabled}
-              onChange={(checked) =>
-                setConfig((current) =>
-                  current ? { ...current, yearly_enabled: checked } : current,
-                )
-              }
-            />
-            <Toggle
-              label="Lifetime（99 年）"
-              checked={config.lifetime_enabled}
-              onChange={(checked) =>
-                setConfig((current) =>
-                  current ? { ...current, lifetime_enabled: checked } : current,
                 )
               }
             />
@@ -341,7 +218,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={() => void save()} disabled={saving}>
-              {saving ? '保存中…' : '保存订阅配置'}
+              {saving ? '保存中…' : '保存商业策略'}
             </Button>
             <Button
               variant="outline"
@@ -357,7 +234,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
         </>
       ) : (
         <Button variant="outline" onClick={() => void load()}>
-          重新读取订阅配置
+          重新读取商业策略
         </Button>
       )}
     </section>

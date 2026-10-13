@@ -44,14 +44,14 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.admin_platform_update | Admin | Admin ctx+目标+patch → 平台；platform UPDATE锁 |
 | private.admin_account_transition | Admin | Admin ctx+目标+action+reason → suspend/restore/close |
 | private.admin_platform_key_create / admin_platform_key_confirm_deployment / admin_platform_key_revoke | Admin | Admin ctx+hash/version等 → key metadata；明文不入库；撤旧前必须持久确认新Key已部署 |
-| private.entitlement_read | Entitlements/Account | ctx → 标准权益；边界同步重算 |
+| private.entitlement_current_read | Entitlements/Account | ctx → 标准权益 + 可选 Offer attribution；边界同步重算 |
 | private.entitlement_apply | Entitlements 内部 | 已授权操作+source/operationId → Grant/Event/Projection；不授予executor直接调用 |
 | private.redeem_subscription_code | Entitlements/Account | ctx+规范化码HMAC+版本+idem → 原子结果 |
 | private.admin_entitlement_command | Entitlements/Admin | Admin ctx+目标+grant/revoke/pause/resume/correct+operation_id → 统一领域结果 |
-| private.admin_plan_upsert | Entitlements/Admin | Admin ctx+平台+计划字段+默认Free动作 → 计划生命周期与默认计划原子更新 |
+| private.admin_plan_save / admin_plan_command | Entitlements/Admin | Admin ctx+平台 → metadata save；archive/default lifecycle 使用 recent-MFA + reason + operation_id 幂等命令 |
 | private.platform_key_verify_presented | Account | key id+HMAC+版本 → active platform/key metadata；只授予account_executor，不开放Key表读取 |
-| private.admin_plan_list / admin_batch_list / admin_subscription_read | Entitlements/Admin | Admin ctx+目标范围 → 只读计划、兑换批次、订阅投影；不授予基础表读取 |
-| private.admin_billing_order_list / admin_billing_order_read / admin_billing_metrics / admin_billing_provider_product_list | Billing/Admin | Admin ctx → Provider 事实、订单结算状态、积压/对账指标和商品映射只读投影；不开放 Billing 表读取 |
+| private.admin_plan_list / admin_redemption_campaign_list / admin_subscription_read | Entitlements/Admin | Admin ctx+目标范围 → 只读计划、兑换 Campaign、订阅投影；不授予基础表读取 |
+| private.admin_billing_order_list / admin_billing_order_read / admin_billing_metrics | Billing/Admin | Admin ctx → Provider 事实、订单结算状态和积压/对账指标；Provider Mapping 只通过平台级 Commerce read model 暴露 |
 | private.admin_billing_order_requery | Billing/Admin | Admin ctx+订单+operation_id+expected_version+reason → 幂等 reconciliation job 与审计；不直接查询 Provider |
 | private.admin_billing_order_resolve | Billing/Admin | Admin ctx+订单+operation_id+expected_version+decision+reason → 受控最终结案与审计；不冒充退款 API 或绕过 `entitlement_apply` |
 | private.admin_step_up_valid | Admin | user+session+proof → 5分钟内有效性；敏感写操作必须通过统一包装 |

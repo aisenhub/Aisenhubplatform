@@ -1,12 +1,14 @@
 begin;
 
-select plan(16);
+select plan(18);
 
 select has_table('private', 'user_recent_auth_proofs', 'recent proof storage exists');
 select has_function('private', 'account_activate', array['private.account_context'], 'account_activate exists');
 select has_function('private', 'account_close', array['private.account_context', 'uuid'], 'account_close exists');
 select has_function('private', 'identity_delete_request', array['private.account_context', 'uuid'], 'identity delete request exists');
-select has_function('private', 'admin_account_transition', array['private.admin_context', 'uuid', 'uuid', 'text'], 'Admin account transition exists');
+select has_function('private', 'admin_account_transition', array['private.admin_context', 'uuid', 'uuid', 'text', 'text'], 'Canonical Admin account transition exists');
+select ok(to_regprocedure('private.admin_account_transition(private.admin_context, uuid, uuid, text)') is null, 'Legacy Admin account transition is retired');
+select ok(to_regprocedure('private.admin_account_transition_v2(private.admin_context, uuid, uuid, text, text)') is null, 'Versioned Admin account transition is retired');
 
 select ok(
   exists (select 1 from pg_constraint where conrelid = 'private.user_recent_auth_proofs'::regclass and (pg_get_constraintdef(oid) like '%5 minutes%' or pg_get_constraintdef(oid) like '%00:05:00%')),
@@ -25,7 +27,7 @@ select ok(
   'account executor can request deletion through wrapper'
 );
 select ok(
-  has_function_privilege('admin_executor', 'private.admin_account_transition(private.admin_context, uuid, uuid, text)', 'execute'),
+  has_function_privilege('admin_executor', 'private.admin_account_transition(private.admin_context, uuid, uuid, text, text)', 'execute'),
   'Admin executor can transition account through wrapper'
 );
 select ok(

@@ -673,6 +673,10 @@ export function mapSqlFault(error: unknown): ApiFault {
   if (message.includes('file_busy')) return new ApiFault(409, 'FILE_BUSY');
   if (message.includes('file_not_downloadable'))
     return new ApiFault(409, 'FILE_NOT_DOWNLOADABLE');
+  if (message.includes('invalid_account_transition'))
+    return new ApiFault(409, 'ACCOUNT_TRANSITION_CONFLICT');
+  if (message.includes('idempotency_conflict'))
+    return new ApiFault(409, 'IDEMPOTENCY_CONFLICT');
   if (message.includes('operation_in_progress'))
     return new ApiFault(409, 'OPERATION_IN_PROGRESS');
   if (message.includes('intent_expired'))
@@ -901,50 +905,6 @@ export function parseBillingOrderCursor(
   }
 }
 
-export function fileDto(row: Row): Record<string, unknown> {
-  return {
-    file_id: uuidValue(row.file_id ?? row.id),
-    status: stringValue(row.status) ?? 'pending',
-    size: Number(row.actual_size_bytes ?? row.reserved_bytes ?? 0),
-    reserved_bytes: Number(row.reserved_bytes ?? 0),
-    reserved_count: Number(row.reserved_count ?? 0),
-    actual_size_bytes:
-      row.actual_size_bytes === null || row.actual_size_bytes === undefined
-        ? null
-        : Number(row.actual_size_bytes),
-    original_name: stringValue(row.original_name),
-    content_type: stringValue(row.mime_type) ?? 'application/octet-stream',
-    created_at: isoDate(row.created_at) ?? new Date(0).toISOString(),
-    updated_at: isoDate(row.updated_at) ?? new Date(0).toISOString(),
-    cancel_requested_at: isoDate(row.cancel_requested_at),
-    write_outcome: stringValue(row.write_outcome) ?? 'not_started',
-  };
-}
-
-export function fileBudgetDto(row: Row): Record<string, unknown> {
-  return {
-    platform_id: uuidValue(row.platform_id),
-    enabled: row.enabled === true,
-    max_file_bytes: Number(row.max_file_bytes ?? 0),
-    max_files: Number(row.max_files ?? 0),
-    max_total_bytes: Number(row.max_total_bytes ?? 0),
-    reserved_bytes: Number(row.reserved_bytes ?? 0),
-    reserved_count: Number(row.reserved_count ?? 0),
-    available_bytes: Number(row.available_bytes ?? 0),
-    available_count: Number(row.available_count ?? 0),
-    over_quota: row.over_quota === true,
-    updated_at: isoDate(row.updated_at),
-  };
-}
-
-export function adminFileDto(row: Row): Record<string, unknown> {
-  return {
-    ...fileDto(row),
-    platform_id: uuidValue(row.platform_id),
-    platform_account_id: uuidValue(row.platform_account_id),
-  };
-}
-
 export function adminAuditDto(row: Row): Record<string, unknown> {
   return {
     id: uuidValue(row.audit_id ?? row.id),
@@ -992,7 +952,7 @@ export async function sha256Hex(bytes: Uint8Array): Promise<string> {
 
 export function entitlementDto(row: Row) {
   const code = stringValue(row.code);
-  const subscriptionProductCode = stringValue(row.subscription_product_code);
+  const offerCode = stringValue(row.offer_code);
   return {
     effective_status: stringValue(row.effective_status) ?? 'none',
     entitlement_kind: stringValue(row.entitlement_kind) ?? 'none',
@@ -1005,12 +965,10 @@ export function entitlementDto(row: Row) {
           features: objectValue(row.features),
         }
       : null,
-    subscription_product: subscriptionProductCode
+    offer: offerCode
       ? {
-          code: subscriptionProductCode,
-          name:
-            stringValue(row.subscription_product_name) ??
-            subscriptionProductCode,
+          code: offerCode,
+          name: stringValue(row.offer_name) ?? offerCode,
         }
       : null,
     features: objectValue(row.features),

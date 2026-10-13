@@ -3,6 +3,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 
 import { handleMaintenanceRequest } from './index.ts';
+import { authAdminAdapter } from './core.ts';
 
 const fileId = '00000000-0000-4000-8000-000000000001';
 const feedbackAttachmentId = '00000000-0000-4000-8000-000000000007';
@@ -1351,4 +1352,31 @@ Deno.test('maintenance evaluates and delivers billing observability alerts', asy
   assertEquals((await response.json()).data.receiver_status, 'delivered');
   assertEquals(delivered, ['billing.jobs.expired_lease']);
   assertEquals(alertEvents, ['role', 'evaluate', 'role', 'delivery']);
+});
+
+Deno.test('authAdminAdapter treats 404 as idempotent deletion success', async () => {
+  const previousUrl = Deno.env.get('SUPABASE_URL');
+  const previousKey = Deno.env.get('SUPABASE_SECRET_KEY');
+  const originalFetch = globalThis.fetch;
+  try {
+    Deno.env.set('SUPABASE_URL', 'http://localhost:54321');
+    Deno.env.set('SUPABASE_SECRET_KEY', 'test-key');
+    let fetchedUrl = '';
+    globalThis.fetch = (input: string | URL | Request) => {
+      fetchedUrl = String(input);
+      return Promise.resolve(new Response('User not found', { status: 404 }));
+    };
+    const adapter = authAdminAdapter();
+    await adapter.deleteUser('user-to-delete');
+    assertEquals(
+      fetchedUrl,
+      'http://localhost:54321/auth/v1/admin/users/user-to-delete',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousUrl === undefined) Deno.env.delete('SUPABASE_URL');
+    else Deno.env.set('SUPABASE_URL', previousUrl);
+    if (previousKey === undefined) Deno.env.delete('SUPABASE_SECRET_KEY');
+    else Deno.env.set('SUPABASE_SECRET_KEY', previousKey);
+  }
 });

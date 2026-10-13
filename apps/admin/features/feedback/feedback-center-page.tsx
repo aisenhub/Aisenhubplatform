@@ -165,6 +165,8 @@ export function FeedbackCenterPage() {
   const [deleteOperationId, setDeleteOperationId] = useState<string | null>(
     null,
   );
+  const [deleteFeedbackIds, setDeleteFeedbackIds] = useState<string[]>([]);
+  const [deleteReason, setDeleteReason] = useState<string | null>(null);
   const listGeneration = useRef(0);
   const detailGeneration = useRef(0);
 
@@ -386,13 +388,16 @@ export function FeedbackCenterPage() {
   function openDelete() {
     if (!selected.size) return;
     setDeleteOperationId(crypto.randomUUID());
+    setDeleteFeedbackIds([...selected].sort());
+    setDeleteReason(null);
     setDeleteState('confirm_required');
     setDeleteError(null);
     setDeleteOpen(true);
   }
 
   async function executeDelete(reason: string) {
-    if (!selected.size || !deleteOperationId) return;
+    if (!deleteFeedbackIds.length || !deleteOperationId) return;
+    setDeleteReason(reason);
     setDeleteState('pending');
     setDeleteError(null);
     try {
@@ -402,7 +407,7 @@ export function FeedbackCenterPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            feedback_ids: [...selected],
+            feedback_ids: deleteFeedbackIds,
             reason,
             operation_id: deleteOperationId,
           }),
@@ -421,11 +426,12 @@ export function FeedbackCenterPage() {
       }
       setDeleteState('accepted');
       setSelected(new Set());
-      if (detailId && selected.has(detailId)) {
+      if (detailId && deleteFeedbackIds.includes(detailId)) {
         setDetailId(null);
         setDetail(null);
         setDetailState('idle');
       }
+      setDeleteReason(null);
       await loadList();
     } catch (caught) {
       if (caught instanceof SessionRetryRequiredError) {
@@ -438,15 +444,8 @@ export function FeedbackCenterPage() {
   }
 
   async function checkDeleteOutcome() {
-    await loadList();
-    setDeleteState('failure');
-    setDeleteError({
-      title: '已重新读取权威状态',
-      description:
-        '请根据最新列表判断原删除请求是否生效；页面不会自动重发批量删除。',
-      requestId: null,
-      technicalDetail: 'STATE_RELOADED',
-    });
+    if (!deleteReason) return;
+    await executeDelete(deleteReason);
   }
 
   return (

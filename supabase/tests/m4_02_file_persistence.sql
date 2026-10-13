@@ -1,6 +1,6 @@
 begin;
 
-select plan(28);
+select plan(26);
 
 select has_table('public', 'platform_file_policies', 'file policy table exists');
 select has_table('public', 'platform_config_files', 'config file table exists');
@@ -45,20 +45,6 @@ select ok(
   'config files use a same-platform account foreign key'
 );
 select ok(
-  exists (
-    select 1 from pg_constraint
-    where conrelid = 'public.platform_config_files'::regclass
-      and contype = 'f'
-      and confrelid = 'public.platform_config_files'::regclass
-      and pg_get_constraintdef(oid) like '%replaces_file_id%'
-  ),
-  'replacement target uses a same-platform composite foreign key'
-);
-select ok(
-  exists (select 1 from pg_indexes where indexname = 'platform_config_files_live_replace_idx'),
-  'only one live replacement per target is indexed'
-);
-select ok(
   exists (select 1 from pg_indexes where indexname = 'file_write_attempts_unsettled_idx'),
   'only one unsettled write attempt per file is indexed'
 );
@@ -92,10 +78,10 @@ select ok(
 );
 
 select ok(
-  (select count(*) = 4 from information_schema.columns
+  (select count(*) = 3 from information_schema.columns
    where table_schema = 'public' and table_name = 'platform_file_policies'
-     and column_name in ('enabled', 'max_file_bytes', 'max_files', 'max_total_bytes')),
-  'file policy exposes the four bounded policy fields'
+     and column_name in ('enabled', 'max_file_bytes', 'max_platform_total_bytes')),
+  'storage policy exposes only enablement, object size and platform capacity'
 );
 select ok(
   (select count(*) >= 8 from information_schema.columns

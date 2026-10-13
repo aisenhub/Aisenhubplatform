@@ -294,13 +294,12 @@ await context.route('**/*', async (route) => {
     data = url.searchParams.get('q') === 'no-match' ? [] : [account];
   else if (path === `/platforms/${platformId}/accounts/${accountId}`)
     data = account;
-  else if (path === `/platforms/${platformId}/subscription-config`)
+  else if (path === `/platforms/${platformId}/commerce/policy`)
     data = {
-      paid_plan_id: null,
-      paid_plan_status: null,
-      monthly_enabled: false,
-      yearly_enabled: false,
-      lifetime_enabled: false,
+      platform_id: platformId,
+      purchases_paused: false,
+      subscription_copy_override: null,
+      row_version: 1,
     };
   else if (path === `/platforms/${platformId}/file-policy`) data = filePolicy;
   else if (path === `/platforms/${platformId}/config-resources`)

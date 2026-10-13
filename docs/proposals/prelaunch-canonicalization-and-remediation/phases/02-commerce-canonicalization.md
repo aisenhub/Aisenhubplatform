@@ -1,6 +1,6 @@
 # 阶段 02：Commerce 单轨化与高风险写修复
 
-状态：未开始
+状态：本地已完成 / 待 Git checkpoint
 
 前置：阶段 01 contract 已冻结。
 

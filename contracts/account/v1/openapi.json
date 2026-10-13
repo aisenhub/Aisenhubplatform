@@ -2636,7 +2636,7 @@
           "effective_status",
           "entitlement_kind",
           "plan",
-          "subscription_product",
+          "offer",
           "features",
           "started_at",
           "current_period_end",
@@ -2662,7 +2662,7 @@
               }
             ]
           },
-          "subscription_product": {
+          "offer": {
             "anyOf": [
               {
                 "type": "object",
@@ -2670,7 +2670,7 @@
                 "properties": {
                   "code": {
                     "type": "string",
-                    "enum": ["free", "monthly", "yearly", "lifetime"]
+                    "minLength": 1
                   },
                   "name": {
                     "type": "string"
@@ -2709,7 +2709,7 @@
             "effective_status": "none",
             "entitlement_kind": "none",
             "plan": null,
-            "subscription_product": null,
+            "offer": null,
             "features": {},
             "started_at": null,
             "current_period_end": null,

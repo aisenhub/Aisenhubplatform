@@ -124,6 +124,10 @@ export function authAdminAdapter(): AuthAdminAdapter {
         throw new Error('PROVIDER_TIMEOUT');
       }
       if (!response.ok) {
+        if (response.status === 404) {
+          await response.body?.cancel().catch(() => undefined);
+          return;
+        }
         await response.body?.cancel().catch(() => undefined);
         throw new Error(`AUTH_DELETE_FAILED_${response.status}`);
       }

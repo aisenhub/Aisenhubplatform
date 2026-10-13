@@ -1,6 +1,6 @@
 begin;
 
-select plan(43);
+select plan(44);
 
 select has_table('public','platform_commercial_offers','Commercial Offer table exists');
 select has_table('public','platform_commercial_prices','Immutable commercial Price table exists');
@@ -10,8 +10,8 @@ select ok(not has_table_privilege('admin_executor','public.platform_commercial_o
 select ok(not has_table_privilege('account_executor','public.platform_commercial_prices','select'),'Account executor has no direct Price table read');
 select has_function('private','admin_commerce_summary',array['private.admin_context','uuid','timestamp with time zone','timestamp with time zone'],'Commerce summary exists');
 select has_function('private','admin_commerce_entitlement_list',array['private.admin_context','uuid','timestamp with time zone','uuid','integer','text','text','uuid','text','timestamp with time zone','timestamp with time zone'],'Commerce entitlement list exists');
-select has_function('private','admin_redemption_campaign_list_v2',array['private.admin_context','uuid','uuid','integer','text','text','uuid','uuid','timestamp with time zone','timestamp with time zone'],'Campaign list v2 exists');
-select has_function('private','admin_redemption_campaign_codes_v2',array['private.admin_context','uuid','uuid','uuid','integer'],'Campaign code detail exists');
+select has_function('private','admin_redemption_campaign_list',array['private.admin_context','uuid','uuid','integer','text','text','uuid','uuid','timestamp with time zone','timestamp with time zone'],'Canonical Campaign list exists');
+select has_function('private','admin_redemption_campaign_codes',array['private.admin_context','uuid','uuid','uuid','integer'],'Canonical Campaign code detail exists');
 select ok(has_function_privilege('admin_executor','private.admin_commerce_summary(private.admin_context, uuid, timestamptz, timestamptz)','execute'),'Admin executor can read Commerce summary');
 select ok(not has_function_privilege('account_executor','private.admin_commerce_summary(private.admin_context, uuid, timestamptz, timestamptz)','execute'),'Account executor cannot read Admin Commerce summary');
 select ok((select prosecdef and array_to_string(proconfig,',') like 'search_path=pg_catalog%' from pg_proc where oid='private.admin_commerce_summary(private.admin_context, uuid, timestamptz, timestamptz)'::regprocedure),'Commerce summary is pinned security definer');
@@ -38,10 +38,10 @@ insert into public.plans(id,platform_id,code,name,kind,status,features) values
  ('00000000-0000-4000-8000-000000010031','00000000-0000-4000-8000-000000010020','premium','Premium','paid','active','{}'::jsonb);
 
 insert into public.platform_commercial_offers(
- id,platform_id,plan_id,code,name,term_kind,duration_value,duration_unit,status,sort_order,recommended,legacy_product_code
+ id,platform_id,plan_id,code,name,term_kind,duration_value,duration_unit,status,sort_order,recommended
 ) values
- ('00000000-0000-4000-8000-000000010040','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010030','standard-month','Standard Monthly','finite',1,'month','active',10,true,'monthly'),
- ('00000000-0000-4000-8000-000000010041','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010031','premium-year','Premium Yearly','finite',1,'year','active',20,false,null);
+ ('00000000-0000-4000-8000-000000010040','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010030','standard-month','Standard Monthly','finite',1,'month','active',10,true),
+ ('00000000-0000-4000-8000-000000010041','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010031','premium-year','Premium Yearly','finite',1,'year','active',20,false);
 insert into public.platform_commercial_prices(id,platform_id,offer_id,version,amount,currency,status,effective_from) values
  ('00000000-0000-4000-8000-000000010050','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010040',1,19.90,'CNY','active',now()-interval '1 day'),
  ('00000000-0000-4000-8000-000000010051','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010041',1,199.00,'CNY','active',now()-interval '1 day');
@@ -71,22 +71,35 @@ insert into public.subscriptions(id,platform_id,platform_account_id,plan_id,stat
 
 insert into public.billing_provider_accounts(id,provider,name,status,secret_reference)
 values('00000000-0000-4000-8000-000000010080','afdian','Commerce Fixture','disabled','fixture://commerce');
+insert into public.billing_provider_products(
+ id,provider_account_id,platform_id,commercial_price_id,external_plan_id,product_type,
+ external_sku_ids,sku_count,purchase_months,expected_show_amount,expected_total_amount,
+ currency,price_version,mapping_version,validation_status,published,enabled
+) values(
+ '00000000-0000-4000-8000-000000010084','00000000-0000-4000-8000-000000010080',
+ '00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010050',
+ 'commerce-standard-month','subscription','{}'::text[],0,1,19.90,19.90,'CNY',1,1,
+ 'verified',true,true
+);
 insert into public.billing_checkout_intents(
- id,platform_id,platform_account_id,subscription_product_id,entitlement_plan_id,product_code,
- term_kind_snapshot,duration_value_snapshot,duration_unit_snapshot,price_amount,currency,price_version,
- idempotency_key_hash,request_hash,expires_at,status,paid_at,granted_at
+ id,platform_id,platform_account_id,entitlement_plan_id,provider_account_id,provider_product_id,
+ commercial_offer_id,commercial_price_id,offer_code_snapshot,term_kind_snapshot,
+ duration_value_snapshot,duration_unit_snapshot,price_amount,currency,price_version,mapping_version,
+ custom_order_id,idempotency_key_hash,request_hash,expires_at,status,paid_at,granted_at
 ) values(
  '00000000-0000-4000-8000-000000010081','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010060',
- (select id from public.subscription_products where code='monthly'),'00000000-0000-4000-8000-000000010030','monthly',
- 'finite',1,'month',19.90,'CNY',1,decode(repeat('11',32),'hex'),decode(repeat('12',32),'hex'),now()+interval '1 hour','granted',now()-interval '4 days',now()-interval '4 days'
+ '00000000-0000-4000-8000-000000010030','00000000-0000-4000-8000-000000010080','00000000-0000-4000-8000-000000010084',
+ '00000000-0000-4000-8000-000000010040','00000000-0000-4000-8000-000000010050','standard-month',
+ 'finite',1,'month',19.90,'CNY',1,1,'commerce-summary-checkout',decode(repeat('11',32),'hex'),
+ decode(repeat('12',32),'hex'),now()+interval '1 hour','granted',now()-interval '4 days',now()-interval '4 days'
 );
 insert into public.billing_orders(
- id,provider_account_id,provider_order_no,checkout_intent_id,platform_id,platform_account_id,subscription_product_id,
+ id,provider_account_id,provider_order_no,checkout_intent_id,platform_id,platform_account_id,
  total_amount,currency,provider_status,verification_status,entitlement_status,linkage_status,resolution_status,
  resolved_at,resolution_reason,provider_paid_at,created_at,updated_at
 ) values
- ('00000000-0000-4000-8000-000000010082','00000000-0000-4000-8000-000000010080','commerce-success','00000000-0000-4000-8000-000000010081','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010060',(select id from public.subscription_products where code='monthly'),19.90,'CNY','paid','verified','granted','linked','resolved',now()-interval '4 days','settled successfully',now()-interval '4 days',now()-interval '4 days',now()-interval '4 days'),
- ('00000000-0000-4000-8000-000000010083','00000000-0000-4000-8000-000000010080','commerce-duplicate','00000000-0000-4000-8000-000000010081','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010060',(select id from public.subscription_products where code='monthly'),999.00,'CNY','paid','verified','granted','linked','resolved',now()-interval '3 days','duplicate payment closed',now()-interval '3 days',now()-interval '3 days',now()-interval '3 days');
+ ('00000000-0000-4000-8000-000000010082','00000000-0000-4000-8000-000000010080','commerce-success','00000000-0000-4000-8000-000000010081','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010060',19.90,'CNY','paid','verified','granted','linked','resolved',now()-interval '4 days','settled successfully',now()-interval '4 days',now()-interval '4 days',now()-interval '4 days'),
+ ('00000000-0000-4000-8000-000000010083','00000000-0000-4000-8000-000000010080','commerce-duplicate','00000000-0000-4000-8000-000000010081','00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010060',999.00,'CNY','paid','verified','granted','linked','resolved',now()-interval '3 days','duplicate payment closed',now()-interval '3 days',now()-interval '3 days',now()-interval '3 days');
 
 insert into public.redemption_code_batches(
  id,platform_id,plan_id,name,quantity,duration_value,duration_unit,expires_at,status,delivery_deadline,delivered_at,delivery_session_id,delivery_receipt_hmac,creation_operation_id,commercial_offer_id
@@ -132,10 +145,24 @@ select * from private.admin_commerce_entitlement_list(
  row('00000000-0000-4000-8000-000000010001','00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010132')::private.admin_context,
  '00000000-0000-4000-8000-000000010020',null,null,1,null,'active',null,null,null,null
 );
+set local role postgres;
+update public.subscriptions
+set updated_at = now() + interval '1 hour'
+where platform_account_id in (
+  '00000000-0000-4000-8000-000000010061',
+  '00000000-0000-4000-8000-000000010062'
+);
+update public.subscriptions
+set status = 'suspended'
+where platform_account_id = '00000000-0000-4000-8000-000000010061';
+update public.subscriptions
+set status = 'active'
+where platform_account_id = '00000000-0000-4000-8000-000000010061';
+set local role admin_executor;
 create temporary table entitlement_page_two on commit drop as
 select * from private.admin_commerce_entitlement_list(
  row('00000000-0000-4000-8000-000000010001','00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010133')::private.admin_context,
- '00000000-0000-4000-8000-000000010020',(select updated_at from entitlement_page_one),(select platform_account_id from entitlement_page_one),1,null,'active',null,null,null,null
+ '00000000-0000-4000-8000-000000010020',(select account_created_at from entitlement_page_one),(select platform_account_id from entitlement_page_one),1,null,'active',null,null,null,null
 );
 create temporary table redemption_entitlements on commit drop as
 select * from private.admin_commerce_entitlement_list(
@@ -143,12 +170,12 @@ select * from private.admin_commerce_entitlement_list(
  '00000000-0000-4000-8000-000000010020',null,null,20,null,'active',null,'redemption_code',null,null
 );
 create temporary table campaign_list on commit drop as
-select * from private.admin_redemption_campaign_list_v2(
+select * from private.admin_redemption_campaign_list(
  row('00000000-0000-4000-8000-000000010001','00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010135')::private.admin_context,
  '00000000-0000-4000-8000-000000010020',null,20,'Partner','active',null,'00000000-0000-4000-8000-000000010041',null,null
 );
 create temporary table campaign_codes on commit drop as
-select * from private.admin_redemption_campaign_codes_v2(
+select * from private.admin_redemption_campaign_codes(
  row('00000000-0000-4000-8000-000000010001','00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010136')::private.admin_context,
  '00000000-0000-4000-8000-000000010020','00000000-0000-4000-8000-000000010090',null,20
 );
@@ -167,15 +194,16 @@ select is((select expiring_paid_entitlement_accounts from commerce_summary),3::b
 select is((select platform_account_id from billing_entitlements),'00000000-0000-4000-8000-000000010060'::uuid,'Entitlement source filter returns the Billing account');
 select ok((select entitlement_source='billing_order' and grant_id='00000000-0000-4000-8000-000000010104'::uuid from billing_entitlements),'Winning-grant source ignores an older overlapping Admin grant');
 select is((select count(*)::integer from entitlement_page_one),1,'Entitlement list first cursor page is bounded');
-select is((select platform_account_id from entitlement_page_two),'00000000-0000-4000-8000-000000010061'::uuid,'Entitlement cursor advances by updated_at/account id');
+select is((select platform_account_id from entitlement_page_one),'00000000-0000-4000-8000-000000010062'::uuid,'Entitlement list orders by immutable account creation boundary');
+select is((select platform_account_id from entitlement_page_two),'00000000-0000-4000-8000-000000010061'::uuid,'Entitlement cursor remains stable after subscription mutation and pause/resume');
 select ok((select entitlement_source='redemption_code' and redemption_batch_id='00000000-0000-4000-8000-000000010090'::uuid and commercial_offer_id='00000000-0000-4000-8000-000000010041'::uuid from redemption_entitlements),'Redemption entitlement preserves Campaign/Offer attribution');
 select ok((select redeemed_count=1 and unused_count=1 and disabled_count=1 and redemption_rate=0.333333::numeric from campaign_list),'Campaign aggregates redeemed/unused/disabled counts and redemption rate');
 select is((select batch_id from campaign_list),'00000000-0000-4000-8000-000000010090'::uuid,'Campaign filters apply server-side before pagination');
 select is((select count(*)::integer from campaign_codes),3,'Campaign detail returns bounded code rows');
 select is((select masked_code from campaign_codes where redemption_code_id='00000000-0000-4000-8000-000000010093'),'AAA••••1111','Campaign detail exposes only masked code material');
-select ok(pg_get_functiondef('private.admin_redemption_campaign_codes_v2(private.admin_context, uuid, uuid, uuid, integer)'::regprocedure) not like '%code_hmac%','Campaign detail function never selects HMAC material');
+select ok(pg_get_functiondef('private.admin_redemption_campaign_codes(private.admin_context, uuid, uuid, uuid, integer)'::regprocedure) not like '%code_hmac%','Campaign detail function never selects HMAC material');
 select throws_ok(
- $$select * from private.admin_redemption_campaign_codes_v2(row('00000000-0000-4000-8000-000000010001','00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010137')::private.admin_context,'00000000-0000-4000-8000-000000010021','00000000-0000-4000-8000-000000010090',null,20)$$,
+ $$select * from private.admin_redemption_campaign_codes(row('00000000-0000-4000-8000-000000010001','00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010137')::private.admin_context,'00000000-0000-4000-8000-000000010021','00000000-0000-4000-8000-000000010090',null,20)$$,
  'P0002','resource_not_found','Campaign detail rejects cross-platform IDOR'
 );
 select throws_ok(
@@ -184,7 +212,7 @@ select throws_ok(
 );
 select throws_ok(
  $$select * from private.admin_commerce_entitlement_list(row('00000000-0000-4000-8000-000000010001','00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010139')::private.admin_context,'00000000-0000-4000-8000-000000010020',now(),'00000000-0000-4000-8000-000000010062',20,null,null,null,null,null,null)$$,
- 'P0002','resource_not_found','Entitlement cursor rejects a mismatched timestamp'
+ 'P0002','resource_not_found','Entitlement cursor rejects a mismatched immutable account timestamp'
 );
 
 select * from finish();

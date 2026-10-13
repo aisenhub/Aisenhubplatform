@@ -188,7 +188,7 @@ try {
   const [initial] = await asRole(
     'account_executor',
     (transaction) =>
-      transaction`select * from private.entitlement_read(${context()})`,
+      transaction`select * from private.entitlement_current_read(${context()})`,
   );
   assert(
     initial.entitlement_kind === 'free' &&
@@ -216,7 +216,7 @@ try {
   const [term] = await asRole(
     'account_executor',
     (transaction) =>
-      transaction`select * from private.entitlement_read(${context()})`,
+      transaction`select * from private.entitlement_current_read(${context()})`,
   );
   assert(
     grant.outcome === 'applied' &&
@@ -374,7 +374,7 @@ try {
   const [paused] = await asRole(
     'account_executor',
     (transaction) =>
-      transaction`select * from private.entitlement_read(${context()})`,
+      transaction`select * from private.entitlement_current_read(${context()})`,
   );
   assert(
     paused.effective_status === 'suspended' &&
@@ -390,7 +390,7 @@ try {
   const [resumed] = await asRole(
     'account_executor',
     (transaction) =>
-      transaction`select * from private.entitlement_read(${context()})`,
+      transaction`select * from private.entitlement_current_read(${context()})`,
   );
   assert(
     resumed.effective_status === 'active' && resumed.code === 'pro',
@@ -404,7 +404,7 @@ try {
   const [revoked] = await asRole(
     'account_executor',
     (transaction) =>
-      transaction`select * from private.entitlement_read(${context()})`,
+      transaction`select * from private.entitlement_current_read(${context()})`,
   );
   assert(
     revoked.entitlement_kind === 'free' && revoked.plan_id === freePlanId,
@@ -508,7 +508,7 @@ try {
   const [afterRedeem] = await asRole(
     'account_executor',
     (transaction) =>
-      transaction`select * from private.entitlement_read(${context()})`,
+      transaction`select * from private.entitlement_current_read(${context()})`,
   );
   assert(
     afterRedeem.code === 'pro' && afterRedeem.entitlement_kind === 'term',
@@ -521,7 +521,7 @@ try {
   const [replayedProjection] = await asRole(
     'account_executor',
     (transaction) =>
-      transaction`select * from private.entitlement_read(${context()})`,
+      transaction`select * from private.entitlement_current_read(${context()})`,
   );
   assert(
     replayedProjection.code === 'pro' &&

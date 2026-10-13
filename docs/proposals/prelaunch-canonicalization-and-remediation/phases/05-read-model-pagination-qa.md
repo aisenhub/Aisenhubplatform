@@ -1,6 +1,6 @@
 # 阶段 05：Read Model、Pagination 与 QA 事实统一
 
-状态：未开始
+状态：本地已完成 / 待 checkpoint
 
 前置：阶段 02、03、04。
 

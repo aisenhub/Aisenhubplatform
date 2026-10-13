@@ -29,58 +29,69 @@ insert into public.plans (id, platform_id, code, name, kind, features)
 values ('00000000-0000-4000-8000-000000000503', '00000000-0000-4000-8000-000000000502', 'paid', 'Paid', 'paid', '{}'::jsonb);
 insert into public.platform_accounts (id, platform_id, user_id, status)
 values ('00000000-0000-4000-8000-000000000504', '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000501', 'active');
-update public.platform_subscription_config
-set paid_plan_id = '00000000-0000-4000-8000-000000000503', monthly_enabled = true
-where platform_id = '00000000-0000-4000-8000-000000000502';
+insert into public.platform_commercial_offers(
+  id, platform_id, plan_id, code, name, duration_value, duration_unit, status, recommended
+) values (
+  '00000000-0000-4000-8000-000000000560','00000000-0000-4000-8000-000000000502',
+  '00000000-0000-4000-8000-000000000503','monthly','Monthly',1,'month','active',true
+);
+insert into public.platform_commercial_prices(
+  id, platform_id, offer_id, version, amount, currency, status, effective_from
+) values (
+  '00000000-0000-4000-8000-000000000561','00000000-0000-4000-8000-000000000502',
+  '00000000-0000-4000-8000-000000000560',2,9.90,'CNY','active',now()
+);
 insert into public.billing_provider_accounts (id, provider, name, status, secret_reference)
 values ('00000000-0000-4000-8000-000000000505', 'afdian', 'BILL-05 fixture', 'active', 'test-secret-reference');
 insert into public.billing_provider_products (
-  id, provider_account_id, subscription_product_id, external_plan_id, product_type,
+  id, provider_account_id, platform_id, commercial_price_id, external_plan_id, product_type,
   external_sku_ids, sku_count, purchase_months, expected_show_amount, expected_total_amount,
-  price_version, mapping_version, validation_status, published, enabled
+  currency, price_version, mapping_version, validation_status, published, enabled
 ) values (
   '00000000-0000-4000-8000-000000000506', '00000000-0000-4000-8000-000000000505',
-  (select id from public.subscription_products where code = 'monthly'), 'plan-monthly',
-  'subscription', '{}'::text[], 0, 1, 9.90, 9.90, 2, 1, 'verified', true, true
+  '00000000-0000-4000-8000-000000000502','00000000-0000-4000-8000-000000000561',
+  'plan-monthly','subscription','{}'::text[],0,1,9.90,9.90,'CNY',2,1,'verified',true,true
 );
 insert into public.billing_checkout_intents (
-  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
-  provider_account_id, provider_product_id, product_code, term_kind_snapshot,
-  duration_value_snapshot, duration_unit_snapshot, price_amount, price_version,
+  id, platform_id, platform_account_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, commercial_offer_id, commercial_price_id,
+  offer_code_snapshot, term_kind_snapshot, duration_value_snapshot, duration_unit_snapshot,
+  price_amount, currency, price_version,
   mapping_version, custom_order_id, token_key_version, token_digest,
   idempotency_key_hash, request_hash, expires_at
 ) values (
   '00000000-0000-4000-8000-000000000507', '00000000-0000-4000-8000-000000000502',
   '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'monthly'),
   '00000000-0000-4000-8000-000000000503', '00000000-0000-4000-8000-000000000505',
-  '00000000-0000-4000-8000-000000000506', 'monthly', 'finite', 1, 'month', 9.90,
-  2, 1, 'bill05-custom-order', 1, decode(repeat('ab', 32), 'hex'),
+  '00000000-0000-4000-8000-000000000506','00000000-0000-4000-8000-000000000560',
+  '00000000-0000-4000-8000-000000000561','monthly','finite',1,'month',9.90,'CNY',
+  2,1,'bill05-custom-order',1,decode(repeat('ab', 32), 'hex'),
   decode(repeat('cd', 32), 'hex'), decode(repeat('ef', 32), 'hex'), now() + interval '30 minutes'
 );
 insert into public.billing_checkout_intents (
-  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
-  provider_account_id, provider_product_id, product_code, term_kind_snapshot,
-  duration_value_snapshot, duration_unit_snapshot, price_amount, price_version,
+  id, platform_id, platform_account_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, commercial_offer_id, commercial_price_id,
+  offer_code_snapshot, term_kind_snapshot, duration_value_snapshot, duration_unit_snapshot,
+  price_amount, currency, price_version,
   mapping_version, custom_order_id, token_key_version, token_digest,
   idempotency_key_hash, request_hash, expires_at
 ) values (
   '00000000-0000-4000-8000-000000000527', '00000000-0000-4000-8000-000000000502',
   '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'monthly'),
   '00000000-0000-4000-8000-000000000503', '00000000-0000-4000-8000-000000000505',
-  '00000000-0000-4000-8000-000000000506', 'monthly', 'finite', 1, 'month', 9.90,
-  2, 1, 'bill05-missing-plan', 1, decode(repeat('78', 32), 'hex'),
+  '00000000-0000-4000-8000-000000000506','00000000-0000-4000-8000-000000000560',
+  '00000000-0000-4000-8000-000000000561','monthly','finite',1,'month',9.90,'CNY',
+  2,1,'bill05-missing-plan',1,decode(repeat('78', 32), 'hex'),
   decode(repeat('9a', 32), 'hex'), decode(repeat('bc', 32), 'hex'), now() + interval '30 minutes'
 );
 insert into public.billing_orders (
   id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
-  platform_account_id, subscription_product_id, linkage_status
+  platform_account_id, linkage_status
 ) values (
   '00000000-0000-4000-8000-000000000508', '00000000-0000-4000-8000-000000000505',
   'provider-order-1', '00000000-0000-4000-8000-000000000507',
   '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'monthly'), 'linked'
+  'linked'
 );
 insert into public.billing_processing_jobs (
   id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
@@ -111,12 +122,12 @@ select is((select count(*)::integer from public.subscription_grants where billin
 
 insert into public.billing_orders (
   id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
-  platform_account_id, subscription_product_id, linkage_status
+  platform_account_id, linkage_status
 ) values (
   '00000000-0000-4000-8000-000000000514', '00000000-0000-4000-8000-000000000505',
   'provider-order-2', '00000000-0000-4000-8000-000000000507',
   '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'monthly'), 'linked'
+  'linked'
 );
 insert into public.billing_processing_jobs (
   id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
@@ -135,12 +146,12 @@ select is((select state from public.billing_processing_jobs where id = '00000000
 
 insert into public.billing_orders (
   id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
-  platform_account_id, subscription_product_id, linkage_status
+  platform_account_id, linkage_status
 ) values (
   '00000000-0000-4000-8000-000000000518', '00000000-0000-4000-8000-000000000505',
   'provider-order-3', '00000000-0000-4000-8000-000000000507',
   '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'monthly'), 'linked'
+  'linked'
 );
 insert into public.billing_processing_jobs (
   id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
@@ -157,38 +168,52 @@ select is(
 select is((select settlement_kind from public.billing_settlements where billing_order_id = '00000000-0000-4000-8000-000000000518'), 'manual', 'contract mismatch uses manual settlement');
 select is((select state from public.billing_processing_jobs where id = '00000000-0000-4000-8000-000000000519'), 'manual_review', 'contract mismatch stops in manual review');
 
-insert into public.billing_provider_products (
-  id, provider_account_id, subscription_product_id, external_plan_id, product_type,
-  external_sku_ids, sku_count, purchase_months, expected_show_amount, expected_total_amount,
-  price_version, mapping_version, validation_status, published, enabled
+insert into public.platform_commercial_offers(
+  id, platform_id, plan_id, code, name, duration_value, duration_unit, status, recommended
 ) values (
-  '00000000-0000-4000-8000-000000000522', '00000000-0000-4000-8000-000000000505',
-  (select id from public.subscription_products where code = 'lifetime'), 'sale-plan-lifetime',
-  '1', array['sale-sku-lifetime']::text[], 1, null, 49.90, 49.90, 2, 1, 'verified', true, true
+  '00000000-0000-4000-8000-000000000562','00000000-0000-4000-8000-000000000502',
+  '00000000-0000-4000-8000-000000000503','lifetime-sale','Lifetime Sale',99,'year','active',false
+);
+insert into public.platform_commercial_prices(
+  id, platform_id, offer_id, version, amount, currency, status, effective_from
+) values (
+  '00000000-0000-4000-8000-000000000563','00000000-0000-4000-8000-000000000502',
+  '00000000-0000-4000-8000-000000000562',2,49.90,'CNY','active',now()
+);
+insert into public.billing_provider_products (
+  id, provider_account_id, platform_id, commercial_price_id, external_plan_id, product_type,
+  external_sku_ids, sku_count, purchase_months, expected_show_amount, expected_total_amount,
+  currency, price_version, mapping_version, validation_status, published, enabled
+) values (
+  '00000000-0000-4000-8000-000000000522','00000000-0000-4000-8000-000000000505',
+  '00000000-0000-4000-8000-000000000502','00000000-0000-4000-8000-000000000563',
+  'sale-plan-lifetime','1',array['sale-sku-lifetime']::text[],1,null,49.90,49.90,'CNY',2,1,
+  'verified',true,true
 );
 insert into public.billing_checkout_intents (
-  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
-  provider_account_id, provider_product_id, product_code, term_kind_snapshot,
-  duration_value_snapshot, duration_unit_snapshot, price_amount, price_version,
+  id, platform_id, platform_account_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, commercial_offer_id, commercial_price_id,
+  offer_code_snapshot, term_kind_snapshot, duration_value_snapshot, duration_unit_snapshot,
+  price_amount, currency, price_version,
   mapping_version, custom_order_id, token_key_version, token_digest,
   idempotency_key_hash, request_hash, expires_at
 ) values (
   '00000000-0000-4000-8000-000000000523', '00000000-0000-4000-8000-000000000502',
   '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'lifetime'),
   '00000000-0000-4000-8000-000000000503', '00000000-0000-4000-8000-000000000505',
-  '00000000-0000-4000-8000-000000000522', 'lifetime', 'finite', 99, 'year', 49.90,
-  2, 1, 'bill05-sale-custom-order', 1, decode(repeat('12', 32), 'hex'),
+  '00000000-0000-4000-8000-000000000522','00000000-0000-4000-8000-000000000562',
+  '00000000-0000-4000-8000-000000000563','lifetime-sale','finite',99,'year',49.90,'CNY',
+  2,1,'bill05-sale-custom-order',1,decode(repeat('12', 32), 'hex'),
   decode(repeat('34', 32), 'hex'), decode(repeat('56', 32), 'hex'), now() + interval '30 minutes'
 );
 insert into public.billing_orders (
   id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
-  platform_account_id, subscription_product_id, linkage_status
+  platform_account_id, linkage_status
 ) values (
   '00000000-0000-4000-8000-000000000524', '00000000-0000-4000-8000-000000000505',
   'provider-sale-order', '00000000-0000-4000-8000-000000000523',
   '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'lifetime'), 'linked'
+  'linked'
 );
 insert into public.billing_processing_jobs (
   id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
@@ -210,12 +235,12 @@ select is((select count(*)::integer from public.subscription_grants where billin
 
 insert into public.billing_orders (
   id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
-  platform_account_id, subscription_product_id, linkage_status
+  platform_account_id, linkage_status
 ) values (
   '00000000-0000-4000-8000-000000000528', '00000000-0000-4000-8000-000000000505',
   'provider-missing-plan', '00000000-0000-4000-8000-000000000527',
   '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'monthly'), 'linked'
+  'linked'
 );
 insert into public.billing_processing_jobs (
   id, job_kind, billing_order_id, state, attempts, lease_owner, lease_until, fence
@@ -235,12 +260,12 @@ select is((select state from public.billing_processing_jobs where id = '00000000
 
 insert into public.billing_orders (
   id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
-  platform_account_id, subscription_product_id, linkage_status
+  platform_account_id, linkage_status
 ) values (
   '00000000-0000-4000-8000-000000000541', '00000000-0000-4000-8000-000000000505',
   'provider-order-scope-check', '00000000-0000-4000-8000-000000000507',
   '00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000504',
-  (select id from public.subscription_products where code = 'monthly'), 'linked'
+  'linked'
 );
 select throws_ok(
   $$insert into public.billing_settlements (
@@ -311,16 +336,17 @@ select is(
 select is((select linkage_status from public.billing_orders where id = '00000000-0000-4000-8000-000000000543'), 'unlinked', 'manual settlement keeps the order unlinked during a link race');
 
 insert into public.billing_checkout_intents (
-  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
-  provider_account_id, provider_product_id, product_code, term_kind_snapshot,
+  id, platform_id, platform_account_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, commercial_offer_id, commercial_price_id,
+  offer_code_snapshot, term_kind_snapshot,
   duration_value_snapshot, duration_unit_snapshot, price_amount, currency,
   price_version, mapping_version, status, token_key_version, token_digest,
   idempotency_key_hash, request_hash, expires_at, custom_order_id
 )
 select
   '00000000-0000-4000-8000-000000000553', platform_id, platform_account_id,
-  subscription_product_id, entitlement_plan_id, provider_account_id,
-  provider_product_id, product_code, term_kind_snapshot, duration_value_snapshot,
+  entitlement_plan_id, provider_account_id, provider_product_id,
+  commercial_offer_id, commercial_price_id, offer_code_snapshot, term_kind_snapshot, duration_value_snapshot,
   duration_unit_snapshot, price_amount, currency, price_version, mapping_version,
   'pending', token_key_version, decode(repeat('11', 32), 'hex'),
   decode(repeat('22', 32), 'hex'), decode(repeat('33', 32), 'hex'), expires_at,

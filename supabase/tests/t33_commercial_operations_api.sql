@@ -1,20 +1,20 @@
 begin;
 
-select plan(21);
+select plan(20);
 
 select has_function(
   'private','commerce_offers_list',array['uuid','uuid'],
   'Offer-aware consumer catalog wrapper exists'
 );
 select has_function(
-  'private','subscription_checkout_create_v2',
-  array['private.account_context','uuid','text','uuid','text','smallint','bytea'],
-  'Offer-aware checkout create wrapper exists'
+  'private','subscription_checkout_create',
+  array['private.account_context','uuid','uuid','text','smallint','bytea'],
+  'Canonical Offer checkout create wrapper exists'
 );
 select ok(
   has_function_privilege(
     'account_executor',
-    'private.subscription_checkout_create_v2(private.account_context, uuid, text, uuid, text, smallint, bytea)',
+    'private.subscription_checkout_create(private.account_context, uuid, uuid, text, smallint, bytea)',
     'execute'
   ),
   'account executor can create Offer-aware Checkouts'
@@ -22,7 +22,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'authenticated',
-    'private.subscription_checkout_create_v2(private.account_context, uuid, text, uuid, text, smallint, bytea)',
+    'private.subscription_checkout_create(private.account_context, uuid, uuid, text, smallint, bytea)',
     'execute'
   ),
   'authenticated cannot bypass the account executor boundary'
@@ -78,13 +78,13 @@ values(
   '00000000-0000-4000-8000-000000011030','afdian','Commerce API Provider','active','fixture://commerce-api'
 );
 insert into public.billing_provider_products(
-  id,provider_account_id,subscription_product_id,platform_id,commercial_price_id,
+  id,provider_account_id,platform_id,commercial_price_id,
   external_plan_id,product_type,external_sku_ids,sku_count,purchase_months,
   expected_show_amount,expected_total_amount,currency,price_version,mapping_version,
   validation_status,published,enabled
 ) values(
   '00000000-0000-4000-8000-000000011031',
-  '00000000-0000-4000-8000-000000011030',null,
+  '00000000-0000-4000-8000-000000011030',
   '00000000-0000-4000-8000-000000011010',
   '00000000-0000-4000-8000-000000011021',
   'afdian-pro-7d','plan','{}'::text[],0,null,49.90,49.90,'CNY',1,1,
@@ -98,7 +98,7 @@ select * from private.commerce_offers_list(
   '00000000-0000-4000-8000-000000011013'
 );
 create temporary table offer_checkout on commit drop as
-select * from private.subscription_checkout_create_v2(
+select * from private.subscription_checkout_create(
   row(
     '00000000-0000-4000-8000-000000011001',
     '00000000-0000-4000-8000-000000011002',
@@ -106,12 +106,12 @@ select * from private.subscription_checkout_create_v2(
     '00000000-0000-4000-8000-000000011013',
     '00000000-0000-4000-8000-000000011040'
   )::private.account_context,
-  '00000000-0000-4000-8000-000000011041'::uuid,null::text,
+  '00000000-0000-4000-8000-000000011041'::uuid,
   '00000000-0000-4000-8000-000000011020'::uuid,'offer-checkout-1'::text,1::smallint,
   decode(repeat('ab',32),'hex')
 );
 create temporary table offer_checkout_replay on commit drop as
-select * from private.subscription_checkout_create_v2(
+select * from private.subscription_checkout_create(
   row(
     '00000000-0000-4000-8000-000000011001',
     '00000000-0000-4000-8000-000000011002',
@@ -119,7 +119,7 @@ select * from private.subscription_checkout_create_v2(
     '00000000-0000-4000-8000-000000011013',
     '00000000-0000-4000-8000-000000011042'
   )::private.account_context,
-  '00000000-0000-4000-8000-000000011043'::uuid,null::text,
+  '00000000-0000-4000-8000-000000011043'::uuid,
   '00000000-0000-4000-8000-000000011020'::uuid,'offer-checkout-1'::text,1::smallint,
   decode(repeat('cd',32),'hex')
 );
@@ -130,8 +130,8 @@ select ok((select purchasable and reason='ready' from commerce_catalog),'Offer i
 select is((select price_amount from commerce_catalog),49.90::numeric,'Offer catalog price is server-side Price fact');
 select is((select duration_unit from commerce_catalog),'day','Offer catalog supports finite day terms');
 select is((select checkout_id from offer_checkout),'00000000-0000-4000-8000-000000011041'::uuid,'Offer checkout creates the requested durable Checkout id');
-select is((select product_code from offer_checkout),null::text,'Non-legacy Offer Checkout has no fake product_code');
 select is((select offer_id from offer_checkout),'00000000-0000-4000-8000-000000011020'::uuid,'Checkout snapshots the Offer id');
+select is((select offer_code from offer_checkout),'pro-7d'::text,'Checkout returns the canonical Offer code');
 select is((select plan_id from offer_checkout),'00000000-0000-4000-8000-000000011011'::uuid,'Checkout snapshots the entitlement Plan');
 select is((select price_amount from offer_checkout),49.90::numeric,'Checkout price comes from immutable server Price');
 select is((select duration_unit from offer_checkout),'day','Checkout snapshots the Offer term rather than legacy product term');
@@ -144,22 +144,7 @@ select throws_ok(
   'P0001','checkout_snapshot_immutable','commercial Checkout snapshot is immutable after creation'
 );
 select throws_ok(
-  $$select * from private.subscription_checkout_create_v2(
-    row(
-      '00000000-0000-4000-8000-000000011001',
-      '00000000-0000-4000-8000-000000011002',
-      '00000000-0000-4000-8000-000000011010',
-      '00000000-0000-4000-8000-000000011013',
-      '00000000-0000-4000-8000-000000011044'
-    )::private.account_context,
-    '00000000-0000-4000-8000-000000011045'::uuid,'monthly'::text,
-    '00000000-0000-4000-8000-000000011020'::uuid,'offer-checkout-conflict'::text,1::smallint,
-    decode(repeat('ef',32),'hex')
-  )$$,
-  '22023','invalid_input','checkout rejects product_code and offer_id together'
-);
-select throws_ok(
-  $$select * from private.subscription_checkout_create_v2(
+  $$select * from private.subscription_checkout_create(
     row(
       '00000000-0000-4000-8000-000000011001',
       '00000000-0000-4000-8000-000000011002',
@@ -167,10 +152,10 @@ select throws_ok(
       '00000000-0000-4000-8000-000000011013',
       '00000000-0000-4000-8000-000000011046'
     )::private.account_context,
-    '00000000-0000-4000-8000-000000011047'::uuid,null::text,null::uuid,'offer-checkout-missing'::text,1::smallint,
+    '00000000-0000-4000-8000-000000011047'::uuid,null::uuid,'offer-checkout-missing'::text,1::smallint,
     decode(repeat('12',32),'hex')
   )$$,
-  '22023','invalid_input','checkout requires exactly one catalog selector'
+  '22023','invalid_input','checkout requires a canonical Offer selector'
 );
 
 select * from finish();
