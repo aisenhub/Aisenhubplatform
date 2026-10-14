@@ -1404,11 +1404,11 @@ Deno.test('maintenance evaluates and delivers billing observability alerts', asy
 
 Deno.test('authAdminAdapter treats 404 as idempotent deletion success', async () => {
   const previousUrl = Deno.env.get('SUPABASE_URL');
-  const previousKey = Deno.env.get('SUPABASE_SECRET_KEY');
+  const previousKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const originalFetch = globalThis.fetch;
   try {
     Deno.env.set('SUPABASE_URL', 'http://localhost:54321');
-    Deno.env.set('SUPABASE_SECRET_KEY', 'test-key');
+    Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', 'test-key');
     let fetchedUrl = '';
     globalThis.fetch = (input: string | URL | Request) => {
       fetchedUrl = String(input);
@@ -1424,7 +1424,7 @@ Deno.test('authAdminAdapter treats 404 as idempotent deletion success', async ()
     globalThis.fetch = originalFetch;
     if (previousUrl === undefined) Deno.env.delete('SUPABASE_URL');
     else Deno.env.set('SUPABASE_URL', previousUrl);
-    if (previousKey === undefined) Deno.env.delete('SUPABASE_SECRET_KEY');
-    else Deno.env.set('SUPABASE_SECRET_KEY', previousKey);
+    if (previousKey === undefined) Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');
+    else Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', previousKey);
   }
 });

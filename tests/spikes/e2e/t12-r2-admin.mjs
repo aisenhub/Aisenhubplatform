@@ -2101,6 +2101,7 @@ async function runArchitectureBehaviorMatrix(secret) {
     200,
     'Platform switcher cursor page',
   );
+  await scaleDropdown.getByRole('option').nth(20).waitFor({ state: 'visible' });
   assert.ok(
     (await scaleDropdown.getByRole('option').count()) > 20,
     'Platform switcher must append a second cursor page',
@@ -2503,6 +2504,8 @@ try {
   console.log(JSON.stringify(result));
 } finally {
   if (browser) await browser.close().catch(() => undefined);
+  await sql`delete from public.platform_commerce_policy where platform_id in
+    (select id from public.platforms where code like ${`${scalePlatformPrefix}%`})`;
   await sql`delete from public.platforms where code like ${`${scalePlatformPrefix}%`}`.catch(
     () => undefined,
   );
@@ -2516,6 +2519,8 @@ try {
     await sql`delete from private.idempotency_keys where platform_id = ${platformId}`.catch(
       () => undefined,
     );
+    await sql`delete from private.file_write_attempts where platform_id = ${platformId}`;
+    await sql`delete from private.feedback_attachment_write_attempts where platform_id = ${platformId}`;
     await sql`delete from private.platform_api_keys where platform_id = ${platformId}`.catch(
       () => undefined,
     );
@@ -2561,6 +2566,7 @@ try {
     await sql`delete from public.platform_config_files where platform_id = ${platformId}`.catch(
       () => undefined,
     );
+    await sql`delete from private.file_deletion_tombstones where platform_id = ${platformId}`;
     await sql`delete from public.platform_file_policies where platform_id = ${platformId}`.catch(
       () => undefined,
     );
@@ -2585,9 +2591,9 @@ try {
     await sql`delete from auth.users where id in (${paidActiveUserId}, ${paidSuspendedUserId})`.catch(
       () => undefined,
     );
-    await sql`delete from public.platform_subscription_config where platform_id = ${platformId}`.catch(
-      () => undefined,
-    );
+    await sql`delete from public.platform_commercial_prices where platform_id = ${platformId}`;
+    await sql`delete from public.platform_commercial_offers where platform_id = ${platformId}`;
+    await sql`delete from public.platform_commerce_policy where platform_id in (${platformId}, ${otherPlatformId})`;
     await sql`update public.platforms set default_plan_id = null where id = ${platformId}`.catch(
       () => undefined,
     );
@@ -2668,5 +2674,13 @@ try {
       () => undefined,
     );
   }
+  const [remainingPlatforms] =
+    await sql`select count(*)::integer count from public.platforms
+    where id in (${platformId}, ${otherPlatformId}) or code like ${`${scalePlatformPrefix}%`}`;
+  assert.equal(
+    remainingPlatforms.count,
+    0,
+    'Admin browser fixtures must be removed',
+  );
   await sql.end({ timeout: 5 }).catch(() => undefined);
 }

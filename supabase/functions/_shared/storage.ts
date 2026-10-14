@@ -39,7 +39,7 @@ function storageUrl(): string {
 }
 
 function storageSecret(): string {
-  const secret = Deno.env.get('SUPABASE_SECRET_KEY');
+  const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!secret) throw new Error('STORAGE_NOT_CONFIGURED');
   return secret;
 }

@@ -226,9 +226,7 @@ function authIdentity(value: unknown): AdminAuthIdentity | null {
 
 function authAdminConfig(): { url: string; key: string } {
   const url = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
-  const key =
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ??
-    Deno.env.get('SUPABASE_SECRET_KEY');
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !key) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
   return { url, key };
 }

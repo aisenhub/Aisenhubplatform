@@ -22,6 +22,8 @@ packages/domain 使用纯 TypeScript 和显式相对 ESM 导入供 Edge 使用�
 
 ## 2. 可信上下文
 
+Canonical baseline 显式撤销 anon/authenticated 对 public 业务表的全部直接权限，并撤销 postgres 创建未来 public 表时的对应默认授权；TRUNCATE、TRIGGER 等不受 RLS 限制的权限同样不得保留。业务读写由 private 领域函数及最小 executor grant 承担。
+
 SQL定义private.account_context(user_id,session_id,platform_id,platform_key_id,request_id)，字段UUID非空语义由函数校验；platform_account_id在数据库根据user/platform解析，不由HTTP提交。激活前允许不存在账户，但不能伪造目标账户。
 
 Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，目标platform/account作为单独参数，包装函数验证singleton/session/step-up。Job函数用private.job_context(job_id,lease_owner,fencing_token,request_id)。
@@ -51,7 +53,7 @@ Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，�
 | private.admin_plan_save / admin_plan_command | Entitlements/Admin | Admin ctx+平台 → metadata save；archive/default lifecycle 使用 recent-MFA + reason + operation_id 幂等命令 |
 | private.platform_key_verify_presented | Account | key id+HMAC+版本 → active platform/key metadata；只授予account_executor，不开放Key表读取 |
 | private.admin_plan_list / admin_redemption_campaign_list / admin_subscription_read | Entitlements/Admin | Admin ctx+目标范围 → 只读计划、兑换 Campaign、订阅投影；不授予基础表读取 |
-| private.admin_billing_order_list / admin_billing_order_read / admin_billing_metrics | Billing/Admin | Admin ctx → Provider 事实、订单结算状态和积压/对账指标；Provider Mapping 只通过平台级 Commerce read model 暴露 |
+| private.admin_billing_order_list_v2 / admin_billing_order_read_v3 / admin_billing_observability | Billing/Admin | Admin ctx → Provider 事实、订单结算状态和积压/对账指标；Provider Mapping 只通过平台级 Commerce read model 暴露；detail v2 只供 v3 内部调用 |
 | private.admin_billing_order_requery | Billing/Admin | Admin ctx+订单+operation_id+expected_version+reason → 幂等 reconciliation job 与审计；不直接查询 Provider |
 | private.admin_billing_order_resolve | Billing/Admin | Admin ctx+订单+operation_id+expected_version+decision+reason → 受控最终结案与审计；不冒充退款 API 或绕过 `entitlement_apply` |
 | private.admin_step_up_valid | Admin | user+session+proof → 5分钟内有效性；敏感写操作必须通过统一包装 |

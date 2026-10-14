@@ -1,10 +1,18 @@
 # 阶段 07：Schema Rebaseline、Reset 与完整验收
 
-状态：In Progress；完整验收与合同基线核对中，reset/squash 等待本次明确的数据重置授权。
+状态：In Progress；2026-10-14 用户明确授权重置 Local/workendstaging 测试数据及后续发布、合并与分支清理，正在执行 rebaseline 与 fresh 验收。
 
 前置：阶段 02～06 全部代码行为已经稳定。
 
 覆盖：LC-13 与全部 R/LC 的最终关闭。
+
+最终审查补充：fresh baseline 撤销浏览器对当前及未来 public 业务表的所有权限；移除无运行调用者的旧 Admin account/get/list/patch、platform/key/origin list、audit list、Billing metrics/detail 九个入口。对应测试改用当前 canonical 入口；Billing detail v2 仅保留为 v3 的内部实现，不授予 executor 直接调用权限。Auth 身份、MFA 与唯一管理员关联在 workendstaging 重置中保留，应用测试数据重新生成；发布期间 Checkout、Background Processing 与 Auto Settlement 关闭。
+
+受控 seed 使用 `tests/fixtures/prelaunch-seed.sql`：只在已授权清空的测试环境运行，要求先恢复唯一管理员、注入临时 `prelaunch.platform_hmac_secret`。生成两个隔离平台、四个无登录凭据的合成用户及 canonical Commerce/Config/Feedback/Campaign fixture；订单通过领域结算入口生成 Grant。Config 先保留 pending intent，运维脚本实际上传 JSON 后调用 activate/approve，禁止仅伪造 active ledger。Secret、Platform Key 和 Storage 管理凭据不提交；fixture 没有真实 Provider 验证含义。
+
+基线显式授予 `domain_owner` 对 public schema 的 USAGE，不依赖 Local 的 PUBLIC 默认权限；远端 reset/create schema 与托管角色边界下，平台 bootstrap trigger 也必须可正常创建 Commerce policy。首个远端 reset transaction 因该缺失失败并整体回滚，修复后重试；不得放宽业务表权限。
+
+本阶段一并集成已提交的 UI 优化 `c1776f0`（17 个文件，UI-ISSUE-001～015），用户 2026-10-14 已确认；原工作区仍在编辑的 `AUDIT_REPORT.md` 不覆盖、不暂存。集成后重新执行全部 Local 与浏览器检查；删除安全加载页的重复技术说明，保留必要的加载反馈。
 
 ## 为什么最后做 schema rebaseline
 
@@ -24,7 +32,7 @@
 
 如果环境门槛变化、Staging 出现必须保留的数据，则改为 forward destructive cleanup migration，不进行 history squash，但仍必须删除运行 compatibility surfaces。
 
-2026-10-14 核对：远端保有测试账户与订单，本次重置授权尚未答复。继续准备非破坏性 forward cleanup：删除无调用者的旧 Account/Key list wrapper；Billing v2 detail 仍被唯一 v3 detail 调用，保留为内部 helper 并收回 executor 直接授权。未经数据重置确认不执行 reset/squash。
+2026-10-14 核对：远端只有测试数据；本轮明确授权覆盖 Local/workendstaging reset。先完成 Local canonical baseline 与 fresh 验收，再重置唯一远端测试项目并部署；不保留旧 Account/Key list wrapper，Billing detail 内部 helper 仅由 canonical detail 调用。
 
 ## Contract baseline
 

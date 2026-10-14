@@ -262,7 +262,7 @@ async function startServices() {
     {
       SUPABASE_URL: authUrl,
       SUPABASE_PUBLISHABLE_KEY: publishableKey,
-      SUPABASE_SECRET_KEY: serviceRoleKey,
+      SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
       ACCOUNT_API_DB_URL: databaseUrl,
       PLATFORM_KEY_HMAC_SECRET: platformSecret,
       REDEMPTION_HMAC_SECRET: redemptionSecret,
@@ -1117,6 +1117,13 @@ async function cleanup() {
   await sql`delete from public.audit_logs where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`delete from private.idempotency_keys where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from private.feedback_attachment_write_attempts where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback_labels where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback_events where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback_attachments where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from private.file_write_attempts where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.subscription_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
@@ -1159,12 +1166,15 @@ async function cleanup() {
   await sql`delete from public.platform_config_files where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`delete from private.file_deletion_tombstones where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.platform_file_policies where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
   await sql`delete from public.platform_accounts where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`update public.platforms set default_plan_id = null where id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_commerce_policy where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.plans where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
@@ -1173,6 +1183,14 @@ async function cleanup() {
   );
   await sql`delete from public.platforms where id = ${platformAId} or id = ${platformBId}`.catch(
     () => {},
+  );
+  const [remainingPlatforms] =
+    await sql`select count(*)::integer count from public.platforms
+    where id in (${platformAId}, ${platformBId})`;
+  assert.equal(
+    remainingPlatforms.count,
+    0,
+    'Consumer Harness fixtures must be removed',
   );
   for (const id of [userId, fixtureOwnerId].filter(Boolean)) {
     await sql`delete from auth.sessions where user_id = ${id}`.catch(() => {});

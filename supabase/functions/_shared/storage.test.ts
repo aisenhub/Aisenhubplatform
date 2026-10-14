@@ -6,10 +6,10 @@ import { createSupabaseStorageAdapter } from './storage.ts';
 
 Deno.test('Storage download deadline remains active while reading a stalled body', async () => {
   const originalUrl = Deno.env.get('SUPABASE_URL');
-  const originalSecret = Deno.env.get('SUPABASE_SECRET_KEY');
+  const originalSecret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const originalFetch = globalThis.fetch;
   Deno.env.set('SUPABASE_URL', 'https://storage.example.test');
-  Deno.env.set('SUPABASE_SECRET_KEY', 'sb_secret_fake_fixture');
+  Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', 'sb_secret_fake_fixture');
   globalThis.fetch = (async (_input, init) =>
     new Response(
       new ReadableStream({
@@ -39,18 +39,19 @@ Deno.test('Storage download deadline remains active while reading a stalled body
     globalThis.fetch = originalFetch;
     if (originalUrl === undefined) Deno.env.delete('SUPABASE_URL');
     else Deno.env.set('SUPABASE_URL', originalUrl);
-    if (originalSecret === undefined) Deno.env.delete('SUPABASE_SECRET_KEY');
-    else Deno.env.set('SUPABASE_SECRET_KEY', originalSecret);
+    if (originalSecret === undefined)
+      Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');
+    else Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', originalSecret);
   }
 });
 
 Deno.test('Storage adapter exposes immutable server-only operations', async () => {
   const originalUrl = Deno.env.get('SUPABASE_URL');
-  const originalSecret = Deno.env.get('SUPABASE_SECRET_KEY');
+  const originalSecret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const originalFetch = globalThis.fetch;
   const calls: Request[] = [];
   Deno.env.set('SUPABASE_URL', 'https://storage.example.test');
-  Deno.env.set('SUPABASE_SECRET_KEY', 'sb_secret_fake_fixture');
+  Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', 'sb_secret_fake_fixture');
   globalThis.fetch = (async (input, init) => {
     const request = new Request(input, init);
     calls.push(request);
@@ -119,14 +120,15 @@ Deno.test('Storage adapter exposes immutable server-only operations', async () =
     globalThis.fetch = originalFetch;
     if (originalUrl === undefined) Deno.env.delete('SUPABASE_URL');
     else Deno.env.set('SUPABASE_URL', originalUrl);
-    if (originalSecret === undefined) Deno.env.delete('SUPABASE_SECRET_KEY');
-    else Deno.env.set('SUPABASE_SECRET_KEY', originalSecret);
+    if (originalSecret === undefined)
+      Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');
+    else Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', originalSecret);
   }
 });
 
 Deno.test('Storage adapter requires the dedicated secret', async () => {
-  const originalSecret = Deno.env.get('SUPABASE_SECRET_KEY');
-  Deno.env.delete('SUPABASE_SECRET_KEY');
+  const originalSecret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');
   try {
     const adapter = createSupabaseStorageAdapter();
     await assertRejects(
@@ -140,7 +142,8 @@ Deno.test('Storage adapter requires the dedicated secret', async () => {
       'STORAGE_NOT_CONFIGURED',
     );
   } finally {
-    if (originalSecret === undefined) Deno.env.delete('SUPABASE_SECRET_KEY');
-    else Deno.env.set('SUPABASE_SECRET_KEY', originalSecret);
+    if (originalSecret === undefined)
+      Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');
+    else Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', originalSecret);
   }
 });

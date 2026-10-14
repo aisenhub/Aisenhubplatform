@@ -7,12 +7,12 @@ select has_column('public', 'billing_processing_jobs', 'operation_id', 'billing 
 select ok(exists (select 1 from pg_class where relname = 'billing_processing_jobs_operation_idx' and relkind = 'i'), 'billing operations are idempotent');
 select has_function('private', 'billing_admin_assert', array['private.admin_context'], 'billing admin guard exists');
 select ok(to_regprocedure('private.admin_billing_order_list(private.admin_context, timestamptz, integer, text)') is null, 'legacy timestamp-only billing order list is retired');
-select has_function('private', 'admin_billing_order_read', array['private.admin_context', 'uuid'], 'billing order read exists');
-select has_function('private', 'admin_billing_metrics', array['private.admin_context'], 'billing metrics exists');
+select has_function('private', 'admin_billing_order_read_v3', array['private.admin_context', 'uuid'], 'billing order read exists');
+select has_function('private', 'admin_billing_observability', array['private.admin_context'], 'billing metrics exists');
 select has_function('private', 'admin_billing_order_requery', array['private.admin_context', 'uuid', 'uuid', 'bigint', 'text'], 'billing requery exists');
 select has_function('private', 'admin_billing_order_resolve', array['private.admin_context', 'uuid', 'uuid', 'bigint', 'text', 'text'], 'billing resolve exists');
 select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_list_v2(private.admin_context, timestamptz, uuid, integer, text, uuid, uuid, uuid, text)', 'execute'), 'admin can list billing orders through the composite cursor boundary');
-select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_read(private.admin_context, uuid)', 'execute'), 'admin can read billing orders');
+select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_read_v3(private.admin_context, uuid)', 'execute'), 'admin can read billing orders');
 select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_requery(private.admin_context, uuid, uuid, bigint, text)', 'execute'), 'admin can requery billing orders');
 select ok(has_function_privilege('admin_executor', 'private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)', 'execute'), 'admin can resolve billing orders');
 select ok(not has_function_privilege('account_executor', 'private.admin_billing_order_requery(private.admin_context, uuid, uuid, bigint, text)', 'execute'), 'account executor cannot requery billing orders');
@@ -33,8 +33,8 @@ select ok((select relforcerowsecurity from pg_class where oid = 'public.billing_
 select ok(exists (select 1 from pg_trigger where tgname = 'billing_orders_admin_version'), 'billing order versions advance in one trigger');
 select ok(pg_get_functiondef('private.admin_billing_order_requery(private.admin_context, uuid, uuid, bigint, text)'::regprocedure) like '%reconciliation%', 'requery creates reconciliation work');
 select ok(pg_get_functiondef('private.admin_billing_order_resolve(private.admin_context, uuid, uuid, bigint, text, text)'::regprocedure) like '%resolution_status%', 'resolve records order resolution');
-select ok(pg_get_functiondef('private.admin_billing_metrics(private.admin_context)'::regprocedure) like '%duplicate_payment%', 'metrics expose duplicate payments');
-select ok(pg_get_functiondef('private.admin_billing_order_read(private.admin_context, uuid)'::regprocedure) like '%provider_facts%', 'order read exposes normalized facts');
+select ok(pg_get_functiondef('private.admin_billing_observability(private.admin_context)'::regprocedure) like '%duplicate_payment%', 'metrics expose duplicate payments');
+select ok(pg_get_functiondef('private.admin_billing_order_read_v3(private.admin_context, uuid)'::regprocedure) like '%provider_facts%', 'order read exposes normalized facts');
 select ok(
   exists (
     select 1 from pg_constraint
@@ -97,7 +97,7 @@ select is(
   'unlinked', 'admin list returns unlinked payments in the dedicated queue'
 );
 select is(
-  (select platform_id from private.admin_billing_order_read(
+  (select platform_id from private.admin_billing_order_read_v3(
     row('00000000-0000-4000-8000-000000000601', '00000000-0000-4000-8000-000000000602', '00000000-0000-4000-8000-000000000608')::private.admin_context,
     '00000000-0000-4000-8000-000000000604'
   )),

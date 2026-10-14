@@ -6,8 +6,8 @@
     {
       "id": "subscription-checkout",
       "producer": {
-        "path": "supabase/migrations/20261013041332_prelaunch_commerce_canonicalization.sql",
-        "contains": "private.subscription_checkout_create"
+        "path": "supabase/migrations/20261013210107_prelaunch_canonical_baseline.sql",
+        "contains": "\"private\".\"subscription_checkout_create\""
       },
       "edge": {
         "path": "supabase/functions/account-api/account.ts",
@@ -117,8 +117,8 @@
     {
       "id": "entitlement-projection",
       "producer": {
-        "path": "supabase/migrations/20261013041332_prelaunch_commerce_canonicalization.sql",
-        "contains": "private.entitlement_current_read"
+        "path": "supabase/migrations/20261013210107_prelaunch_canonical_baseline.sql",
+        "contains": "\"private\".\"entitlement_current_read\""
       },
       "edge": {
         "path": "supabase/functions/account-api/account.ts",
@@ -203,8 +203,8 @@
     {
       "id": "admin-billing-evidence",
       "producer": {
-        "path": "supabase/migrations/20260914064806_repair_task_0603.sql",
-        "contains": "private.admin_billing_order_read_v2"
+        "path": "supabase/migrations/20261013210107_prelaunch_canonical_baseline.sql",
+        "contains": "\"private\".\"admin_billing_order_read_v3\""
       },
       "edge": {
         "path": "supabase/functions/account-api/admin.ts",

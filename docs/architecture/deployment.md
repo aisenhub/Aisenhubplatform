@@ -16,7 +16,7 @@ Account API 可识别 functions/v1/account-api 外层前缀。Maintenance 直接
 
 ## 服务边界
 
-[Supabase 配置](../../supabase/config.toml)中两个函数的 verify_jwt 均为 false。Account API 自行调用 Auth 验证用户，再按路由验证平台凭据或管理员权限；Maintenance 验证专用 Bearer token。
+[Supabase 配置](../../supabase/config.toml)中三个函数的 verify_jwt 均为 false。Account API 自行调用 Auth 验证用户，再按路由验证平台凭据或管理员权限；Maintenance 验证分能力的 Bearer token；Billing Webhook 验证 Provider 签名。
 
 SQL 连接使用 postgres 驱动、prepare=false 和短事务。Account/Admin 各自最大连接数为 8，Maintenance 为 4；数据库连接变量的选择顺序见[配置](../reference/configuration.md)。
 

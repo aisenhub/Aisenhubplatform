@@ -12,7 +12,7 @@ select is((select count(*) from pg_proc p join pg_namespace n on n.oid = p.prona
   where n.nspname = 'private' and a.grantee = 0 and a.privilege_type = 'EXECUTE'),
   0::bigint, 'PUBLIC retains no implicit or explicit private EXECUTE grant');
 select ok(has_function_privilege('account_executor', 'private.profile_get(private.account_context)', 'execute')
-  and has_function_privilege('admin_executor', 'private.admin_platform_list(private.admin_context, integer)', 'execute')
+  and has_function_privilege('admin_executor', 'private.admin_platform_list_v3(private.admin_context, text, integer, timestamptz, uuid)', 'execute')
   and has_function_privilege('job_executor', 'private.idempotency_cleanup(private.job_context, timestamptz, integer)', 'execute'),
   'Account, Admin and Worker retain their explicitly granted entry points');
 

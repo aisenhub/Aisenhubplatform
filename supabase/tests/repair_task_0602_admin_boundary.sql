@@ -40,7 +40,7 @@ select ok(
 select ok(
   has_function_privilege(
     'admin_executor',
-    'private.admin_billing_metrics(private.admin_context)',
+    'private.admin_billing_observability(private.admin_context)',
     'execute'
   ),
   'admin executor can use the server-side billing metrics wrapper'
@@ -48,7 +48,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'job_executor',
-    'private.admin_billing_metrics(private.admin_context)',
+    'private.admin_billing_observability(private.admin_context)',
     'execute'
   ),
   'job executor cannot query central billing metrics'

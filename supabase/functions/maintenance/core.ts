@@ -103,7 +103,7 @@ export function storageAdapter(): StorageAdapter {
 
 export function authAdminAdapter(): AuthAdminAdapter {
   const baseUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
-  const secret = Deno.env.get('SUPABASE_SECRET_KEY');
+  const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!baseUrl || !secret) throw new Error('AUTH_NOT_CONFIGURED');
   return {
     async deleteUser(userId) {

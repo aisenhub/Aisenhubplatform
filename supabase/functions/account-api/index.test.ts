@@ -697,11 +697,6 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           }
-          if (query.startsWith('select * from private.admin_account_list')) {
-            return [
-              { platform_account_id: sessionId, status: 'active' },
-            ] as unknown as R[];
-          }
           if (
             query.startsWith(
               'select * from private.admin_account_workbench_read',
@@ -730,11 +725,6 @@ function fakeDatabase(
               },
             ] as unknown as R[];
           }
-          if (query.startsWith('select * from private.admin_account_get')) {
-            return [
-              { platform_account_id: sessionId, status: 'active' },
-            ] as unknown as R[];
-          }
           if (
             query.startsWith('select * from private.admin_account_tags_replace')
           ) {
@@ -750,15 +740,6 @@ function fakeDatabase(
                 note_id: keyId,
                 platform_account_id: sessionId,
                 created_at: '2026-10-12T00:00:00.000Z',
-              },
-            ] as unknown as R[];
-          }
-          if (query.startsWith('select * from private.admin_account_patch')) {
-            return [
-              {
-                platform_account_id: sessionId,
-                user_id: userId,
-                status: 'suspended',
               },
             ] as unknown as R[];
           }
