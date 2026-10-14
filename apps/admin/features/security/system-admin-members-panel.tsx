@@ -181,9 +181,12 @@ export function SystemAdminMembersPanel() {
 
   if (status.membership_state === 'pending') {
     return (
-      <div className="panel gap-4" data-test="system-admin-pending-onboarding">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+      <div
+        className="panel w-full max-w-full min-w-0 gap-4 [&_*]:min-w-0"
+        data-test="system-admin-pending-onboarding"
+      >
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
             <h2>管理员 onboarding</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               当前 membership 仍为 pending，不具备普通 Admin 业务权限。
@@ -212,9 +215,12 @@ export function SystemAdminMembersPanel() {
   }
 
   return (
-    <div className="panel gap-5" data-test="system-admin-members-panel">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+    <div
+      className="panel w-full max-w-full min-w-0 gap-5 [&_*]:min-w-0"
+      data-test="system-admin-members-panel"
+    >
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2>System Admin 灾备</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             membership、双 TOTP readiness 与最少 active 数量均由服务端权威判断。
@@ -226,7 +232,7 @@ export function SystemAdminMembersPanel() {
           rawValue={status.readiness_healthy ? 'ready' : 'not_ready'}
         />
       </div>
-      <dl className="detail-list text-sm">
+      <dl className="detail-list min-w-0 text-sm">
         <div>
           <dt>Active Admin</dt>
           <dd>{status.active_admin_count}</dd>
@@ -240,8 +246,8 @@ export function SystemAdminMembersPanel() {
           <dd>{status.verified_totp_count}</dd>
         </div>
       </dl>
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-        <div className="grid gap-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid min-w-0 gap-2">
           <Label htmlFor="system-admin-target-user">
             新增管理员 Auth User ID
           </Label>
@@ -262,11 +268,13 @@ export function SystemAdminMembersPanel() {
           添加 pending 管理员
         </Button>
       </div>
-      <ul className="data-list" data-test="system-admin-list">
+      <ul className="data-list min-w-0" data-test="system-admin-list">
         {members.map((member) => (
-          <li key={member.user_id} className="gap-3">
-            <span className="min-w-0">
-              <strong>{member.email ?? '无邮箱 Auth 身份'}</strong>
+          <li key={member.user_id} className="min-w-0 flex-wrap gap-3">
+            <span className="min-w-0 flex-1">
+              <strong className="break-all">
+                {member.email ?? '无邮箱 Auth 身份'}
+              </strong>
               <small className="mt-1 block">
                 {member.state} · verified TOTP {member.verified_totp_count} ·
                 Auth {member.auth_available ? 'available' : 'unavailable'}
