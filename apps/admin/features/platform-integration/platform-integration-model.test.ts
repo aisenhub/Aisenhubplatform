@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { derivePlatformIntegrationState } from './platform-integration-model';
+import {
+  derivePlatformIntegrationState,
+  integrationFactsForScope,
+} from './platform-integration-model';
 
 const platform = {
   platform_id: '11111111-1111-4111-8111-111111111111',
@@ -11,6 +14,16 @@ const platform = {
 };
 
 describe('platform integration model', () => {
+  it('ignores facts captured for a previous platform scope', () => {
+    const facts = {
+      scope: 'platform-a',
+      value: [{ status: 'active', deployment_confirmed_at: null }],
+    };
+
+    expect(integrationFactsForScope(facts, 'platform-b')).toBeUndefined();
+    expect(integrationFactsForScope(facts, 'platform-a')).toEqual(facts.value);
+  });
+
   it('marks only central authoritative facts as automatically complete', () => {
     const state = derivePlatformIntegrationState({
       platform,

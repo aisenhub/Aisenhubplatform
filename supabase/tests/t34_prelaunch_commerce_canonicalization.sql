@@ -22,7 +22,7 @@ values('00000000-0000-4000-8000-000000012001','authenticated','authenticated','p
 insert into auth.sessions(id,user_id,created_at,updated_at,not_after)
 values('00000000-0000-4000-8000-000000012002','00000000-0000-4000-8000-000000012001',now(),now(),now()+interval '1 hour');
 insert into private.system_admin(user_id) values('00000000-0000-4000-8000-000000012001')
-on conflict(singleton_id) do update set user_id=excluded.user_id;
+on conflict (user_id) do update set state = 'active';
 
 insert into auth.users(id,aud,role,email,encrypted_password,created_at,updated_at)
 values('00000000-0000-4000-8000-000000012003','authenticated','authenticated','prelaunch-commerce-account@example.invalid','x',now(),now());

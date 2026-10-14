@@ -27,7 +27,7 @@ values
   ('00000000-0000-4000-8000-000000006111', '00000000-0000-4000-8000-000000006101', now(), now(), now()+interval '1 hour');
 insert into private.system_admin(user_id)
 values ('00000000-0000-4000-8000-000000006100')
-on conflict (singleton_id) do update set user_id=excluded.user_id;
+on conflict (user_id) do update set state = 'active';
 
 insert into public.platforms(id, code, name, status, allow_activation)
 values

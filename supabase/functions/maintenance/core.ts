@@ -5,6 +5,7 @@ import {
   createSupabaseStorageAdapter,
   type StorageAdapter,
 } from '../_shared/storage.ts';
+import { discardResponseBody } from '../_shared/http.ts';
 import { readBoundedBody } from '../_shared/upload.ts';
 
 export type Row = Record<string, unknown>;
@@ -125,13 +126,13 @@ export function authAdminAdapter(): AuthAdminAdapter {
       }
       if (!response.ok) {
         if (response.status === 404) {
-          await response.body?.cancel().catch(() => undefined);
+          await discardResponseBody(response);
           return;
         }
-        await response.body?.cancel().catch(() => undefined);
+        await discardResponseBody(response);
         throw new Error(`AUTH_DELETE_FAILED_${response.status}`);
       }
-      await response.body?.cancel().catch(() => undefined);
+      await discardResponseBody(response);
     },
   };
 }
@@ -150,6 +151,7 @@ export function billingAlertReceiver(): BillingAlertReceiver | undefined {
           body: JSON.stringify({ event: 'billing.alert', alert }),
           signal: controller.signal,
         });
+        await discardResponseBody(delivered);
         if (!delivered.ok)
           throw new Error(`ALERT_RECEIVER_HTTP_${delivered.status}`);
       } catch (error) {

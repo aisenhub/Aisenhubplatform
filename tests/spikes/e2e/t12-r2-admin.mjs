@@ -27,15 +27,10 @@ const databaseUrl = process.env.SUPABASE_DB_URL;
 const appUrl = (
   process.env.T12_ADMIN_APP_URL ?? 'http://localhost:3001'
 ).replace(/\/$/u, '');
-const allowSystemAdminSwap = process.env.T12_ALLOW_SYSTEM_ADMIN_SWAP === '1';
 
 if (!authUrl || !anonKey || !databaseUrl)
   throw new Error(
     'T12 browser probe requires SUPABASE_LOCAL_URL, SUPABASE_LOCAL_ANON_KEY, and SUPABASE_DB_URL',
-  );
-if (!allowSystemAdminSwap)
-  throw new Error(
-    'T12 browser probe requires T12_ALLOW_SYSTEM_ADMIN_SWAP=1 for an isolated Local system_admin fixture',
   );
 
 const sql = postgres(databaseUrl, {
@@ -73,7 +68,6 @@ let configId;
 let configVersionId;
 let configSubmissionId;
 let feedbackId;
-let previousSystemAdmin;
 let browser;
 let page;
 
@@ -221,19 +215,13 @@ async function signupAndEnroll() {
 }
 
 async function createFixtures() {
-  const [admin] = await sql`
-    select s.user_id, u.email
-    from private.system_admin s
-    left join auth.users u on u.id = s.user_id
-    where s.singleton_id = 1
-  `;
-  previousSystemAdmin = admin?.email?.startsWith('t12-r2-browser-')
-    ? null
-    : (admin?.user_id ?? null);
   await sql`
-    insert into private.system_admin (user_id)
-    values (${userId})
-    on conflict (singleton_id) do update set user_id = excluded.user_id
+    insert into private.system_admin (user_id, state, activated_at)
+    values (${userId}, 'active', now())
+    on conflict (user_id) do update
+      set state = 'active',
+          activated_at = coalesce(private.system_admin.activated_at, excluded.activated_at),
+          updated_at = now()
   `;
   await sql`
     insert into public.platforms (id, code, name, status, allow_activation)
@@ -1211,14 +1199,7 @@ async function runBrowserFlow(secret) {
   assertStatus(capacityRead.status, 200, 'capacity read after update');
   assert.equal(capacityRead.payload?.data?.platform_over_capacity, true);
 
-  if (previousSystemAdmin) {
-    await sql`
-      update private.system_admin set user_id = ${previousSystemAdmin}
-      where singleton_id = 1
-    `;
-  } else {
-    await sql`delete from private.system_admin where singleton_id = 1`;
-  }
+  await sql`delete from private.system_admin where user_id = ${userId}`;
   try {
     const nonAdminStatus = await browserRequest(
       '/api/v1/admin/api/v1/security/status',
@@ -1241,9 +1222,12 @@ async function runBrowserFlow(secret) {
     );
   } finally {
     await sql`
-      insert into private.system_admin (user_id)
-      values (${userId})
-      on conflict (singleton_id) do update set user_id = excluded.user_id
+      insert into private.system_admin (user_id, state, activated_at)
+      values (${userId}, 'active', now())
+      on conflict (user_id) do update
+        set state = 'active',
+            activated_at = coalesce(private.system_admin.activated_at, excluded.activated_at),
+            updated_at = now()
     `;
   }
 
@@ -2637,16 +2621,10 @@ try {
       () => undefined,
     );
   }
-  if (previousSystemAdmin) {
-    await sql`
-      update private.system_admin set user_id = ${previousSystemAdmin}
-      where singleton_id = 1
-    `.catch(() => undefined);
-  } else {
-    await sql`delete from private.system_admin where singleton_id = 1`.catch(
+  if (userId)
+    await sql`delete from private.system_admin where user_id = ${userId}`.catch(
       () => undefined,
     );
-  }
   if (userId) {
     await sql`delete from private.admin_step_up where user_id = ${userId}`.catch(
       () => undefined,

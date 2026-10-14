@@ -26,7 +26,7 @@ Canonical baseline 显式撤销 anon/authenticated 对 public 业务表的全部
 
 SQL定义private.account_context(user_id,session_id,platform_id,platform_key_id,request_id)，字段UUID非空语义由函数校验；platform_account_id在数据库根据user/platform解析，不由HTTP提交。激活前允许不存在账户，但不能伪造目标账户。
 
-Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，目标platform/account作为单独参数，包装函数验证singleton/session/step-up。Job函数用private.job_context(job_id,lease_owner,fencing_token,request_id)。
+Admin函数使用private.admin_context(admin_user_id,session_id,request_id)，目标platform/account作为单独参数；普通 Admin 包装验证 active System Admin membership 与活动 session，高风险操作再验证 recent step-up。System Admin add/activate/remove 由 private domain function 在统一 membership 锁内重新校验 actor、目标 MFA readiness 与最少 active 数量。Job函数用private.job_context(job_id,lease_owner,fencing_token,request_id)。
 
 这些context仅在受控服务内部构造。数据库不信任额外is_admin/aal布尔值；已验证HTTP身份由对应executor调用，数据库再检查可持久验证的会话/成员/证明和关系。失陷executor属于运行时信任边界，不能声称类型本身防止服务被攻陷。
 

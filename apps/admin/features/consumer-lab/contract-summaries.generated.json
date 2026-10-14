@@ -938,6 +938,38 @@
       },
       {
         "method": "GET",
+        "path": "/admin/api/v1/security/system-admins",
+        "operationId": "adminListSystemAdmins",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/security/system-admins",
+        "operationId": "adminAddSystemAdmin",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/security/system-admins/{userId}/activate",
+        "operationId": "adminActivateSystemAdmin",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/admin/api/v1/security/system-admins/{userId}/remove",
+        "operationId": "adminRemoveSystemAdmin",
+        "security": [
+          "adminBearer"
+        ]
+      },
+      {
+        "method": "GET",
         "path": "/admin/api/v1/subscriptions/{accountId}",
         "operationId": "adminGetSubscription",
         "security": [

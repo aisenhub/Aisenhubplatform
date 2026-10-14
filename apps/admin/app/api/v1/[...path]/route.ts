@@ -11,6 +11,20 @@ type RouteContext = { params: Promise<{ path: string[] }> };
 const resourceId =
   '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
 
+const MAX_ADMIN_QUERY_BYTES = 8192;
+const MAX_ADMIN_QUERY_PARAMS = 64;
+
+function adminQueryWithinBudget(search: string): boolean {
+  if (new TextEncoder().encode(search).byteLength > MAX_ADMIN_QUERY_BYTES)
+    return false;
+  let count = 0;
+  for (const _ of new URLSearchParams(search)) {
+    count += 1;
+    if (count > MAX_ADMIN_QUERY_PARAMS) return false;
+  }
+  return true;
+}
+
 export function isAllowedAdminPath(method: string, path: string): boolean {
   const id = resourceId;
   const exact = (value: string) => path === `admin/api/v1/${value}`;
@@ -20,6 +34,7 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
   if (method === 'GET') {
     return (
       exact('security/status') ||
+      exact('security/system-admins') ||
       exact('accounts') ||
       matches(`accounts/${id}`) ||
       exact('platforms') ||
@@ -59,6 +74,8 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
   if (method === 'POST') {
     return (
       exact('auth/recent-proof') ||
+      exact('security/system-admins') ||
+      matches(`security/system-admins/${id}/(?:activate|remove)`) ||
       exact('platforms') ||
       matches(`platforms/${id}/origins`) ||
       matches(`platforms/${id}/accounts/${id}/(?:suspend|restore|close)`) ||
@@ -141,6 +158,8 @@ async function dispatch(
     const pathValue = normalizedPath.join('/');
     if (!isAllowedAdminPath(request.method, pathValue))
       return errorResponse(404, 'NOT_FOUND', id);
+    if (!adminQueryWithinBudget(request.nextUrl.search))
+      return errorResponse(414, 'INVALID_INPUT', id);
     const target = `${baseUrl}/${pathValue}${request.nextUrl.search}`;
     const mutation = request.method !== 'GET';
     if (mutation) {

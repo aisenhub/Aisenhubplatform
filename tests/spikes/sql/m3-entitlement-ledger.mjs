@@ -25,13 +25,6 @@ let grantRaceUser;
 let hmacRotationUser;
 let correctionUser;
 let correctionRaceUser;
-const [existingSystemAdmin] = await sql`
-  select user_id from private.system_admin where singleton_id = 1
-`;
-if (existingSystemAdmin && process.env.M3_ALLOW_SYSTEM_ADMIN_SWAP !== '1')
-  throw new Error(
-    'M3 fixture found an existing system_admin; set M3_ALLOW_SYSTEM_ADMIN_SWAP=1 only for an isolated Local run',
-  );
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -82,7 +75,7 @@ try {
     (${otherPlanId}, ${platformId}, 'team', 'Team', 'paid', '{"quota":50}'::jsonb)`;
   await sql`update public.platforms set default_plan_id = ${freePlanId} where id = ${platformId}`;
   await sql`insert into private.platform_api_keys (id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix, creation_operation_id) values (${keyId}, ${platformId}, 'M3 key', ${'d'.repeat(64)}, 1, 'phk_v1', 'dddd', ${crypto.randomUUID()})`;
-  await sql`insert into private.system_admin (user_id) values (${adminUser.user}) on conflict (singleton_id) do update set user_id = excluded.user_id`;
+  await sql`insert into private.system_admin (user_id, state, activated_at) values (${adminUser.user}, 'active', now()) on conflict (user_id) do update set state = 'active', activated_at = coalesce(private.system_admin.activated_at, excluded.activated_at), updated_at = now()`;
   await sql`grant account_executor to postgres`;
   await sql`grant admin_executor to postgres`;
   const [januaryLeap] = await asRole(
@@ -846,13 +839,8 @@ try {
       method: 'DELETE',
       headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
     }).catch(() => undefined);
-  if (existingSystemAdmin)
-    await sql`update private.system_admin set user_id = ${existingSystemAdmin.user_id} where singleton_id = 1`.catch(
-      () => undefined,
-    );
-  else
-    await sql`delete from private.system_admin where singleton_id = 1`.catch(
-      () => undefined,
-    );
+  await sql`delete from private.system_admin where user_id = ${adminUser.user}`.catch(
+    () => undefined,
+  );
   await sql.end({ timeout: 1 }).catch(() => undefined);
 }

@@ -282,15 +282,25 @@ Deno.test('Afdian adapter treats missing orders as not found and API failures as
   });
   assertEquals((await missing.queryOrder('missing')).status, 'not_found');
 
+  let queryCancelled = false;
   const unavailable = createAfdianProviderAdapter({
     userId: 'creator-user',
     apiToken: 'fixture-token',
-    fetchImpl: async () => new Response('upstream failure', { status: 503 }),
+    fetchImpl: async () =>
+      new Response(
+        new ReadableStream({
+          cancel() {
+            queryCancelled = true;
+          },
+        }),
+        { status: 503 },
+      ),
   });
   assertEquals(
     (await unavailable.queryOrder('order-1')).status,
     'temporarily_unavailable',
   );
+  assertEquals(queryCancelled, true);
 });
 
 Deno.test('Afdian adapter discovers a bounded order page with signed page params', async () => {
@@ -323,6 +333,29 @@ Deno.test('Afdian adapter discovers a bounded order page with signed page params
   assertEquals(body.params, '{"page":2}');
   assert(typeof body.sign === 'string');
   assert(!JSON.stringify(body).includes('fixture-token'));
+});
+
+Deno.test('Afdian page discovery discards non-success response bodies', async () => {
+  let cancelled = false;
+  const unavailable = createAfdianProviderAdapter({
+    userId: 'creator-user',
+    apiToken: 'fixture-token',
+    fetchImpl: async () =>
+      new Response(
+        new ReadableStream({
+          cancel() {
+            cancelled = true;
+          },
+        }),
+        { status: 429 },
+      ),
+  });
+
+  assertEquals(
+    (await unavailable.listOrders(1)).status,
+    'temporarily_unavailable',
+  );
+  assertEquals(cancelled, true);
 });
 
 Deno.test('Afdian adapter refuses malformed page envelopes and invalid page numbers', async () => {

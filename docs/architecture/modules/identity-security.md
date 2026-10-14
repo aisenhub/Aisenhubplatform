@@ -44,19 +44,21 @@ Principal 从验证后的 user + Platform Key 得到 userId、platformId、platf
 
 中央服务不可用时，受保护业务默认503 AUTHORIZATION_UNAVAILABLE，不降级为只看JWT。BFF不跨请求缓存Principal/权益；调用超时与重试见接口文档。数据库会话检查、状态校验、代码重放是不同机制，不能互相省略。
 
-## 5. 单一管理员和近期 MFA
+## 5. System Admin membership 和近期 MFA
 
-system_admin singleton 保证最多一名管理员；每个普通 Admin Route/Server Action 验证 token、会话、user状态、实时 membership、AAL2。唯一的 AAL2 前置读取入口是 `GET /admin/api/v1/security/status`：它仍验证已签名身份、活动 session 和实时管理员 membership，但允许 AAL1 管理员读取当前 AAL 与当前 session 有效近期证明的过期时间。`private.admin_security_status` 执行该数据库校验；匿名为 401、非管理员为 403 `ADMIN_REQUIRED`、无效 session 为 401。AAL2本身不证明近期完成MFA，也不使用JWT iat作为MFA时间。
+`private.system_admin` 是 System Admin membership 的权威来源，状态只有 `pending / active`；`private.active_system_admin` 是普通 Admin 授权的 active-only 投影。只有 active member 可以进入普通 Admin 业务，正常 readiness 要求至少 2 名 active System Admin，且每名 active 管理员至少有 2 个 Supabase Auth verified TOTP factor。System Admin 使用专用 Auth identity；pending/active 管理员身份都不能构造普通 Consumer Principal。
 
-Admin Shell 在渲染普通管理页面前先读取该状态：未登录转登录，AAL1 管理员只进入 `/admin/mfa`，AAL2 管理员进入普通管理页面，非管理员和授权服务故障均保持在无业务内容的阻断界面。`/admin/login` 是唯一不读取 status 的登录入口；BFF 仅代理状态请求，不复制管理员或 AAL 判断。
+唯一允许在普通 Admin AAL2 gate 之前读取的入口是 `GET /admin/api/v1/security/status`。`private.admin_system_admin_self_status` 同时校验 membership、活动 session，并返回 `membership_state`、当前 AAL、当前 session recent-MFA 过期时间、verified TOTP 数量、active/member 数量和服务端 readiness。匿名为 401，非 membership 为 403 `ADMIN_REQUIRED`，无效 session 为 401。pending member 可以在 AAL1/AAL2 下读取 onboarding 所需状态，但不会因此获得普通 Admin 权限；AAL2 本身也不证明近期完成 MFA，不使用 JWT `iat` 作为 MFA 时间。
 
-普通 Admin 操作以活动管理员会话 + AAL2 为统一授权基线。关键密钥生命周期（Platform Key 创建、部署确认、撤销）、Global Delete 启动/重试、平台账户状态变更（通用 PATCH 以及 suspend/restore/close）、Billing 人工 requery/resolve，以及未来的管理员替换要求近期 step-up；近期 MFA 证明最长有效 30 分钟。Plan 与订阅配置、兑换码批次与交付、配置文件读取/下载/普通删除与文件策略等其他管理操作仍以 AAL2 为边界，不额外要求 recent MFA。管理员替换当前尚无公开 Admin Route；未来实现时必须进入同一 30 分钟 step-up 边界。
+Admin Shell 在渲染普通管理页面前读取该状态：未登录转登录；active AAL1 管理员只进入 `/admin/mfa`；active AAL2 管理员进入普通管理页面；pending 管理员只允许 `/admin/mfa` 与 `/admin/security` 完成双 TOTP onboarding 和查看 readiness；非管理员和授权服务故障保持在无业务内容的阻断界面。`/admin/login` 是唯一不读取 status 的登录入口；BFF 只代理状态与 membership API，不复制 active-floor 或 factor 数量算法。
+
+普通 Admin 操作以 active membership + 活动 session + AAL2 为统一授权基线。关键密钥生命周期（Platform Key 创建、部署确认、撤销）、Global Delete 启动/重试、平台账户状态变更（通用 PATCH 以及 suspend/restore/close）、Billing 人工 requery/resolve，以及 System Admin `add / activate / remove` 都要求近期 step-up；近期 MFA 证明最长有效 30 分钟。System Admin mutation 在数据库中先取得统一 membership advisory lock，再重新校验 actor/recent-MFA：新增只创建 pending membership，激活前服务端确认目标至少 2 个 verified TOTP，移除 active member 时事务内保证结果仍有至少 2 名 active，并立即撤销目标 Auth session 与 recent-proof。Plan 与订阅配置、兑换码批次与交付、配置文件读取/下载/普通删除与文件策略等其他管理操作仍以 AAL2 为边界，不额外要求 recent MFA。
 
 全局 Identity 的 Admin 读取继续把 Auth PII 与业务生命周期分层：`GET /admin/api/v1/accounts` 用服务端 Auth Admin API 枚举/精确解析允许的 Auth identity，再由 `private.admin_identity_accounts` 补平台账户关系；`GET /admin/api/v1/accounts/{userId}` 对一个仍存在的 Auth identity 复用同一 Auth 读取，并通过只授予 `admin_executor` 的 `private.admin_identity_lifecycle_read` 补当前/最近删除 request 与关联 job。该只读投影固定 security-definer search_path，只返回 Admin UI 做状态判断所需的 request/job 字段，不返回 request session、job fence 或 lease 等执行内部信息。读取仍只要求普通 Admin AAL2；Global Delete 启动/重试继续走既有 recent-MFA mutation 边界。
 
-Admin Auth adapter完成官方MFA验证后，由Admin BFF使用共享服务端HMAC Secret签发最多60秒的attestation，绑定user_id、session_id、factor_id、verified_at和随机nonce；中央Account API必须验证签名、当前AAL2 bearer的user/session绑定与时效后，才调用private.admin_step_up_issue写入private.admin_step_up。attestation 只负责证明“刚完成 MFA”并保持 60 秒短寿命，真正的 step-up 证明最长有效 30 分钟。证明记录保存user_id、session_id、verified_at、expires_at、factor_id和attestation_nonce；nonce按当前管理员会话唯一消费，重放拒绝。普通token refresh不延长窗口，撤销会话或替换管理员立即使证明不可用。浏览器提交的factor id、挑战完成布尔值或已有AAL2本身都不构成近期MFA证明。
+Admin Auth adapter完成官方MFA验证后，由Admin BFF使用共享服务端HMAC Secret签发最多60秒的attestation，绑定user_id、session_id、factor_id、verified_at和随机nonce；中央Account API必须验证签名、当前AAL2 bearer的user/session绑定与时效后，才调用private.admin_step_up_issue写入private.admin_step_up。attestation 只负责证明“刚完成 MFA”并保持 60 秒短寿命，真正的 step-up 证明最长有效 30 分钟。证明记录保存user_id、session_id、verified_at、expires_at、factor_id和attestation_nonce；nonce按当前管理员会话唯一消费，重放拒绝。普通token refresh不延长窗口；撤销会话或移除管理员 membership 会立即使证明不可用。浏览器提交的factor id、挑战完成布尔值或已有AAL2本身都不构成近期MFA证明。
 
-中央 Account API 对普通 Admin Route 统一要求活动管理员会话与 AAL2；私有数据库包装函数继续重新检查管理员成员关系和活动 session。Global Delete 的数据库包装额外校验与当前 user/session 绑定且未过期的 step-up proof；关键密钥生命周期、平台账户状态变更与 Billing requery/resolve 在中央 API 边界执行同一 `adminStepUp` 校验。Account executor无权调用 Admin 包装或记录 step-up。数据库不自行验证 HTTP JWT 签名，由服务器 Auth adapter 验证后传入受控上下文。
+中央 Account API 对普通 Admin Route 统一要求 active System Admin、活动管理员会话与 AAL2；私有数据库包装函数继续重新检查 active membership 和 session。System Admin membership mutation、Global Delete、关键密钥生命周期、平台账户状态变更与 Billing requery/resolve 使用同一 recent-MFA 边界；membership 的 active-floor、目标 MFA readiness 和并发串行化只在 private domain function 内决定。Account executor无权调用 Admin 包装或记录 step-up。数据库不自行验证 HTTP JWT 签名，由服务器 Auth adapter 验证后传入受控上下文。
 
 普通用户的近期认证使用独立的 Supabase email sign-in 事件：当前业务会话先由 BFF 恢复并确认用户，邮件中的 `token_hash` 在不持久化的临时 Auth client 中验证，随后 BFF 只把临时 access token 通过 `X-Reauth-Access-Token` 传给中央 Account API。中央 API 分别验证当前 bearer 与事件 token 的 Auth 用户、解析出的 `session_id`，并由窄范围的 security-definer helper 检查事件 session 属于同一用户、创建时间在 5 分钟内且仍有效；proof 只写入原业务 session，临时 session 在 BFF 中撤销且不会返回浏览器。邮件 token 不放入中央 API body、proof cookie 仍为 HttpOnly，缺少任一事件/绑定/撤销证据即拒绝。该实现不把 `iat`、AAL2 或客户端布尔值当作近期认证证明；Supabase 的 `reauthenticate()`/nonce 流程仍仅保留为资料或密码变更语义，不作为本 proof 协议。
 
@@ -98,7 +100,7 @@ Global Delete由用户近期重新认证后提交请求，Admin近期MFA确认�
 6. 清除step-up/receipt会话绑定、identity_lifecycle门闩及其他restrict依赖；只有处于受控deleting任务时允许该步。整个间隙仍由deletion job阻止新Principal或门闩重建。
 7. 调用Auth Admin删除用户；失败维持deleting job并重试。成功后清空job.user_id，保留非个人任务ID/完成记录与审计。
 
-当前管理员Global Delete必须先经离线恢复流程原子替换singleton；不得为了通过FK先临时移除管理员约束。删除任务涉及备份保留与恢复后重应用清除，见运维文档。
+当前 System Admin 若要进入 Global Delete，必须先通过正常 membership 流程移除其管理员资格，并保证仍有至少 2 名 active System Admin；只有正常管理路径整体不可用时才进入离线 recovery。不得为了通过 FK 临时删除 membership 约束或绕过 active-floor。删除任务涉及备份保留与恢复后重应用清除，见运维文档。
 
 ## 8. 限流和审计
 

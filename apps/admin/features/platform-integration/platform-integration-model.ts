@@ -18,6 +18,18 @@ export type IntegrationCommerceOfferFact = {
   mapping_status: string;
 };
 
+export type ScopedIntegrationFacts<T> = {
+  scope: string;
+  value: T[];
+};
+
+export function integrationFactsForScope<T>(
+  facts: ScopedIntegrationFacts<T> | undefined,
+  scope: string,
+): T[] | undefined {
+  return facts?.scope === scope ? facts.value : undefined;
+}
+
 export type IntegrationStepStatus =
   | 'complete'
   | 'incomplete'

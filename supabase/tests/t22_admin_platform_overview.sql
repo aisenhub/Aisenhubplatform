@@ -55,7 +55,7 @@ values
 
 insert into private.system_admin (user_id)
 values ('00000000-0000-4000-8000-000000004100')
-on conflict (singleton_id) do update set user_id = excluded.user_id;
+on conflict (user_id) do update set state = 'active';
 
 insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
 values (

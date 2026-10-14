@@ -472,19 +472,26 @@ export async function dispatchAdmin(
   const context = adminContextValues(session);
   if (path === 'admin/api/v1/security/status' && request.method === 'GET') {
     const [status] = await transaction.unsafe<Row>(
-      'select * from private.admin_security_status(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::text)',
+      'select * from private.admin_system_admin_self_status(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::text)',
       [...context, session.aal],
     );
     if (
       !status ||
+      (status.membership_state !== 'pending' &&
+        status.membership_state !== 'active') ||
       (status.current_aal !== 'aal1' && status.current_aal !== 'aal2')
     )
       throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
     return {
       status: 200,
       data: {
+        membership_state: status.membership_state,
         current_aal: status.current_aal,
         recent_mfa_expires_at: status.recent_mfa_expires_at ?? null,
+        verified_totp_count: Number(status.verified_totp_count),
+        active_admin_count: Number(status.active_admin_count),
+        member_count: Number(status.member_count),
+        readiness_healthy: status.readiness_healthy === true,
       },
     };
   }
@@ -520,6 +527,62 @@ export async function dispatchAdmin(
     return { status: 201, data: proof };
   }
   if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
+  if (
+    path === 'admin/api/v1/security/system-admins' &&
+    request.method === 'GET'
+  ) {
+    const rows = await transaction.unsafe<Row>(
+      'select * from private.admin_system_admin_list(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context)',
+      context,
+    );
+    return { status: 200, data: rows };
+  }
+  if (
+    path === 'admin/api/v1/security/system-admins' &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const targetUserId = uuidValue(input.target_user_id);
+    const operationId = uuidValue(input.operation_id);
+    const reason = stringValue(input.reason);
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    if (!targetUserId || !operationId || !reason || !proofId)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [row] = await transaction.unsafe<Row>(
+      'select private.admin_system_admin_add(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text) as result',
+      [...context, targetUserId, proofId, operationId, reason],
+    );
+    if (!row?.result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 201, data: row.result };
+  }
+  const systemAdminMutationMatch =
+    /^admin\/api\/v1\/security\/system-admins\/([^/]+)\/(activate|remove)$/u.exec(
+      path,
+    );
+  if (
+    systemAdminMutationMatch &&
+    UUID.test(systemAdminMutationMatch[1]!) &&
+    request.method === 'POST'
+  ) {
+    await adminStepUp(transaction, session, request);
+    const input = await body(request);
+    const operationId = uuidValue(input.operation_id);
+    const reason = stringValue(input.reason);
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    if (!operationId || !reason || !proofId)
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const fn =
+      systemAdminMutationMatch[2] === 'activate'
+        ? 'private.admin_system_admin_activate'
+        : 'private.admin_system_admin_remove';
+    const [row] = await transaction.unsafe<Row>(
+      `select ${fn}(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid, $7::text) as result`,
+      [...context, systemAdminMutationMatch[1], proofId, operationId, reason],
+    );
+    if (!row?.result) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return { status: 200, data: row.result };
+  }
   if (path === 'admin/api/v1/platforms' && request.method === 'GET') {
     const query = platformQuery(url.searchParams.get('q'));
     const limit = boundedLimit(url.searchParams.get('limit'));

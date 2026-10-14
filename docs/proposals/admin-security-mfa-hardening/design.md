@@ -2,7 +2,7 @@
 
 状态：In Progress
 
-关联：[总计划](plan.md) · [专项审查](../../reviews/admin-security-mfa-review-2026-09-21.md)
+关联：[总计划](plan.md) · [专项审查](../../reviews/admin-security-mfa-review-2026-09-21.md) · [System Admin 多管理员与灾备韧性](../system-admin-resilience/design.md)
 
 ## 背景与当前问题
 
@@ -120,7 +120,7 @@ Account API 为每次请求产生规范 request ID，不接受浏览器提交的
 
 `SEC-PROBE-00` 已证实 Auth 原生删除竞争可删至零、AAL 在 refresh 后降级、Auth audit 表可读。最后因子全局保护未满足，删除入口保留发布阻塞；第二因子添加及其他独立改进可继续，不能静默宣称原子保护。以下能力明确推迟，不应由实施 Agent 自行加入：
 
-- 多管理员和 RBAC；
+- 多管理员和 RBAC；其中“多 System Admin、无 RBAC”的后续架构已经独立进入 [System Admin 多管理员与灾备韧性](../system-admin-resilience/design.md)，不回写为本整改阶段的既有实现；
 - “注销所有设备”的产品入口；
 - 恢复码、Passkey 或其他 MFA 类型；
 - 生产强制 CSP 启用时间；
