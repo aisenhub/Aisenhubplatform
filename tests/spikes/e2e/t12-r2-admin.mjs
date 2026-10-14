@@ -27,15 +27,10 @@ const databaseUrl = process.env.SUPABASE_DB_URL;
 const appUrl = (
   process.env.T12_ADMIN_APP_URL ?? 'http://localhost:3001'
 ).replace(/\/$/u, '');
-const allowSystemAdminSwap = process.env.T12_ALLOW_SYSTEM_ADMIN_SWAP === '1';
 
 if (!authUrl || !anonKey || !databaseUrl)
   throw new Error(
     'T12 browser probe requires SUPABASE_LOCAL_URL, SUPABASE_LOCAL_ANON_KEY, and SUPABASE_DB_URL',
-  );
-if (!allowSystemAdminSwap)
-  throw new Error(
-    'T12 browser probe requires T12_ALLOW_SYSTEM_ADMIN_SWAP=1 for an isolated Local system_admin fixture',
   );
 
 const sql = postgres(databaseUrl, {
@@ -64,6 +59,9 @@ const scalePlatformTargetCode = `${scalePlatformPrefix}-target`;
 const email = `t12-r2-browser-${crypto.randomUUID()}@example.test`;
 const password = `T12-R2-${randomBytes(16).toString('hex')}!`;
 const lifecycleEmail = `t12-r2-lifecycle-${crypto.randomUUID()}@example.test`;
+let consumerUserId;
+let consumerSessionId;
+const consumerEmail = `t12-r2-consumer-${crypto.randomUUID()}@example.test`;
 let userId;
 let factorId;
 let lifecycleUserId;
@@ -73,7 +71,6 @@ let configId;
 let configVersionId;
 let configSubmissionId;
 let feedbackId;
-let previousSystemAdmin;
 let browser;
 let page;
 
@@ -221,20 +218,30 @@ async function signupAndEnroll() {
 }
 
 async function createFixtures() {
-  const [admin] = await sql`
-    select s.user_id, u.email
-    from private.system_admin s
-    left join auth.users u on u.id = s.user_id
-    where s.singleton_id = 1
-  `;
-  previousSystemAdmin = admin?.email?.startsWith('t12-r2-browser-')
-    ? null
-    : (admin?.user_id ?? null);
   await sql`
-    insert into private.system_admin (user_id)
-    values (${userId})
-    on conflict (singleton_id) do update set user_id = excluded.user_id
+    insert into private.system_admin (user_id, state, activated_at)
+    values (${userId}, 'active', now())
+    on conflict (user_id) do update
+      set state = 'active',
+          activated_at = coalesce(private.system_admin.activated_at, excluded.activated_at),
+          updated_at = now()
   `;
+  const consumerSignup = await authRequest('/auth/v1/signup', null, {
+    method: 'POST',
+    body: JSON.stringify({ email: consumerEmail, password }),
+  });
+  assertStatus(consumerSignup.response.status, 200, 'Local consumer signup');
+  consumerUserId = consumerSignup.body?.user?.id;
+  assert.ok(consumerUserId, 'consumer signup must return a user');
+  const [consumerSession] = await sql`
+    select id
+    from auth.sessions
+    where user_id = ${consumerUserId}
+    order by created_at desc
+    limit 1
+  `;
+  consumerSessionId = consumerSession?.id;
+  assert.ok(consumerSessionId, 'consumer signup must create a session');
   await sql`
     insert into public.platforms (id, code, name, status, allow_activation)
     values (${platformId}, ${platformCode}, 'T12 R2 Browser', 'active', true)
@@ -249,7 +256,7 @@ async function createFixtures() {
   `;
   await sql`
     insert into public.platform_accounts (id, platform_id, user_id, status)
-    values (${platformAccountId}, ${platformId}, ${userId}, 'active')
+    values (${platformAccountId}, ${platformId}, ${consumerUserId}, 'active')
   `;
   await sql`
     insert into public.platform_profiles (
@@ -362,17 +369,6 @@ async function createFixtures() {
     where id = ${platformId}
   `;
 
-  const [configSession] = await sql`
-    select id
-    from auth.sessions
-    where user_id = ${userId}
-    order by created_at desc
-    limit 1
-  `;
-  assert.ok(
-    configSession?.id,
-    'Config fixture requires an active Auth session',
-  );
   await sql`
     insert into private.platform_api_keys (
       id, platform_id, name, key_hmac, hmac_key_version, key_prefix, key_suffix,
@@ -384,8 +380,8 @@ async function createFixtures() {
   `;
 
   const accountContext = [
-    userId,
-    configSession.id,
+    consumerUserId,
+    consumerSessionId,
     platformId,
     configPlatformKeyId,
   ];
@@ -452,8 +448,8 @@ async function createFixtures() {
       author_display_name_snapshot, contact_allowed, contact_email_snapshot,
       category, title, body, status, client_context, submitted_at
     ) values (
-      ${feedbackId}, ${platformId}, ${platformAccountId}, ${userId},
-      'T12 Feedback User', true, ${email},
+      ${feedbackId}, ${platformId}, ${platformAccountId}, ${consumerUserId},
+      'T12 Feedback User', true, ${consumerEmail},
       'bug', 'T12 Feedback', 'T12 browser feedback governance fixture',
       'new', ${sql.json({ route: '/t12-feedback' })}, now()
     )
@@ -1211,14 +1207,7 @@ async function runBrowserFlow(secret) {
   assertStatus(capacityRead.status, 200, 'capacity read after update');
   assert.equal(capacityRead.payload?.data?.platform_over_capacity, true);
 
-  if (previousSystemAdmin) {
-    await sql`
-      update private.system_admin set user_id = ${previousSystemAdmin}
-      where singleton_id = 1
-    `;
-  } else {
-    await sql`delete from private.system_admin where singleton_id = 1`;
-  }
+  await sql`delete from private.system_admin where user_id = ${userId}`;
   try {
     const nonAdminStatus = await browserRequest(
       '/api/v1/admin/api/v1/security/status',
@@ -1241,9 +1230,12 @@ async function runBrowserFlow(secret) {
     );
   } finally {
     await sql`
-      insert into private.system_admin (user_id)
-      values (${userId})
-      on conflict (singleton_id) do update set user_id = excluded.user_id
+      insert into private.system_admin (user_id, state, activated_at)
+      values (${userId}, 'active', now())
+      on conflict (user_id) do update
+        set state = 'active',
+            activated_at = coalesce(private.system_admin.activated_at, excluded.activated_at),
+            updated_at = now()
     `;
   }
 
@@ -1432,7 +1424,7 @@ async function runArchitectureBehaviorMatrix(secret) {
     insert into public.platform_feedback (
       platform_id, platform_account_id, user_id, category, title, body, status, submitted_at
     ) values (
-      ${platformId}, ${platformAccountId}, ${userId}, 'other',
+      ${platformId}, ${platformAccountId}, ${consumerUserId}, 'other',
       'T12 Account 360 feedback', 'Account workbench summary fixture', 'new', now()
     )
   `;
@@ -1468,7 +1460,7 @@ async function runArchitectureBehaviorMatrix(secret) {
       'typing in global identity search must not issue requests before submit',
     );
 
-    const committedQuery = email.slice(0, 12);
+    const committedQuery = consumerEmail.slice(0, 12);
     await search.fill(committedQuery);
     const submitted = page.waitForResponse(
       (response) =>
@@ -1509,16 +1501,16 @@ async function runArchitectureBehaviorMatrix(secret) {
     const uidSearch = page.waitForResponse(
       (response) =>
         response.url().includes('/api/v1/admin/api/v1/accounts') &&
-        response.url().includes(encodeURIComponent(userId)) &&
+        response.url().includes(encodeURIComponent(consumerUserId)) &&
         response.url().includes(`platform_id=${platformId}`) &&
         response.request().method() === 'GET',
     );
-    await search.fill(userId);
+    await search.fill(consumerUserId);
     await page.getByRole('button', { name: '检索' }).click();
     await uidSearch;
     await page.waitForURL(
       (url) =>
-        url.searchParams.get('q') === userId &&
+        url.searchParams.get('q') === consumerUserId &&
         url.searchParams.get('platform') === platformId,
     );
     assert.equal(
@@ -1527,11 +1519,11 @@ async function runArchitectureBehaviorMatrix(secret) {
       'UID search submit must issue exactly one global identity request',
     );
     const identityDetailLink = page
-      .locator(`[data-test="identity-detail-link-${userId}"]`)
+      .locator(`[data-test="identity-detail-link-${consumerUserId}"]`)
       .first();
     await identityDetailLink.waitFor({ state: 'visible' });
     await identityDetailLink.click();
-    await page.waitForURL(`**/admin/accounts/${userId}`);
+    await page.waitForURL(`**/admin/accounts/${consumerUserId}`);
     await page.locator('[data-test="identity-detail-page"]').waitFor({
       state: 'visible',
     });
@@ -2591,6 +2583,17 @@ try {
     await sql`delete from auth.users where id in (${paidActiveUserId}, ${paidSuspendedUserId})`.catch(
       () => undefined,
     );
+    if (consumerUserId) {
+      await sql`delete from auth.sessions where user_id = ${consumerUserId}`.catch(
+        () => undefined,
+      );
+      await sql`delete from auth.identities where user_id = ${consumerUserId}`.catch(
+        () => undefined,
+      );
+      await sql`delete from auth.users where id = ${consumerUserId}`.catch(
+        () => undefined,
+      );
+    }
     await sql`delete from public.platform_commercial_prices where platform_id = ${platformId}`;
     await sql`delete from public.platform_commercial_offers where platform_id = ${platformId}`;
     await sql`delete from public.platform_commerce_policy where platform_id in (${platformId}, ${otherPlatformId})`;
@@ -2637,16 +2640,10 @@ try {
       () => undefined,
     );
   }
-  if (previousSystemAdmin) {
-    await sql`
-      update private.system_admin set user_id = ${previousSystemAdmin}
-      where singleton_id = 1
-    `.catch(() => undefined);
-  } else {
-    await sql`delete from private.system_admin where singleton_id = 1`.catch(
+  if (userId)
+    await sql`delete from private.system_admin where user_id = ${userId}`.catch(
       () => undefined,
     );
-  }
   if (userId) {
     await sql`delete from private.admin_step_up where user_id = ${userId}`.catch(
       () => undefined,

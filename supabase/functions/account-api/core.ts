@@ -624,6 +624,16 @@ export function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(401, 'PLATFORM_CREDENTIAL_INVALID');
   if (code === 'P0002' || message.includes('resource_not_found'))
     return new ApiFault(404, 'RESOURCE_NOT_FOUND');
+  if (message.includes('system_admin_mfa_readiness_required'))
+    return new ApiFault(409, 'SYSTEM_ADMIN_MFA_READINESS_REQUIRED');
+  if (message.includes('minimum_active_system_admins_required'))
+    return new ApiFault(409, 'MINIMUM_ACTIVE_SYSTEM_ADMINS_REQUIRED');
+  if (message.includes('dedicated_admin_identity_required'))
+    return new ApiFault(409, 'DEDICATED_ADMIN_IDENTITY_REQUIRED');
+  if (message.includes('system_admin_member_exists'))
+    return new ApiFault(409, 'SYSTEM_ADMIN_MEMBER_EXISTS');
+  if (message.includes('admin_identity_unavailable'))
+    return new ApiFault(409, 'ADMIN_IDENTITY_UNAVAILABLE');
   if (message.includes('account_not_activated'))
     return new ApiFault(409, 'ACCOUNT_NOT_ACTIVATED');
   if (message.includes('activation_disabled'))

@@ -41,13 +41,6 @@ let user;
 let admin;
 let rotationUser;
 let proofId;
-const [existingSystemAdmin] = await sql`
-  select user_id from private.system_admin where singleton_id = 1
-`;
-if (existingSystemAdmin && process.env.M3_ALLOW_SYSTEM_ADMIN_SWAP !== '1')
-  throw new Error(
-    'M3 fixture found an existing system_admin; set M3_ALLOW_SYSTEM_ADMIN_SWAP=1 only for an isolated Local run',
-  );
 const assertStatus = (response, expected, label) => {
   assert.equal(
     response.status,
@@ -247,7 +240,7 @@ try {
       values (${rotationCodeId}, ${platformId}, ${rotationBatchId}, ${rotationPlanId},
         ${rotationCodeHmac}, 1, 'ABCD', '6789')`;
   }
-  await sql`insert into private.system_admin (user_id) values (${admin.userId}) on conflict (singleton_id) do update set user_id = excluded.user_id`;
+  await sql`insert into private.system_admin (user_id, state, activated_at) values (${admin.userId}, 'active', now()) on conflict (user_id) do update set state = 'active', activated_at = coalesce(private.system_admin.activated_at, excluded.activated_at), updated_at = now()`;
   const recentProofResponse = await apiRequest(
     '/functions/v1/account-api/admin/api/v1/auth/recent-proof',
     {
@@ -625,14 +618,9 @@ try {
   await sql`delete from public.platforms where id = ${platformId}`.catch(
     () => undefined,
   );
-  if (existingSystemAdmin)
-    await sql`update private.system_admin set user_id = ${existingSystemAdmin.user_id} where singleton_id = 1`.catch(
-      () => undefined,
-    );
-  else
-    await sql`delete from private.system_admin where singleton_id = 1`.catch(
-      () => undefined,
-    );
+  await sql`delete from private.system_admin where user_id = ${admin.userId}`.catch(
+    () => undefined,
+  );
   for (const account of [user, admin, rotationUser]) {
     if (!account?.userId) continue;
     await fetch(`${authUrl}/auth/v1/admin/users/${account.userId}`, {

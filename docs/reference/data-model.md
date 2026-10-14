@@ -82,11 +82,18 @@ create table public.platform_auth_origins (
 );
 
 create table private.system_admin (
-  singleton_id smallint primary key default 1 check (singleton_id = 1),
-  user_id uuid not null unique references auth.users(id) on delete restrict,
+  user_id uuid primary key references auth.users(id) on delete restrict,
+  state text not null default 'active' check (state in ('pending', 'active')),
+  activated_at timestamptz,
+  created_by_user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create view private.active_system_admin as
+select user_id, created_at, updated_at, activated_at, created_by_user_id
+from private.system_admin
+where state = 'active';
 
 create table private.identity_lifecycle (
   user_id uuid primary key references auth.users(id) on delete restrict,
@@ -96,6 +103,8 @@ create table private.identity_lifecycle (
 ~~~
 
 user_id 可空仅为受控 Global Purge 保留无身份墓碑账户。普通 Close 不清空 user_id；业务运行角色不能修改归属。平台资料只引用唯一账户根，不需要重复 platform_id。
+
+`private.system_admin` 是 System Admin membership 权威表：`pending` 只用于管理员 MFA onboarding，只有 `active` 可进入普通 Admin 授权。正常运行 readiness 要求至少 2 名 active member，且每名 active member 至少有 2 个 Supabase Auth verified TOTP factor；新增、激活、移除由 private domain function 串行化，正常路径不能把 active 数量降到 2 以下。System Admin 使用专用 Auth identity，任意 pending/active membership 都会被普通 Consumer Principal 拒绝。
 
 identity_lifecycle 首次受控访问时 insert-on-conflict 建立。普通写入锁定并检查该身份门闩；Global Delete 设置 deleting 后，激活/兑换/上传/下载和 BFF 授权均拒绝。Auth 中用户缺失时不能重建门闩。
 

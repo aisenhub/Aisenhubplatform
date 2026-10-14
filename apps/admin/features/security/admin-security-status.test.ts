@@ -24,14 +24,26 @@ describe('Admin security status gate', () => {
   it('accepts both authenticated assurance levels', () => {
     expect(
       resolveAdminSecurityView(response(200), {
-        data: { current_aal: 'aal1' },
+        data: { membership_state: 'active', current_aal: 'aal1' },
       }),
     ).toEqual({ kind: 'aal1' });
     expect(
       resolveAdminSecurityView(response(200), {
-        data: { current_aal: 'aal2' },
+        data: { membership_state: 'active', current_aal: 'aal2' },
       }),
     ).toEqual({ kind: 'aal2' });
+  });
+
+  it('keeps pending members inside onboarding even after AAL2', () => {
+    expect(
+      resolveAdminSecurityView(response(200), {
+        data: {
+          membership_state: 'pending',
+          current_aal: 'aal2',
+          verified_totp_count: 2,
+        },
+      }),
+    ).toEqual({ kind: 'pending', currentAal: 'aal2', verifiedTotpCount: 2 });
   });
 
   it('preserves request IDs and fails closed for unexpected responses', () => {
@@ -52,7 +64,7 @@ describe('Admin security status gate', () => {
     });
     expect(
       resolveAdminSecurityView(response(200), {
-        data: { current_aal: 'unknown' },
+        data: { membership_state: 'active', current_aal: 'unknown' },
       }).kind,
     ).toBe('unavailable');
   });

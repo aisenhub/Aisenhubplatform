@@ -45,7 +45,6 @@ let userId;
 let platformId;
 let platformKey;
 let proofId;
-let oldSystemAdmin;
 let apiProcess;
 
 function assertStatus(response, expected, label) {
@@ -243,12 +242,8 @@ async function cleanup() {
     await sql`delete from private.admin_step_up where id = ${proofId}`.catch(
       () => undefined,
     );
-  if (oldSystemAdmin)
-    await sql`update private.system_admin set user_id = ${oldSystemAdmin} where singleton_id = 1`.catch(
-      () => undefined,
-    );
-  else
-    await sql`delete from private.system_admin where singleton_id = 1`.catch(
+  if (adminId)
+    await sql`delete from private.system_admin where user_id = ${adminId}`.catch(
       () => undefined,
     );
   for (const id of [adminId, userId]) {
@@ -269,12 +264,9 @@ try {
   const user = await signup(userEmail);
   userId = user.userId;
   const elevated = await promoteAdmin(admin);
-  const [existing] =
-    await sql`select user_id from private.system_admin where singleton_id = 1`;
-  oldSystemAdmin = existing?.user_id ?? null;
   await sql`grant admin_executor to postgres`;
   await sql`grant account_executor to postgres`;
-  await sql`insert into private.system_admin (user_id) values (${adminId}) on conflict (singleton_id) do update set user_id = excluded.user_id`;
+  await sql`insert into private.system_admin (user_id, state, activated_at) values (${adminId}, 'active', now()) on conflict (user_id) do update set state = 'active', activated_at = coalesce(private.system_admin.activated_at, excluded.activated_at), updated_at = now()`;
 
   const authHeaders = { Authorization: `Bearer ${elevated.accessToken}` };
   const elevatedSessionId = jwtSessionId(elevated.accessToken);

@@ -259,6 +259,11 @@ async function main() {
     ['test:sql:prelaunch-commerce-concurrency'],
     localEnv,
   );
+  runPnpm(
+    'System Admin resilience concurrency',
+    ['test:sql:system-admin-resilience-concurrency'],
+    localEnv,
+  );
   runPnpm('admin typecheck', ['--filter', 'admin', 'typecheck'], localEnv);
   runPnpm('contract breaking compatibility', ['contracts:breaking']);
   runPnpm('registry contract test', ['test:registry']);
@@ -275,7 +280,6 @@ async function main() {
     runPnpm('Admin browser flow', ['test:e2e:t12-r2'], {
       ...localEnv,
       T12_ADMIN_APP_URL: 'http://127.0.0.1:3001',
-      T12_ALLOW_SYSTEM_ADMIN_SWAP: '1',
     });
   } finally {
     terminateChild(admin);

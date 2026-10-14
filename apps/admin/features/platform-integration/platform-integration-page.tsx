@@ -18,11 +18,13 @@ import {
 } from '../resources/scoped-load-guard';
 import {
   derivePlatformIntegrationState,
+  integrationFactsForScope,
   integrationStatusLabel,
   type IntegrationKeyFact,
   type IntegrationCommerceOfferFact,
   type IntegrationOriginFact,
   type IntegrationStep,
+  type ScopedIntegrationFacts,
 } from './platform-integration-model';
 import {
   PlatformOriginsSection,
@@ -52,8 +54,12 @@ export function PlatformIntegrationPage() {
   const { platform } = usePlatformContext();
   const searchParams = useSearchParams();
   const welcome = searchParams.get('welcome') === '1';
-  const [origins, setOrigins] = useState<IntegrationOriginFact[] | undefined>();
-  const [keys, setKeys] = useState<IntegrationKeyFact[] | undefined>();
+  const [origins, setOrigins] = useState<
+    ScopedIntegrationFacts<IntegrationOriginFact> | undefined
+  >();
+  const [keys, setKeys] = useState<
+    ScopedIntegrationFacts<IntegrationKeyFact> | undefined
+  >();
   const [offers, setOffers] = useState<
     IntegrationCommerceOfferFact[] | undefined
   >();
@@ -106,12 +112,18 @@ export function PlatformIntegrationPage() {
     return () => cancelAnimationFrame(frame);
   }, [searchParams]);
 
-  const handleOriginsChange = useCallback((next: Origin[]) => {
-    setOrigins(next);
-  }, []);
-  const handleKeysChange = useCallback((next: PlatformKey[]) => {
-    setKeys(next);
-  }, []);
+  const handleOriginsChange = useCallback(
+    (next: Origin[]) => {
+      setOrigins({ scope: platform.platform_id, value: next });
+    },
+    [platform.platform_id],
+  );
+  const handleKeysChange = useCallback(
+    (next: PlatformKey[]) => {
+      setKeys({ scope: platform.platform_id, value: next });
+    },
+    [platform.platform_id],
+  );
 
   function refreshAll() {
     setOrigins(undefined);
@@ -123,8 +135,8 @@ export function PlatformIntegrationPage() {
 
   const state = derivePlatformIntegrationState({
     platform,
-    origins,
-    keys,
+    origins: integrationFactsForScope(origins, platform.platform_id),
+    keys: integrationFactsForScope(keys, platform.platform_id),
     offers,
   });
   const encoded = encodeURIComponent(platform.platform_id);
@@ -225,13 +237,13 @@ export function PlatformIntegrationPage() {
       </section>
 
       <PlatformOriginsSection
-        key={`origins-${refreshVersion}`}
+        key={`origins-${platform.platform_id}-${refreshVersion}`}
         embedded
         onFactsChange={handleOriginsChange}
       />
 
       <PlatformKeysSection
-        key={`keys-${refreshVersion}`}
+        key={`keys-${platform.platform_id}-${refreshVersion}`}
         embedded
         onFactsChange={handleKeysChange}
       />

@@ -63,11 +63,15 @@ Supabase Secret、SQL账户密码、备份凭据分别轮换，各有部署顺�
 
 ## 4. 管理员恢复
 
-覆盖MFA设备/邮箱丢失、Auth封禁或损坏、singleton映射损坏、Admin部署不可达与Auth故障。正常运行最多一名active管理员，无隐藏常驻第二账号。
+System Admin 采用同权 membership，不设隐藏常驻 recovery admin。正常 readiness 要求至少 2 名 `active` System Admin，且每名 active 管理员至少有 2 个 Supabase Auth verified TOTP factor；`pending` membership 只用于 onboarding，不具备普通 Admin 业务权限。管理员 Auth identity 必须专用，不能直接把已有 Consumer 业务账号提升为管理员。
 
-离线操作需要项目所有者控制的基础设施入口；建立工单/恢复ID、备份当前singleton、确认新专用用户已完成MFA，再以限时recovery_executor在事务内替换singleton。替换后撤销旧Admin所有会话/step-up，轮换恢复中接触的Secret，审计并关闭恢复入口。
+单个管理员丢失一个 MFA 设备时优先使用该账号的第二个 verified TOTP。若一名管理员完全失联，但仍有其他 active 管理员在线：在线管理员完成 recent MFA 后添加一个新的专用 Auth user 为 `pending`，新管理员独立登录并绑定至少两个 verified TOTP，再由在线管理员显式激活；active 数量达到 3 后才移除失联 membership。数据库对 add/activate/remove 使用统一 membership advisory lock，并在锁内重新校验 actor、recent MFA 和 active 数量，因此并发删除也不能把 active 数量降到 2 以下。移除成功会撤销目标管理员 Auth sessions 与 `private.admin_step_up` proof。
 
-Auth完全不可用时不绕过认证开放Admin网页；通过基础设施运维恢复Auth/部署。应用可保持不可用直至验证通过。新账号准备阶段不是第二名应用管理员，只有singleton切换后才获得权限。
+全部 active 管理员均无法登录/MFA、正常 Admin 部署不可达或 membership 损坏时才进入 break-glass。离线恢复不开放网页绕过：项目所有者建立工单/恢复 ID，使用受控基础设施 Auth 管理能力准备新的专用用户并完成至少两个 verified TOTP，再限时启用 `recovery_executor` 调用 `private.recovery_system_admin_add/activate/remove`。recovery add 仍只创建 `pending`，activate 仍要求双 TOTP，remove 仍遵守至少 2 名 active 的下限；若当前 active 容量不足，应先恢复/激活新的管理员，再清理不可用 membership。所有 recovery mutation 写入 `audit_logs`。
+
+break-glass 完成后必须：验证至少两名 active 管理员可独立登录并达到 AAL2；检查每名 active 管理员至少两个 verified TOTP；撤销失效管理员的 session/recent-proof；轮换恢复过程中接触的 credential/secret；关闭 `recovery_executor` 临时入口；记录恢复耗时、恢复 ID、执行人、目标 user id、审计事件和后续问题。Auth 本身完全不可用时不降低认证边界开放 Admin 网页，应先通过基础设施运维恢复 Auth/部署。
+
+Production 发布前的管理员 readiness 检查至少包括：`active_admin_count >= 2`、所有 active member `verified_totp_count >= 2`、Auth user 未删除/未封禁、membership/Auth 状态可读取。Admin Security 页面展示服务端权威 readiness；底层拥有 Supabase Auth 管理权限的人仍可绕过应用 UI 修改 factor，因此生产运维告警和定期人工核对仍是必要控制。
 
 ## 5. Durable任务与容量
 

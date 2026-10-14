@@ -7,6 +7,7 @@ import {
   type ProviderOrderStatus,
   toMoneyAmount,
 } from '../../../packages/domain/src/contracts/billing.ts';
+import { discardResponseBody } from './http.ts';
 
 type ObjectValue = Record<string, unknown>;
 
@@ -327,7 +328,10 @@ async function fetchAfdianOrder(
         signal: controller.signal,
       },
     );
-    if (!response.ok) return { status: 'temporarily_unavailable' };
+    if (!response.ok) {
+      await discardResponseBody(response);
+      return { status: 'temporarily_unavailable' };
+    }
     const payload = (await response.json().catch(() => null)) as unknown;
     const root = objectValue(payload);
     if (root?.ec !== 200) return { status: 'temporarily_unavailable' };
@@ -388,7 +392,10 @@ async function fetchAfdianOrderPage(
         signal: controller.signal,
       },
     );
-    if (!response.ok) return { status: 'temporarily_unavailable' };
+    if (!response.ok) {
+      await discardResponseBody(response);
+      return { status: 'temporarily_unavailable' };
+    }
     const payload = (await response.json().catch(() => null)) as unknown;
     const root = objectValue(payload);
     const data = objectValue(root?.data);

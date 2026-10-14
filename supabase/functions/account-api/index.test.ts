@@ -372,8 +372,57 @@ function fakeDatabase(
           if (query.startsWith('select private.admin_step_up_valid')) {
             return [{ valid: true }] as unknown as R[];
           }
-          if (query.startsWith('select * from private.admin_security_status'))
+          if (
+            query.startsWith(
+              'select * from private.admin_system_admin_self_status',
+            )
+          )
             return securityStatusRows as R[];
+          if (query.startsWith('select * from private.admin_system_admin_list'))
+            return [
+              {
+                user_id: userId,
+                email: 'admin@example.test',
+                state: 'active',
+                verified_totp_count: 2,
+                auth_available: true,
+                created_at: '2026-09-08T00:00:00Z',
+                activated_at: '2026-09-08T00:00:00Z',
+                created_by_user_id: null,
+                active_admin_count: 2,
+                readiness_healthy: true,
+              },
+            ] as unknown as R[];
+          if (query.includes('private.admin_system_admin_add('))
+            return [
+              {
+                result: {
+                  user_id: '00000000-0000-4000-8000-000000000008',
+                  state: 'pending',
+                  replayed: false,
+                },
+              },
+            ] as unknown as R[];
+          if (query.includes('private.admin_system_admin_activate('))
+            return [
+              {
+                result: {
+                  user_id: '00000000-0000-4000-8000-000000000008',
+                  state: 'active',
+                  replayed: false,
+                },
+              },
+            ] as unknown as R[];
+          if (query.includes('private.admin_system_admin_remove('))
+            return [
+              {
+                result: {
+                  user_id: '00000000-0000-4000-8000-000000000008',
+                  removed: true,
+                  replayed: false,
+                },
+              },
+            ] as unknown as R[];
           if (query.includes('from private.admin_platform_list')) {
             return [
               {
@@ -1848,14 +1897,28 @@ Deno.test('Admin security status is available to an active AAL1 administrator', 
     {
       database: fakeDatabase(
         (query, values) => {
-          if (query.startsWith('select * from private.admin_security_status')) {
+          if (
+            query.startsWith(
+              'select * from private.admin_system_admin_self_status',
+            )
+          ) {
             statusQuery = query;
             statusArguments = values;
           }
         },
         undefined,
         undefined,
-        [{ current_aal: 'aal1', recent_mfa_expires_at: null }],
+        [
+          {
+            membership_state: 'active',
+            current_aal: 'aal1',
+            recent_mfa_expires_at: null,
+            verified_totp_count: 2,
+            active_admin_count: 2,
+            member_count: 2,
+            readiness_healthy: true,
+          },
+        ],
       ),
       verifyAccessToken: async () => userId,
     },
@@ -1866,9 +1929,39 @@ Deno.test('Admin security status is available to an active AAL1 administrator', 
   assertEquals(statusArguments?.[1], sessionId);
   assertEquals(statusArguments?.[3], 'aal1');
   assertEquals((await response.json()).data, {
+    membership_state: 'active',
     current_aal: 'aal1',
     recent_mfa_expires_at: null,
+    verified_totp_count: 2,
+    active_admin_count: 2,
+    member_count: 2,
+    readiness_healthy: true,
   });
+});
+
+Deno.test('Admin security status exposes pending onboarding before activation', async () => {
+  const response = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/security/status',
+      { headers: { Authorization: `Bearer ${fakeJwt('aal2')}` } },
+    ),
+    {
+      database: fakeDatabase(undefined, undefined, undefined, [
+        {
+          membership_state: 'pending',
+          current_aal: 'aal2',
+          recent_mfa_expires_at: null,
+          verified_totp_count: 2,
+          active_admin_count: 2,
+          member_count: 3,
+          readiness_healthy: true,
+        },
+      ]),
+      verifyAccessToken: async () => userId,
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).data.membership_state, 'pending');
 });
 
 Deno.test('Admin security status reports non-admin before the AAL2 gate', async () => {
@@ -1881,7 +1974,11 @@ Deno.test('Admin security status reports non-admin before the AAL2 gate', async 
     ),
     {
       database: fakeDatabase((query) => {
-        if (query.startsWith('select * from private.admin_security_status'))
+        if (
+          query.startsWith(
+            'select * from private.admin_system_admin_self_status',
+          )
+        )
           throw Object.assign(new Error('admin_required'), { code: '42501' });
       }),
       verifyAccessToken: async () => userId,
@@ -1901,7 +1998,11 @@ Deno.test('Admin security status rejects a revoked session', async () => {
     ),
     {
       database: fakeDatabase((query) => {
-        if (query.startsWith('select * from private.admin_security_status'))
+        if (
+          query.startsWith(
+            'select * from private.admin_system_admin_self_status',
+          )
+        )
           throw Object.assign(new Error('session_not_active'), {
             code: '42501',
           });
@@ -1928,6 +2029,71 @@ Deno.test('Admin security status fails closed when its SQL result is malformed',
   );
   assertEquals(response.status, 503);
   assertEquals((await response.json()).error.code, 'AUTHORIZATION_UNAVAILABLE');
+});
+
+Deno.test('System Admin membership routes expose list and recent-MFA mutations', async () => {
+  const common = {
+    database: fakeDatabase(),
+    verifyAccessToken: async () => userId,
+  };
+  const authorization = `Bearer ${fakeJwt('aal2')}`;
+  const proofId = '00000000-0000-4000-8000-000000000005';
+  const targetUserId = '00000000-0000-4000-8000-000000000008';
+  const operationId = '00000000-0000-4000-8000-000000000009';
+
+  const list = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/security/system-admins',
+      { headers: { Authorization: authorization } },
+    ),
+    common,
+  );
+  assertEquals(list.status, 200);
+  assertEquals((await list.json()).data[0].state, 'active');
+
+  const add = await handleRequest(
+    new Request(
+      'http://local/functions/v1/account-api/admin/api/v1/security/system-admins',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: authorization,
+          'Content-Type': 'application/json',
+          'X-Recent-Auth-Proof': proofId,
+        },
+        body: JSON.stringify({
+          target_user_id: targetUserId,
+          operation_id: operationId,
+          reason: 'fixture',
+        }),
+      },
+    ),
+    common,
+  );
+  assertEquals(add.status, 201);
+  assertEquals((await add.json()).data.state, 'pending');
+
+  for (const action of ['activate', 'remove'] as const) {
+    const response = await handleRequest(
+      new Request(
+        `http://local/functions/v1/account-api/admin/api/v1/security/system-admins/${targetUserId}/${action}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authorization,
+            'Content-Type': 'application/json',
+            'X-Recent-Auth-Proof': proofId,
+          },
+          body: JSON.stringify({
+            operation_id: operationId,
+            reason: 'fixture',
+          }),
+        },
+      ),
+      common,
+    );
+    assertEquals(response.status, 200);
+  }
 });
 
 Deno.test('Account API binds ordinary recent proof to a separate verified session', async () => {

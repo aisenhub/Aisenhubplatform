@@ -15,7 +15,6 @@ const platformId = crypto.randomUUID();
 const planId = crypto.randomUUID();
 const offerId = crypto.randomUUID();
 const providerAccountId = crypto.randomUUID();
-let previousSystemAdminId = null;
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -29,10 +28,6 @@ const asAdmin = async (callback) =>
 
 try {
   await sql`grant admin_executor to postgres`;
-  const [previousSystemAdmin] =
-    await sql`select user_id from private.system_admin where singleton_id = 1`;
-  previousSystemAdminId = previousSystemAdmin?.user_id ?? null;
-
   await sql`
     insert into auth.users(id,aud,role,email,encrypted_password,created_at,updated_at)
     values(
@@ -45,9 +40,9 @@ try {
     values(${sessionId},${adminUserId},now(),now(),now()+interval '1 hour')
   `;
   await sql`
-    insert into private.system_admin(singleton_id,user_id)
-    values(1,${adminUserId})
-    on conflict(singleton_id) do update set user_id=excluded.user_id,updated_at=now()
+    insert into private.system_admin(user_id,state,activated_at)
+    values(${adminUserId},'active',now())
+    on conflict(user_id) do update set state='active',activated_at=coalesce(private.system_admin.activated_at,excluded.activated_at),updated_at=now()
   `;
   await sql`
     insert into public.platforms(id,code,name,status,allow_activation)
@@ -229,17 +224,10 @@ try {
     'platform',
     () => sql`delete from public.platforms where id=${platformId}`,
   );
-  await cleanup('system admin restore', async () => {
-    if (previousSystemAdminId) {
-      await sql`
-        update private.system_admin
-        set user_id=${previousSystemAdminId},updated_at=now()
-        where singleton_id=1
-      `;
-    } else {
-      await sql`delete from private.system_admin where user_id=${adminUserId}`;
-    }
-  });
+  await cleanup(
+    'system admin fixture',
+    () => sql`delete from private.system_admin where user_id=${adminUserId}`,
+  );
   await cleanup(
     'admin session',
     () => sql`delete from auth.sessions where id=${sessionId}`,

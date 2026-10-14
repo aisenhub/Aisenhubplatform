@@ -151,10 +151,18 @@ export default function AdminMfaPage() {
     }
     if (!response.ok) {
       const details = payload?.error?.details;
+      if (details?.enrollment_verified === 'true') {
+        setEnrollment(null);
+        setCode('');
+        await loadFactors();
+        adminAuthSession.completeAuthentication('admin_mfa');
+        setStatus('认证器已绑定；正在刷新管理员安全状态…');
+        setVerifying(false);
+        window.location.assign('/admin/security');
+        return;
+      }
       setStatus(
-        details?.enrollment_verified === 'true'
-          ? '认证器已绑定，但近期认证证明签发失败；请使用已有认证器重试。'
-          : `认证器绑定失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+        `认证器绑定失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
       );
       setVerifying(false);
       return;
@@ -163,9 +171,9 @@ export default function AdminMfaPage() {
     setCode('');
     await loadFactors();
     adminAuthSession.completeAuthentication('admin_mfa');
-    setStatus('认证器已绑定并完成 MFA，正在进入 Admin…');
+    setStatus('认证器已绑定并完成 MFA，正在刷新管理员安全状态…');
     setVerifying(false);
-    window.location.assign('/admin');
+    window.location.assign('/admin/security');
   }
 
   async function verifyExistingFactor(event: FormEvent<HTMLFormElement>) {
@@ -195,10 +203,14 @@ export default function AdminMfaPage() {
         error?: { code?: string; details?: Record<string, string> };
       } | null;
       const details = payload?.error?.details;
+      if (details?.mfa_verified === 'true') {
+        adminAuthSession.completeAuthentication('admin_mfa');
+        setVerifying(false);
+        window.location.assign('/admin');
+        return;
+      }
       setStatus(
-        details?.mfa_verified === 'true'
-          ? 'MFA 已验证，但近期认证证明签发失败；请稍后重试。'
-          : `MFA 失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
+        `MFA 失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
       );
       setVerifying(false);
       return;
@@ -233,12 +245,12 @@ export default function AdminMfaPage() {
         </p>
       </div>
 
-      {!factors.length && !enrollment ? (
+      {!enrollment ? (
         <section className="panel admin-auth-card">
-          <h2>绑定认证器</h2>
+          <h2>{factors.length ? '添加备用认证器' : '绑定认证器'}</h2>
           <p className="muted">
-            使用 Google Authenticator、Microsoft Authenticator 或其他兼容 TOTP
-            的认证器绑定此 Admin 账户。
+            System Admin 生产就绪要求至少两个 verified TOTP
+            因子。已验证因子不会因添加备用认证器而被替换。
           </p>
           <button
             type="button"
@@ -246,7 +258,11 @@ export default function AdminMfaPage() {
             onClick={startEnrollment}
             disabled={enrolling}
           >
-            {enrolling ? '正在生成…' : '生成绑定二维码'}
+            {enrolling
+              ? '正在生成…'
+              : factors.length
+                ? '添加另一个认证器'
+                : '生成绑定二维码'}
           </button>
         </section>
       ) : null}

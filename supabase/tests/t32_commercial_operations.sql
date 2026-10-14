@@ -28,7 +28,7 @@ insert into auth.users(id,aud,role,email,encrypted_password,created_at,updated_a
 insert into auth.sessions(id,user_id,created_at,updated_at,not_after)
 values('00000000-0000-4000-8000-000000010010','00000000-0000-4000-8000-000000010001',now(),now(),now()+interval '1 hour');
 insert into private.system_admin(user_id) values('00000000-0000-4000-8000-000000010001')
-on conflict(singleton_id) do update set user_id=excluded.user_id;
+on conflict (user_id) do update set state = 'active';
 
 insert into public.platforms(id,code,name,status,allow_activation) values
  ('00000000-0000-4000-8000-000000010020','commerce-main','Commerce Main','active',true),

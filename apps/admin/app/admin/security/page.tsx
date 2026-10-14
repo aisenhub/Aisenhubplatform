@@ -16,6 +16,7 @@ import {
   useAdminSessionSnapshot,
 } from '../../_lib/auth-session';
 import { resourceError } from '../../../features/resources/admin-resource-utils';
+import { SystemAdminMembersPanel } from '../../../features/security/system-admin-members-panel';
 
 type Factor = {
   id: string;
@@ -199,6 +200,8 @@ export default function AdminSecurityPage() {
           </Button>
         </div>
       </section>
+
+      <SystemAdminMembersPanel />
     </main>
   );
 }

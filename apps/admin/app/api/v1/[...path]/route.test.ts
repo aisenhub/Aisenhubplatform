@@ -128,7 +128,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(72);
+    expect(operationCount).toBe(76);
   });
 
   it('proxies private Feedback images as binary and allows label replacement', async () => {
@@ -261,6 +261,26 @@ describe('admin BFF', () => {
       context(['v1', 'profile']),
     );
     expect(response.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects oversized or overpopulated Admin query strings before upstream fetch', async () => {
+    const oversized = await GET(
+      request('GET', 'admin/api/v1/platforms', {
+        query: `?q=${'界'.repeat(3000)}`,
+      }),
+      context(['admin', 'api', 'v1', 'platforms']),
+    );
+    expect(oversized.status).toBe(414);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const params = new URLSearchParams();
+    for (let index = 0; index < 65; index += 1) params.append(`p${index}`, 'x');
+    const overpopulated = await GET(
+      request('GET', 'admin/api/v1/platforms', { query: `?${params}` }),
+      context(['admin', 'api', 'v1', 'platforms']),
+    );
+    expect(overpopulated.status).toBe(414);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

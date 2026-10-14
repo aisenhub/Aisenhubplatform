@@ -129,16 +129,16 @@ export async function deletionJobFiles(
       [...jobContext, jobId, leaseFence],
     ),
   );
-  let failed = false;
+  let retryNeeded = false;
   for (const file of files) {
     if (file.write_outcome !== 'confirmed') {
-      failed = true;
+      retryNeeded = true;
       break;
     }
     const fileId = uuid(file.file_id);
     if (!fileId) continue;
     const result = await cleanupFileId(dependencies, id, fileId);
-    if (result.status >= 500) failed = true;
+    if (!result.ok) retryNeeded = true;
   }
   const [step] = await withJobRole(db, (transaction) =>
     transaction.unsafe<Row>(
@@ -148,12 +148,12 @@ export async function deletionJobFiles(
         jobId,
         leaseFence,
         'personal_data_cleared',
-        failed ? 'blocked' : 'completed',
-        failed ? 'storage_cleanup_pending' : null,
+        retryNeeded ? 'retry' : 'completed',
+        retryNeeded ? 'storage_cleanup_pending' : null,
       ],
     ),
   );
-  return response(failed ? 503 : 200, {
+  return response(retryNeeded ? 503 : 200, {
     job_id: jobId,
     files_seen: files.length,
     step: step ?? null,

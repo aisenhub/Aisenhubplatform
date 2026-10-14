@@ -42,6 +42,61 @@
         }
       }
     },
+    "/admin/api/v1/security/system-admins": {
+      "get": {
+        "operationId": "adminListSystemAdmins",
+        "security": [{ "adminBearer": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "adminAddSystemAdmin",
+        "security": [{ "adminBearer": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/security/system-admins/{userId}/activate": {
+      "post": {
+        "operationId": "adminActivateSystemAdmin",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/UserId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/security/system-admins/{userId}/remove": {
+      "post": {
+        "operationId": "adminRemoveSystemAdmin",
+        "security": [{ "adminBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/UserId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Json" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
     "/admin/api/v1/auth/recent-proof": {
       "post": {
         "operationId": "adminIssueRecentAuthProof",
@@ -3004,8 +3059,19 @@
     "schemas": {
       "AdminSecurityStatusData": {
         "type": "object",
-        "required": ["current_aal"],
+        "required": [
+          "membership_state",
+          "current_aal",
+          "verified_totp_count",
+          "active_admin_count",
+          "member_count",
+          "readiness_healthy"
+        ],
         "properties": {
+          "membership_state": {
+            "type": "string",
+            "enum": ["pending", "active"]
+          },
           "current_aal": {
             "type": "string",
             "enum": ["aal1", "aal2"]
@@ -3013,7 +3079,11 @@
           "recent_mfa_expires_at": {
             "type": ["string", "null"],
             "format": "date-time"
-          }
+          },
+          "verified_totp_count": { "type": "integer", "minimum": 0 },
+          "active_admin_count": { "type": "integer", "minimum": 0 },
+          "member_count": { "type": "integer", "minimum": 0 },
+          "readiness_healthy": { "type": "boolean" }
         }
       },
       "PlatformOverviewData": {

@@ -121,7 +121,7 @@ insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
 values ('00000000-0000-4000-8000-000000007110', '00000000-0000-4000-8000-000000007100', now(), now(), now() + interval '1 hour');
 insert into private.system_admin(user_id)
 values ('00000000-0000-4000-8000-000000007100')
-on conflict (singleton_id) do update set user_id = excluded.user_id;
+on conflict (user_id) do update set state = 'active';
 insert into public.platforms(id, code, name, status, allow_activation)
 values ('00000000-0000-4000-8000-000000007120', 'config-cursor', 'Config Cursor', 'active', true);
 insert into public.platform_accounts(id, platform_id, user_id, status, activated_at)

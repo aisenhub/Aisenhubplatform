@@ -36,6 +36,10 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 
 export type PlatformKey = {
   key_id: string;
@@ -101,12 +105,14 @@ export function PlatformKeysSection({
   const [secret, setSecret] = useState<string | null>(null);
   const [inspectorKey, setInspectorKey] = useState<PlatformKey | null>(null);
   const loadGeneration = useRef(0);
+  const loadScope = useRef(platform.platform_id);
+  loadScope.current = platform.platform_id;
 
   useEffect(() => setDraftQuery(query), [query]);
 
   const load = useCallback(
     async (background = false) => {
-      const generation = ++loadGeneration.current;
+      const token = beginScopedLoad(loadGeneration, platform.platform_id);
       const epoch = adminAuthSession.getEpoch();
       setRefreshing(background);
       setRefreshError(null);
@@ -119,12 +125,12 @@ export function PlatformKeysSection({
           ? `?q=${encodeURIComponent(query.trim())}`
           : '';
         const response = await adminAuthSession.request(
-          `${resourcePath(platform.platform_id, '/keys')}${suffix}`,
+          `${resourcePath(token.scope, '/keys')}${suffix}`,
           { cache: 'no-store' },
         );
         const payload = await readApiPayload<PlatformKey[]>(response);
         if (
-          generation !== loadGeneration.current ||
+          !isScopedLoadCurrent(loadGeneration, loadScope, token) ||
           !adminAuthSession.isCurrentEpoch(epoch)
         )
           return;
@@ -147,7 +153,7 @@ export function PlatformKeysSection({
         return payload.data;
       } catch (caught) {
         if (
-          generation !== loadGeneration.current ||
+          !isScopedLoadCurrent(loadGeneration, loadScope, token) ||
           !adminAuthSession.isCurrentEpoch(epoch)
         )
           return;
@@ -163,7 +169,8 @@ export function PlatformKeysSection({
           setState('error');
         }
       } finally {
-        if (generation === loadGeneration.current) setRefreshing(false);
+        if (isScopedLoadCurrent(loadGeneration, loadScope, token))
+          setRefreshing(false);
       }
     },
     [onFactsChange, platform.platform_id, query],

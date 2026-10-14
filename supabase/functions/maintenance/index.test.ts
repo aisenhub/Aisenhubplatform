@@ -3,7 +3,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 
 import { handleMaintenanceRequest } from './index.ts';
-import { authAdminAdapter } from './core.ts';
+import { authAdminAdapter, billingAlertReceiver } from './core.ts';
 
 const fileId = '00000000-0000-4000-8000-000000000001';
 const feedbackAttachmentId = '00000000-0000-4000-8000-000000000007';
@@ -1254,6 +1254,66 @@ Deno.test('maintenance records provider page failures without advancing discover
   ]);
 });
 
+Deno.test('Global Delete retries when Storage cleanup is temporarily unavailable', async () => {
+  let deletionOutcome: unknown;
+  let deletionError: unknown;
+  const base = database();
+  const wrapped: TestDatabase = {
+    begin: (callback) =>
+      base.begin((transaction) =>
+        callback({
+          ...transaction,
+          async unsafe<T extends TestRow>(query: string, values?: unknown[]) {
+            if (query.includes('deletion_job_file_list')) {
+              return [
+                { file_id: fileId, write_outcome: 'confirmed' },
+              ] as unknown as T[];
+            }
+            if (query.includes('deletion_job_step')) {
+              deletionOutcome = values?.[7];
+              deletionError = values?.[8];
+            }
+            return transaction.unsafe<T>(query, values);
+          },
+        }),
+      ),
+  };
+
+  const response = await handleMaintenanceRequest(
+    new Request('http://local/maintenance/v1/deletion-jobs/files', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-job',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ job_id: jobId, fence: 2, lease_fence: 1 }),
+    }),
+    {
+      capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+      workerId: 'test-worker',
+      database: wrapped,
+      storageAdapter: {
+        async putImmutable() {
+          throw new Error('unused');
+        },
+        async getInfo() {
+          throw new Error('unused');
+        },
+        async download() {
+          throw new Error('unused');
+        },
+        async remove() {
+          throw new Error('PROVIDER_TIMEOUT');
+        },
+      },
+    },
+  );
+
+  assertEquals(response.status, 503);
+  assertEquals(deletionOutcome, 'retry');
+  assertEquals(deletionError, 'storage_cleanup_pending');
+});
+
 Deno.test('maintenance gates Auth deletion on provider success before checkpoint advance', async () => {
   events.length = 0;
   const response = await handleMaintenanceRequest(
@@ -1400,6 +1460,49 @@ Deno.test('maintenance evaluates and delivers billing observability alerts', asy
   assertEquals((await response.json()).data.receiver_status, 'delivered');
   assertEquals(delivered, ['billing.jobs.expired_lease']);
   assertEquals(alertEvents, ['role', 'evaluate', 'role', 'delivery']);
+});
+
+Deno.test('billing alert receiver discards unused response bodies', async () => {
+  const previousTarget = Deno.env.get('BILLING_ALERT_WEBHOOK_URL');
+  const originalFetch = globalThis.fetch;
+  try {
+    Deno.env.set(
+      'BILLING_ALERT_WEBHOOK_URL',
+      'https://alerts.example.test/hook',
+    );
+    for (const status of [200, 503]) {
+      let cancelled = false;
+      globalThis.fetch = () =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream({
+              cancel() {
+                cancelled = true;
+              },
+            }),
+            { status },
+          ),
+        );
+      const receiver = billingAlertReceiver();
+      if (!receiver) throw new Error('receiver missing');
+      try {
+        await receiver.deliver({ alert_key: 'fixture-alert' });
+        if (status !== 200) throw new Error('expected receiver failure');
+      } catch (error) {
+        if (status === 200) throw error;
+        assertEquals(
+          error instanceof Error ? error.message : String(error),
+          'ALERT_RECEIVER_HTTP_503',
+        );
+      }
+      assertEquals(cancelled, true, `status ${status}`);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousTarget === undefined)
+      Deno.env.delete('BILLING_ALERT_WEBHOOK_URL');
+    else Deno.env.set('BILLING_ALERT_WEBHOOK_URL', previousTarget);
+  }
 });
 
 Deno.test('authAdminAdapter treats 404 as idempotent deletion success', async () => {

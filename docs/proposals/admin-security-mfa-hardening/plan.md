@@ -5,7 +5,7 @@
 依据：[Admin 安全管理与 MFA 专项审查报告](../../reviews/admin-security-mfa-review-2026-09-21.md)  
 执行规则：[Agent 开发与发布流程](../../guides/development-release-workflow.md)  
 审查基线：`bf142bb51f2e62ad3ba964e2199d01955dd7bd10`  
-关联：[优化设计](design.md) · [Agent 交接](agent-handoff.md) · [验证记录](verification-record.md)
+关联：[优化设计](design.md) · [Agent 交接](agent-handoff.md) · [验证记录](verification-record.md) · [后续 System Admin 多管理员与灾备韧性](../system-admin-resilience/plan.md)
 
 ## 1. 使用方式
 
@@ -39,7 +39,7 @@
 
 本计划明确不包含：
 
-- 多管理员 RBAC；
+- 多管理员 RBAC；“多个同权 System Admin、不引入 RBAC”的后续改造由独立 [System Admin 多管理员与灾备韧性计划](../system-admin-resilience/plan.md) 承载，不属于本计划阶段范围；
 - Passkey/WebAuthn；
 - 短信或邮件 OTP；
 - 新的外部身份供应商；
