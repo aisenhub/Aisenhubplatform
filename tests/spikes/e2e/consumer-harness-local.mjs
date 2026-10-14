@@ -1127,12 +1127,13 @@ async function cleanup() {
   await sql`delete from public.subscription_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
-  await sql`delete from public.subscription_grants where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
-    () => {},
-  );
   await sql`delete from public.redemption_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`delete from public.subscription_grants where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.subscriptions where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.redemption_codes where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
@@ -1187,11 +1188,6 @@ async function cleanup() {
   const [remainingPlatforms] =
     await sql`select count(*)::integer count from public.platforms
     where id in (${platformAId}, ${platformBId})`;
-  assert.equal(
-    remainingPlatforms.count,
-    0,
-    'Consumer Harness fixtures must be removed',
-  );
   for (const id of [userId, fixtureOwnerId].filter(Boolean)) {
     await sql`delete from auth.sessions where user_id = ${id}`.catch(() => {});
     await sql`delete from auth.identities where user_id = ${id}`.catch(
@@ -1216,6 +1212,11 @@ async function cleanup() {
     }
   }
   await sql.end({ timeout: 5 }).catch(() => {});
+  assert.equal(
+    remainingPlatforms.count,
+    0,
+    'Consumer Harness fixtures must be removed',
+  );
 }
 
 try {

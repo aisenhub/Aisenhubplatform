@@ -1,6 +1,6 @@
 # 预上线单轨化清理与缺陷修复总计划
 
-状态：In Progress
+状态：发布进行中；全部 R/LC、Local fresh 验收与指定 Supabase 测试环境交付已完成，待 Git/main 和 Admin 发布闭环。
 
 关联：[设计](design.md) · [Agent 交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -23,7 +23,7 @@
 | 04 | 状态机、治理事件与幂等统一 | R-01/R-04/R-11；LC-07 | 02、03 | 本地已完成 / ab27712 checkpoint | [阶段 04](phases/04-governance-idempotency.md) |
 | 05 | Summary、Pagination 与 QA 事实修复 | R-05/R-06/R-07/R-12 | 02、03、04 | 本地已完成 / ab27712 checkpoint | [阶段 05](phases/05-read-model-pagination-qa.md) |
 | 06 | Admin 前端异步、切换、导航与规模边界修复 | R-13/R-14/R-15；LC-09 | 01、05 | 本地已完成 | [阶段 06](phases/06-admin-state-navigation-scale.md) |
-| 07 | Prelaunch schema/migration rebaseline、reset 与完整验收 | LC-13 + 全部 R/LC | 02～06 | PARTIAL：Local reuse gate PASS；重置/发布 BLOCKED | [阶段 07](phases/07-schema-rebaseline-and-release-verification.md) |
+| 07 | Prelaunch schema/migration rebaseline、reset 与完整验收 | LC-13 + 全部 R/LC | 02～06 | fresh Local / workendstaging PASS；Git/Admin 发布进行中 | [阶段 07](phases/07-schema-rebaseline-and-release-verification.md) |
 
 ## 串行与并行
 

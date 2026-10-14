@@ -1,6 +1,6 @@
 # 阶段 07：Schema Rebaseline、Reset 与完整验收
 
-状态：In Progress；2026-10-14 用户明确授权重置 Local/workendstaging 测试数据及后续发布、合并与分支清理，正在执行 rebaseline 与 fresh 验收。
+状态：本地及测试环境已完成；默认 Local fresh 验收 22 gates PASS、workendstaging reset/seed/三函数部署 PASS；Git/main 与 Admin 发布正在闭环。
 
 前置：阶段 02～06 全部代码行为已经稳定。
 
@@ -13,6 +13,8 @@
 基线显式授予 `domain_owner` 对 public schema 的 USAGE，不依赖 Local 的 PUBLIC 默认权限；远端 reset/create schema 与托管角色边界下，平台 bootstrap trigger 也必须可正常创建 Commerce policy。首个远端 reset transaction 因该缺失失败并整体回滚，修复后重试；不得放宽业务表权限。
 
 本阶段一并集成已提交的 UI 优化 `c1776f0`（17 个文件，UI-ISSUE-001～015），用户 2026-10-14 已确认；原工作区仍在编辑的 `AUDIT_REPORT.md` 不覆盖、不暂存。集成后重新执行全部 Local 与浏览器检查；删除安全加载页的重复技术说明，保留必要的加载反馈。
+
+Seed Platform Key 材料必须由带独立用途前缀的 HMAC 按 Key ID 派生，不得把根 HMAC Secret 作为请求中的 Key 材料。受控测试项目的 seed 密钥已按此规则轮换；所有凭据仅在临时运维文件中使用并在交付后移除。
 
 ## 为什么最后做 schema rebaseline
 

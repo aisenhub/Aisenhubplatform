@@ -1,6 +1,6 @@
 # 预上线单轨化清理与缺陷修复 — 验证记录
 
-本文件只记录实施期间真实发生的命令、结果、失败、修复、提交和环境动作。用户已于 2026-10-13 确认问题清单、兼容清理方向和 8 阶段 Proposal，并授权开始实施；Production 部署仍不在授权范围。
+本文件只记录实施期间真实发生的命令、结果、失败、修复、提交和环境动作。用户于 2026-10-13 授权 8 阶段实施，2026-10-14 追加授权 Local/workendstaging 测试数据重置、后续发布/合并及已提交 UI 改动集成。未创建独立 Production Supabase，未发起真实支付或费用变更。
 
 ## 项目与基线
 
@@ -8,7 +8,7 @@
 - 审查基线：`65c52fb1162b549b2446550b2cda9367c94e9e4f`
 - 实施分支：`codex/prelaunch-canonicalization-remediation`
 - 环境 destructive gate：PASS（仅 Local/Test/Staging；测试数据可重建）
-- Production：NOT_RUN / 明确禁止
+- Production Supabase/真实交易：NOT_RUN；现有 Admin Vercel Production 托管渠道绑定 workendstaging，发布已获授权。
 
 ## 阶段状态
 
@@ -21,7 +21,7 @@
 | 04 | 本地已完成 | Account transition 已收敛为严格单入口状态机；Feedback batch delete 使用真实 Admin idempotency，unknown outcome 可安全重放 | PASS | `ab27712` / 本轮补推送 |
 | 05 | 本地已完成 | Overview / Commerce Summary 已共享 canonical paid-entitlement helper；Entitlement 与 Billing cursor 均为 opaque immutable boundary；历史 false-positive 已追加 errata，浏览器反例 fixture 可区分旧/新算法 | PASS（`contracts:breaking` 对旧 `origin/main` baseline 的 37 项 breaking 为阶段 07 前预期） | `ab27712` / 本轮补推送 |
 | 06 | 本地已完成 | request scope + subtree isolation、服务端 UTF-8 query-bound cursor、实体路由切换 | PASS | 本轮 checkpoint |
-| 07 | PARTIAL | forward runtime cleanup 与 Local reuse gate 已验收；fresh reset/schema squash 和整体远端晋升待授权/配置访问 | Local PASS；发布 BLOCKED | 本轮 checkpoint |
+| 07 | 发布进行中 | 单一 canonical baseline、Local fresh gate、workendstaging reset/seed/Edge 更新已完成；已集成 UI，待 Git/main 与 Admin 发布闭环 | Local PASS；测试环境 PASS | schema `16eae38`；UI merge `f218d4e` |
 
 ## R-01～R-15 关闭记录
 
@@ -29,7 +29,7 @@
 
 ## LC-01～LC-13 关闭记录
 
-阶段 02 已关闭 Commerce 域 LC-01、LC-02、LC-03、LC-04、LC-06、LC-07、LC-12；阶段 03 已关闭 Config/Storage 域 LC-05、LC-07、LC-10；LC-08、LC-09、LC-10、LC-11 的公共运行面已由阶段 01 关闭。LC-13 的历史 squash/fresh reset 尚未完成，不以 forward cleanup 或 reuse-local PASS 代替。
+阶段 02 已关闭 Commerce 域 LC-01、LC-02、LC-03、LC-04、LC-06、LC-07、LC-12；阶段 03 已关闭 Config/Storage 域 LC-05、LC-07、LC-10；LC-08、LC-09、LC-10、LC-11 的公共运行面已由阶段 01 关闭。LC-13 已由阶段 07 的单一基线、默认 Local fresh reset 和 workendstaging 重建关闭，证据见本文件最新记录。
 
 ## 实际验证记录
 
@@ -128,3 +128,30 @@ G0/G1：候选范围与适用 Local reuse 检查 PASS；G2/G3：整体发布 BLO
 - 最新单独 Harness 复验包含账户 5/min、平台 300/min、失败计数、拒绝 replay 和超限后的成功 replay，PASS；窗口 fixture 同时填充相邻分钟，避免 wall-clock 边界造成假失败。测试计数 hash 按本次合成平台范围清理。
 
 整体 schema/reset、Account/Webhook 更新、main 合并与分支删除仍 BLOCKED；不以独立 worker 发布充当全项目上线完成。
+
+## 2026-10-14 Phase 07 最终验收与发布
+
+本节取代上一轮的当前 BLOCKED 状态，历史失败和授权边界保留为审计记录。
+
+- R3 范围：Phase 00～07、已提交 UI `c1776f0`、SQL/权限/Worker/Storage/Auth 配置；消费者为 Account/Admin HTTP、Registry、Harness、Admin、三 Edge Functions。用户明确允许两个测试环境 reset 与后续发布/合并。原工作区 `AUDIT_REPORT.md` 保留原样。
+- 删除 118 个历史 migration，保留 CLI 2.111.0 生成的 `20261013210107_prelaunch_canonical_baseline.sql`；旧源码记录保存在 Git `4405922` 与仓库外审计目录，不再逐条升级旧测试数据。Schema 重建不是旧数据迁移，legacy non-empty upgrade fixture 不适用。
+- 追加移除 9 个无运行调用者的 Admin SQL 入口、旧 t18 Audit 静态测试和三个失效 Mock 分支；当前 Audit v2/Workbench/transition/pagination/observability 测试保留，Billing detail v2 仅由 v3 内部调用且无 executor grant。当前版本后缀表示正在使用的 SQL 标识，不用于旧 wire 输入回退。
+- Hosted runtime 改用平台注入的 `SUPABASE_SERVICE_ROLE_KEY`，同步所有测试/工具调用者，三函数 `verify_jwt=false` 后逐路由自行认证；移除未使用的 `MAINTENANCE_JOB_TOKEN`，files/identity/billing 使用独立 token。Vercel 与 Edge 的 MFA attestation Secret 成对配置，值未输出或提交。
+
+| 验证/动作 | 结果及实际证据 |
+| --- | --- |
+| `pnpm verify:task:0801`，默认 project/54321、DB 54322、PG17；`CONTRACT_BASE_REF=b7de3ef` | PASS：22 executable gates，包含 fresh reset、格式/lint/typecheck/build、118 unit、9 tooling、109 API、62 SQL files / 1353 tests、结算与 Price/Mapping 真并发、Registry/合同/运行时、Consumer HTTP、Admin 浏览器、209 docs |
+| Admin 集成 UI | PASS：AAL1/非管理员拒绝、AAL2/近期 MFA/显式重试、106 平台分页搜索、迟到响应、跨平台实体退出；5 viewports × 20 routes = 100 responsive/a11y observations |
+| 新 seed 的 Local 事务回滚自检 | PASS：2 平台、4 普通账户、1 个领域结算 Grant、Config/Version/Gallery、Feedback、Campaign；新增断言确保 Platform Key 材料不呈现根 HMAC Secret |
+| Local advisor | PASS：`supabase db advisors --local --type security --level error --fail-on error`，0 error |
+| workendstaging 重建 | PASS：Management API 通过固定 CLI `db query --linked --file` 执行单个 reset/baseline/seed/history transaction；保留 Auth 身份、1 verified MFA、system_admin 和非秘密 Provider 配置；业务数据重新生成。迁移历史仅一个版本，源 SHA256 `5e751e0b053eb48619698ba03fd73730a11ba23cc34ecc4839ab78e12d2da2fe` 与提交源一致 |
+| Hosted 私有 Storage fixture | PASS：实际 immutable 上传 `{}`、下载字节/hash 核验后调用领域 prepare/finalize/activate/review；1 stored object、1 approved Gallery entry，未伪造已上传状态 |
+| Edge 发布及源比对 | PASS：Account API、Webhook、Maintenance ACTIVE；24 个部署源码与候选一致。eszip SHA256 分别 `b3c25dbf5dbbead7db0f2ca0d86c20619d6033eed4462dde2baf613a6f7267ca`、`130a325a2e45f15e40d8eb4210e24bfdc71b076b8559644aab7acdc5ad64ca95`、`a5a760ecdd2ee39f68f00dc17e4ee99d693e9d7dfcded9c7b62ef36cfd69f979`；后续 Secret 更新只提升版本，不改变源码包 |
+| Hosted 拒绝/只读 probe | PASS：匿名 Account/Admin/Maintenance 401、files token 调 Billing 401、正确 Billing token 在关闭状态返回 503/BILLING_PROCESSING_DISABLED、正确 scoped Platform Key 读 Plans 200 |
+| Hosted 权限 | PASS：anon/authenticated 业务表权限 0、private EXECUTE 0；旧 pg_net public warning 已消除；Billing Cron 配置存在但运行暂停，避免关闭的 Worker 周期产生失败噪声 |
+| Hosted advisors | PARTIAL：security 0 error，唯一 WARN 为 Free 套餐不提供的 leaked-password protection（[官方要求 Pro 及以上](https://supabase.com/docs/guides/auth/password-security)）；performance 只有 INFO（38 个 FK index 建议及 fresh-reset 后 unused-index 统计），没有实测慢路径，不批量加索引或删除仍有用途的索引 |
+| 外部真实 Provider/真实交易、远端有效管理员登录与真实删除任务恢复 | NOT_RUN：本地 Mock/真实 Local Auth 与权限/恢复已验收，未提供远端管理员登录凭据；购买/自动结算与调度保持暂停，不作为额外 Local 门槛 |
+
+失败保留：native-key 反例 3 FAIL 后 109 API PASS；新表 TRUNCATE/TRIGGER/默认权限 3 FAIL 后修复；9 retired SQL 入口反例 FAIL 后删除；Hosted 第一事务缺 public USAGE、第二事务遗留 row_security=off 均整体回滚，确认仍为旧 112 migrations / 1 Auth 用户后修复并重试成功。Platform 第二页测试收到响应头后提前断言的问题通过等待可见第 21 项修复，保留原数量断言。新增 fixture 残留断言揭示清理顺序/缺少 Commerce policy、Feedback、write attempts、subscriptions 与 redemption-events→grants 次序，修复后 Harness 及最终 fresh gate PASS。Seed 根密钥材料复用反例 FAIL 后改为独立用途 HMAC 派生，并轮换测试根 Secret/重写两条 fixture Key HMAC，最终 Hosted probes PASS。
+
+G0/G1：最终范围与默认 Local fresh PASS；G2：唯一 Supabase 测试目标、Vercel 项目/域名/URL/publishable key/MFA Secret 配对已核对；G3：原子 reset、精确保留管理员、单一历史与源 hash 已核对；G4：禁止退回 retired schema/runtime，维持购买/Worker/Cron 暂停并 forward-fix，测试环境可按既有授权重建；G5：用户已授权 reset、后续操作、main 合并与 UI 集成；G6：Hosted 只读/拒绝式与真实 Storage probes PASS，真实交易观察 NOT_RUN。Git/main、Admin Production 托管部署和分支清理结果在下节收尾记录。

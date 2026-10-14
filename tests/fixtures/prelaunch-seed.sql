@@ -7,7 +7,7 @@ declare
   v_offer uuid; v_price uuid; v_provider uuid; v_mapping uuid; v_checkout uuid; v_order uuid; v_job uuid;
   v_ctx private.account_context; v_config record; v_version record; v_settlement record;
   v_secret text := current_setting('prelaunch.platform_hmac_secret', true);
-  v_suffix text; v_origin text;
+  v_suffix text; v_origin text; v_key_material text;
 begin
   select user_id into strict v_admin from private.system_admin;
   if coalesce(length(v_secret),0)<32 or exists(select 1 from public.platforms) then
@@ -15,6 +15,7 @@ begin
   end if;
   for i in 1..2 loop
     v_platform:=gen_random_uuid(); v_free:=gen_random_uuid(); v_paid:=gen_random_uuid(); v_key:=gen_random_uuid();
+    v_key_material:=encode(extensions.hmac('prelaunch-seed-key:v1:'||v_key::text,v_secret,'sha256'),'hex');
     v_suffix:=i::text; v_origin:='http://localhost:'||(3110+i-1)::text;
     insert into public.platforms(id,code,name,status,allow_activation)
       values(v_platform,'prelaunch-seed-'||v_suffix,'Prelaunch Test '||v_suffix,'active',true);
@@ -28,8 +29,8 @@ begin
       values(v_platform,true,1048576,8388608);
     insert into private.platform_api_keys(id,platform_id,name,key_hmac,hmac_key_version,key_prefix,key_suffix,creation_operation_id)
       values(v_key,v_platform,'Prelaunch fixture',encode(extensions.hmac(
-        '1:platform-key:'||v_key::text||':phk_v1_'||v_key::text||'_'||v_secret,v_secret,'sha256'),'hex'),
-        1,'phk_v1',right(v_secret,8),gen_random_uuid());
+        '1:platform-key:'||v_key::text||':phk_v1_'||v_key::text||'_'||v_key_material,v_secret,'sha256'),'hex'),
+        1,'phk_v1',right(v_key_material,8),gen_random_uuid());
     for j in 1..2 loop
       v_user:=gen_random_uuid(); v_account:=gen_random_uuid(); v_session:=gen_random_uuid();
       insert into auth.users(id,aud,role,email,encrypted_password,created_at,updated_at)
@@ -86,6 +87,10 @@ begin
      or (select count(*) from public.subscription_grants)<>1 or (select count(*) from public.platform_config_versions)<>1
      or (select count(*) from public.platform_feedback)<>1 or (select count(*) from public.redemption_code_batches)<>2 then
     raise exception 'prelaunch_seed_incomplete';
+  end if;
+  if exists(select 1 from private.platform_api_keys k where k.key_hmac=encode(extensions.hmac(
+    '1:platform-key:'||k.id::text||':phk_v1_'||k.id::text||'_'||v_secret,v_secret,'sha256'),'hex')) then
+    raise exception 'seed_key_material_must_not_expose_root_secret';
   end if;
 end;
 $seed$;

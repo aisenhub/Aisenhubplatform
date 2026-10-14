@@ -183,9 +183,6 @@ export function AdminShell({ children }: AdminShellProps) {
           <h1 className="text-lg font-semibold tracking-tight text-foreground">
             正在检查管理员安全状态
           </h1>
-          <p className="muted text-xs">
-            确认完成前不会加载管理数据，正在核验双因子会话凭据…
-          </p>
         </main>
       </div>
     );

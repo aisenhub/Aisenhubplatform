@@ -24,6 +24,8 @@ Storage bucket 为私有的 platform-config-files。上传和下载由服务端�
 
 ## 调度与发布边界
 
+2026-10-14 预上线部署事实：现有 Vercel `aisenhubplatform-admin` 的 Production 域名 `admin.aisenhub.com` 绑定唯一 Supabase 测试项目 `workendstaging`。这里的 Production 是前端托管渠道，尚无独立 Production 数据库。测试项目 Checkout、Background Processing、Auto Settlement 与 Billing Cron 保持暂停；开启真实业务须按发布流程另行核对 Provider 与运行配置。该测试绑定不替代下述正式上线拓扑。
+
 环境与发布规则采用[ADR-0004](../decisions/0004-local-only-test-acceptance.md)：Local本机Supabase Docker → 发布核对 → 独立Production。最高测试环境为本地Supabase，适用本地测试通过即可进入上线流程；不要求Hosted Staging、远程Provider或额外CI验收。变更分级与发布核对见[Agent开发与发布流程](../guides/development-release-workflow.md)。这是工作规则，不能据此推断部署事实。
 
 [schedule.json](../../supabase/functions/maintenance/schedule.json)是任务调用元数据；它不安装定时器，也不证明外部调度器已运行。仓库 CI 执行质量检查、构建、单元测试及合同检查，没有生产部署步骤。
