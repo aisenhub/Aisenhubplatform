@@ -1,6 +1,6 @@
 # 阶段 02：Commerce 单轨化与高风险写修复
 
-状态：本地已完成 / 待 Git checkpoint
+状态：Completed（2026-10-14）；本阶段成果已随 Phase 07 发布，准确验证与交付版本见总验证记录。
 
 前置：阶段 01 contract 已冻结。
 

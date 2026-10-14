@@ -162,5 +162,8 @@ G0/G1：最终范围与默认 Local fresh PASS；G2：唯一 Supabase 测试目�
 - `pnpm contracts:breaking` 默认 origin/main PASS；比较器没有例外、过滤或降级，新的 canonical v1 基线已经生效。完整 main diff 的 credential pattern 扫描 0 候选、`git diff --check` PASS，不宣称全面 Secret scanner。
 - Vercel Production `dpl_GMVRVUK9caUeBkU3jkk2EG16eJcp` READY，Git source 精确为上述 main merge，custom domain `https://admin.aisenhub.com` alias 生效。发布后 `/admin/login` 200、canonical anonymous security/status 401、明确虚构凭据的登录 401/UNAUTHORIZED，PASS；首次 probe 把路径误写为 auth/security-status 得到 404，纠正后通过，未把 URL 误写归因产品缺陷。
 - 三 Edge 当前版本为 Account API v67、Webhook v35、Maintenance v44；Secret 更新使版本号增加，三 eszip hashes 与已比对的部署源保持一致。正确 scoped Key 与 capability 拒绝式 probe 在最后一次根密钥轮换后重跑 PASS。
-- main CI 正在复跑同一套 Local 检查，当前 PARTIAL/in_progress；不称 CI PASS，也不把该额外复跑作为新的发布门槛。旧 main PR 比较的 37 项授权 breaking 失败保留；main 的 strict baseline 已实测恢复 PASS。
+- main 的两次同套 CI 复跑均 PASS：`ab80645` run `38492437497`、收尾 `78956e4` run `38493007605`。这两个结果对应准确 SHA，不预报后续纯文档记录提交的 CI。旧 main PR 比较的 37 项授权 breaking 失败保留；main 的 strict baseline 已实测恢复 PASS。
 - 本 Proposal 已 Completed；没有下一项必需实现任务。独立 Production 数据库、真实 Provider/有效远端管理员登录/真实支付仍 NOT_RUN；购买、自动结算、Background Processing 和 Cron 暂停，不新增收费资源。后续真实业务上线遵循原发布与 Provider 门槛。
+- 本次完成分支已清理：PR 任务分支由合并流程删除，独立 Phase 07 本地分支与已合并 UI 分支删除，并以 `ls-remote` 核对这三个远端分支均不存在；没有删除其他任务分支。原项目已 fast-forward 到 main，唯一未提交内容是用户要求保留的 `AUDIT_REPORT.md`。
+- 删除 9 个临时凭据文件和本次隔离 worktree，停止并删除独立 `aisenhub-platform-phase07-local` 测试栈；默认 Local 栈全部 healthy，常规开发环境保留。源码与脱敏失败/通过日志保存在 Git 和仓库外证据目录。
+- 收尾文档 `78956e4` 同样已推送核对，Vercel Production `dpl_5js4pB91gbyqxeo4ghdGfJEFdWVn` READY，绑定该准确 SHA；与主代码发布仅有文档差异。后续本节状态同步提交不改变运行源码。

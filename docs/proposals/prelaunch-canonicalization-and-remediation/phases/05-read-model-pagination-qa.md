@@ -1,6 +1,6 @@
 # 阶段 05：Read Model、Pagination 与 QA 事实统一
 
-状态：本地已完成 / 待 checkpoint
+状态：Completed（2026-10-14）；本阶段成果已随 Phase 07 发布，准确验证与交付版本见总验证记录。
 
 前置：阶段 02、03、04。
 

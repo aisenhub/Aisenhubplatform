@@ -28,4 +28,4 @@
 
 2026-10-14 已交付：R/LC 全部关闭、默认 Local fresh 22 gates PASS、测试 Supabase 和现有 Admin 托管渠道已发布，PR #19 已合并 main。准确源版本、限额/暂停配置与未运行的真实联调见[验证记录](verification-record.md)最新章节；原 `AUDIT_REPORT.md` 按用户要求继续保留，不提交。
 
-用户已确认 R-01～R-15、LC-01～LC-13 与本 Proposal 的实施方向，并授权按阶段开始修改业务代码、合同、测试和计划文档。仍不包含 Production 部署、真实支付、费用变更或 force push；每阶段必须按门槛验证并记录真实结果。
+最初授权覆盖 R-01～R-15、LC-01～LC-13 的分阶段实现；后续用户授权扩展至测试环境 reset、现有 Admin 托管发布、main 合并及 UI 集成。本次未创建独立 Production 数据库、发起真实支付或费用变更；仍遵循不 force push、保留其他工作及如实记录验证结果的规则。
