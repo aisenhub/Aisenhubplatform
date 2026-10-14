@@ -49,4 +49,3 @@
 - 至少两名独立管理员可以通过产品化在线路径形成 active redundancy；
 - onboarding 未完成的 pending member 不被计算为灾备可用管理员；
 - membership mutation 和 factor readiness 有可调查审计。
-

@@ -60,4 +60,3 @@
 - 所有当前文档不再把 singleton 当作已实现架构；
 - active admin 数量和 MFA readiness 有明确生产门槛；
 - break-glass 不依赖隐藏常驻第二账号，也不暴露网页绕过入口。
-

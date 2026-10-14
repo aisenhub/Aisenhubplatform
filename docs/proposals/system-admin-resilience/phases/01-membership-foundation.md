@@ -50,4 +50,3 @@
 - active/pending 语义可被后续 API 使用；
 - active 数量下限在数据库并发下成立；
 - 旧 singleton fixture 路径已退出。
-

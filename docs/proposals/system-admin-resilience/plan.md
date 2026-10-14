@@ -118,4 +118,3 @@
 5. break-glass 仅存在于受控离线 runbook；
 6. architecture/reference/guides 已同步为实际实现；
 7. proposal 才可从 Proposed/In Progress 更新为 Completed。
-
