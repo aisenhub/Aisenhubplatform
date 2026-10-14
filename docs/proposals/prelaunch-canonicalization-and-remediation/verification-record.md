@@ -21,7 +21,7 @@
 | 04 | 本地已完成 | Account transition 已收敛为严格单入口状态机；Feedback batch delete 使用真实 Admin idempotency，unknown outcome 可安全重放 | PASS | `ab27712` / 本轮补推送 |
 | 05 | 本地已完成 | Overview / Commerce Summary 已共享 canonical paid-entitlement helper；Entitlement 与 Billing cursor 均为 opaque immutable boundary；历史 false-positive 已追加 errata，浏览器反例 fixture 可区分旧/新算法 | PASS（`contracts:breaking` 对旧 `origin/main` baseline 的 37 项 breaking 为阶段 07 前预期） | `ab27712` / 本轮补推送 |
 | 06 | 本地已完成 | request scope + subtree isolation、服务端 UTF-8 query-bound cursor、实体路由切换 | PASS | 本轮 checkpoint |
-| 07 | 发布进行中 | 单一 canonical baseline、Local fresh gate、workendstaging reset/seed/Edge 更新已完成；已集成 UI，待 Git/main 与 Admin 发布闭环 | Local PASS；测试环境 PASS | schema `16eae38`；UI merge `f218d4e` |
+| 07 | 已交付 | 单一 baseline、Local fresh、workendstaging reset/seed/Edge、UI、Git/main 与 Admin 发布闭环 | PASS | 代码 `481880e`；main merge `ab80645`；PR #19 |
 
 ## R-01～R-15 关闭记录
 
@@ -155,3 +155,12 @@ G0/G1：候选范围与适用 Local reuse 检查 PASS；G2/G3：整体发布 BLO
 失败保留：native-key 反例 3 FAIL 后 109 API PASS；新表 TRUNCATE/TRIGGER/默认权限 3 FAIL 后修复；9 retired SQL 入口反例 FAIL 后删除；Hosted 第一事务缺 public USAGE、第二事务遗留 row_security=off 均整体回滚，确认仍为旧 112 migrations / 1 Auth 用户后修复并重试成功。Platform 第二页测试收到响应头后提前断言的问题通过等待可见第 21 项修复，保留原数量断言。新增 fixture 残留断言揭示清理顺序/缺少 Commerce policy、Feedback、write attempts、subscriptions 与 redemption-events→grants 次序，修复后 Harness 及最终 fresh gate PASS。Seed 根密钥材料复用反例 FAIL 后改为独立用途 HMAC 派生，并轮换测试根 Secret/重写两条 fixture Key HMAC，最终 Hosted probes PASS。
 
 G0/G1：最终范围与默认 Local fresh PASS；G2：唯一 Supabase 测试目标、Vercel 项目/域名/URL/publishable key/MFA Secret 配对已核对；G3：原子 reset、精确保留管理员、单一历史与源 hash 已核对；G4：禁止退回 retired schema/runtime，维持购买/Worker/Cron 暂停并 forward-fix，测试环境可按既有授权重建；G5：用户已授权 reset、后续操作、main 合并与 UI 集成；G6：Hosted 只读/拒绝式与真实 Storage probes PASS，真实交易观察 NOT_RUN。Git/main、Admin Production 托管部署和分支清理结果在下节收尾记录。
+
+### Git/main 与 Admin 发布闭环
+
+- `481880e3f50873f2ee16f308827b8b51bc16a07e` 已推送，并通过 `git ls-remote` 核对远端；PR [#19](https://github.com/aisenhub/Aisenhubplatform/pull/19) 于 2026-10-14 00:50:37 UTC 合并，main 为 `ab80645005ba813d1dc1895b11160cf90399192a`，远端 fetch/SHA 与 PR mergeCommit 一致。`git diff 481880e origin/main --exit-code` PASS，合并未改变验收文件树。
+- `pnpm contracts:breaking` 默认 origin/main PASS；比较器没有例外、过滤或降级，新的 canonical v1 基线已经生效。完整 main diff 的 credential pattern 扫描 0 候选、`git diff --check` PASS，不宣称全面 Secret scanner。
+- Vercel Production `dpl_GMVRVUK9caUeBkU3jkk2EG16eJcp` READY，Git source 精确为上述 main merge，custom domain `https://admin.aisenhub.com` alias 生效。发布后 `/admin/login` 200、canonical anonymous security/status 401、明确虚构凭据的登录 401/UNAUTHORIZED，PASS；首次 probe 把路径误写为 auth/security-status 得到 404，纠正后通过，未把 URL 误写归因产品缺陷。
+- 三 Edge 当前版本为 Account API v67、Webhook v35、Maintenance v44；Secret 更新使版本号增加，三 eszip hashes 与已比对的部署源保持一致。正确 scoped Key 与 capability 拒绝式 probe 在最后一次根密钥轮换后重跑 PASS。
+- main CI 正在复跑同一套 Local 检查，当前 PARTIAL/in_progress；不称 CI PASS，也不把该额外复跑作为新的发布门槛。旧 main PR 比较的 37 项授权 breaking 失败保留；main 的 strict baseline 已实测恢复 PASS。
+- 本 Proposal 已 Completed；没有下一项必需实现任务。独立 Production 数据库、真实 Provider/有效远端管理员登录/真实支付仍 NOT_RUN；购买、自动结算、Background Processing 和 Cron 暂停，不新增收费资源。后续真实业务上线遵循原发布与 Provider 门槛。

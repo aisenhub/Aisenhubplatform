@@ -1,6 +1,6 @@
 # 预上线单轨化清理与缺陷修复总计划
 
-状态：发布进行中；全部 R/LC、Local fresh 验收与指定 Supabase 测试环境交付已完成，待 Git/main 和 Admin 发布闭环。
+状态：Completed（2026-10-14）；R-01～R-15、LC-01～LC-13、Local fresh 验收、指定测试环境、Git/main 与 Admin 托管发布已闭环。
 
 关联：[设计](design.md) · [Agent 交接](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -23,7 +23,7 @@
 | 04 | 状态机、治理事件与幂等统一 | R-01/R-04/R-11；LC-07 | 02、03 | 本地已完成 / ab27712 checkpoint | [阶段 04](phases/04-governance-idempotency.md) |
 | 05 | Summary、Pagination 与 QA 事实修复 | R-05/R-06/R-07/R-12 | 02、03、04 | 本地已完成 / ab27712 checkpoint | [阶段 05](phases/05-read-model-pagination-qa.md) |
 | 06 | Admin 前端异步、切换、导航与规模边界修复 | R-13/R-14/R-15；LC-09 | 01、05 | 本地已完成 | [阶段 06](phases/06-admin-state-navigation-scale.md) |
-| 07 | Prelaunch schema/migration rebaseline、reset 与完整验收 | LC-13 + 全部 R/LC | 02～06 | fresh Local / workendstaging PASS；Git/Admin 发布进行中 | [阶段 07](phases/07-schema-rebaseline-and-release-verification.md) |
+| 07 | Prelaunch schema/migration rebaseline、reset 与完整验收 | LC-13 + 全部 R/LC | 02～06 | 已交付；fresh Local / workendstaging / main / Admin PASS | [阶段 07](phases/07-schema-rebaseline-and-release-verification.md) |
 
 ## 串行与并行
 
@@ -69,11 +69,11 @@
 
 ## 完成标准
 
-- [ ] R-01～R-15 均有关闭证据和回归测试。
-- [ ] LC-01～LC-13 已从最终 runtime/contract/schema/test/docs 清除或明确保留理由。
-- [ ] Account/Admin API 只有一套 canonical 商业/Config 行为。
-- [ ] retired function 无 executor grant。
-- [ ] 新 v1 contract 已成为新的 compatibility baseline，breaking gate 恢复绿色。
-- [ ] Local fresh reset 与完整 gate 通过。
-- [ ] Staging 如参与，已完成 reset/deploy/只读核验且无正式数据丢失风险。
-- [ ] Production NOT_RUN，除非后续单独审批。
+- [x] R-01～R-15 均有关闭证据和回归测试。
+- [x] LC-01～LC-13 已从最终 runtime/contract/schema/test/docs 清除或明确保留理由。
+- [x] Account/Admin API 只有一套 canonical 商业/Config 行为。
+- [x] retired function 无 executor grant。
+- [x] 新 v1 contract 已成为新的 compatibility baseline，默认 breaking gate 恢复绿色。
+- [x] Local fresh reset 与完整 gate 通过。
+- [x] workendstaging 已完成 reset/deploy/只读核验，仅重建已授权测试数据。
+- [x] 独立 Production Supabase/真实交易 NOT_RUN；现有 Admin Production 托管渠道经追加授权发布并核验。
