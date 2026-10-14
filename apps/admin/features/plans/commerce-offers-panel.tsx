@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
@@ -22,6 +22,10 @@ import {
   statusTone,
   type ResourceError,
 } from '../resources/admin-resource-utils';
+import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 
 type Plan = {
   plan_id: string;
@@ -53,8 +57,16 @@ type Offer = {
 };
 
 type Intent =
-  | { kind: 'activate' | 'archive'; offer: Offer }
-  | { kind: 'publish_price'; offer: Offer };
+  | {
+      kind: 'activate' | 'archive';
+      offer: Offer;
+      operationId: string;
+    }
+  | {
+      kind: 'publish_price' | 'retire_price';
+      offer: Offer;
+      operationId: string;
+    };
 
 export function CommerceOffersPanel({
   platformId,
@@ -84,25 +96,38 @@ export function CommerceOffersPanel({
   const [mutationError, setMutationError] = useState<ResourceError | null>(
     null,
   );
+  const loadGeneration = useRef(0);
+  const scopeRef = useRef(platformId);
+  scopeRef.current = platformId;
 
   const load = useCallback(async () => {
+    const token = beginScopedLoad(loadGeneration, platformId);
     const epoch = adminAuthSession.getEpoch();
     setLoading(true);
     setError(null);
+    setOffers([]);
     try {
       const response = await adminAuthSession.request(
         `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}/commerce/offers`,
         { cache: 'no-store' },
       );
       const payload = await readApiPayload<Offer[]>(response);
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       if (!response.ok || !Array.isArray(payload?.data)) {
         setError(resourceError(response, payload, 'Offer / Price 目录'));
         return;
       }
       setOffers(payload.data);
     } catch (caught) {
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       setError({
         title: 'Offer / Price 读取失败',
         description: sessionErrorMessage(caught),
@@ -110,7 +135,11 @@ export function CommerceOffersPanel({
         technicalDetail: null,
       });
     } finally {
-      if (adminAuthSession.isCurrentEpoch(epoch)) setLoading(false);
+      if (
+        isScopedLoadCurrent(loadGeneration, scopeRef, token) &&
+        adminAuthSession.isCurrentEpoch(epoch)
+      )
+        setLoading(false);
     }
   }, [platformId]);
 
@@ -185,22 +214,28 @@ export function CommerceOffersPanel({
     if (!intent) return;
     setMutationState('pending');
     setMutationError(null);
-    const operationId = crypto.randomUUID();
-    const isPrice = intent.kind === 'publish_price';
+    const isPrice =
+      intent.kind === 'publish_price' || intent.kind === 'retire_price';
     const path = isPrice
-      ? `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}/commerce/prices/${encodeURIComponent(intent.offer.price_id ?? '')}/publish`
+      ? `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}/commerce/prices/${encodeURIComponent(intent.offer.price_id ?? '')}/commands`
       : `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}/commerce/offers/${encodeURIComponent(intent.offer.offer_id)}/commands`;
+    const action =
+      intent.kind === 'publish_price'
+        ? 'publish'
+        : intent.kind === 'retire_price'
+          ? 'retire'
+          : intent.kind;
     try {
       const response = await adminAuthSession.request(
         path,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            isPrice
-              ? { operation_id: operationId, reason }
-              : { action: intent.kind, operation_id: operationId, reason },
-          ),
+          body: JSON.stringify({
+            action,
+            operation_id: intent.operationId,
+            reason,
+          }),
         },
         { replay: 'never' },
       );
@@ -355,18 +390,42 @@ export function CommerceOffersPanel({
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    setIntent({ kind: 'publish_price', offer });
+                    setIntent({
+                      kind: 'publish_price',
+                      offer,
+                      operationId: crypto.randomUUID(),
+                    });
                     setMutationState('confirm_required');
                   }}
                 >
                   发布 Price
                 </Button>
               ) : null}
+              {offer.price_id && offer.price_status === 'active' ? (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    setIntent({
+                      kind: 'retire_price',
+                      offer,
+                      operationId: crypto.randomUUID(),
+                    });
+                    setMutationState('confirm_required');
+                  }}
+                >
+                  退役 Price
+                </Button>
+              ) : null}
               {offer.status !== 'active' ? (
                 <Button
                   size="sm"
                   onClick={() => {
-                    setIntent({ kind: 'activate', offer });
+                    setIntent({
+                      kind: 'activate',
+                      offer,
+                      operationId: crypto.randomUUID(),
+                    });
                     setMutationState('confirm_required');
                   }}
                 >
@@ -377,7 +436,11 @@ export function CommerceOffersPanel({
                   size="sm"
                   variant="destructive"
                   onClick={() => {
-                    setIntent({ kind: 'archive', offer });
+                    setIntent({
+                      kind: 'archive',
+                      offer,
+                      operationId: crypto.randomUUID(),
+                    });
                     setMutationState('confirm_required');
                   }}
                 >
@@ -400,13 +463,17 @@ export function CommerceOffersPanel({
           title={
             intent.kind === 'publish_price'
               ? '发布 Price'
-              : intent.kind === 'activate'
-                ? '启用 Offer'
-                : '归档 Offer'
+              : intent.kind === 'retire_price'
+                ? '退役 Price'
+                : intent.kind === 'activate'
+                  ? '启用 Offer'
+                  : '归档 Offer'
           }
           targetIdentity={intent.offer.offer_id}
           impact="该操作会改变后续新购买可用性；历史 Checkout、Order 与 Grant snapshot 不会被改写。"
-          reversible={intent.kind !== 'archive'}
+          reversible={
+            intent.kind !== 'archive' && intent.kind !== 'retire_price'
+          }
           reasonRequired
           state={mutationState}
           error={mutationError}
@@ -424,7 +491,7 @@ export function CommerceOffersPanel({
                   setMutationError({
                     title: '商业目录已重新读取',
                     description:
-                      '没有自动重发原操作，请按当前状态决定是否继续。',
+                      '原 operation_id 已保留。若当前状态仍不确定，可再次确认；服务端会按同一 operation_id 安全重放，而不会创建第二次业务事实。',
                     requestId: null,
                     technicalDetail: null,
                   });

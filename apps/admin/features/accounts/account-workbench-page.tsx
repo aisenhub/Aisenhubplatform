@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { SessionRetryRequiredError } from '../../app/_lib/auth/browser';
@@ -35,6 +35,10 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 
 import {
   accountActionLabel,
@@ -109,12 +113,18 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
       ),
     [accountId, platform.platform_id],
   );
+  const loadGeneration = useRef(0);
+  const scopeRef = useRef(accountPath);
+  scopeRef.current = accountPath;
 
   const load = useCallback(
     async (background = false) => {
+      const token = beginScopedLoad(loadGeneration, accountPath);
       const epoch = adminAuthSession.getEpoch();
       if (background) setRefreshing(true);
       else {
+        setDetail(null);
+        setTagsDraft('');
         setState('loading');
         setError(null);
       }
@@ -123,7 +133,11 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
           cache: 'no-store',
         });
         const payload = await readApiPayload<AccountWorkbench>(response);
-        if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+        if (
+          !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         if (!response.ok || !payload?.data) {
           setError(resourceError(response, payload, 'Account 360'));
           if (!background) setState('error');
@@ -133,7 +147,11 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
         setTagsDraft(tagsInput(payload.data.tags ?? []));
         setState('success');
       } catch (caught) {
-        if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+        if (
+          !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
         setError({
           title: 'Account 360 读取失败',
           description: sessionErrorMessage(caught),
@@ -142,7 +160,8 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
         });
         if (!background) setState('error');
       } finally {
-        setRefreshing(false);
+        if (isScopedLoadCurrent(loadGeneration, scopeRef, token))
+          setRefreshing(false);
       }
     },
     [accountPath],

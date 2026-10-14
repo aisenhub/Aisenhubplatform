@@ -5,3 +5,7 @@
 允许兼容扩展；禁止删除或改名既有 operation/字段、改变字段类型/语义、增加既有调用必须提供的 required request 输入、删除既有 enum 值或静默收紧 security。Admin 的 AAL2、近期 MFA、If-Match、operation_id、reason 等安全边界只能通过显式兼容迁移改变，不能靠 UI/BFF 参数绕过。
 
 AisenHubPlatform 保证 wire compatibility，不保证任何生成客户端的源码兼容。无法兼容的变化进入新的 API major。
+
+## 预上线基线（2026-10-14）
+
+本次授权的一次性 rebaseline 删除未发布的 fixed products、product_code Checkout、generic config-files 与旧 URL surface。候选提交 `b7de3ef` 中的 OpenAPI 是新的 v1 起点；预期 breaking diff 记录在 Proposal 验证记录。合并后仍使用 origin/main 作严格兼容比较，不取消或放宽 breaking gate。

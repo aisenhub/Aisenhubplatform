@@ -5,7 +5,6 @@ import process from 'node:process';
 const root = process.cwd();
 const accountFile = path.join(root, 'contracts/account/v1/openapi.json');
 const adminFile = path.join(root, 'contracts/admin/v1/openapi.json');
-const domainApiFile = path.join(root, 'packages/domain/src/contracts/api.ts');
 
 function fail(message) {
   throw new Error(message);
@@ -80,27 +79,6 @@ function checkOperations(document, name) {
   return ops;
 }
 
-function extractDomainStringArray(source, exportName) {
-  const pattern = new RegExp(
-    `export const ${exportName} = \\[([\\s\\S]*?)\\] as const`,
-    'u',
-  );
-  const body = pattern.exec(source)?.[1];
-  if (!body) fail(`could not locate Domain export ${exportName}`);
-  return [...body.matchAll(/'([^']+)'/gu)].map((match) => match[1]);
-}
-
-function assertSameStringSet(label, left, right) {
-  const leftSet = new Set(left);
-  const rightSet = new Set(right);
-  const missing = [...leftSet].filter((value) => !rightSet.has(value));
-  const extra = [...rightSet].filter((value) => !leftSet.has(value));
-  if (missing.length || extra.length)
-    fail(
-      `${label} drifted: missing=[${missing.join(', ')}], extra=[${extra.join(', ')}]`,
-    );
-}
-
 const account = readContract(accountFile);
 const admin = readContract(adminFile);
 if (
@@ -116,13 +94,6 @@ const accountOps = checkOperations(account.document, 'account');
 const adminOps = checkOperations(admin.document, 'admin');
 if (accountOps.length === 0) fail('account contract must expose operations');
 if (adminOps.length === 0) fail('admin contract must expose operations');
-if (
-  (account.raw.match(/"\/v1\/config-files\/\{fileId\}\/content"/g) ?? [])
-    .length !== 1
-) {
-  fail('account contract must declare the file content path exactly once');
-}
-
 const errorCodes = account.document.components.schemas.ApiErrorCode.enum;
 for (const code of [
   'INVALID_INPUT',
@@ -134,19 +105,6 @@ for (const code of [
 ]) {
   if (!errorCodes.includes(code)) fail(`missing stable error code ${code}`);
 }
-const domainApiSource = fs.readFileSync(domainApiFile, 'utf8');
-const domainProductReasons = extractDomainStringArray(
-  domainApiSource,
-  'SUBSCRIPTION_PRODUCT_REASONS',
-);
-const contractProductReasons =
-  account.document.components.schemas.SubscriptionProduct.properties.reason
-    .enum;
-assertSameStringSet(
-  'SubscriptionProduct.reason Domain/OpenAPI enum',
-  domainProductReasons,
-  contractProductReasons,
-);
 const entitlementExample =
   account.document.components.schemas.Entitlement.examples[0];
 if (

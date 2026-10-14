@@ -103,7 +103,7 @@ export function storageAdapter(): StorageAdapter {
 
 export function authAdminAdapter(): AuthAdminAdapter {
   const baseUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/u, '');
-  const secret = Deno.env.get('SUPABASE_SECRET_KEY');
+  const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!baseUrl || !secret) throw new Error('AUTH_NOT_CONFIGURED');
   return {
     async deleteUser(userId) {
@@ -124,6 +124,10 @@ export function authAdminAdapter(): AuthAdminAdapter {
         throw new Error('PROVIDER_TIMEOUT');
       }
       if (!response.ok) {
+        if (response.status === 404) {
+          await response.body?.cancel().catch(() => undefined);
+          return;
+        }
         await response.body?.cancel().catch(() => undefined);
         throw new Error(`AUTH_DELETE_FAILED_${response.status}`);
       }

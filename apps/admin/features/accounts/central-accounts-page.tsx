@@ -16,6 +16,11 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
 import { Button, buttonVariants } from '@kit/ui/button';
+import {
+  EmptyState,
+  EmptyStateHeading,
+  EmptyStateText,
+} from '@kit/ui/empty-state';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
@@ -374,7 +379,7 @@ export function CentralAccountsPage() {
             {suspendedAccountCount > 0 ? (
               <span>
                 已暂停账户：
-                <strong className="text-amber-600">
+                <strong className="text-warning-foreground">
                   {suspendedAccountCount}
                 </strong>
               </span>
@@ -398,16 +403,18 @@ export function CentralAccountsPage() {
         />
       ) : null}
       {accountsState === 'success' && identities.length === 0 ? (
-        <section
-          className="panel gap-2 p-12 text-center"
+        <EmptyState
+          className="panel my-4 gap-2 p-12 text-center"
           data-test="accounts-empty"
         >
-          <Users className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h3 className="mt-4 text-base font-semibold">未找到匹配的统一身份</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <Users className="mx-auto h-10 w-10 text-muted-foreground/60" />
+          <EmptyStateHeading className="mt-4 text-base font-semibold">
+            未找到匹配的统一身份
+          </EmptyStateHeading>
+          <EmptyStateText className="mt-1 text-sm text-muted-foreground">
             请尝试更换平台范围，或使用完整/部分邮箱与 Auth UID 检索。
-          </p>
-        </section>
+          </EmptyStateText>
+        </EmptyState>
       ) : null}
       {accountsState === 'success' && identities.length > 0 ? (
         <section className="panel gap-4 p-0">

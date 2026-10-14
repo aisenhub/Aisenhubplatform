@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
@@ -11,10 +11,11 @@ import { StatusBadge } from '@kit/ui/status-badge';
 import { adminAuthSession } from '../../app/_lib/auth-session';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import { readApiPayload } from '../resources/admin-resource-utils';
 import {
-  readApiPayload,
-  resourcePath,
-} from '../resources/admin-resource-utils';
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 import {
   derivePlatformIntegrationState,
   integrationStatusLabel,
@@ -22,7 +23,6 @@ import {
   type IntegrationCommerceOfferFact,
   type IntegrationOriginFact,
   type IntegrationStep,
-  type IntegrationSubscriptionFact,
 } from './platform-integration-model';
 import {
   PlatformOriginsSection,
@@ -54,53 +54,48 @@ export function PlatformIntegrationPage() {
   const welcome = searchParams.get('welcome') === '1';
   const [origins, setOrigins] = useState<IntegrationOriginFact[] | undefined>();
   const [keys, setKeys] = useState<IntegrationKeyFact[] | undefined>();
-  const [subscription, setSubscription] = useState<
-    IntegrationSubscriptionFact | null | undefined
-  >();
   const [offers, setOffers] = useState<
     IntegrationCommerceOfferFact[] | undefined
   >();
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const commerceLoadGeneration = useRef(0);
+  const commerceScopeRef = useRef(platform.platform_id);
+  commerceScopeRef.current = platform.platform_id;
 
-  const loadSubscription = useCallback(async () => {
+  const loadCommerce = useCallback(async () => {
+    const token = beginScopedLoad(commerceLoadGeneration, platform.platform_id);
     const epoch = adminAuthSession.getEpoch();
+    setOffers(undefined);
     try {
-      const [subscriptionResponse, offersResponse] = await Promise.all([
-        adminAuthSession.request(
-          resourcePath(platform.platform_id, '/subscription-config'),
-          {
-            cache: 'no-store',
-          },
-        ),
-        adminAuthSession.request(
-          `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platform.platform_id)}/commerce/offers`,
-          { cache: 'no-store' },
-        ),
-      ]);
-      const subscriptionPayload =
-        await readApiPayload<IntegrationSubscriptionFact>(subscriptionResponse);
+      const offersResponse = await adminAuthSession.request(
+        `/api/v1/admin/api/v1/platforms/${encodeURIComponent(token.scope)}/commerce/offers`,
+        { cache: 'no-store' },
+      );
       const offersPayload =
         await readApiPayload<IntegrationCommerceOfferFact[]>(offersResponse);
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
-      setSubscription(
-        subscriptionResponse.ok
-          ? (subscriptionPayload?.data ?? null)
-          : undefined,
-      );
+      if (
+        !isScopedLoadCurrent(commerceLoadGeneration, commerceScopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       setOffers(
         offersResponse.ok && Array.isArray(offersPayload?.data)
           ? offersPayload.data
           : undefined,
       );
     } catch {
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
-      setSubscription(undefined);
+      if (
+        !isScopedLoadCurrent(commerceLoadGeneration, commerceScopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
+      setOffers(undefined);
     }
   }, [platform.platform_id]);
 
   useEffect(() => {
-    void loadSubscription();
-  }, [loadSubscription]);
+    void loadCommerce();
+  }, [loadCommerce]);
 
   useEffect(() => {
     const section = searchParams.get('section');
@@ -121,17 +116,15 @@ export function PlatformIntegrationPage() {
   function refreshAll() {
     setOrigins(undefined);
     setKeys(undefined);
-    setSubscription(undefined);
     setOffers(undefined);
     setRefreshVersion((current) => current + 1);
-    void loadSubscription();
+    void loadCommerce();
   }
 
   const state = derivePlatformIntegrationState({
     platform,
     origins,
     keys,
-    subscription,
     offers,
   });
   const encoded = encodeURIComponent(platform.platform_id);

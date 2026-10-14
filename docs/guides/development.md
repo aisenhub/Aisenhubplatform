@@ -1,5 +1,7 @@
 # 本地开发
 
+预上线 canonical schema 由单一 baseline migration 建立，包含最小角色、授权、private Storage bucket 与 cron 初始化。Local PostgreSQL major 为 17，与 workendstaging 对齐；合成业务 fixture 由本地 SQL/API/E2E runner 创建并清理，不把真实 Secret 或用户数据写入 seed。
+
 开始任务先读[Agent 开发与发布流程](development-release-workflow.md)，明确变更分级、消费者和验收路线。最高测试环境为本地 Supabase；适用本地测试通过即可进入上线流程，不再要求 Hosted Staging。部署前仍核对目标、配置、迁移兼容、恢复清单及已有授权。
 
 先核对[工具链](../reference/toolchain.md)。在仓库根目录安装锁定依赖：

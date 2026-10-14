@@ -8,6 +8,7 @@ import {
   createAfdianProviderAdapter,
   normalizeAfdianOrder,
   parseAfdianWebhook,
+  afdianCanonicalFactBytes,
   toBillingOrderFacts,
   verifyAfdianWebhookSignature,
   providerUrlsRequireHttps,
@@ -180,6 +181,40 @@ Deno.test('Afdian webhook event identity excludes unsigned mutable status', () =
   assertEquals(later.eventKey, first.eventKey);
 });
 
+Deno.test('Afdian canonical fact bytes are stable across status changes but detect fact conflicts', () => {
+  const orderA = {
+    out_trade_no: 'order-1',
+    user_id: 'user-1',
+    plan_id: 'plan-monthly',
+    total_amount: '9.90',
+    status: 1,
+    remark: 'first-attempt',
+  };
+  const orderB = {
+    out_trade_no: 'order-1',
+    user_id: 'user-1',
+    plan_id: 'plan-monthly',
+    total_amount: '9.90',
+    status: 2,
+    remark: 'paid-attempt',
+  };
+  const orderConflict = {
+    out_trade_no: 'order-1',
+    user_id: 'user-1',
+    plan_id: 'plan-monthly',
+    total_amount: '19.90',
+    status: 2,
+  };
+  const bytesA = afdianCanonicalFactBytes(orderA);
+  const bytesB = afdianCanonicalFactBytes(orderB);
+  const bytesConflict = afdianCanonicalFactBytes(orderConflict);
+  assertEquals(bytesA, bytesB);
+  assert(
+    new TextDecoder().decode(bytesA) !==
+      new TextDecoder().decode(bytesConflict),
+  );
+});
+
 Deno.test('Afdian adapter queries an order by out_trade_no without exposing credentials', async () => {
   const requests: Request[] = [];
   const adapter = createAfdianProviderAdapter({
@@ -218,6 +253,22 @@ Deno.test('Afdian adapter queries an order by out_trade_no without exposing cred
   assertEquals(body.params, '{"out_trade_no":"order-1"}');
   assert(typeof body.sign === 'string');
   assert(!JSON.stringify(body).includes('fixture-token'));
+});
+
+Deno.test('Afdian fact digest distinguishes signed field boundaries', () => {
+  const first = afdianCanonicalFactBytes({
+    out_trade_no: 'order-a',
+    user_id: 'bc',
+    plan_id: 'plan',
+    total_amount: '9.90',
+  });
+  const second = afdianCanonicalFactBytes({
+    out_trade_no: 'order-ab',
+    user_id: 'c',
+    plan_id: 'plan',
+    total_amount: '9.90',
+  });
+  assert(new TextDecoder().decode(first) !== new TextDecoder().decode(second));
 });
 
 Deno.test('Afdian adapter treats missing orders as not found and API failures as retryable', async () => {

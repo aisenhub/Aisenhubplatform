@@ -1,6 +1,6 @@
 begin;
 
-select plan(31);
+select plan(36);
 
 select has_function('private','admin_feedback_list',array['private.admin_context','uuid','uuid','integer','text','text','text','text','text','text','boolean','timestamptz','timestamptz'],'Admin Feedback list exists');
 select has_function('private','admin_feedback_read',array['private.admin_context','uuid','uuid'],'Admin Feedback detail exists');
@@ -133,7 +133,26 @@ select * from private.admin_feedback_batch_delete(
  '00000000-0000-4000-8000-000000008320',array['00000000-0000-4000-8000-000000008341'::uuid],'duplicate report','00000000-0000-4000-8000-000000008382'
 );
 set local role postgres;
+create temporary table deleted_batch_baseline on commit drop as
+select row_version
+from public.platform_feedback
+where id='00000000-0000-4000-8000-000000008341';
+set local role admin_executor;
+create temporary table deleted_batch_replay on commit drop as
+select * from private.admin_feedback_batch_delete(
+ row('00000000-0000-4000-8000-000000008300','00000000-0000-4000-8000-000000008310','00000000-0000-4000-8000-000000008384')::private.admin_context,
+ '00000000-0000-4000-8000-000000008320',array['00000000-0000-4000-8000-000000008341'::uuid],'duplicate report','00000000-0000-4000-8000-000000008382'
+);
+set local role postgres;
 select is((select status from deleted_batch),'deleted','zero-attachment Admin delete reaches terminal deleted through shared lifecycle');
+select is((select status from deleted_batch_replay),'deleted','same operation id safely replays the cached batch result');
+select is((select row_version from public.platform_feedback where id='00000000-0000-4000-8000-000000008341'),(select row_version from deleted_batch_baseline),'idempotent replay does not increment Feedback row_version again');
+select is((select count(*)::integer from public.platform_feedback_events where feedback_id='00000000-0000-4000-8000-000000008341' and event_type='delete_requested'),1,'idempotent replay does not append delete_requested twice');
+select is((select count(*)::integer from public.audit_logs where event_type='feedback.batch_delete_requested' and metadata->>'operation_id'='00000000-0000-4000-8000-000000008382'),1,'idempotent replay does not append batch audit twice');
+select throws_ok(
+ $$select * from private.admin_feedback_batch_delete(row('00000000-0000-4000-8000-000000008300','00000000-0000-4000-8000-000000008310','00000000-0000-4000-8000-000000008385')::private.admin_context,'00000000-0000-4000-8000-000000008320',array['00000000-0000-4000-8000-000000008341'::uuid],'changed reason','00000000-0000-4000-8000-000000008382')$$,
+ '23505','idempotency_conflict','same operation id with a different request hash is rejected'
+);
 select ok((select title is null and body is null and contact_email_snapshot is null and platform_account_id is null and user_id is null from public.platform_feedback where id='00000000-0000-4000-8000-000000008341'),'Admin batch delete immediately minimizes personal Feedback data');
 select ok((select metadata->>'operation_id'='00000000-0000-4000-8000-000000008382' from public.audit_logs where event_type='feedback.batch_delete_requested' order by created_at desc limit 1),'batch delete audit records operation id without Feedback content');
 select throws_ok(

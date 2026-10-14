@@ -38,6 +38,7 @@ import {
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
 import {
+  isRecentMfaRequired,
   readApiPayload,
   resourceError,
   resourcePath,
@@ -46,6 +47,7 @@ import {
   type ResourceError,
   type ResourceLoadState,
 } from '../resources/admin-resource-utils';
+import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import { CommerceOffersPanel } from './commerce-offers-panel';
 
 type Plan = {
@@ -68,14 +70,12 @@ type PlanPayload = {
   description: string | null;
   kind: Plan['kind'];
   features: Record<string, unknown>;
-  status: Plan['status'];
-  make_default: boolean;
-  clear_default: boolean;
 };
 
 type PlanActionIntent = {
   plan: Plan;
-  changes: Pick<PlanPayload, 'status' | 'make_default' | 'clear_default'>;
+  action: 'archive' | 'make_default' | 'clear_default';
+  operationId: string;
   title: string;
   impact: string;
   reversible: boolean;
@@ -185,9 +185,6 @@ export function PlatformPlansPage() {
       description: null,
       kind: 'paid',
       features: { config_slot_limit: 0 },
-      status: 'active',
-      make_default: false,
-      clear_default: false,
     });
     setEditorError(null);
     setEditorOpen(true);
@@ -205,9 +202,6 @@ export function PlatformPlansPage() {
         ...(plan.features ?? {}),
         config_slot_limit: configSlotLimit(plan.features),
       },
-      status: plan.status,
-      make_default: false,
-      clear_default: false,
     });
     setEditorError(null);
     setEditorOpen(true);
@@ -302,19 +296,20 @@ export function PlatformPlansPage() {
     }
   }
 
-  function openPlanAction(plan: Plan, changes: PlanActionIntent['changes']) {
-    const archive = changes.status === 'archived';
+  function openPlanAction(plan: Plan, action: PlanActionIntent['action']) {
+    const archive = action === 'archive';
     setActionIntent({
       plan,
-      changes,
+      action,
+      operationId: crypto.randomUUID(),
       title: archive
         ? `归档 Plan ${plan.code}`
-        : changes.make_default
+        : action === 'make_default'
           ? `设为默认 Free：${plan.code}`
           : '清空默认 Free Plan',
       impact: archive
         ? '归档会停止新权益授予，但不会删除历史权益；默认 Free Plan 必须先切换或清空。'
-        : changes.make_default
+        : action === 'make_default'
           ? '该 Free Plan 将成为当前平台的默认回退权益。'
           : '平台将不再配置默认 Free Plan，读取结果会按服务端规则返回 none。',
       reversible: true,
@@ -323,33 +318,34 @@ export function PlatformPlansPage() {
     setActionError(null);
   }
 
-  async function executePlanAction() {
+  async function executePlanAction(reason: string) {
     if (!actionIntent) return;
     setActionState('pending');
     setActionError(null);
-    const { plan, changes } = actionIntent;
+    const { plan, action, operationId } = actionIntent;
     try {
       const response = await adminAuthSession.request(
-        resourcePath(platform.platform_id, '/plans'),
+        resourcePath(
+          platform.platform_id,
+          `/plans/${encodeURIComponent(plan.plan_id)}/commands`,
+        ),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            plan_id: plan.plan_id,
-            code: plan.code,
-            name: plan.name,
-            description: plan.description ?? null,
-            kind: plan.kind,
-            features: plan.features ?? {},
-            status: changes.status,
-            make_default: changes.make_default,
-            clear_default: changes.clear_default,
+            action,
+            operation_id: operationId,
+            reason,
           }),
         },
         { replay: 'never' },
       );
       const payload = await readApiPayload<Plan>(response);
       if (!response.ok) {
+        if (isRecentMfaRequired(response, payload)) {
+          setActionState('step_up_required');
+          return;
+        }
         setActionState('failure');
         setActionError(resourceError(response, payload, 'Plan 操作'));
         return;
@@ -366,10 +362,11 @@ export function PlatformPlansPage() {
       setActionIntent(null);
     } catch (caught) {
       if (caught instanceof SessionRetryRequiredError) {
-        setActionState('failure');
+        setActionState('unknown_outcome');
         setActionError({
-          title: '会话已恢复，请重新提交',
-          description: '为避免重复写入，这次 Plan 操作没有自动重放。',
+          title: 'Plan 操作结果待确认',
+          description:
+            '会话恢复前结果未知；原 operation_id 已保留，再次确认会由服务端安全重放。',
           requestId: null,
           technicalDetail: null,
         });
@@ -543,13 +540,7 @@ export function PlatformPlansPage() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() =>
-                              openPlanAction(plan, {
-                                status: 'archived',
-                                make_default: false,
-                                clear_default: false,
-                              })
-                            }
+                            onClick={() => openPlanAction(plan, 'archive')}
                             data-test={`plan-archive-${plan.plan_id}`}
                           >
                             归档
@@ -561,13 +552,7 @@ export function PlatformPlansPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() =>
-                              openPlanAction(plan, {
-                                status: plan.status,
-                                make_default: true,
-                                clear_default: false,
-                              })
-                            }
+                            onClick={() => openPlanAction(plan, 'make_default')}
                             data-test={`plan-default-${plan.plan_id}`}
                           >
                             设为默认
@@ -578,11 +563,7 @@ export function PlatformPlansPage() {
                             variant="outline"
                             size="sm"
                             onClick={() =>
-                              openPlanAction(plan, {
-                                status: plan.status,
-                                make_default: false,
-                                clear_default: true,
-                              })
+                              openPlanAction(plan, 'clear_default')
                             }
                             data-test={`plan-clear-default-${plan.plan_id}`}
                           >
@@ -764,8 +745,16 @@ export function PlatformPlansPage() {
           targetIdentity={actionIntent.plan.plan_id}
           impact={actionIntent.impact}
           reversible={actionIntent.reversible}
+          reasonRequired
           state={actionState}
           error={actionError}
+          stepUpContent={
+            actionState === 'step_up_required' ? (
+              <AdminRecentMfaPanel
+                onVerified={() => setActionState('confirm_required')}
+              />
+            ) : null
+          }
           onCheckUnknown={
             actionState === 'unknown_outcome'
               ? async () => {
@@ -773,7 +762,7 @@ export function PlatformPlansPage() {
                   setActionError({
                     title: 'Plan 列表已重新读取',
                     description:
-                      '没有重新发送原操作；请根据当前状态决定是否需要新的显式确认。',
+                      '原 operation_id 已保留；若结果仍不确定，可再次确认并安全重放同一操作。',
                     requestId: null,
                     technicalDetail: null,
                   });

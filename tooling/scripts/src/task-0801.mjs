@@ -162,7 +162,7 @@ async function startAccountApiForT12(env) {
       env: childEnvironment({
         SUPABASE_URL: env.SUPABASE_LOCAL_URL,
         SUPABASE_PUBLISHABLE_KEY: env.SUPABASE_LOCAL_PUBLISHABLE_KEY,
-        SUPABASE_SECRET_KEY: env.SUPABASE_LOCAL_SECRET_KEY,
+        SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_LOCAL_SECRET_KEY,
         ACCOUNT_API_DB_URL: env.SUPABASE_DB_URL,
         PLATFORM_KEY_HMAC_SECRET:
           'local-fixture-only-task-0801-platform-secret',
@@ -252,6 +252,11 @@ async function main() {
   runPnpm(
     'settlement concurrency',
     ['run', 'test:sql:bill-05-concurrency'],
+    localEnv,
+  );
+  runPnpm(
+    'prelaunch Commerce Price/Mapping concurrency',
+    ['test:sql:prelaunch-commerce-concurrency'],
     localEnv,
   );
   runPnpm('admin typecheck', ['--filter', 'admin', 'typecheck'], localEnv);

@@ -496,15 +496,11 @@ function DeletionJobCard({
         ) : null}
       </div>
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <Detail label="Retry count" value={`${job.retry_count}`} />
-        <Detail label="Next attempt" value={formatUtc(job.next_attempt_at)} />
-        <Detail label="Created" value={formatUtc(job.created_at)} />
-        <Detail label="Completed" value={formatUtc(job.completed_at)} />
-        <Detail
-          label="Last error code"
-          value={job.last_error_code ?? '—'}
-          mono
-        />
+        <Detail label="重试次数" value={`${job.retry_count}`} />
+        <Detail label="下次重试时间" value={formatUtc(job.next_attempt_at)} />
+        <Detail label="创建时间" value={formatUtc(job.created_at)} />
+        <Detail label="完成时间" value={formatUtc(job.completed_at)} />
+        <Detail label="末次错误码" value={job.last_error_code ?? '—'} mono />
       </dl>
       <Link
         href={`/admin/accounts/deletion-jobs?job_id=${encodeURIComponent(job.job_id)}`}

@@ -1,8 +1,3 @@
-import {
-  getBillingProductSpec,
-  isBillingProductCode,
-  isMoneyAmount,
-} from './billing.ts';
 import type {
   BillingCheckoutProgressDto,
   BillingCheckoutStatus,
@@ -102,49 +97,6 @@ export interface PlanDto {
   readonly features: Readonly<Record<string, unknown>>;
 }
 
-export type SubscriptionProductReason =
-  | 'ready'
-  | 'free_plan_source'
-  | 'free_plan_not_configured'
-  | 'paid_plan_not_configured'
-  | 'paid_plan_unavailable'
-  | 'product_disabled'
-  | 'provider_mapping_unavailable'
-  | 'lifetime_already_purchased'
-  | 'purchases_paused'
-  | 'platform_disabled';
-
-export const SUBSCRIPTION_PRODUCT_REASONS = [
-  'ready',
-  'free_plan_source',
-  'free_plan_not_configured',
-  'paid_plan_not_configured',
-  'paid_plan_unavailable',
-  'product_disabled',
-  'provider_mapping_unavailable',
-  'lifetime_already_purchased',
-  'purchases_paused',
-  'platform_disabled',
-] as const satisfies readonly SubscriptionProductReason[];
-
-export interface SubscriptionProductDto {
-  readonly code: 'free' | 'monthly' | 'yearly' | 'lifetime';
-  readonly name: string;
-  readonly description: string | null;
-  readonly price: string;
-  readonly currency: 'CNY';
-  readonly term: {
-    readonly kind: 'free' | 'finite';
-    readonly duration_value: number | null;
-    readonly duration_unit: 'month' | 'year' | null;
-  };
-  readonly price_version: number;
-  readonly recommended: boolean;
-  readonly enabled: boolean;
-  readonly purchasable: boolean;
-  readonly reason: SubscriptionProductReason;
-}
-
 export type CommerceOfferReason =
   | 'ready'
   | 'platform_disabled'
@@ -175,87 +127,15 @@ export interface CommerceOfferDto {
     readonly version: number | null;
   };
   readonly recommended: boolean;
-  readonly legacy_product_code: 'monthly' | 'yearly' | 'lifetime' | null;
   readonly purchasable: boolean;
   readonly reason: CommerceOfferReason;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function isSubscriptionProductReason(
-  value: unknown,
-): value is SubscriptionProductReason {
-  return (
-    typeof value === 'string' &&
-    (SUBSCRIPTION_PRODUCT_REASONS as readonly string[]).includes(value)
-  );
-}
-
-export function isSubscriptionProductDto(
-  value: unknown,
-): value is SubscriptionProductDto {
-  if (!isRecord(value)) return false;
-  const code = value.code;
-  if (!isBillingProductCode(code)) return false;
-  const spec = getBillingProductSpec(code);
-  const term = value.term;
-  if (!spec || !isRecord(term)) return false;
-
-  return (
-    typeof value.name === 'string' &&
-    value.name.length > 0 &&
-    (typeof value.description === 'string' || value.description === null) &&
-    isMoneyAmount(value.price) &&
-    value.currency === 'CNY' &&
-    term.kind === spec.term_kind &&
-    term.duration_value === spec.duration_value &&
-    term.duration_unit === spec.duration_unit &&
-    typeof value.price_version === 'number' &&
-    Number.isSafeInteger(value.price_version) &&
-    value.price_version > 0 &&
-    typeof value.recommended === 'boolean' &&
-    typeof value.enabled === 'boolean' &&
-    typeof value.purchasable === 'boolean' &&
-    isSubscriptionProductReason(value.reason)
-  );
-}
-
-export function isSubscriptionProductList(
-  value: unknown,
-): value is readonly SubscriptionProductDto[] {
-  return Array.isArray(value) && value.every(isSubscriptionProductDto);
-}
-
-export interface SubscriptionConfigDto {
-  readonly platform_id: string;
-  readonly paid_plan_id: string | null;
-  readonly paid_plan_code: string | null;
-  readonly paid_plan_name: string | null;
-  readonly paid_plan_status: 'active' | 'archived' | null;
-  readonly purchases_paused: boolean;
-  readonly monthly_enabled: boolean;
-  readonly yearly_enabled: boolean;
-  readonly lifetime_enabled: boolean;
-  readonly subscription_copy_override: string | null;
-  readonly row_version: number;
-  readonly preflight_blocked_reason:
-    | 'active_or_future_grant'
-    | 'redeemable_old_plan_batch'
-    | null;
-  readonly preflight_blocking_count: number;
-}
-
-/** Backward-compatible API name; the state source is the billing contract. */
-export type SubscriptionCheckoutStatus = BillingCheckoutStatus;
-
 export interface SubscriptionCheckoutDto {
   readonly checkout_id: string;
-  readonly status: SubscriptionCheckoutStatus;
-  readonly product_code: 'monthly' | 'yearly' | 'lifetime' | null;
-  readonly offer_id: string | null;
-  readonly offer_code: string | null;
+  readonly status: BillingCheckoutStatus;
+  readonly offer_id: string;
+  readonly offer_code: string;
   readonly plan_id: string;
   readonly plan_name: string;
   readonly price_version: number;

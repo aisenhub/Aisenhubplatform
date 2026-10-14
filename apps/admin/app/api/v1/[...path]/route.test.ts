@@ -9,7 +9,7 @@ import {
   encodeAuthSessionAcknowledgement,
 } from '../../../_lib/auth/server';
 
-import { DELETE, GET, POST, PUT, isAllowedAdminPath } from './route';
+import { GET, POST, PUT, isAllowedAdminPath } from './route';
 import { POST as login } from '../../auth/login/route';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
@@ -23,7 +23,7 @@ const LOGIN_ACK = encodeAuthSessionAcknowledgement({
 });
 
 function request(
-  method: 'DELETE' | 'GET' | 'POST' | 'PUT',
+  method: 'GET' | 'POST' | 'PUT',
   path: string,
   options: {
     readonly csrf?: boolean;
@@ -78,22 +78,6 @@ describe('admin BFF', () => {
     vi.unstubAllGlobals();
   });
 
-  it('forwards an empty streamed DELETE body while keeping its byte limit', async () => {
-    const response = await DELETE(
-      request('DELETE', `admin/api/v1/config-files/${SESSION_ID}`, {
-        csrf: true,
-        body: '',
-      }),
-      context(['admin', 'api', 'v1', 'config-files', SESSION_ID]),
-    );
-    expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
-      method: 'DELETE',
-      body: '',
-    });
-  });
-
   it('rejects oversized business and login JSON before contacting upstream', async () => {
     const oversized = 'x'.repeat(65_537);
     const response = await POST(
@@ -144,7 +128,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(77);
+    expect(operationCount).toBe(72);
   });
 
   it('proxies private Feedback images as binary and allows label replacement', async () => {
@@ -322,5 +306,66 @@ describe('admin BFF', () => {
       context(['admin', 'api', 'v1', 'platforms']),
     );
     expect(response.status).toBe(503);
+  });
+
+  it('omits Content-Type header when mutation request has no body', async () => {
+    const response = await POST(
+      request('POST', 'admin/api/v1/platforms', { csrf: true }),
+      context(['admin', 'api', 'v1', 'platforms']),
+    );
+    expect(response.status).toBe(200);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBeUndefined();
+    expect(
+      (init.headers as Record<string, string>)['Content-Type'],
+    ).toBeUndefined();
+  });
+
+  it('normalizes uppercase UUID path segments to lowercase before upstream fetch', async () => {
+    const uppercaseId = 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA';
+    const response = await GET(
+      request('GET', `admin/api/v1/platforms/${uppercaseId}/keys`),
+      context(['admin', 'api', 'v1', 'platforms', uppercaseId, 'keys']),
+    );
+    expect(response.status).toBe(200);
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      `https://account.example/admin/api/v1/platforms/${uppercaseId.toLowerCase()}/keys`,
+    );
+  });
+
+  it('attaches Content-Security-Policy sandbox header to binary download responses', async () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    fetchMock.mockResolvedValueOnce(
+      new Response(new Uint8Array([1, 2, 3]), {
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+          'content-disposition': 'attachment; filename="test.png"',
+        },
+      }),
+    );
+    const response = await GET(
+      request(
+        'GET',
+        `admin/api/v1/platforms/${id}/feedback/${id}/attachments/${id}/content`,
+      ),
+      context([
+        'admin',
+        'api',
+        'v1',
+        'platforms',
+        id,
+        'feedback',
+        id,
+        'attachments',
+        id,
+        'content',
+      ]),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-security-policy')).toBe(
+      "sandbox; default-src 'none'",
+    );
   });
 });

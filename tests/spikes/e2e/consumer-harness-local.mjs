@@ -82,8 +82,8 @@ const platformACode = `harness-a-${platformAId.slice(0, 8)}`;
 const platformBCode = `harness-b-${platformBId.slice(0, 8)}`;
 const presentedKeyA = `phk_v1_${platformAKeyId}_harness-a`;
 const presentedKeyB = `phk_v1_${platformBKeyId}_harness-b`;
-const redemptionCodeA = 'HARNESSA23456789';
-const redemptionCodeB = 'HARNESSB23456789';
+const redemptionCodeA = 'A'.repeat(31);
+const redemptionCodeB = 'B'.repeat(31);
 
 const sql = postgres(databaseUrl, {
   max: 4,
@@ -238,12 +238,12 @@ async function createFixtures() {
       values
         (${fixture.redemptionCodeId}, ${fixture.platformId}, ${fixture.batchId}, ${fixture.paidPlanId},
          ${redemptionHmac(fixture.platformId, fixture.redemptionCode)}, 1,
-         ${fixture.redemptionCode.slice(0, 8)}, ${fixture.redemptionCode.slice(-4)})
+         ${fixture.redemptionCode.slice(0, 4)}, ${fixture.redemptionCode.slice(-4)})
     `;
     await sql`
       insert into public.platform_file_policies
-        (platform_id, max_file_bytes, max_files, max_total_bytes)
-      values (${fixture.platformId}, 128, 10, 1280)
+        (platform_id, enabled, max_file_bytes, max_platform_total_bytes)
+      values (${fixture.platformId}, true, 128, 1048576)
     `;
   }
 }
@@ -262,7 +262,7 @@ async function startServices() {
     {
       SUPABASE_URL: authUrl,
       SUPABASE_PUBLISHABLE_KEY: publishableKey,
-      SUPABASE_SECRET_KEY: serviceRoleKey,
+      SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
       ACCOUNT_API_DB_URL: databaseUrl,
       PLATFORM_KEY_HMAC_SECRET: platformSecret,
       REDEMPTION_HMAC_SECRET: redemptionSecret,
@@ -406,19 +406,21 @@ async function exerciseHarness(
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   const publicPlans = await pageRequest(page, '/api/v1/plans');
   assert.equal(publicPlans.status, 200, 'public plans');
-  const products = await pageRequest(page, '/api/v1/subscription/products');
-  assert.equal(products.status, 200, 'public subscription products');
-  assert.ok(Array.isArray(products.body?.data), 'products must be an array');
+  const offers = await pageRequest(page, '/api/v1/commerce/offers');
+  assert.equal(offers.status, 200, 'public commerce offers');
+  assert.ok(Array.isArray(offers.body?.data), 'offers must be an array');
   assert.ok(
-    products.body.data.every(
+    offers.body.data.every(
       (item) =>
+        typeof item?.offer_id === 'string' &&
         typeof item?.code === 'string' &&
         typeof item?.name === 'string' &&
-        typeof item?.currency === 'string' &&
+        item?.price &&
+        typeof item?.price?.currency === 'string' &&
         item?.term &&
         typeof item?.reason === 'string',
     ),
-    'product contract fields must be readable through the Harness',
+    'Offer contract fields must be readable through the Harness',
   );
 
   await login(page, baseUrl);
@@ -484,15 +486,116 @@ async function exerciseHarness(
   const subscriptionBefore = await pageRequest(page, '/api/v1/subscription');
   assert.equal(subscriptionBefore.status, 200, 'subscription read');
   assert.equal(subscriptionBefore.body?.data?.plan?.code, 'free');
+  const redeemKey = randomUUID();
   const redeem = await mutation(page, baseUrl, '/api/v1/subscription/redeem', {
     headers: {
       'Content-Type': 'application/json',
-      'Idempotency-Key': randomUUID(),
+      'Idempotency-Key': redeemKey,
     },
     body: JSON.stringify({ code }),
   });
   assert.equal(redeem.status, 200, 'subscription redeem');
   assert.equal(redeem.body?.data?.plan?.code, 'pro');
+
+  const invalidKey = `harness-invalid-${expectedPlatformId}`;
+  const invalidOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': invalidKey,
+    },
+    body: JSON.stringify({ code: 'C'.repeat(31) }),
+  };
+  const invalidRedeem = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    invalidOptions,
+  );
+  assert.equal(invalidRedeem.body?.error?.code, 'INVALID_CODE');
+  const [account] =
+    await sql`select id from public.platform_accounts where platform_id = ${expectedPlatformId}`;
+  const [firstLimit] =
+    await sql`select sum(hit_count) as hit_count from private.rate_limit_windows
+    where key_hash = extensions.digest(convert_to(${`${expectedPlatformId}:${account.id}:redeem_subscription_code`}, 'utf8'), 'sha256')`;
+  assert.equal(
+    Number(firstLimit?.hit_count),
+    2,
+    'failed redemption persists its rate-limit count',
+  );
+  await mutation(page, baseUrl, '/api/v1/subscription/redeem', invalidOptions);
+  const [replayedLimit] =
+    await sql`select sum(hit_count) as hit_count from private.rate_limit_windows
+    where key_hash = extensions.digest(convert_to(${`${expectedPlatformId}:${account.id}:redeem_subscription_code`}, 'utf8'), 'sha256')`;
+  assert.equal(
+    Number(replayedLimit?.hit_count),
+    2,
+    'same rejected intent replays without recounting',
+  );
+  async function exhaustWindow(key, limit) {
+    await sql`insert into private.rate_limit_windows
+      (key_hash, window_started_at, window_seconds, hit_count, limit_count, expires_at)
+      select extensions.digest(convert_to(${key}, 'utf8'), 'sha256'),
+        date_trunc('minute', now()) + minute * interval '1 minute', 60, ${limit}, ${limit},
+        date_trunc('minute', now()) + (minute + 1) * interval '1 minute'
+      from generate_series(0, 2) as minute
+      on conflict (key_hash, window_started_at) do update set hit_count = excluded.hit_count`;
+  }
+  // Cover adjacent windows so the assertion does not race the wall-clock minute.
+  await exhaustWindow(
+    `${expectedPlatformId}:${account.id}:redeem_subscription_code`,
+    5,
+  );
+  const limitedRedeem = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    {
+      ...invalidOptions,
+      headers: {
+        ...invalidOptions.headers,
+        'Idempotency-Key': `${invalidKey}-limited`,
+      },
+    },
+  );
+  assert.equal(limitedRedeem.status, 429, 'redemption limit fails closed');
+  assert.equal(limitedRedeem.body?.error?.code, 'RATE_LIMITED');
+  await sql`update private.rate_limit_windows set hit_count = 0
+    where key_hash = extensions.digest(convert_to(${`${expectedPlatformId}:${account.id}:redeem_subscription_code`}, 'utf8'), 'sha256')`;
+  await exhaustWindow(`${expectedPlatformId}:redeem_subscription_code`, 300);
+  const platformLimited = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    {
+      ...invalidOptions,
+      headers: {
+        ...invalidOptions.headers,
+        'Idempotency-Key': `${invalidKey}-platform-limit`,
+      },
+    },
+  );
+  assert.equal(
+    platformLimited.status,
+    429,
+    'platform limit protects other accounts too',
+  );
+  const successReplay = await mutation(
+    page,
+    baseUrl,
+    '/api/v1/subscription/redeem',
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': redeemKey,
+      },
+      body: JSON.stringify({ code }),
+    },
+  );
+  assert.equal(
+    successReplay.status,
+    200,
+    'completed success replays after counters are exhausted',
+  );
 
   const protectedFeature = await pageRequest(
     page,
@@ -541,60 +644,6 @@ async function exerciseHarness(
     body: JSON.stringify({ theme: 'dark', harness: true }),
   });
   assert.equal(preferencePatch.status, 200, 'preferences PATCH');
-
-  const fileContent = 'consumer-harness-file';
-  const intent = await mutation(
-    page,
-    baseUrl,
-    '/api/v1/config-files/upload-intent',
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': randomUUID(),
-      },
-      body: JSON.stringify({
-        name: 'harness.ini',
-        size: fileContent.length,
-        content_type: 'text/plain',
-        purpose: 'config',
-      }),
-    },
-  );
-  assert.equal(intent.status, 201, 'file upload intent');
-  const fileId = intent.body?.data?.file_id;
-  const uploadPath = intent.body?.data?.upload_path;
-  assert.ok(fileId && uploadPath, 'upload intent must return file id/path');
-  const upload = await mutation(page, baseUrl, `/api${uploadPath}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'Idempotency-Key': randomUUID(),
-    },
-    body: fileContent,
-  });
-  assert.equal(upload.status, 202, 'binary upload');
-  const listed = await pageRequest(page, '/api/v1/config-files?limit=20');
-  assert.equal(listed.status, 200, 'file list');
-  assert.ok(
-    listed.body?.data?.items?.some((item) => item.file_id === fileId),
-    'uploaded file must be listed',
-  );
-  const downloaded = await pageRequest(
-    page,
-    `/api/v1/config-files/${fileId}/content`,
-  );
-  assert.equal(downloaded.status, 200, 'file download');
-  assert.equal(downloaded.body?.raw, fileContent, 'download content');
-  const removed = await mutation(
-    page,
-    baseUrl,
-    `/api/v1/config-files/${fileId}`,
-    {
-      method: 'DELETE',
-      headers: { 'Idempotency-Key': randomUUID() },
-    },
-  );
-  assert.equal(removed.status, 202, 'file delete request');
 
   const configCreate = await mutation(page, baseUrl, '/api/v1/configs', {
     headers: { 'Content-Type': 'application/json' },
@@ -714,22 +763,6 @@ async function exerciseHarness(
       (item) => item.version_id === versionId,
     ),
     'uploaded Version must be listed',
-  );
-  const legacyAfterVersion = await pageRequest(
-    page,
-    '/api/v1/config-files?limit=20',
-  );
-  assert.equal(
-    legacyAfterVersion.status,
-    200,
-    'legacy file list after Version upload',
-  );
-  assert.equal(
-    legacyAfterVersion.body?.data?.items?.some(
-      (item) => item.file_id === versionFileId,
-    ),
-    false,
-    'legacy file list must not expose Config Version physical files',
   );
   const ownerVersionContent = await pageRequest(
     page,
@@ -1074,18 +1107,33 @@ async function exerciseSessionTerminal(page, context, baseUrl) {
 
 async function cleanup() {
   cleaningUp = true;
+  await sql`delete from private.rate_limit_windows
+    where key_hash = extensions.digest(convert_to(${`${platformAId}:redeem_subscription_code`}, 'utf8'), 'sha256')
+       or key_hash = extensions.digest(convert_to(${`${platformBId}:redeem_subscription_code`}, 'utf8'), 'sha256')
+       or key_hash in (
+      select extensions.digest(convert_to(platform_id::text || ':' || id::text || ':redeem_subscription_code', 'utf8'), 'sha256')
+      from public.platform_accounts where platform_id = ${platformAId} or platform_id = ${platformBId}
+    )`.catch(() => {});
   await sql`delete from public.audit_logs where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`delete from private.idempotency_keys where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from private.feedback_attachment_write_attempts where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback_labels where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback_events where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback_attachments where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_feedback where platform_id in (${platformAId}, ${platformBId})`;
+  await sql`delete from private.file_write_attempts where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.subscription_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
-    () => {},
-  );
-  await sql`delete from public.subscription_grants where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
   await sql`delete from public.redemption_events where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`delete from public.subscription_grants where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
+    () => {},
+  );
+  await sql`delete from public.subscriptions where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.redemption_codes where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
@@ -1119,12 +1167,15 @@ async function cleanup() {
   await sql`delete from public.platform_config_files where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`delete from private.file_deletion_tombstones where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.platform_file_policies where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
   await sql`delete from public.platform_accounts where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
+  await sql`update public.platforms set default_plan_id = null where id in (${platformAId}, ${platformBId})`;
+  await sql`delete from public.platform_commerce_policy where platform_id in (${platformAId}, ${platformBId})`;
   await sql`delete from public.plans where platform_id = ${platformAId} or platform_id = ${platformBId}`.catch(
     () => {},
   );
@@ -1134,6 +1185,9 @@ async function cleanup() {
   await sql`delete from public.platforms where id = ${platformAId} or id = ${platformBId}`.catch(
     () => {},
   );
+  const [remainingPlatforms] =
+    await sql`select count(*)::integer count from public.platforms
+    where id in (${platformAId}, ${platformBId})`;
   for (const id of [userId, fixtureOwnerId].filter(Boolean)) {
     await sql`delete from auth.sessions where user_id = ${id}`.catch(() => {});
     await sql`delete from auth.identities where user_id = ${id}`.catch(
@@ -1158,6 +1212,11 @@ async function cleanup() {
     }
   }
   await sql.end({ timeout: 5 }).catch(() => {});
+  assert.equal(
+    remainingPlatforms.count,
+    0,
+    'Consumer Harness fixtures must be removed',
+  );
 }
 
 try {

@@ -59,6 +59,32 @@ values (
   '00000000-0000-4000-8000-000000000902',
   '00000000-0000-4000-8000-000000000901', 'active'
 );
+insert into public.platform_commercial_offers(
+  id, platform_id, plan_id, code, name, duration_value, duration_unit, status, recommended
+) values (
+  '00000000-0000-4000-8000-000000000908',
+  '00000000-0000-4000-8000-000000000902',
+  '00000000-0000-4000-8000-000000000903',
+  'monthly', 'Monthly', 1, 'month', 'active', true
+);
+insert into public.platform_commercial_prices(
+  id, platform_id, offer_id, version, amount, currency, status, effective_from
+) values (
+  '00000000-0000-4000-8000-000000000909',
+  '00000000-0000-4000-8000-000000000902',
+  '00000000-0000-4000-8000-000000000908', 1, 9.90, 'CNY', 'active', now()
+);
+insert into public.billing_provider_accounts(id, provider, name, status, secret_reference)
+values ('00000000-0000-4000-8000-000000000910','afdian','BILL-09 cleanup','active','fixture://bill09-cleanup');
+insert into public.billing_provider_products(
+  id, provider_account_id, platform_id, commercial_price_id, external_plan_id, product_type,
+  external_sku_ids, sku_count, purchase_months, expected_show_amount, expected_total_amount,
+  currency, price_version, mapping_version, validation_status, published, enabled
+) values (
+  '00000000-0000-4000-8000-000000000911','00000000-0000-4000-8000-000000000910',
+  '00000000-0000-4000-8000-000000000902','00000000-0000-4000-8000-000000000909',
+  'bill09-plan','subscription','{}'::text[],0,1,9.90,9.90,'CNY',1,1,'verified',true,true
+);
 
 insert into private.idempotency_keys (
   platform_id, platform_account_id, operation, actor_scope,
@@ -96,17 +122,20 @@ select admin_user_id, scope, operation, 'live-admin-key', request_hash,
 from private.admin_idempotency;
 
 insert into public.billing_checkout_intents (
-  id, platform_id, platform_account_id, subscription_product_id,
-  entitlement_plan_id, product_code, term_kind_snapshot,
-  duration_value_snapshot, duration_unit_snapshot, price_amount,
-  price_version, idempotency_key_hash, request_hash, expires_at
+  id, platform_id, platform_account_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, commercial_offer_id, commercial_price_id,
+  offer_code_snapshot, term_kind_snapshot, duration_value_snapshot, duration_unit_snapshot,
+  price_amount, currency, price_version, mapping_version,
+  idempotency_key_hash, request_hash, expires_at
 ) values (
   '00000000-0000-4000-8000-000000000905',
   '00000000-0000-4000-8000-000000000902',
   '00000000-0000-4000-8000-000000000904',
-  (select id from public.subscription_products where code = 'monthly'),
-  '00000000-0000-4000-8000-000000000903', 'monthly', 'finite', 1, 'month',
-  9.90, 2, decode(repeat('cc', 32), 'hex'), decode(repeat('dd', 32), 'hex'),
+  '00000000-0000-4000-8000-000000000903',
+  '00000000-0000-4000-8000-000000000910','00000000-0000-4000-8000-000000000911',
+  '00000000-0000-4000-8000-000000000908','00000000-0000-4000-8000-000000000909',
+  'monthly','finite',1,'month',9.90,'CNY',1,1,
+  decode(repeat('cc', 32), 'hex'), decode(repeat('dd', 32), 'hex'),
   now() - interval '1 day'
 );
 

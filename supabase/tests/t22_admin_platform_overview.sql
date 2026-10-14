@@ -1,6 +1,6 @@
 begin;
 
-select plan(16);
+select plan(20);
 
 select has_function(
   'private',
@@ -38,6 +38,12 @@ select ok(
     where oid = 'private.admin_platform_overview(private.admin_context, uuid, integer)'::regprocedure
   ),
   'platform overview reader is a pinned security definer'
+);
+select has_function(
+  'private',
+  'commerce_active_paid_entitlements',
+  array['uuid', 'timestamp with time zone'],
+  'shared active paid entitlement helper exists'
 );
 
 insert into auth.users (id, aud, role, email, encrypted_password, created_at, updated_at)
@@ -95,11 +101,11 @@ values
     'active', now() - interval '30 days', now() - interval '30 days', null, null, null
   );
 
-insert into public.plans (id, platform_id, code, name, kind)
+insert into public.plans (id, platform_id, code, name, kind, status)
 values (
   '00000000-0000-4000-8000-000000004140',
   '00000000-0000-4000-8000-000000004120',
-  'overview-pro', 'Overview Pro', 'paid'
+  'overview-pro', 'Overview Pro', 'paid', 'active'
 );
 
 insert into public.subscriptions (
@@ -120,6 +126,37 @@ values
     '00000000-0000-4000-8000-000000004133',
     '00000000-0000-4000-8000-000000004140',
     'active', now() - interval '30 days', now() - interval '1 day'
+  ),
+  (
+    '00000000-0000-4000-8000-000000004152',
+    '00000000-0000-4000-8000-000000004120',
+    '00000000-0000-4000-8000-000000004131',
+    '00000000-0000-4000-8000-000000004140',
+    'active', now() - interval '5 days', now() + interval '25 days'
+  );
+
+insert into public.subscription_grants(
+  id, platform_id, platform_account_id, plan_id, source, operation_id,
+  starts_at, ends_at, created_by, reason
+)
+values
+  (
+    '00000000-0000-4000-8000-000000004153',
+    '00000000-0000-4000-8000-000000004120',
+    '00000000-0000-4000-8000-000000004130',
+    '00000000-0000-4000-8000-000000004140', 'admin',
+    '00000000-0000-4000-8000-000000004154',
+    now() - interval '5 days', now() + interval '25 days',
+    '00000000-0000-4000-8000-000000004100', 'overview active fixture'
+  ),
+  (
+    '00000000-0000-4000-8000-000000004155',
+    '00000000-0000-4000-8000-000000004120',
+    '00000000-0000-4000-8000-000000004131',
+    '00000000-0000-4000-8000-000000004140', 'admin',
+    '00000000-0000-4000-8000-000000004156',
+    now() - interval '5 days', now() + interval '25 days',
+    '00000000-0000-4000-8000-000000004100', 'overview suspended fixture'
   );
 
 insert into public.billing_provider_accounts (
@@ -181,6 +218,18 @@ from private.admin_platform_overview(
   '00000000-0000-4000-8000-000000004120'::uuid,
   7
 );
+create temporary table commerce_summary_snapshot on commit drop as
+select *
+from private.admin_commerce_summary(
+  row(
+    '00000000-0000-4000-8000-000000004100'::uuid,
+    '00000000-0000-4000-8000-000000004110'::uuid,
+    '00000000-0000-4000-8000-000000004181'::uuid
+  )::private.admin_context,
+  '00000000-0000-4000-8000-000000004120'::uuid,
+  now() - interval '7 days',
+  now() + interval '1 minute'
+);
 set local role postgres;
 
 select is((select total_accounts from platform_overview_snapshot), 4::bigint, 'all platform accounts are counted');
@@ -200,7 +249,30 @@ select ok(
    from platform_overview_snapshot),
   'net account change is derived from new minus closed'
 );
+select is(
+  (select count(distinct s.platform_account_id)::bigint
+   from public.subscriptions s
+   join public.plans p on p.platform_id = s.platform_id and p.id = s.plan_id
+   where s.platform_id = '00000000-0000-4000-8000-000000004120'
+     and s.status = 'active' and p.kind = 'paid'
+     and s.started_at <= now()
+     and (s.current_period_end is null or s.current_period_end > now())),
+  2::bigint,
+  'fixture proves the retired subscription-only paid algorithm would over-count a suspended account'
+);
+select is(
+  (select count(*)::bigint from private.commerce_active_paid_entitlements(
+    '00000000-0000-4000-8000-000000004120'::uuid, now()
+  )),
+  1::bigint,
+  'shared paid entitlement helper excludes the suspended account'
+);
 select is((select active_paid_accounts from platform_overview_snapshot), 1::bigint, 'expired paid projection is not counted active');
+select is(
+  (select active_paid_accounts from platform_overview_snapshot),
+  (select active_paid_entitlement_accounts from commerce_summary_snapshot),
+  'Overview and Commerce Summary consume the same paid entitlement fact'
+);
 select ok(
   (select orders = 2 and previous_orders = 1
     and granted_orders = 1 and previous_granted_orders = 1

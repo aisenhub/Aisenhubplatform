@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
@@ -14,6 +14,10 @@ import {
   resourceError,
   type ResourceError,
 } from '../resources/admin-resource-utils';
+import {
+  beginScopedLoad,
+  isScopedLoadCurrent,
+} from '../resources/scoped-load-guard';
 
 export type CommerceSummary = {
   platform_id: string | null;
@@ -60,11 +64,16 @@ export function CommerceSummaryPanel({
   const [summary, setSummary] = useState<CommerceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ResourceError | null>(null);
+  const loadGeneration = useRef(0);
+  const scopeRef = useRef(platformId ?? '__global__');
+  scopeRef.current = platformId ?? '__global__';
 
   const load = useCallback(async () => {
+    const token = beginScopedLoad(loadGeneration, platformId ?? '__global__');
     const epoch = adminAuthSession.getEpoch();
     setLoading(true);
     setError(null);
+    setSummary(null);
     try {
       const params = new URLSearchParams();
       if (platformId) params.set('platform_id', platformId);
@@ -73,14 +82,22 @@ export function CommerceSummaryPanel({
         { cache: 'no-store' },
       );
       const payload = await readApiPayload<CommerceSummary>(response);
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       if (!response.ok || !payload?.data) {
         setError(resourceError(response, payload, '经营摘要'));
         return;
       }
       setSummary(payload.data);
     } catch (caught) {
-      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (
+        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+        !adminAuthSession.isCurrentEpoch(epoch)
+      )
+        return;
       setError({
         title: '经营摘要读取失败',
         description: sessionErrorMessage(caught),
@@ -88,7 +105,11 @@ export function CommerceSummaryPanel({
         technicalDetail: null,
       });
     } finally {
-      if (adminAuthSession.isCurrentEpoch(epoch)) setLoading(false);
+      if (
+        isScopedLoadCurrent(loadGeneration, scopeRef, token) &&
+        adminAuthSession.isCurrentEpoch(epoch)
+      )
+        setLoading(false);
     }
   }, [platformId]);
 
@@ -145,8 +166,14 @@ export function CommerceSummaryPanel({
                 '30 天内即将到期',
                 count(summary.expiring_paid_entitlement_accounts),
               ],
-            ].map(([label, value]) => (
-              <article className="panel gap-1" key={label}>
+            ].map(([label, value], index) => (
+              <article
+                className="panel gap-1"
+                key={label}
+                data-test={
+                  index === 0 ? 'commerce-summary-paid-accounts' : undefined
+                }
+              >
                 <span className="text-xs text-muted-foreground">{label}</span>
                 <strong className="text-xl tabular-nums">{value}</strong>
               </article>

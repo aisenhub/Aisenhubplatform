@@ -10,8 +10,8 @@ select has_function(
 );
 select has_function(
   'private',
-  'admin_platform_key_list_v2',
-  array['private.admin_context', 'uuid'],
+  'admin_platform_key_list_v3',
+  array['private.admin_context', 'uuid', 'text'],
   'Admin key list exposes deployment state'
 );
 select ok(

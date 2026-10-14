@@ -125,7 +125,7 @@ async function startManagedApi() {
         SUPABASE_URL: authUrl,
         SUPABASE_ANON_KEY: anonKey,
         SUPABASE_PUBLISHABLE_KEY: anonKey,
-        SUPABASE_SECRET_KEY: status.SERVICE_ROLE_KEY,
+        SUPABASE_SERVICE_ROLE_KEY: status.SERVICE_ROLE_KEY,
         ACCOUNT_API_JWT_SECRET: status.JWT_SECRET,
         ACCOUNT_API_DB_URL: databaseUrl,
         PLATFORM_KEY_HMAC_SECRET: platformSecret,

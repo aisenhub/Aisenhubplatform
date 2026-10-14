@@ -14,12 +14,12 @@ select ok(
   'billing detail v2 remains security definer'
 );
 select ok(
-  has_function_privilege(
+  not has_function_privilege(
     'admin_executor',
     'private.admin_billing_order_read_v2(private.admin_context, uuid)',
     'execute'
   ),
-  'admin executor can read the timeline'
+  'admin executor cannot bypass the canonical v3 timeline boundary'
 );
 select ok(
   not has_function_privilege(

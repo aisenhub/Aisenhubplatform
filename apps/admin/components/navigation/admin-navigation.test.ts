@@ -12,7 +12,6 @@ import {
 describe('admin navigation model', () => {
   it('separates global and platform routes', () => {
     expect(parseAdminPlatformPath('/admin/platforms')).toBeNull();
-    expect(parseAdminPlatformPath('/admin/billing')).toBeNull();
     expect(parseAdminPlatformPath('/admin/accounts')).toBeNull();
     expect(adminNavigationLabel('/admin/accounts')).toBe('统一用户');
     expect(
@@ -64,9 +63,6 @@ describe('admin navigation model', () => {
     expect(mapAdminScopeRoute('/admin/accounts', 'platform-1')).toBe(
       '/admin/platforms/platform-1/accounts',
     );
-    expect(mapAdminScopeRoute('/admin/billing', 'platform-1')).toBe(
-      '/admin/platforms/platform-1/billing',
-    );
     expect(mapAdminScopeRoute('/admin/billing/orders', 'platform-1')).toBe(
       '/admin/platforms/platform-1/billing',
     );
@@ -87,8 +83,28 @@ describe('admin navigation model', () => {
     ).toBe('/admin/platforms/platform-2/settings/origins');
   });
 
-  it('keeps the legacy Billing route active while navigation points at orders', () => {
-    expect(adminNavigationLabel('/admin/billing')).toBe('计费管理');
+  it('drops platform-specific entity ids when switching workspace scope', () => {
+    expect(
+      mapAdminScopeRoute(
+        '/admin/platforms/platform-1/accounts/account-1',
+        'platform-2',
+      ),
+    ).toBe('/admin/platforms/platform-2/accounts');
+    expect(
+      mapAdminScopeRoute(
+        '/admin/platforms/platform-1/config-resources/config-1',
+        'platform-2',
+      ),
+    ).toBe('/admin/platforms/platform-2/files');
+    expect(
+      mapAdminScopeRoute(
+        '/admin/platforms/platform-1/billing/orders/order-1',
+        'platform-2',
+      ),
+    ).toBe('/admin/platforms/platform-2/billing');
+  });
+
+  it('uses the canonical Billing orders route', () => {
     expect(adminNavigationLabel('/admin/billing/orders')).toBe('计费管理');
   });
 

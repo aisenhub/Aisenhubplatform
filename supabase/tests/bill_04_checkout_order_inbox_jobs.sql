@@ -33,22 +33,22 @@ select ok(not has_table_privilege('account_executor', 'public.billing_checkout_i
 select ok(not has_table_privilege('billing_ingress', 'public.billing_webhook_events', 'insert'), 'webhook role cannot insert inbox rows directly');
 select ok(not has_table_privilege('job_executor', 'public.billing_processing_jobs', 'update'), 'job executor cannot update jobs directly');
 
-select has_function('private', 'subscription_checkout_create', array['private.account_context', 'uuid', 'text', 'text', 'smallint', 'bytea'], 'checkout create wrapper exists');
+select has_function('private', 'subscription_checkout_create', array['private.account_context', 'uuid', 'uuid', 'text', 'smallint', 'bytea'], 'canonical Offer checkout create wrapper exists');
 select has_function('private', 'subscription_checkout_read', array['private.account_context', 'uuid'], 'checkout read wrapper exists');
 select has_function('private', 'billing_webhook_ingest', array['uuid', 'text', 'bytea', 'text', 'text'], 'webhook ingest wrapper exists');
 select has_function('private', 'billing_processing_job_claim', array['private.job_context', 'integer'], 'job claim wrapper exists');
 select has_function('private', 'billing_processing_job_finish', array['private.job_context', 'uuid', 'bigint', 'text', 'text', 'text'], 'job finish wrapper exists');
-select ok(has_function_privilege('account_executor', 'private.subscription_checkout_create(private.account_context, uuid, text, text, smallint, bytea)', 'execute'), 'account executor can create checkout through wrapper');
+select ok(has_function_privilege('account_executor', 'private.subscription_checkout_create(private.account_context, uuid, uuid, text, smallint, bytea)', 'execute'), 'account executor can create checkout through wrapper');
 select ok(has_function_privilege('account_executor', 'private.subscription_checkout_read(private.account_context, uuid)', 'execute'), 'account executor can read checkout through wrapper');
 select ok(has_function_privilege('billing_ingress', 'private.billing_webhook_ingest(uuid, text, bytea, text, text)', 'execute'), 'billing ingress can ingest through wrapper');
 select ok(has_function_privilege('job_executor', 'private.billing_processing_job_claim(private.job_context, integer)', 'execute'), 'job executor can claim through wrapper');
 select ok(has_function_privilege('job_executor', 'private.billing_processing_job_finish(private.job_context, uuid, bigint, text, text, text)', 'execute'), 'job executor can finish through wrapper');
 
-select ok((select prosecdef from pg_proc where oid = 'private.subscription_checkout_create(private.account_context, uuid, text, text, smallint, bytea)'::regprocedure), 'checkout create is security definer');
+select ok((select prosecdef from pg_proc where oid = 'private.subscription_checkout_create(private.account_context, uuid, uuid, text, smallint, bytea)'::regprocedure), 'checkout create is security definer');
 select ok((select prosecdef from pg_proc where oid = 'private.billing_webhook_ingest(uuid, text, bytea, text, text)'::regprocedure), 'webhook ingest is security definer');
 select ok((select array_to_string(proconfig, ',') like 'search_path=pg_catalog%' from pg_proc where oid = 'private.billing_processing_job_claim(private.job_context, integer)'::regprocedure), 'job claim pins search path');
-select ok(pg_get_functiondef('private.subscription_checkout_create(private.account_context, uuid, text, text, smallint, bytea)'::regprocedure) like '%provider_mapping_unavailable%', 'checkout closes when provider mapping is unavailable');
-select ok(pg_get_functiondef('private.subscription_checkout_create(private.account_context, uuid, text, text, smallint, bytea)'::regprocedure) like '%idempotency_conflict%', 'checkout detects idempotency conflict');
+select ok(pg_get_functiondef('private.subscription_checkout_create(private.account_context, uuid, uuid, text, smallint, bytea)'::regprocedure) like '%provider_mapping_unavailable%', 'checkout closes when provider mapping is unavailable');
+select ok(pg_get_functiondef('private.subscription_checkout_create(private.account_context, uuid, uuid, text, smallint, bytea)'::regprocedure) like '%idempotency_conflict%', 'checkout detects idempotency conflict');
 select ok(pg_get_functiondef('private.billing_webhook_ingest(uuid, text, bytea, text, text)'::regprocedure) like '%payload_hash%', 'webhook ingest persists hash not payload');
 select ok(pg_get_functiondef('private.billing_processing_job_claim(private.job_context, integer)'::regprocedure) like '%skip locked%', 'job claim uses skip locked');
 select ok(pg_get_functiondef('private.billing_processing_job_finish(private.job_context, uuid, bigint, text, text, text)'::regprocedure) like '%fence_conflict%', 'job finish rejects stale fences');

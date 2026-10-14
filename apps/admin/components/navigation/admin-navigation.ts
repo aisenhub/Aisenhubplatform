@@ -67,7 +67,6 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
         key: 'billing',
         label: '计费管理',
         href: '/admin/billing/orders',
-        aliases: ['/admin/billing'],
         description: '中央订单、结算、Provider 与人工处理',
         icon: CreditCard,
       },
@@ -278,7 +277,14 @@ export function mapAdminScopeRoute(
   if (targetPlatformId) {
     const targetPrefix = `/admin/platforms/${encodeURIComponent(targetPlatformId)}`;
     if (currentPlatform) {
-      return `${targetPrefix}${currentPlatform.suffix}`;
+      const entityCollection = [
+        [/^\/accounts\/[^/]+(?:\/.*)?$/u, '/accounts'],
+        [/^\/config-resources\/[^/]+(?:\/.*)?$/u, '/files'],
+        [/^\/files\/[^/]+(?:\/.*)?$/u, '/files'],
+        [/^\/billing\/orders\/[^/]+(?:\/.*)?$/u, '/billing'],
+        [/^\/feedback\/[^/]+(?:\/.*)?$/u, '/feedback'],
+      ].find(([pattern]) => (pattern as RegExp).test(currentPlatform.suffix));
+      return `${targetPrefix}${entityCollection?.[1] ?? currentPlatform.suffix}`;
     }
     if (
       pathname === '/admin/accounts' ||
@@ -287,7 +293,6 @@ export function mapAdminScopeRoute(
       return `${targetPrefix}/accounts`;
     }
     if (
-      pathname === '/admin/billing' ||
       pathname === '/admin/billing/orders' ||
       pathname.startsWith('/admin/billing/orders/')
     ) {

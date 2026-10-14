@@ -46,13 +46,21 @@ const sql = postgres(databaseUrl, {
 const platformId = crypto.randomUUID();
 const otherPlatformId = crypto.randomUUID();
 const platformAccountId = crypto.randomUUID();
-const paginationAccountIds = Array.from({ length: 21 }, () =>
+const paidPlanId = crypto.randomUUID();
+const paidActiveUserId = crypto.randomUUID();
+const paidSuspendedUserId = crypto.randomUUID();
+const paidActiveAccountId = crypto.randomUUID();
+const paidSuspendedAccountId = crypto.randomUUID();
+const paginationAccountIds = Array.from({ length: 19 }, () =>
   crypto.randomUUID(),
 );
 const configPlatformKeyId = crypto.randomUUID();
 const planId = crypto.randomUUID();
 const platformCode = `t12-r2-browser-${crypto.randomUUID()}`;
 const otherPlatformCode = `t12-r2-other-${crypto.randomUUID()}`;
+const scalePlatformTargetId = crypto.randomUUID();
+const scalePlatformPrefix = `t12-r2-scale-${crypto.randomUUID()}`;
+const scalePlatformTargetCode = `${scalePlatformPrefix}-target`;
 const email = `t12-r2-browser-${crypto.randomUUID()}@example.test`;
 const password = `T12-R2-${randomBytes(16).toString('hex')}!`;
 const lifecycleEmail = `t12-r2-lifecycle-${crypto.randomUUID()}@example.test`;
@@ -265,6 +273,90 @@ async function createFixtures() {
     `;
   }
   await sql`
+    insert into public.plans (id, platform_id, code, name, kind, status, features)
+    values (
+      ${paidPlanId}, ${platformId}, 't12-paid', 'T12 Paid', 'paid', 'active',
+      ${sql.json({ config_slot_limit: 10 })}
+    )
+  `;
+  await sql`
+    insert into auth.users (
+      id, aud, role, email, encrypted_password, created_at, updated_at
+    ) values
+      (
+        ${paidActiveUserId}, 'authenticated', 'authenticated',
+        ${`paid-active-${paidActiveUserId}@example.invalid`}, 'x', now(), now()
+      ),
+      (
+        ${paidSuspendedUserId}, 'authenticated', 'authenticated',
+        ${`paid-suspended-${paidSuspendedUserId}@example.invalid`}, 'x', now(), now()
+      )
+  `;
+  await sql`
+    insert into public.platform_accounts (
+      id, platform_id, user_id, status, activated_at, suspended_at, created_at, updated_at
+    ) values
+      (
+        ${paidActiveAccountId}, ${platformId}, ${paidActiveUserId}, 'active',
+        now() - interval '1 year', null, now() - interval '1 year', now() - interval '1 year'
+      ),
+      (
+        ${paidSuspendedAccountId}, ${platformId}, ${paidSuspendedUserId}, 'suspended',
+        now() - interval '2 years', now() - interval '1 year',
+        now() - interval '2 years', now() - interval '1 year'
+      )
+  `;
+  await sql`
+    insert into public.subscriptions (
+      id, platform_id, platform_account_id, plan_id, status, started_at, current_period_end
+    ) values
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidActiveAccountId}, ${paidPlanId},
+        'active', now() - interval '30 days', now() + interval '30 days'
+      ),
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidSuspendedAccountId}, ${paidPlanId},
+        'active', now() - interval '30 days', now() + interval '30 days'
+      )
+  `;
+  await sql`
+    insert into public.subscription_grants (
+      id, platform_id, platform_account_id, plan_id, source, operation_id,
+      starts_at, ends_at, created_by, reason
+    ) values
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidActiveAccountId}, ${paidPlanId}, 'admin',
+        ${crypto.randomUUID()}, now() - interval '30 days', now() + interval '30 days',
+        ${userId}, 'T12 active paid summary fixture'
+      ),
+      (
+        ${crypto.randomUUID()}, ${platformId}, ${paidSuspendedAccountId}, ${paidPlanId}, 'admin',
+        ${crypto.randomUUID()}, now() - interval '30 days', now() + interval '30 days',
+        ${userId}, 'T12 suspended paid summary fixture'
+      )
+  `;
+  const [paidFixtureFacts] = await sql`
+    select
+      (
+        select count(distinct s.platform_account_id)::integer
+        from public.subscriptions s
+        join public.plans p on p.platform_id = s.platform_id and p.id = s.plan_id
+        where s.platform_id = ${platformId}
+          and s.status = 'active' and p.kind = 'paid'
+          and s.started_at <= now()
+          and (s.current_period_end is null or s.current_period_end > now())
+      ) as retired_subscription_only_count,
+      (
+        select count(*)::integer
+        from private.commerce_active_paid_entitlements(${platformId}, now())
+      ) as canonical_paid_count
+  `;
+  assert.deepEqual(
+    paidFixtureFacts,
+    { retired_subscription_only_count: 2, canonical_paid_count: 1 },
+    'T12 paid fixture must distinguish the retired subscription-only algorithm from canonical paid facts',
+  );
+  await sql`
     update public.platforms
     set default_plan_id = ${planId}
     where id = ${platformId}
@@ -391,6 +483,36 @@ async function createFixtures() {
       'pending_admin', now()
     )
   `;
+}
+
+async function createPlatformScaleFixtures() {
+  await sql`
+    insert into public.platforms (
+      id, code, name, status, allow_activation, created_at, updated_at
+    ) values (
+      ${scalePlatformTargetId}, ${scalePlatformTargetCode}, 'T12 Scale Target',
+      'active', true, now() - interval '3 years', now() - interval '3 years'
+    )
+  `;
+  await sql`
+    insert into public.platforms (
+      id, code, name, status, allow_activation, created_at, updated_at
+    )
+    select gen_random_uuid(),
+      ${scalePlatformPrefix} || '-' || lpad(series::text, 3, '0'),
+      'T12 Scale ' || lpad(series::text, 3, '0'),
+      'active', true,
+      now() - (series * interval '1 minute'),
+      now() - (series * interval '1 minute')
+    from generate_series(1, 105) as series
+  `;
+  const [scaleFacts] = await sql`
+    select count(*)::integer as platform_count,
+      count(*) filter (where id = ${scalePlatformTargetId})::integer as target_count
+    from public.platforms
+    where code like ${`${scalePlatformPrefix}%`}
+  `;
+  assert.deepEqual(scaleFacts, { platform_count: 106, target_count: 1 });
 }
 
 async function runBrowserFlow(secret) {
@@ -798,11 +920,16 @@ async function runBrowserFlow(secret) {
   });
 
   async function governConfig(action, buttonTest, expectedStatus) {
-    await page
-      .locator('[data-test="config-governance-reason"]')
-      .fill(`T12 ${action} fixture`);
+    const governanceReason = page.locator(
+      '[data-test="config-governance-reason"]',
+    );
+    if (!(await governanceReason.isVisible())) {
+      await page.locator('[data-test="config-resource-open"]').click();
+      await governanceReason.waitFor({ state: 'visible' });
+    }
+    await governanceReason.fill(`T12 ${action} fixture`);
     await page.locator(`[data-test="${buttonTest}"]`).click();
-    const [response] = await Promise.all([
+    const [response, detailRefreshResponse] = await Promise.all([
       page.waitForResponse(
         (candidate) =>
           candidate
@@ -811,15 +938,35 @@ async function runBrowserFlow(secret) {
               `/api/v1/admin/api/v1/platforms/${platformId}/config-resources/${configId}/gallery-governance`,
             ) && candidate.request().method() === 'POST',
       ),
+      page.waitForResponse(
+        (candidate) =>
+          candidate
+            .url()
+            .endsWith(
+              `/api/v1/admin/api/v1/platforms/${platformId}/config-resources/${configId}`,
+            ) && candidate.request().method() === 'GET',
+      ),
       page.locator('[data-test="confirm-action-submit"]').click(),
     ]);
     assertStatus(response.status(), 200, `Config Gallery ${action}`);
+    assertStatus(
+      detailRefreshResponse.status(),
+      200,
+      `Config Gallery ${action} detail refresh`,
+    );
     const [entry] = await sql`
       select status
       from public.platform_config_gallery_entries
       where platform_id = ${platformId} and config_id = ${configId}
     `;
     assert.equal(entry.status, expectedStatus);
+    const expectedGovernanceButton =
+      expectedStatus === 'approved'
+        ? 'config-governance-remove'
+        : 'config-governance-restore';
+    await page
+      .locator(`[data-test="${expectedGovernanceButton}"]`)
+      .waitFor({ state: 'visible' });
     await page.keyboard.press('Escape');
     await page.locator('[data-test="confirm-action-submit"]').waitFor({
       state: 'hidden',
@@ -1810,17 +1957,9 @@ async function runArchitectureBehaviorMatrix(secret) {
   });
 
   await page.goto(
-    `${appUrl}/admin/operations?job_id=${lifecycleJobId}&q=retry&legacy=drop-me`,
+    `${appUrl}/admin/accounts/deletion-jobs?job_id=${lifecycleJobId}&q=retry`,
     { waitUntil: 'domcontentloaded' },
   );
-  await page.waitForURL((url) => {
-    return (
-      url.pathname === '/admin/accounts/deletion-jobs' &&
-      url.searchParams.get('job_id') === lifecycleJobId &&
-      url.searchParams.get('q') === 'retry' &&
-      url.searchParams.get('legacy') === null
-    );
-  });
   await page.locator('[data-test="deletion-jobs-page"]').waitFor({
     state: 'visible',
   });
@@ -1911,6 +2050,101 @@ async function runArchitectureBehaviorMatrix(secret) {
     .click();
   await page.waitForURL('**/admin/accounts');
 
+  await page.goto(
+    `${appUrl}/admin/platforms/${platformId}/accounts/${platformAccountId}`,
+    { waitUntil: 'domcontentloaded' },
+  );
+  await page.locator('[data-test="account-workbench-page"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  await page.getByLabel('搜索平台').fill(otherPlatformCode);
+  const otherPlatformOption = page
+    .locator('[data-test="platform-switcher-dropdown"]')
+    .getByRole('option')
+    .filter({ hasText: otherPlatformCode });
+  await otherPlatformOption.waitFor({ state: 'visible' });
+  await otherPlatformOption.click();
+  await page.waitForURL(`**/admin/platforms/${otherPlatformId}/accounts`);
+  assert.ok(
+    !page.url().includes(platformAccountId),
+    'Entity-level platform switch must never carry the old Platform Account id',
+  );
+
+  await createPlatformScaleFixtures();
+  await page.goto(`${appUrl}/admin/billing/orders`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator('[data-test="platform-switcher-trigger"]').click();
+  const scaleDropdown = page.locator(
+    '[data-test="platform-switcher-dropdown"]',
+  );
+  await scaleDropdown.getByRole('option').first().waitFor({ state: 'visible' });
+  assert.equal(
+    await scaleDropdown.getByRole('option').count(),
+    20,
+    'Platform switcher initial page must stay bounded to 20 platforms',
+  );
+  const nextPlatformPageResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith('/api/v1/admin/api/v1/platforms') &&
+      url.searchParams.has('cursor') &&
+      response.request().method() === 'GET'
+    );
+  });
+  await scaleDropdown
+    .locator('[data-test="platform-switcher-load-more"]')
+    .click();
+  assertStatus(
+    (await nextPlatformPageResponse).status(),
+    200,
+    'Platform switcher cursor page',
+  );
+  await scaleDropdown.getByRole('option').nth(20).waitFor({ state: 'visible' });
+  assert.ok(
+    (await scaleDropdown.getByRole('option').count()) > 20,
+    'Platform switcher must append a second cursor page',
+  );
+
+  const scaledSearchResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith('/api/v1/admin/api/v1/platforms') &&
+      url.searchParams.get('q') === scalePlatformTargetCode &&
+      response.request().method() === 'GET'
+    );
+  });
+  await page.getByLabel('搜索平台').fill(scalePlatformTargetCode);
+  assertStatus(
+    (await scaledSearchResponse).status(),
+    200,
+    'Platform switcher server-side scale search',
+  );
+  const scaledTargetOption = scaleDropdown
+    .getByRole('option')
+    .filter({ hasText: scalePlatformTargetCode });
+  await scaledTargetOption.waitFor({ state: 'visible' });
+  await scaledTargetOption.click();
+  await page.waitForURL(`**/admin/platforms/${scalePlatformTargetId}/billing`);
+
+  await page.goto(`${appUrl}/admin/platforms/${platformId}`, {
+    waitUntil: 'domcontentloaded',
+  });
+  const overviewPaidAccounts = page.locator(
+    '[data-test="platform-overview-paid-accounts"] strong',
+  );
+  const summaryPaidAccounts = page.locator(
+    '[data-test="commerce-summary-paid-accounts"] strong',
+  );
+  await overviewPaidAccounts.waitFor({ state: 'visible' });
+  await summaryPaidAccounts.waitFor({ state: 'visible' });
+  assert.equal(
+    (await overviewPaidAccounts.textContent())?.trim(),
+    (await summaryPaidAccounts.textContent())?.trim(),
+    'Overview paid accounts must match Commerce Summary paid entitlement facts',
+  );
+
   await page.goto(`${appUrl}/admin/platforms/${platformId}/billing`, {
     waitUntil: 'domcontentloaded',
   });
@@ -1950,7 +2184,90 @@ async function runArchitectureBehaviorMatrix(secret) {
     .click();
   await page.waitForURL('**/admin/billing/orders');
 
+  let releaseSlowOffer;
+  let markSlowOfferStarted;
+  let markSlowOfferFinished;
+  const slowOfferGate = new Promise((resolve) => {
+    releaseSlowOffer = resolve;
+  });
+  const slowOfferStarted = new Promise((resolve) => {
+    markSlowOfferStarted = resolve;
+  });
+  const slowOfferFinished = new Promise((resolve) => {
+    markSlowOfferFinished = resolve;
+  });
+  const slowOfferPath = `**/api/v1/admin/api/v1/platforms/${platformId}/commerce/offers`;
+  const fastOfferPath = `**/api/v1/admin/api/v1/platforms/${otherPlatformId}/commerce/offers`;
+  await page.route(slowOfferPath, async (route) => {
+    markSlowOfferStarted();
+    await slowOfferGate;
+    await route
+      .fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              status: 'active',
+              price_status: 'active',
+              mapping_status: 'ready',
+            },
+          ],
+        }),
+      })
+      .catch(() => undefined);
+    markSlowOfferFinished();
+  });
+  await page.route(fastOfferPath, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    }),
+  );
+  try {
+    await page.goto(
+      `${appUrl}/admin/platforms/${platformId}/settings/integration`,
+      { waitUntil: 'domcontentloaded' },
+    );
+    await slowOfferStarted;
+    await page.locator('[data-test="platform-switcher-trigger"]').click();
+    await page.getByLabel('搜索平台').fill(otherPlatformCode);
+    await page
+      .locator('[data-test="platform-switcher-dropdown"]')
+      .getByRole('option')
+      .filter({ hasText: otherPlatformCode })
+      .click();
+    await page.waitForURL(
+      `**/admin/platforms/${otherPlatformId}/settings/integration`,
+    );
+    const commerceStep = page.locator(
+      '[data-test="platform-integration-step-commerce"]',
+    );
+    await commerceStep
+      .getByText('按需配置', { exact: true })
+      .waitFor({ state: 'visible' });
+    releaseSlowOffer();
+    await slowOfferFinished;
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    assert.equal(
+      await commerceStep.getByText('按需配置', { exact: true }).isVisible(),
+      true,
+      'Slow platform A offer response must not overwrite the ready platform B state',
+    );
+  } finally {
+    releaseSlowOffer();
+    await page.unroute(slowOfferPath);
+    await page.unroute(fastOfferPath);
+  }
+
   return {
+    stalePlatformOfferResponse: 'PASS',
     identitySubmitSingleRequest: 'PASS',
     identityPlatformScopeSingleRequest: 'PASS',
     identityUidDetailAccountDeepLink: 'PASS',
@@ -1962,11 +2279,13 @@ async function runArchitectureBehaviorMatrix(secret) {
     accountWorkbenchIdor: 'PASS',
     identityDeletionStart: 'PASS',
     identityDeletionRetry: 'PASS',
-    operationsCompatibilityRedirect: 'PASS',
+    canonicalDeletionJobsNavigation: 'PASS',
     billingUrlHydration: 'PASS',
     billingRefreshPersistence: 'PASS',
     accountsEquivalentScopeSwitch: 'PASS',
     billingEquivalentScopeSwitch: 'PASS',
+    entityScopeSwitchDropsOldId: 'PASS',
+    platformSwitcherScalePagination: 'PASS',
     commerceSummarySurfaces: 'PASS',
     commerceCatalogSurface: 'PASS',
     commerceEntitlementSurface: 'PASS',
@@ -2185,6 +2504,11 @@ try {
   console.log(JSON.stringify(result));
 } finally {
   if (browser) await browser.close().catch(() => undefined);
+  await sql`delete from public.platform_commerce_policy where platform_id in
+    (select id from public.platforms where code like ${`${scalePlatformPrefix}%`})`;
+  await sql`delete from public.platforms where code like ${`${scalePlatformPrefix}%`}`.catch(
+    () => undefined,
+  );
   if (platformId) {
     await sql`delete from public.audit_logs where platform_id = ${platformId}`.catch(
       () => undefined,
@@ -2195,6 +2519,8 @@ try {
     await sql`delete from private.idempotency_keys where platform_id = ${platformId}`.catch(
       () => undefined,
     );
+    await sql`delete from private.file_write_attempts where platform_id = ${platformId}`;
+    await sql`delete from private.feedback_attachment_write_attempts where platform_id = ${platformId}`;
     await sql`delete from private.platform_api_keys where platform_id = ${platformId}`.catch(
       () => undefined,
     );
@@ -2240,6 +2566,7 @@ try {
     await sql`delete from public.platform_config_files where platform_id = ${platformId}`.catch(
       () => undefined,
     );
+    await sql`delete from private.file_deletion_tombstones where platform_id = ${platformId}`;
     await sql`delete from public.platform_file_policies where platform_id = ${platformId}`.catch(
       () => undefined,
     );
@@ -2252,15 +2579,21 @@ try {
     await sql`delete from public.platform_account_governance_events where platform_id = ${platformId}`.catch(
       () => undefined,
     );
+    await sql`delete from public.subscription_grants where platform_id = ${platformId}`.catch(
+      () => undefined,
+    );
     await sql`delete from public.subscriptions where platform_id = ${platformId}`.catch(
       () => undefined,
     );
     await sql`delete from public.platform_accounts where platform_id = ${platformId}`.catch(
       () => undefined,
     );
-    await sql`delete from public.platform_subscription_config where platform_id = ${platformId}`.catch(
+    await sql`delete from auth.users where id in (${paidActiveUserId}, ${paidSuspendedUserId})`.catch(
       () => undefined,
     );
+    await sql`delete from public.platform_commercial_prices where platform_id = ${platformId}`;
+    await sql`delete from public.platform_commercial_offers where platform_id = ${platformId}`;
+    await sql`delete from public.platform_commerce_policy where platform_id in (${platformId}, ${otherPlatformId})`;
     await sql`update public.platforms set default_plan_id = null where id = ${platformId}`.catch(
       () => undefined,
     );
@@ -2341,5 +2674,13 @@ try {
       () => undefined,
     );
   }
+  const [remainingPlatforms] =
+    await sql`select count(*)::integer count from public.platforms
+    where id in (${platformId}, ${otherPlatformId}) or code like ${`${scalePlatformPrefix}%`}`;
+  assert.equal(
+    remainingPlatforms.count,
+    0,
+    'Admin browser fixtures must be removed',
+  );
   await sql.end({ timeout: 5 }).catch(() => undefined);
 }

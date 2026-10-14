@@ -10,6 +10,7 @@ import {
 import {
   parseAfdianWebhook,
   verifyAfdianWebhookSignature,
+  afdianCanonicalFactBytes,
 } from '../_shared/afdian.ts';
 import { readBoundedBody, UploadFault } from '../_shared/upload.ts';
 
@@ -196,7 +197,9 @@ export async function handleBillingWebhookRequest(
       )(bytes, request);
       if (!verified) throw new Error('SIGNATURE_INVALID');
     }
-    const payloadHash = await sha256Bytes(bytes);
+    const payloadHash = await sha256Bytes(
+      afdian ? afdianCanonicalFactBytes(afdian.order) : bytes,
+    );
     const db = dependencies.database ?? database();
     const [ingest] = await db.begin(async (transaction) => {
       await transaction.unsafe('set local role billing_ingress');

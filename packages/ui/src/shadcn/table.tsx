@@ -8,7 +8,10 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      role="region"
+      tabIndex={0}
+      aria-label="数据表格（支持方向键横向滚动）"
+      className="data-table relative w-full overflow-x-auto focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/30"
     >
       <table
         data-slot="table"

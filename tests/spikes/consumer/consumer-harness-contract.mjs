@@ -55,14 +55,6 @@ assert.ok(
 );
 assert.equal(
   operationFor(
-    'GET',
-    '/v1/config-files/00000000-0000-4000-8000-000000000001/content',
-  )?.template,
-  '/v1/config-files/{fileId}/content',
-  'dynamic file route must match its canonical template',
-);
-assert.equal(
-  operationFor(
     'PUT',
     '/v1/configs/00000000-0000-4000-8000-000000000001/versions/00000000-0000-4000-8000-000000000002/content',
   )?.template,

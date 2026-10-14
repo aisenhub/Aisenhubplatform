@@ -41,8 +41,6 @@ type PlatformStoragePolicy = {
   platform_id: string;
   enabled: boolean;
   max_file_bytes: number;
-  max_files: number;
-  max_total_bytes: number;
   max_platform_total_bytes: number;
   platform_reserved_bytes: number;
   platform_actual_bytes: number;
@@ -133,8 +131,6 @@ export function PlatformCapacityDialog({ platform }: { platform: Platform }) {
           body: JSON.stringify({
             enabled: policy.enabled,
             max_file_bytes: policy.max_file_bytes,
-            max_files: policy.max_files,
-            max_total_bytes: policy.max_total_bytes,
             max_platform_total_bytes: bytes,
           }),
         },
@@ -239,7 +235,7 @@ export function PlatformCapacityDialog({ platform }: { platform: Platform }) {
           ) : null}
           {policy ? (
             <form className="grid gap-4" onSubmit={prepareSave}>
-              <div className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-muted/20 p-3 text-sm">
+              <dl className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-muted/20 p-3 text-sm">
                 <CapacityFact
                   label="当前上限"
                   value={formatBytes(policy.max_platform_total_bytes)}
@@ -256,7 +252,7 @@ export function PlatformCapacityDialog({ platform }: { platform: Platform }) {
                   label="剩余可预约"
                   value={formatBytes(policy.platform_available_bytes)}
                 />
-              </div>
+              </dl>
               {policy.platform_over_capacity ? (
                 <Alert data-test="platform-capacity-over">
                   <AlertTitle>当前已超出容量</AlertTitle>

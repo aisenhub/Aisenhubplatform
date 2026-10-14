@@ -12,14 +12,6 @@ export type IntegrationKeyFact = {
   deployment_confirmed_at: string | null;
 };
 
-export type IntegrationSubscriptionFact = {
-  paid_plan_id: string | null;
-  paid_plan_status: 'active' | 'archived' | null;
-  monthly_enabled: boolean;
-  yearly_enabled: boolean;
-  lifetime_enabled: boolean;
-};
-
 export type IntegrationCommerceOfferFact = {
   status: string;
   price_status: string | null;
@@ -63,13 +55,11 @@ export function derivePlatformIntegrationState({
   platform,
   origins,
   keys,
-  subscription,
   offers,
 }: {
   platform: Platform;
   origins?: IntegrationOriginFact[];
   keys?: IntegrationKeyFact[];
-  subscription?: IntegrationSubscriptionFact | null;
   offers?: IntegrationCommerceOfferFact[];
 }): PlatformIntegrationState {
   const platformReady =
@@ -148,24 +138,19 @@ export function derivePlatformIntegrationState({
         offer.status === 'active' &&
         offer.price_status === 'active' &&
         offer.mapping_status === 'ready',
-    ) ??
-    (subscription?.paid_plan_id &&
-      subscription.paid_plan_status === 'active' &&
-      (subscription.monthly_enabled ||
-        subscription.yearly_enabled ||
-        subscription.lifetime_enabled)),
+    ),
   );
   const commerceStep: IntegrationStep = {
     key: 'commerce',
     label: '商业配置（按需）',
     status:
-      offers === undefined && subscription === undefined
+      offers === undefined
         ? 'unknown'
         : commerceConfigured
           ? 'complete'
           : 'optional',
     description:
-      offers === undefined && subscription === undefined
+      offers === undefined
         ? '当前无法确认商业 Offer/Price/Mapping readiness；它不阻塞基础接入。'
         : commerceConfigured
           ? '至少一个 active paid Plan 已有 active Offer + Price + ready Provider Mapping。'

@@ -69,7 +69,7 @@ async function startWorker() {
       env: {
         ...process.env,
         SUPABASE_URL: status.API_URL,
-        SUPABASE_SECRET_KEY: status.SERVICE_ROLE_KEY,
+        SUPABASE_SERVICE_ROLE_KEY: status.SERVICE_ROLE_KEY,
         MAINTENANCE_DB_URL: status.DB_URL,
         MAINTENANCE_FILES_TOKEN: jobToken,
         MAINTENANCE_PORT: '8791',

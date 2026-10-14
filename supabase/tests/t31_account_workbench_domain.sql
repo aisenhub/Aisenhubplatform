@@ -1,6 +1,6 @@
 begin;
 
-select plan(52);
+select plan(56);
 
 select has_table('public','platform_account_admin_tags','Account support tags table exists');
 select has_table('public','platform_account_admin_notes','Account support notes table exists');
@@ -10,7 +10,7 @@ select ok(exists(select 1 from pg_indexes where schemaname='public' and tablenam
 select ok(exists(select 1 from pg_indexes where schemaname='public' and tablename='platform_account_governance_events' and indexname='platform_account_governance_events_actor_admin_user_idx'),'Governance actor FK has covering index');
 select has_function('private','admin_account_list_v3',array['private.admin_context','uuid','uuid','integer','text','text','uuid','text','text','timestamptz','timestamptz'],'Account list v3 exists');
 select has_function('private','admin_account_workbench_read',array['private.admin_context','uuid','uuid'],'Account 360 read exists');
-select has_function('private','admin_account_transition_v2',array['private.admin_context','uuid','uuid','text','text'],'Reasoned account transition exists');
+select has_function('private','admin_account_transition',array['private.admin_context','uuid','uuid','text','text'],'Canonical reasoned account transition exists');
 select ok(has_function_privilege('admin_executor','private.admin_account_list_v3(private.admin_context, uuid, uuid, integer, text, text, uuid, text, text, timestamptz, timestamptz)','execute'),'Admin executor can invoke list v3');
 select ok(not has_function_privilege('account_executor','private.admin_account_workbench_read(private.admin_context, uuid, uuid)','execute'),'Account executor cannot read Admin Account 360');
 select ok(not has_function_privilege('job_executor','private.account_admin_support_privacy_cleanup(uuid, timestamptz)','execute'),'Job executor cannot invoke support privacy helper directly');
@@ -114,7 +114,7 @@ select * from private.admin_account_workbench_read(
  '00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009040'
 );
 create temporary table account_suspended on commit drop as
-select * from private.admin_account_transition_v2(
+select * from private.admin_account_transition(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009086')::private.admin_context,
  '00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009040','suspend','chargeback review'
 );
@@ -139,14 +139,21 @@ select ok((select billing_order_count=1 and billing_attention_count=1
 select ok((select jsonb_array_length(notes)=1 and tags=array['beta','vip']::text[] from workbench_read),'Account 360 includes protected support context');
 select is((select status from account_suspended),'suspended','reasoned transition uses authoritative account state machine');
 select is((select reason from public.platform_account_governance_events where id=(select governance_event_id from account_suspended)),'chargeback review','governance event persists Admin reason');
+select ok((select before_status='active' and after_status='suspended' and operation_id='00000000-0000-4000-8000-000000009086'::uuid from public.platform_account_governance_events where id=(select governance_event_id from account_suspended)),'governance event snapshots before/after status and operation id');
 select ok((select metadata ? 'governance_event_id' and not metadata ? 'reason' from public.audit_logs where request_id='00000000-0000-4000-8000-000000009086'),'audit references governance event without copying reason');
+select throws_ok(
+ $$select * from private.admin_account_transition(row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009093')::private.admin_context,'00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009040','suspend','duplicate suspend')$$,
+ 'P0001','invalid_account_transition','no-op suspend is rejected as a business conflict'
+);
+select is((select count(*)::integer from public.platform_account_governance_events where platform_account_id='00000000-0000-4000-8000-000000009040'),1,'invalid transition writes no governance event');
+select is((select count(*)::integer from public.audit_logs where request_id='00000000-0000-4000-8000-000000009093'),0,'invalid transition writes no success audit');
 select ok((select metadata ? 'note_id' and metadata::text not like '%Private support note%' from public.audit_logs where request_id='00000000-0000-4000-8000-000000009081'),'audit references note without copying body');
 select throws_ok(
  $$select * from private.admin_account_workbench_read(row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009087')::private.admin_context,'00000000-0000-4000-8000-000000009021','00000000-0000-4000-8000-000000009040')$$,
  'P0002','resource_not_found','Account 360 rejects cross-platform IDOR'
 );
 select throws_ok(
- $$select * from private.admin_account_transition_v2(row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009088')::private.admin_context,'00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009041','suspend',' ')$$,
+ $$select * from private.admin_account_transition(row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009088')::private.admin_context,'00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009041','suspend',' ')$$,
  '22023','invalid_input','transition rejects blank reason'
 );
 select throws_ok(
@@ -164,7 +171,7 @@ select * from private.admin_account_note_add(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009091')::private.admin_context,
  '00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009041','keep after close'
 );
-select * from private.admin_account_transition_v2(
+select * from private.admin_account_transition(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009092')::private.admin_context,
  '00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009041','close','support requested closure'
 );
@@ -176,7 +183,7 @@ select ok((select count(*)=1 from public.platform_account_admin_tags where platf
 -- Close the rich fixture through the same authoritative transition. Domain summaries and
 -- support context remain available because ordinary close is not a privacy-delete signal.
 set local role admin_executor;
-select * from private.admin_account_transition_v2(
+select * from private.admin_account_transition(
  row('00000000-0000-4000-8000-000000009000','00000000-0000-4000-8000-000000009010','00000000-0000-4000-8000-000000009101')::private.admin_context,
  '00000000-0000-4000-8000-000000009020','00000000-0000-4000-8000-000000009040','close','ordinary close before global delete'
 );

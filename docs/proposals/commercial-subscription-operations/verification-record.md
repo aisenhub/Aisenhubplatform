@@ -60,6 +60,7 @@
 | 2026-10-13 | Phase 04 canonical R3 | Local | PASS：`pnpm verify:task:0801 --reuse-local` = **20/20 executable gates**；API **111/111**、DB **73/1536**、settlement concurrency、contracts/breaking、Consumer harness/browser、Admin T12、5 viewports × 20 routes responsive/a11y、docs **192**、OpenAPI Account/Admin **47/77** 全绿。 |
 | 2026-10-13 | Phase 04 final staging | `workendstaging / egsokuicabbxspkdccqe` | PASS：remote migration history 完整到 `20261012145252 commercial_operations_api_contract`；商业表/索引/函数与 `account_executor` / `admin_executor` 权限核验通过；`account-api` **v63 ACTIVE**（from v62，`verify_jwt=false` 保持），部署 bundle 反查 `ACCOUNT_API_JWT_ISSUER` 与六条 Commerce 写函数单次求值修复均存在。Consumer Commerce 无 Platform Key = `401 PLATFORM_CREDENTIAL_INVALID`；Admin Commerce Summary 无会话 = `401 UNAUTHORIZED`。Security advisor 仅既有 pg_net/leaked-password WARN，无 OPT-010 新 finding；Production NOT_RUN。 |
 | 2026-10-13 | Phase 04 GitHub closeout | GitHub PR #17 / Workflow #164 / `main@00ab819...` | PASS：PR head=`55bac2b`，已合并到 `00ab819a10ca764d5f96ce0e362c4bcb4ebe71a7`；Workflow #164 completed/success；`git diff HEAD origin/main` 在合并后候选上为空。确认无未提交或独有内容后，原 `codex/opt-010-commercial-operations` 本地与远端分支均已删除。Production NOT_RUN。 |
+| 2026-10-13 | Prelaunch remediation errata | Local | CORRECTION：Phase 03 记录中“同一 `admin_commerce_summary` 驱动 Overview”的表述与当时最终源码不一致；当时 Overview 仍保留 subscription-only paid 计算。Prelaunch Phase 05 已改为由 `private.commerce_active_paid_entitlements` 同时驱动 Commerce Summary 与 Overview，并用 suspended-account 反例 fixture 直接证明两者数值一致。原历史记录保留用于审计，不回写删除。 |
 
 ## 规则
 

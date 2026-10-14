@@ -1,5 +1,11 @@
 # Account API v1 Contract Changelog
 
+## 2026-10-14 预上线 rebaseline
+
+- 删除未发布的旧商品/Checkout/config-files 合同，冻结 canonical Offer/Config Version 模型。
+- Admin 增加 query-bound UTF-8 平台游标；所有消费者同批更新。
+- 后续 v1 变更继续执行严格 wire compatibility。
+
 ## 1.0.1
 
 - 补齐服务端已存在的 `SubscriptionProduct.reason = purchases_paused`，修正 canonical OpenAPI 与领域输出的历史漂移；不改变运行时 wire 行为。

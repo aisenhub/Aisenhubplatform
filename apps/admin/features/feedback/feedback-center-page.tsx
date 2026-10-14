@@ -8,8 +8,14 @@ import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
 import { Button } from '@kit/ui/button';
 import { ConfirmActionDialog } from '@kit/ui/confirm-action-dialog';
+import {
+  EmptyState,
+  EmptyStateHeading,
+  EmptyStateText,
+} from '@kit/ui/empty-state';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { MessageSquare } from 'lucide-react';
 import type { MutationState } from '@kit/ui/mutation-state';
 import { ResourceInspector } from '@kit/ui/resource-inspector';
 import { StatusBadge } from '@kit/ui/status-badge';
@@ -68,6 +74,9 @@ type FeedbackExport = {
   row_count: number;
   csv: string;
 };
+
+const selectClassName =
+  'h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 function initialDraft(params: URLSearchParams): FilterDraft {
   return {
@@ -165,6 +174,8 @@ export function FeedbackCenterPage() {
   const [deleteOperationId, setDeleteOperationId] = useState<string | null>(
     null,
   );
+  const [deleteFeedbackIds, setDeleteFeedbackIds] = useState<string[]>([]);
+  const [deleteReason, setDeleteReason] = useState<string | null>(null);
   const listGeneration = useRef(0);
   const detailGeneration = useRef(0);
 
@@ -307,6 +318,17 @@ export function FeedbackCenterPage() {
     });
   }
 
+  function toggleAll() {
+    setSelected((current) => {
+      const allSelected =
+        items.length > 0 && items.every((i) => current.has(i.feedback_id));
+      if (allSelected) {
+        return new Set();
+      }
+      return new Set(items.slice(0, 100).map((i) => i.feedback_id));
+    });
+  }
+
   async function mutateDetail(
     path: string,
     method: 'POST' | 'PUT',
@@ -386,13 +408,16 @@ export function FeedbackCenterPage() {
   function openDelete() {
     if (!selected.size) return;
     setDeleteOperationId(crypto.randomUUID());
+    setDeleteFeedbackIds([...selected].sort());
+    setDeleteReason(null);
     setDeleteState('confirm_required');
     setDeleteError(null);
     setDeleteOpen(true);
   }
 
   async function executeDelete(reason: string) {
-    if (!selected.size || !deleteOperationId) return;
+    if (!deleteFeedbackIds.length || !deleteOperationId) return;
+    setDeleteReason(reason);
     setDeleteState('pending');
     setDeleteError(null);
     try {
@@ -402,7 +427,7 @@ export function FeedbackCenterPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            feedback_ids: [...selected],
+            feedback_ids: deleteFeedbackIds,
             reason,
             operation_id: deleteOperationId,
           }),
@@ -421,11 +446,12 @@ export function FeedbackCenterPage() {
       }
       setDeleteState('accepted');
       setSelected(new Set());
-      if (detailId && selected.has(detailId)) {
+      if (detailId && deleteFeedbackIds.includes(detailId)) {
         setDetailId(null);
         setDetail(null);
         setDetailState('idle');
       }
+      setDeleteReason(null);
       await loadList();
     } catch (caught) {
       if (caught instanceof SessionRetryRequiredError) {
@@ -438,15 +464,8 @@ export function FeedbackCenterPage() {
   }
 
   async function checkDeleteOutcome() {
-    await loadList();
-    setDeleteState('failure');
-    setDeleteError({
-      title: '已重新读取权威状态',
-      description:
-        '请根据最新列表判断原删除请求是否生效；页面不会自动重发批量删除。',
-      requestId: null,
-      technicalDetail: 'STATE_RELOADED',
-    });
+    if (!deleteReason) return;
+    await executeDelete(deleteReason);
   }
 
   return (
@@ -510,7 +529,7 @@ export function FeedbackCenterPage() {
             <Label htmlFor="feedback-status">状态</Label>
             <select
               id="feedback-status"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className={selectClassName}
               value={draft.status}
               onChange={(event) => setDraftField('status', event.target.value)}
             >
@@ -526,7 +545,7 @@ export function FeedbackCenterPage() {
             <Label htmlFor="feedback-category">分类</Label>
             <select
               id="feedback-category"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className={selectClassName}
               value={draft.category}
               onChange={(event) =>
                 setDraftField('category', event.target.value)
@@ -561,7 +580,7 @@ export function FeedbackCenterPage() {
           />
           <select
             aria-label="是否含图片"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className={selectClassName}
             value={draft.hasAttachments}
             onChange={(event) =>
               setDraftField('hasAttachments', event.target.value)
@@ -619,95 +638,115 @@ export function FeedbackCenterPage() {
           />
         ) : null}
         {state === 'success' && items.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            当前筛选没有用户反馈。
-          </div>
+          <EmptyState
+            className="my-6 p-8 text-center"
+            data-test="feedback-empty"
+          >
+            <MessageSquare className="mx-auto h-10 w-10 text-muted-foreground/50" />
+            <EmptyStateHeading className="mt-3">
+              当前筛选无匹配反馈
+            </EmptyStateHeading>
+            <EmptyStateText>
+              请尝试调整或重置顶部的状态、分类及关键词筛选条件。
+            </EmptyStateText>
+          </EmptyState>
         ) : null}
         {state === 'success' && items.length ? (
-          <div
-            className="data-table"
-            tabIndex={0}
-            role="region"
-            aria-label="用户反馈列表，可横向滚动"
-          >
-            <Table data-test="feedback-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">选择</TableHead>
-                  <TableHead>提交时间</TableHead>
-                  <TableHead>用户 / 摘要</TableHead>
-                  <TableHead>分类</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>标签 / 图片</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => {
-                  const status = feedbackStatusView(item.status);
-                  return (
-                    <TableRow key={item.feedback_id} data-test="feedback-row">
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          aria-label={`选择 ${feedbackSummary(item)}`}
-                          checked={selected.has(item.feedback_id)}
-                          onChange={() => toggleSelected(item.feedback_id)}
-                        />
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">
-                        {formatUtc(item.submitted_at ?? item.created_at)}
-                      </TableCell>
-                      <TableCell className="min-w-64 whitespace-normal">
-                        <strong className="block text-sm">
-                          {item.author_display_name}
-                        </strong>
-                        <span className="mt-1 block text-sm">
-                          {feedbackSummary(item)}
+          <Table data-test="feedback-table">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="全选或取消全选当前页反馈"
+                    checked={
+                      items.length > 0 &&
+                      items.every((i) => selected.has(i.feedback_id))
+                    }
+                    ref={(el) => {
+                      if (el) {
+                        const all =
+                          items.length > 0 &&
+                          items.every((i) => selected.has(i.feedback_id));
+                        el.indeterminate =
+                          !all &&
+                          items.some((i) => selected.has(i.feedback_id));
+                      }
+                    }}
+                    onChange={toggleAll}
+                  />
+                </TableHead>
+                <TableHead>提交时间</TableHead>
+                <TableHead>用户 / 摘要</TableHead>
+                <TableHead>分类</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>标签 / 图片</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => {
+                const status = feedbackStatusView(item.status);
+                return (
+                  <TableRow key={item.feedback_id} data-test="feedback-row">
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        aria-label={`选择 ${feedbackSummary(item)}`}
+                        checked={selected.has(item.feedback_id)}
+                        onChange={() => toggleSelected(item.feedback_id)}
+                      />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs">
+                      {formatUtc(item.submitted_at ?? item.created_at)}
+                    </TableCell>
+                    <TableCell className="min-w-64 whitespace-normal">
+                      <strong className="block text-sm">
+                        {item.author_display_name}
+                      </strong>
+                      <span className="mt-1 block text-sm">
+                        {feedbackSummary(item)}
+                      </span>
+                      {item.body_summary && item.title ? (
+                        <span className="mt-1 block line-clamp-2 text-xs text-muted-foreground">
+                          {item.body_summary}
                         </span>
-                        {item.body_summary && item.title ? (
-                          <span className="mt-1 block line-clamp-2 text-xs text-muted-foreground">
-                            {item.body_summary}
-                          </span>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        {feedbackCategoryLabel(item.category)}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          label={status.label}
-                          tone={status.tone}
-                          rawValue={item.status}
-                        />
-                        {item.flagged ? (
-                          <span className="ml-2 text-xs font-medium text-destructive">
-                            重点
-                          </span>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="min-w-44 whitespace-normal text-xs text-muted-foreground">
-                        {item.labels.length
-                          ? item.labels.join(' · ')
-                          : '无标签'}{' '}
-                        · {item.attachment_count} 张图片
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void loadDetail(item.feedback_id)}
-                          data-test="feedback-open-detail"
-                        >
-                          详情
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      {feedbackCategoryLabel(item.category)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        label={status.label}
+                        tone={status.tone}
+                        rawValue={item.status}
+                      />
+                      {item.flagged ? (
+                        <span className="ml-2 text-xs font-medium text-destructive">
+                          重点
+                        </span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="min-w-44 whitespace-normal text-xs text-muted-foreground">
+                      {item.labels.length ? item.labels.join(' · ') : '无标签'}{' '}
+                      · {item.attachment_count} 张图片
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void loadDetail(item.feedback_id)}
+                        data-test="feedback-open-detail"
+                      >
+                        详情
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         ) : null}
         {state === 'success' && items.length ? (
           <div className="flex justify-end gap-2">

@@ -40,7 +40,7 @@ select ok(
 select ok(
   has_function_privilege(
     'admin_executor',
-    'private.admin_billing_metrics(private.admin_context)',
+    'private.admin_billing_observability(private.admin_context)',
     'execute'
   ),
   'admin executor can use the server-side billing metrics wrapper'
@@ -48,7 +48,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'job_executor',
-    'private.admin_billing_metrics(private.admin_context)',
+    'private.admin_billing_observability(private.admin_context)',
     'execute'
   ),
   'job executor cannot query central billing metrics'
@@ -175,22 +175,47 @@ values
     'Repair 0602 B key', repeat('b', 64), 1, 'repair-b', 'fixture-b',
     '00000000-0000-4000-8000-000000002615'
   );
+insert into public.platform_commercial_offers(
+  id, platform_id, plan_id, code, name, duration_value, duration_unit, status, recommended
+) values (
+  '00000000-0000-4000-8000-000000002620','00000000-0000-4000-8000-000000002606',
+  '00000000-0000-4000-8000-000000002608','repair-a-month','Repair A Month',1,'month','active',true
+);
+insert into public.platform_commercial_prices(
+  id, platform_id, offer_id, version, amount, currency, status, effective_from
+) values (
+  '00000000-0000-4000-8000-000000002621','00000000-0000-4000-8000-000000002606',
+  '00000000-0000-4000-8000-000000002620',1,9.90,'CNY','active',now()
+);
+insert into public.billing_provider_accounts(id, provider, name, status, secret_reference)
+values ('00000000-0000-4000-8000-000000002622','afdian','Repair 0602 Provider','active','fixture://repair0602');
+insert into public.billing_provider_products(
+  id, provider_account_id, platform_id, commercial_price_id, external_plan_id, product_type,
+  external_sku_ids, sku_count, purchase_months, expected_show_amount, expected_total_amount,
+  currency, price_version, mapping_version, validation_status, published, enabled
+) values (
+  '00000000-0000-4000-8000-000000002623','00000000-0000-4000-8000-000000002622',
+  '00000000-0000-4000-8000-000000002606','00000000-0000-4000-8000-000000002621',
+  'repair0602-plan','subscription','{}'::text[],0,1,9.90,9.90,'CNY',1,1,'verified',true,true
+);
 insert into public.billing_checkout_intents (
-  id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
-  product_code, term_kind_snapshot, duration_value_snapshot, duration_unit_snapshot,
-  price_amount, currency, price_version, idempotency_key_hash, request_hash, expires_at
+  id, platform_id, platform_account_id, entitlement_plan_id,
+  provider_account_id, provider_product_id, commercial_offer_id, commercial_price_id,
+  offer_code_snapshot, term_kind_snapshot, duration_value_snapshot, duration_unit_snapshot,
+  price_amount, currency, price_version, mapping_version, idempotency_key_hash, request_hash, expires_at
 )
 values (
   '00000000-0000-4000-8000-000000002616',
   '00000000-0000-4000-8000-000000002606',
   '00000000-0000-4000-8000-000000002610',
-  (select id from public.subscription_products where code = 'monthly'),
   '00000000-0000-4000-8000-000000002608',
-  'monthly', 'finite', 1, 'month', 9.90, 'CNY', 1,
+  '00000000-0000-4000-8000-000000002622','00000000-0000-4000-8000-000000002623',
+  '00000000-0000-4000-8000-000000002620','00000000-0000-4000-8000-000000002621',
+  'repair-a-month','finite',1,'month',9.90,'CNY',1,1,
   decode(repeat('c1', 32), 'hex'), decode(repeat('d1', 32), 'hex'), now() + interval '1 hour'
 );
 select is(
-  (select count(*)::integer from private.subscription_checkout_read_v2(
+  (select count(*)::integer from private.subscription_checkout_read(
     row(
       '00000000-0000-4000-8000-000000002604',
       '00000000-0000-4000-8000-000000002605',
@@ -204,7 +229,7 @@ select is(
   'the owning platform and account can read the checkout'
 );
 select throws_ok(
-  $$select * from private.subscription_checkout_read_v2(
+  $$select * from private.subscription_checkout_read(
     row(
       '00000000-0000-4000-8000-000000002604',
       '00000000-0000-4000-8000-000000002605',
@@ -219,7 +244,7 @@ select throws_ok(
   'the same user cannot read a checkout from another platform'
 );
 select throws_ok(
-  $$select * from private.subscription_checkout_read_v2(
+  $$select * from private.subscription_checkout_read(
     row(
       '00000000-0000-4000-8000-000000002604',
       '00000000-0000-4000-8000-000000002605',

@@ -19,16 +19,17 @@ const platformId = crypto.randomUUID();
 let userId;
 const accountId = crypto.randomUUID();
 const planId = crypto.randomUUID();
+const offerId = crypto.randomUUID();
+const priceId = crypto.randomUUID();
 const providerAccountId = crypto.randomUUID();
 const providerProductId = crypto.randomUUID();
 const checkoutId = crypto.randomUUID();
 const orderIds = [crypto.randomUUID(), crypto.randomUUID()];
 const jobIds = [crypto.randomUUID(), crypto.randomUUID()];
 const leaseOwner = 'bill05-concurrency-worker';
-let monthlyProductId;
-let monthlyPrice;
-let monthlyPriceVersion;
-let monthlyCurrency;
+const priceAmount = '19.90';
+const priceVersion = 1;
+const currency = 'CNY';
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -76,18 +77,9 @@ try {
   await sql`grant job_executor to postgres`;
   userId = await signup();
   await asRole('domain_owner', async (transaction) => {
-    const [monthlyProduct] = await transaction`
-      select id, price_amount, price_version, currency
-      from public.subscription_products where code = 'monthly'
-    `;
-    assert(monthlyProduct?.id, 'monthly subscription product is required');
-    monthlyProductId = monthlyProduct.id;
-    monthlyPrice = monthlyProduct.price_amount;
-    monthlyPriceVersion = monthlyProduct.price_version;
-    monthlyCurrency = monthlyProduct.currency;
-    facts.total_amount = monthlyPrice;
-    facts.show_amount = monthlyPrice;
-    facts.currency = monthlyCurrency;
+    facts.total_amount = priceAmount;
+    facts.show_amount = priceAmount;
+    facts.currency = currency;
     await transaction`
       insert into public.platforms (id, code, name)
       values (${platformId}, ${`bill05-concurrency-${platformId.slice(0, 8)}`}, 'BILL-05 concurrency fixture')
@@ -97,9 +89,21 @@ try {
       values (${planId}, ${platformId}, 'paid', 'Paid', 'paid', '{}'::jsonb)
     `;
     await transaction`
-      update public.platform_subscription_config
-      set paid_plan_id = ${planId}, monthly_enabled = true
-      where platform_id = ${platformId}
+      insert into public.platform_commercial_offers (
+        id, platform_id, plan_id, code, name, duration_value, duration_unit,
+        status, recommended
+      ) values (
+        ${offerId}, ${platformId}, ${planId}, 'monthly', 'Monthly', 1, 'month',
+        'active', true
+      )
+    `;
+    await transaction`
+      insert into public.platform_commercial_prices (
+        id, platform_id, offer_id, version, amount, currency, status, effective_from
+      ) values (
+        ${priceId}, ${platformId}, ${offerId}, ${priceVersion}, ${priceAmount}, ${currency},
+        'active', now()
+      )
     `;
     await transaction`
       insert into public.platform_accounts (id, platform_id, user_id, status)
@@ -111,34 +115,37 @@ try {
     `;
     await transaction`
       insert into public.billing_provider_products (
-        id, provider_account_id, subscription_product_id, external_plan_id, product_type,
+        id, provider_account_id, platform_id, commercial_price_id, external_plan_id, product_type,
         external_sku_ids, sku_count, purchase_months, expected_show_amount, expected_total_amount,
-        price_version, mapping_version, validation_status, published, enabled
+        currency, price_version, mapping_version, validation_status, published, enabled
       ) values (
-        ${providerProductId}, ${providerAccountId}, ${monthlyProductId}, 'bill05-concurrency-plan',
-        'subscription', '{}'::text[], 0, 1, ${monthlyPrice}, ${monthlyPrice}, ${monthlyPriceVersion}, 1, 'verified', true, true
+        ${providerProductId}, ${providerAccountId}, ${platformId}, ${priceId}, 'bill05-concurrency-plan',
+        'subscription', '{}'::text[], 0, 1, ${priceAmount}, ${priceAmount}, ${currency},
+        ${priceVersion}, 1, 'verified', true, true
       )
     `;
     await transaction`
       insert into public.billing_checkout_intents (
-        id, platform_id, platform_account_id, subscription_product_id, entitlement_plan_id,
-        provider_account_id, provider_product_id, product_code, term_kind_snapshot,
-        duration_value_snapshot, duration_unit_snapshot, price_amount, price_version,
-        mapping_version, custom_order_id, idempotency_key_hash, request_hash, expires_at
+        id, platform_id, platform_account_id, entitlement_plan_id,
+        provider_account_id, provider_product_id, commercial_offer_id, commercial_price_id,
+        offer_code_snapshot, term_kind_snapshot, duration_value_snapshot,
+        duration_unit_snapshot, price_amount, currency, price_version, mapping_version,
+        custom_order_id, idempotency_key_hash, request_hash, expires_at
       ) values (
-        ${checkoutId}, ${platformId}, ${accountId}, ${monthlyProductId}, ${planId},
-        ${providerAccountId}, ${providerProductId}, 'monthly', 'finite', 1, 'month', ${monthlyPrice},
-        ${monthlyPriceVersion}, 1, ${facts.custom_order_id}, ${Buffer.alloc(32, 0x11)}, ${Buffer.alloc(32, 0x22)}, now() + interval '30 minutes'
+        ${checkoutId}, ${platformId}, ${accountId}, ${planId},
+        ${providerAccountId}, ${providerProductId}, ${offerId}, ${priceId}, 'monthly', 'finite',
+        1, 'month', ${priceAmount}, ${currency}, ${priceVersion}, 1, ${facts.custom_order_id},
+        ${Buffer.alloc(32, 0x11)}, ${Buffer.alloc(32, 0x22)}, now() + interval '30 minutes'
       )
     `;
     for (let index = 0; index < orderIds.length; index += 1) {
       await transaction`
         insert into public.billing_orders (
           id, provider_account_id, provider_order_no, checkout_intent_id, platform_id,
-          platform_account_id, subscription_product_id, linkage_status
+          platform_account_id, linkage_status
         ) values (
           ${orderIds[index]}, ${providerAccountId}, ${`bill05-concurrency-order-${index + 1}`},
-          ${checkoutId}, ${platformId}, ${accountId}, ${monthlyProductId}, 'linked'
+          ${checkoutId}, ${platformId}, ${accountId}, 'linked'
         )
       `;
       await transaction`
@@ -277,14 +284,24 @@ try {
     await sql`delete from public.billing_provider_products where provider_account_id = ${providerAccountId}`;
   });
   await cleanup(
+    'commercial prices',
+    () =>
+      sql`delete from public.platform_commercial_prices where platform_id = ${platformId}`,
+  );
+  await cleanup(
+    'commercial offers',
+    () =>
+      sql`delete from public.platform_commercial_offers where platform_id = ${platformId}`,
+  );
+  await cleanup(
     'provider account',
     () =>
       sql`delete from public.billing_provider_accounts where id = ${providerAccountId}`,
   );
   await cleanup(
-    'subscription config',
+    'commerce policy',
     () =>
-      sql`delete from public.platform_subscription_config where platform_id = ${platformId}`,
+      sql`delete from public.platform_commerce_policy where platform_id = ${platformId}`,
   );
   await cleanup(
     'platform account',

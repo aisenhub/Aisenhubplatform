@@ -3,6 +3,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 
 import { handleMaintenanceRequest } from './index.ts';
+import { authAdminAdapter } from './core.ts';
 
 const fileId = '00000000-0000-4000-8000-000000000001';
 const feedbackAttachmentId = '00000000-0000-4000-8000-000000000007';
@@ -1290,6 +1291,54 @@ Deno.test('maintenance gates Auth deletion on provider success before checkpoint
   ]);
 });
 
+Deno.test('Auth deletion retries temporary failures and blocks permanent failures', async () => {
+  for (const [failure, expected] of [
+    ['PROVIDER_TIMEOUT', 'retry'],
+    ['AUTH_DELETE_FAILED_408', 'retry'],
+    ['AUTH_DELETE_FAILED_429', 'retry'],
+    ['AUTH_DELETE_FAILED_503', 'retry'],
+    ['AUTH_DELETE_FAILED_401', 'blocked'],
+    ['AUTH_NOT_CONFIGURED', 'blocked'],
+  ]) {
+    let outcome: unknown;
+    const db = database();
+    const wrapped: TestDatabase = {
+      begin: (callback) =>
+        db.begin((transaction) =>
+          callback({
+            ...transaction,
+            async unsafe<T extends TestRow>(query: string, values?: unknown[]) {
+              if (query.includes('deletion_job_step')) outcome = values?.[7];
+              return transaction.unsafe<T>(query, values);
+            },
+          }),
+        ),
+    };
+    const response = await handleMaintenanceRequest(
+      new Request('http://local/maintenance/v1/deletion-jobs/auth', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test-job',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ job_id: jobId, fence: 2, lease_fence: 1 }),
+      }),
+      {
+        capabilityTokens: ALL_TEST_CAPABILITY_TOKENS,
+        workerId: 'test-worker',
+        database: wrapped,
+        authAdapter: {
+          async deleteUser() {
+            throw new Error(failure);
+          },
+        },
+      },
+    );
+    assertEquals(response.status, 503);
+    assertEquals(outcome, expected, failure);
+  }
+});
+
 Deno.test('maintenance evaluates and delivers billing observability alerts', async () => {
   const alertId = '00000000-0000-4000-8000-000000000009';
   const alertEvents: string[] = [];
@@ -1351,4 +1400,31 @@ Deno.test('maintenance evaluates and delivers billing observability alerts', asy
   assertEquals((await response.json()).data.receiver_status, 'delivered');
   assertEquals(delivered, ['billing.jobs.expired_lease']);
   assertEquals(alertEvents, ['role', 'evaluate', 'role', 'delivery']);
+});
+
+Deno.test('authAdminAdapter treats 404 as idempotent deletion success', async () => {
+  const previousUrl = Deno.env.get('SUPABASE_URL');
+  const previousKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const originalFetch = globalThis.fetch;
+  try {
+    Deno.env.set('SUPABASE_URL', 'http://localhost:54321');
+    Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', 'test-key');
+    let fetchedUrl = '';
+    globalThis.fetch = (input: string | URL | Request) => {
+      fetchedUrl = String(input);
+      return Promise.resolve(new Response('User not found', { status: 404 }));
+    };
+    const adapter = authAdminAdapter();
+    await adapter.deleteUser('user-to-delete');
+    assertEquals(
+      fetchedUrl,
+      'http://localhost:54321/auth/v1/admin/users/user-to-delete',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousUrl === undefined) Deno.env.delete('SUPABASE_URL');
+    else Deno.env.set('SUPABASE_URL', previousUrl);
+    if (previousKey === undefined) Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');
+    else Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', previousKey);
+  }
 });

@@ -51,7 +51,7 @@ Harness 位于 `tests/consumer-harness`，仅用于 Local conformance，不参�
 | REDEMPTION_HMAC_KEY_VERSION | 当前版本，默认 1 |
 | REDEMPTION_HMAC_SECRET_PREVIOUS | 可选上一兑换 Secret |
 | REDEMPTION_HMAC_PREVIOUS_KEY_VERSION | 上一兑换 Secret 的版本 |
-| SUPABASE_SECRET_KEY | Storage 服务端凭据 |
+| SUPABASE_SERVICE_ROLE_KEY | Storage 服务端凭据 |
 | ACCOUNT_API_PORT | 直接 Deno 运行端口，默认 8000 |
 | ACCOUNT_API_AUTH_TIMEOUT_MS | JWKS 与 Supabase Auth `/auth/v1/user` 上游超时，默认 5000ms，最大 30000ms |
 | BILLING_CHECKOUT_SECRET | 服务端 Checkout 绑定令牌的 HMAC Secret；只用于生成 hash，不得进入浏览器、日志或 Git；未配置时 Checkout 拒绝签发 |
@@ -72,7 +72,7 @@ Harness 位于 `tests/consumer-harness`，仅用于 Local conformance，不参�
 | MAINTENANCE_DB_URL | 优先连接；回退 SUPABASE_DB_URL，再 ACCOUNT_API_DB_URL |
 | MAINTENANCE_WORKER_ID | 受控 Worker 身份；staging/生产调度必须固定且每个并发 Worker 唯一，未配置时每次请求生成临时 maintenance-UUID，仅适合单次本地调用 |
 | MAINTENANCE_PORT | 直接运行默认 8001 |
-| SUPABASE_URL、SUPABASE_SECRET_KEY | Storage 和 Auth Admin API |
+| SUPABASE_URL、SUPABASE_SERVICE_ROLE_KEY | Storage 和 Auth Admin API |
 | BILLING_WEBHOOK_DB_URL | Webhook Inbox 数据库连接；缺失时回退 `SUPABASE_DB_URL`、`ACCOUNT_API_DB_URL` |
 | BILLING_WEBHOOK_INGRESS_ENABLED | `false` 时拒绝新的 Provider webhook 且不写入 Inbox；独立于 Checkout，默认开启 |
 | BILLING_PROVIDER_ACCOUNT_ID | Webhook 使用的 `billing_provider_accounts.id`；必须与 active Afdian provider account 一致，禁止写入前端 |

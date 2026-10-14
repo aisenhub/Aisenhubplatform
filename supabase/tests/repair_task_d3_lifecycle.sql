@@ -3,8 +3,8 @@ begin;
 select plan(24);
 
 select has_column(
-  'public', 'platform_subscription_config', 'purchases_paused',
-  'subscription config exposes an independent purchase pause'
+  'public', 'platform_commerce_policy', 'purchases_paused',
+  'Commerce policy exposes an independent purchase pause'
 );
 select ok(
   exists (
@@ -36,13 +36,13 @@ select ok(
   'legacy enabled-flag archive blocker is removed'
 );
 select has_function(
-  'private', 'admin_subscription_config_read_v2', array['private.admin_context', 'uuid'],
-  'v2 Admin subscription config read exists'
+  'private', 'admin_commerce_policy_read', array['private.admin_context', 'uuid'],
+  'Admin Commerce policy read exists'
 );
 select has_function(
-  'private', 'admin_subscription_config_patch_v2',
-  array['private.admin_context', 'uuid', 'bigint', 'uuid', 'boolean', 'boolean', 'boolean', 'boolean', 'text', 'text'],
-  'v2 Admin subscription config patch exists'
+  'private', 'admin_commerce_policy_patch',
+  array['private.admin_context', 'uuid', 'bigint', 'boolean', 'text', 'text'],
+  'Admin Commerce policy patch exists'
 );
 select has_table('private', 'account_retention_policy', 'retention policy table exists');
 select ok(

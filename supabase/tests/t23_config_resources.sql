@@ -1,6 +1,6 @@
 begin;
 
-select plan(63);
+select plan(58);
 
 select has_table('public', 'platform_configs', 'Config identity table exists');
 select has_table('public', 'platform_config_versions', 'immutable Config version table exists');
@@ -8,7 +8,7 @@ select has_table('public', 'platform_config_gallery_submissions', 'Gallery submi
 select has_table('public', 'platform_config_gallery_entries', 'Gallery current entry projection exists');
 select has_table('public', 'platform_config_likes', 'Gallery likes exist');
 select has_table('public', 'platform_config_usage_events', 'Gallery usage facts exist');
-select has_column('public', 'platform_config_files', 'resource_kind', 'physical file ledger distinguishes legacy and Config versions');
+select has_column('public', 'platform_config_files', 'resource_kind', 'physical file ledger is explicitly scoped to Config versions');
 select has_column('public', 'platform_file_policies', 'max_platform_total_bytes', 'platform storage policy has a physical total cap');
 select ok(
   (select bool_and(c.relforcerowsecurity)
@@ -62,8 +62,9 @@ select ok(exists (
 select ok(exists (
   select 1 from pg_constraint
   where conrelid = 'public.platform_config_files'::regclass
-    and pg_get_constraintdef(oid) like '%resource_kind%legacy%config_version%'
-), 'file resource kind is constrained to legacy or config_version');
+    and pg_get_constraintdef(oid) like '%resource_kind%config_version%'
+    and pg_get_constraintdef(oid) not like '%legacy%'
+), 'file ledger accepts only config_version resources');
 select ok(exists (
   select 1 from pg_constraint
   where conrelid = 'public.platform_file_policies'::regclass
@@ -136,9 +137,9 @@ values
   ('00000000-0000-4000-8000-000000005151', '00000000-0000-4000-8000-000000005121', 'Config other key', repeat('b', 64), 1, 'config-other', 'fixture', '00000000-0000-4000-8000-000000005161');
 
 insert into public.platform_file_policies (
-  platform_id, enabled, max_file_bytes, max_files, max_total_bytes, max_platform_total_bytes
+  platform_id, enabled, max_file_bytes, max_platform_total_bytes
 )
-values ('00000000-0000-4000-8000-000000005120', true, 1048576, 10, 10485760, 1048576);
+values ('00000000-0000-4000-8000-000000005120', true, 1048576, 1048576);
 
 select is(
   private.config_slot_limit(row(
@@ -208,48 +209,6 @@ select is(
   (select resource_kind from public.platform_config_files where id = (select file_id from version_one)),
   'config_version',
   'Version reservation uses the shared file ledger as config_version'
-);
-select is(
-  (select count(*)::integer from private.file_list(row(
-    '00000000-0000-4000-8000-000000005101', '00000000-0000-4000-8000-000000005111',
-    '00000000-0000-4000-8000-000000005120', '00000000-0000-4000-8000-000000005150',
-    '00000000-0000-4000-8000-000000005177'
-  )::private.account_context, null, 20)),
-  0,
-  'legacy Account file list does not expose Config Version files'
-);
-select is(
-  (select count(*)::integer from private.admin_file_list_v3(row(
-    '00000000-0000-4000-8000-000000005100', '00000000-0000-4000-8000-000000005110',
-    '00000000-0000-4000-8000-000000005178'
-  )::private.admin_context, '00000000-0000-4000-8000-000000005120', null, 20, null)),
-  0,
-  'legacy Admin file list does not expose Config Version files'
-);
-select ok(
-  not exists (
-    select 1 from private.admin_file_list(row(
-      '00000000-0000-4000-8000-000000005100', '00000000-0000-4000-8000-000000005110',
-      '00000000-0000-4000-8000-000000005178'
-    )::private.admin_context, null, 20) legacy_file
-    where legacy_file.file_id = (select file_id from version_one)
-  ),
-  'legacy Admin v1 file list also excludes Config Version files'
-);
-select throws_ok(
-  format($query$select * from private.file_delete_request(row(
-    '00000000-0000-4000-8000-000000005101', '00000000-0000-4000-8000-000000005111',
-    '00000000-0000-4000-8000-000000005120', '00000000-0000-4000-8000-000000005150',
-    '00000000-0000-4000-8000-000000005179'
-  )::private.account_context, %L::uuid, 'legacy-delete-fence')$query$, (select file_id from version_one)),
-  'P0002', 'resource_not_found', 'legacy Account delete cannot delete a Config Version file'
-);
-select throws_ok(
-  format($query$select * from private.admin_file_delete_request(row(
-    '00000000-0000-4000-8000-000000005100', '00000000-0000-4000-8000-000000005110',
-    '00000000-0000-4000-8000-000000005180'
-  )::private.admin_context, %L::uuid, 'admin-legacy-delete-fence')$query$, (select file_id from version_one)),
-  'P0002', 'resource_not_found', 'legacy Admin delete cannot delete a Config Version file'
 );
 select throws_ok(
   format($query$select * from private.config_version_activate(row(
@@ -419,12 +378,14 @@ select is(
 );
 
 select throws_ok(
-  $$select * from private.file_intent_create(row(
+  format($query$select * from private.config_version_intent_create(row(
     '00000000-0000-4000-8000-000000005101', '00000000-0000-4000-8000-000000005111',
     '00000000-0000-4000-8000-000000005120', '00000000-0000-4000-8000-000000005150',
     '00000000-0000-4000-8000-000000005189'
-  )::private.account_context, 'legacy-large.bin', 1048500, 'application/octet-stream', null, null, 'platform-capacity')$$,
-  'P0001', 'platform_storage_quota_exceeded', 'legacy and Config Version reservations share the platform physical capacity'
+  )::private.account_context, %L::uuid, 'capacity-v1.json', 1048500,
+    'application/json', 'example.capacity', '1', 'capacity', 'platform-capacity')$query$,
+    (select config_id from config_two)),
+  'P0001', 'platform_storage_quota_exceeded', 'Config Version reservations share the platform physical capacity'
 );
 
 select throws_ok(

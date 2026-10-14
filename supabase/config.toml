@@ -18,7 +18,7 @@ max_rows = 1000
 port = 54322
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
 # server_version;` on the remote database to check.
-major_version = 15
+major_version = 17
 
 [db.pooler]
 enabled = true
@@ -113,4 +113,8 @@ verify_jwt = false
 
 [functions.maintenance]
 # Maintenance authenticates with a server-only job token, independently of a user session.
+verify_jwt = false
+
+[functions.billing-webhook]
+# Provider signatures are verified by this function; providers do not hold Auth JWTs.
 verify_jwt = false
