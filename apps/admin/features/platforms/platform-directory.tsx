@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
 import { Button } from '@kit/ui/button';
+import { Server } from 'lucide-react';
 import {
   Dialog,
   DialogClose,
@@ -20,8 +21,10 @@ import {
 } from '@kit/ui/dialog';
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from '@kit/ui/empty';
 import { Input } from '@kit/ui/input';
@@ -76,8 +79,12 @@ function responseError(
 
 function CreatePlatformDialog({
   onCreated,
+  triggerTestId = 'platform-create-open',
+  triggerText = '创建平台',
 }: {
   onCreated: (platform: Platform) => void;
+  triggerTestId?: string;
+  triggerText?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
@@ -180,7 +187,7 @@ function CreatePlatformDialog({
       }}
     >
       <DialogTrigger
-        render={<Button data-test="platform-create-open">创建平台</Button>}
+        render={<Button data-test={triggerTestId}>{triggerText}</Button>}
       />
       <DialogContent data-test="platform-create-dialog">
         <DialogHeader>
@@ -538,6 +545,12 @@ function PlatformDirectoryContent() {
             className="min-h-64 border-border/70 bg-card"
             data-test="platform-directory-empty"
           >
+            <EmptyMedia variant="icon">
+              <Server
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </EmptyMedia>
             <EmptyHeader>
               <EmptyTitle>
                 {query ? '没有符合条件的平台' : '暂无平台'}
@@ -548,15 +561,27 @@ function PlatformDirectoryContent() {
                   : '创建第一个平台后，它会出现在这个目录中。'}
               </EmptyDescription>
             </EmptyHeader>
-            {query ? (
-              <Button
-                variant="outline"
-                onClick={clearQuery}
-                data-test="platform-directory-empty-clear"
-              >
-                清除搜索
-              </Button>
-            ) : null}
+            <EmptyContent>
+              {query ? (
+                <Button
+                  variant="outline"
+                  onClick={clearQuery}
+                  data-test="platform-directory-empty-clear"
+                >
+                  清除搜索
+                </Button>
+              ) : (
+                <CreatePlatformDialog
+                  triggerTestId="platform-create-empty-open"
+                  triggerText="创建首个平台"
+                  onCreated={(created) => {
+                    router.push(
+                      `/admin/platforms/${encodeURIComponent(created.platform_id)}/settings/integration?welcome=1`,
+                    );
+                  }}
+                />
+              )}
+            </EmptyContent>
           </Empty>
         ) : null}
         {remoteState === 'success' && platforms.length > 0 ? (

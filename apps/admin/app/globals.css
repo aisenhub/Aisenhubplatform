@@ -69,6 +69,7 @@
   --accent: #e7f3f1;
   --accent-foreground: #05635f;
   --destructive: #b53342;
+  --destructive-foreground: #ffffff;
   --border: #dce3e9;
   --input: #b9c6d0;
   --ring: #087b76;
@@ -80,13 +81,13 @@
   --info: #2866a3;
   --info-foreground: #2866a3;
   --focus: #087b76;
-  --sidebar: #f8fafc;
-  --sidebar-foreground: #334155;
+  --sidebar: #182631;
+  --sidebar-foreground: #d9e4eb;
   --sidebar-primary: #087b76;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e6f4f2;
-  --sidebar-accent-foreground: #065e5a;
-  --sidebar-border: #e2e8f0;
+  --sidebar-accent: #243542;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2b3a45;
   --sidebar-ring: #087b76;
   --radius: 0.625rem;
   --font-sans:
@@ -95,6 +96,47 @@
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     monospace;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0d151c;
+  --foreground: #edf2f5;
+  --card: #131e27;
+  --card-foreground: #edf2f5;
+  --popover: #131e27;
+  --popover-foreground: #edf2f5;
+  --primary: #14b8a6;
+  --primary-dark: #0d9488;
+  --primary-soft: #12282e;
+  --primary-foreground: #042f2e;
+  --secondary: #1a2732;
+  --secondary-foreground: #c2d1dc;
+  --muted: #182631;
+  --muted-foreground: #8ea1b0;
+  --accent: #1e2f3d;
+  --accent-foreground: #99f6e4;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #243442;
+  --input: #334656;
+  --ring: #14b8a6;
+  --success: #22c55e;
+  --success-foreground: #22c55e;
+  --warning: #f59e0b;
+  --warning-foreground: #f59e0b;
+  --danger: #ef4444;
+  --info: #38bdf8;
+  --info-foreground: #38bdf8;
+  --focus: #14b8a6;
+  --sidebar: #0f1820;
+  --sidebar-foreground: #d9e4eb;
+  --sidebar-primary: #14b8a6;
+  --sidebar-primary-foreground: #042f2e;
+  --sidebar-accent: #1a2935;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #243442;
+  --sidebar-ring: #14b8a6;
 }
 
 * {
@@ -571,33 +613,38 @@ select:focus-visible {
   box-shadow: 0 1px 2px rgba(8, 123, 118, 0.2);
 }
 .admin-sidebar-brand-name {
-  color: #0f172a;
+  color: var(--sidebar-foreground);
   font-size: 0.9375rem;
   font-weight: 700;
   letter-spacing: -0.015em;
 }
 .admin-sidebar-brand-note {
-  color: #64748b;
+  color: var(--sidebar-foreground);
+  opacity: 0.7;
   font-size: 0.75rem;
 }
 .admin-sidebar-platform-context {
   padding: 0.25rem 0;
 }
 .admin-sidebar-back-link {
-  color: #64748b;
-  transition: color 150ms ease;
+  color: var(--sidebar-foreground);
+  opacity: 0.7;
+  transition:
+    color 150ms ease,
+    opacity 150ms ease;
 }
 .admin-sidebar-back-link:hover {
   color: var(--sidebar-primary);
+  opacity: 1;
 }
 .admin-sidebar-platform-status {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: #94a3b8;
+  background: var(--muted-foreground);
 }
 .admin-sidebar-platform-status[data-status='active'] {
-  background: #10b981;
+  background: var(--success);
 }
 .admin-sidebar-platform-status[data-status='disabled'] {
   background: var(--danger);
@@ -605,13 +652,15 @@ select:focus-visible {
 .admin-sidebar-footer-card {
   border: 1px solid var(--sidebar-border);
   border-radius: 0.5rem;
-  background: #ffffff;
-  color: #64748b;
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
+  opacity: 0.9;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
 }
 :is(.admin-sidebar, [data-slot='sidebar'][data-mobile='true'])
   [data-sidebar='group-label'] {
-  color: #64748b;
+  color: var(--sidebar-foreground);
+  opacity: 0.65;
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -623,18 +672,21 @@ select:focus-visible {
   [data-sidebar='menu-button'] {
   min-height: 2.375rem;
   border-radius: 0.5rem;
-  color: #475569;
+  color: var(--sidebar-foreground);
+  opacity: 0.85;
   font-size: 0.875rem;
   font-weight: 500;
   padding: 0.4rem 0.625rem;
   transition:
     background-color 150ms ease,
-    color 150ms ease;
+    color 150ms ease,
+    opacity 150ms ease;
 }
 :is(.admin-sidebar, [data-slot='sidebar'][data-mobile='true'])
   [data-sidebar='menu-button']:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  opacity: 1;
 }
 :is(.admin-sidebar, [data-slot='sidebar'][data-mobile='true'])
   [data-sidebar='menu-button'][data-active='true'] {

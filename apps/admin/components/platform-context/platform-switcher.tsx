@@ -231,19 +231,19 @@ export function PlatformSwitcher({
         aria-haspopup="dialog"
         className={
           variant === 'sidebar'
-            ? 'flex w-full items-center justify-between gap-2.5 rounded-lg border border-slate-200/90 bg-white p-2 text-left shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-teal-600/30'
-            : 'flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent focus:outline-hidden focus:ring-2 focus:ring-teal-600/30'
+            ? 'flex w-full items-center justify-between gap-2.5 rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-2 text-left shadow-xs transition-colors hover:border-sidebar-border hover:bg-sidebar-accent focus:outline-hidden focus:ring-2 focus:ring-sidebar-ring'
+            : 'flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent focus:outline-hidden focus:ring-2 focus:ring-ring/30'
         }
         data-test="platform-switcher-trigger"
       >
         {current ? (
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-teal-50 font-mono text-xs font-bold text-teal-800 border border-teal-200/60">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sidebar-primary/20 font-mono text-xs font-bold text-sidebar-primary border border-sidebar-primary/30">
               {current.name.slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="truncate text-xs font-semibold text-slate-800">
+                <span className="truncate text-xs font-semibold text-sidebar-foreground">
                   {current.name}
                 </span>
                 <span
@@ -253,29 +253,29 @@ export function PlatformSwitcher({
                   }
                 />
               </div>
-              <div className="truncate font-mono text-[0.68rem] text-slate-400">
+              <div className="truncate font-mono text-xs text-sidebar-foreground/70">
                 {current.code}
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-slate-700">
-            <Globe className="h-4 w-4 shrink-0 text-teal-600" />
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-sidebar-foreground">
+            <Globe className="h-4 w-4 shrink-0 text-primary" />
             <span className="truncate">所有平台（全局透镜）</span>
           </div>
         )}
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/60" />
       </button>
 
       {/* 下拉浮层卡片（自主受控，零外部黑盒崩溃风险） */}
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1.5 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg"
+          className="absolute left-0 top-full z-50 mt-1.5 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-lg"
           role="dialog"
           aria-label="切换平台工作区"
           data-test="platform-switcher-dropdown"
         >
-          <div className="px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             切换工作区
           </div>
 
@@ -283,28 +283,28 @@ export function PlatformSwitcher({
             type="button"
             aria-pressed={!current}
             onClick={() => changePlatform(ALL_PLATFORMS_VALUE)}
-            className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-slate-100 ${
+            className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
               !current
-                ? 'bg-teal-50/80 font-medium text-teal-800'
-                : 'text-slate-700'
+                ? 'bg-primary/10 font-medium text-primary'
+                : 'text-foreground'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-teal-600" />
+              <Globe className="h-4 w-4 text-primary" />
               <span className="font-medium">所有平台（全局透镜）</span>
             </div>
-            {!current && <Check className="h-3.5 w-3.5 text-teal-600" />}
+            {!current && <Check className="h-3.5 w-3.5 text-primary" />}
           </button>
 
-          <div className="my-1 h-px bg-slate-100" />
+          <div className="my-1 h-px bg-border" />
 
           <div className="px-1 py-1">
             <label className="relative block">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
                 aria-label="搜索平台"
                 autoComplete="off"
-                className="h-9 w-full rounded-md border border-slate-200 bg-white pl-8 pr-3 text-xs shadow-xs outline-none transition-colors focus:border-teal-500 focus:ring-2 focus:ring-teal-600/20"
+                className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
                 data-test="platform-switcher-search"
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索名称或代码"
@@ -314,16 +314,16 @@ export function PlatformSwitcher({
           </div>
 
           <div role="listbox" aria-label="平台工作区">
-            <div className="px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wider text-slate-400">
+            <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               已加载平台 ({options.length})
             </div>
             {searching ? (
-              <div className="px-2 py-3 text-center text-xs text-slate-400">
+              <div className="px-2 py-3 text-center text-xs text-muted-foreground">
                 正在搜索平台…
               </div>
             ) : null}
             {!searching && options.length === 0 ? (
-              <div className="px-2 py-3 text-center text-xs text-slate-400">
+              <div className="px-2 py-3 text-center text-xs text-muted-foreground">
                 没有匹配的平台
               </div>
             ) : null}
@@ -336,27 +336,27 @@ export function PlatformSwitcher({
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => changePlatform(platform.platform_id)}
-                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-slate-100 ${
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
                     isSelected
-                      ? 'bg-teal-50 font-medium text-teal-800'
-                      : 'text-slate-700'
+                      ? 'bg-primary/10 font-medium text-primary'
+                      : 'text-foreground'
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <Layers className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span
                       className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDotClass(platform.status)}`}
                       aria-hidden="true"
                     />
                     <div className="min-w-0 truncate">
                       <span className="truncate">{platform.name}</span>
-                      <span className="ml-1.5 font-mono text-[0.65rem] text-slate-400">
+                      <span className="ml-1.5 font-mono text-xs text-muted-foreground">
                         {platform.code}
                       </span>
                     </div>
                   </div>
                   {isSelected && (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-teal-600" />
+                    <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
                   )}
                 </button>
               );
@@ -364,7 +364,7 @@ export function PlatformSwitcher({
             {nextCursor ? (
               <button
                 type="button"
-                className="mt-1 flex w-full items-center justify-center rounded-md border border-slate-200 px-2 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-1 flex w-full items-center justify-center rounded-md border border-border px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 data-test="platform-switcher-load-more"
                 disabled={loadingMore || searching}
                 onClick={() => void loadPlatforms(debouncedQuery, nextCursor)}

@@ -529,30 +529,23 @@ export function DeletionJobsPage() {
                 value={inspectedJob.user_id ?? '已脱离 live Identity'}
                 mono={Boolean(inspectedJob.user_id)}
               />
-              <Detail label="Raw state" value={inspectedJob.state} mono />
+              <Detail label="底层状态" value={inspectedJob.state} mono />
+              <Detail label="检查点标识" value={inspectedJob.checkpoint} mono />
+              <Detail label="重试次数" value={`${inspectedJob.retry_count}`} />
               <Detail
-                label="Raw checkpoint"
-                value={inspectedJob.checkpoint}
-                mono
-              />
-              <Detail
-                label="Retry count"
-                value={`${inspectedJob.retry_count}`}
-              />
-              <Detail
-                label="Next attempt"
+                label="下次重试时间"
                 value={formatUtc(inspectedJob.next_attempt_at)}
               />
               <Detail
-                label="Created"
+                label="创建时间"
                 value={formatUtc(inspectedJob.created_at)}
               />
               <Detail
-                label="Completed"
+                label="完成时间"
                 value={formatUtc(inspectedJob.completed_at)}
               />
               <Detail
-                label="Last error code"
+                label="末次错误码"
                 value={inspectedJob.last_error_code ?? '—'}
                 mono
               />

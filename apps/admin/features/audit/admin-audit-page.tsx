@@ -71,7 +71,7 @@ import {
 const PAGE_SIZE = 50;
 
 const selectClassName =
-  'h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm';
+  'h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 type AuditPayload = {
   data?: AdminAuditEntry[];
@@ -848,81 +848,77 @@ function AdminAuditPageContent() {
 
         {remoteState === 'success' && entries.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
-              <Table data-test="audit-table" className="min-w-[76rem]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>操作者</TableHead>
-                    <TableHead>平台范围</TableHead>
-                    <TableHead>对象</TableHead>
-                    <TableHead>操作</TableHead>
-                    <TableHead>结果</TableHead>
-                    <TableHead>时间</TableHead>
-                    <TableHead className="text-right">详情</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {entries.map((entry, index) => {
-                    const status = auditOutcomeStatus(entry.outcome);
-                    const key =
-                      entry.id ??
-                      entry.request_id ??
-                      `${entry.action}-${index}`;
-                    return (
-                      <TableRow key={key} data-test="audit-row">
-                        <TableCell className="max-w-64 whitespace-normal align-top">
-                          <BusinessValue
-                            primary={auditActorLabel(entry)}
-                            secondary={auditActorSecondary(entry)}
-                          />
-                        </TableCell>
-                        <TableCell className="max-w-60 whitespace-normal align-top">
-                          <BusinessValue
-                            primary={auditPlatformLabel(entry)}
-                            secondary={auditPlatformSecondary(entry)}
-                          />
-                        </TableCell>
-                        <TableCell className="max-w-64 whitespace-normal align-top">
-                          <BusinessValue
-                            primary={auditTargetLabel(entry)}
-                            secondary={auditTargetSecondary(entry)}
-                          />
-                        </TableCell>
-                        <TableCell className="max-w-64 whitespace-normal align-top">
-                          <BusinessValue
-                            primary={auditActionLabel(entry.action)}
-                          />
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <StatusBadge
-                            label={status.label}
-                            tone={status.tone}
-                            rawValue={entry.outcome}
-                          />
-                        </TableCell>
-                        <TableCell className="whitespace-normal text-muted-foreground align-top">
-                          {formatAuditDate(entry.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right align-top">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            data-test="audit-open-inspector"
-                            onClick={(event) => {
-                              lastTriggerRef.current = event.currentTarget;
-                              setSelectedEntry(entry);
-                            }}
-                          >
-                            查看详情
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <Table data-test="audit-table" className="min-w-[76rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>操作者</TableHead>
+                  <TableHead>平台范围</TableHead>
+                  <TableHead>对象</TableHead>
+                  <TableHead>操作</TableHead>
+                  <TableHead>结果</TableHead>
+                  <TableHead>时间</TableHead>
+                  <TableHead className="text-right">详情</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {entries.map((entry, index) => {
+                  const status = auditOutcomeStatus(entry.outcome);
+                  const key =
+                    entry.id ?? entry.request_id ?? `${entry.action}-${index}`;
+                  return (
+                    <TableRow key={key} data-test="audit-row">
+                      <TableCell className="max-w-64 whitespace-normal align-top">
+                        <BusinessValue
+                          primary={auditActorLabel(entry)}
+                          secondary={auditActorSecondary(entry)}
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-60 whitespace-normal align-top">
+                        <BusinessValue
+                          primary={auditPlatformLabel(entry)}
+                          secondary={auditPlatformSecondary(entry)}
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-64 whitespace-normal align-top">
+                        <BusinessValue
+                          primary={auditTargetLabel(entry)}
+                          secondary={auditTargetSecondary(entry)}
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-64 whitespace-normal align-top">
+                        <BusinessValue
+                          primary={auditActionLabel(entry.action)}
+                        />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <StatusBadge
+                          label={status.label}
+                          tone={status.tone}
+                          rawValue={entry.outcome}
+                        />
+                      </TableCell>
+                      <TableCell className="whitespace-normal text-muted-foreground align-top">
+                        {formatAuditDate(entry.created_at)}
+                      </TableCell>
+                      <TableCell className="text-right align-top">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          data-test="audit-open-inspector"
+                          onClick={(event) => {
+                            lastTriggerRef.current = event.currentTarget;
+                            setSelectedEntry(entry);
+                          }}
+                        >
+                          查看详情
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
             <div className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm text-muted-foreground">
                 {nextCursor

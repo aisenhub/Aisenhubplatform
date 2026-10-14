@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import Image from 'next/image';
+import { Loader2 } from 'lucide-react';
+
+import { Button } from '@kit/ui/button';
 
 import {
   adminAuthSession,
@@ -30,6 +33,7 @@ export default function AdminMfaPage() {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [status, setStatus] = useState('正在读取已验证的 MFA 因子…');
   const [enrolling, setEnrolling] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (
@@ -118,7 +122,8 @@ export default function AdminMfaPage() {
 
   async function verifyEnrollment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!enrollment) return;
+    if (!enrollment || verifying) return;
+    setVerifying(true);
     const epoch = adminAuthSession.getEpoch();
     setStatus('正在验证新认证器…');
     let response: Response;
@@ -134,12 +139,16 @@ export default function AdminMfaPage() {
       );
     } catch (error) {
       setStatus(sessionErrorMessage(error));
+      setVerifying(false);
       return;
     }
     const payload = (await response.json().catch(() => null)) as {
       error?: { code?: string; details?: Record<string, string> };
     } | null;
-    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+    if (!adminAuthSession.isCurrentEpoch(epoch)) {
+      setVerifying(false);
+      return;
+    }
     if (!response.ok) {
       const details = payload?.error?.details;
       setStatus(
@@ -147,6 +156,7 @@ export default function AdminMfaPage() {
           ? '认证器已绑定，但近期认证证明签发失败；请使用已有认证器重试。'
           : `认证器绑定失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
       );
+      setVerifying(false);
       return;
     }
     setEnrollment(null);
@@ -154,11 +164,14 @@ export default function AdminMfaPage() {
     await loadFactors();
     adminAuthSession.completeAuthentication('admin_mfa');
     setStatus('认证器已绑定并完成 MFA，正在进入 Admin…');
+    setVerifying(false);
     window.location.assign('/admin');
   }
 
   async function verifyExistingFactor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (verifying) return;
+    setVerifying(true);
     const epoch = adminAuthSession.getEpoch();
     setStatus('正在验证 MFA 并获取近期认证证明…');
     let response: Response;
@@ -174,6 +187,7 @@ export default function AdminMfaPage() {
       );
     } catch (error) {
       setStatus(sessionErrorMessage(error));
+      setVerifying(false);
       return;
     }
     if (!response.ok) {
@@ -186,10 +200,15 @@ export default function AdminMfaPage() {
           ? 'MFA 已验证，但近期认证证明签发失败；请稍后重试。'
           : `MFA 失败：${payload?.error?.code ?? 'AUTHORIZATION_UNAVAILABLE'}`,
       );
+      setVerifying(false);
       return;
     }
-    if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+    if (!adminAuthSession.isCurrentEpoch(epoch)) {
+      setVerifying(false);
+      return;
+    }
     adminAuthSession.completeAuthentication('admin_recent_mfa');
+    setVerifying(false);
     window.location.assign('/admin');
   }
 
@@ -273,13 +292,24 @@ export default function AdminMfaPage() {
               maxLength={6}
               required
             />
-            <button
+            <Button
               type="submit"
               data-test="mfa-enroll-submit"
-              disabled={code.length !== 6}
+              disabled={code.length !== 6 || verifying}
+              className="w-full"
             >
-              确认绑定
-            </button>
+              {verifying ? (
+                <>
+                  <Loader2
+                    className="mr-2 size-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                  <span>正在验证…</span>
+                </>
+              ) : (
+                <span>确认绑定</span>
+              )}
+            </Button>
           </form>
         </section>
       ) : null}
@@ -295,6 +325,7 @@ export default function AdminMfaPage() {
             value={factorId}
             onChange={(event) => setFactorId(event.target.value)}
             required
+            disabled={verifying}
           >
             {factors.map((factor) => (
               <option key={factor.id} value={factor.id}>
@@ -312,20 +343,47 @@ export default function AdminMfaPage() {
             autoComplete="one-time-code"
             maxLength={6}
             required
+            disabled={verifying}
           />
-          <button
+          <Button
             type="submit"
             data-test="mfa-verify-submit"
-            disabled={!factorId || code.length !== 6}
+            disabled={!factorId || code.length !== 6 || verifying}
+            className="w-full"
           >
-            验证并继续
-          </button>
+            {verifying ? (
+              <>
+                <Loader2
+                  className="mr-2 size-4 animate-spin"
+                  aria-hidden="true"
+                />
+                <span>正在验证…</span>
+              </>
+            ) : (
+              <span>验证并继续</span>
+            )}
+          </Button>
         </form>
       ) : null}
 
-      <span className="muted" role="status">
-        {status}
-      </span>
+      {status ? (
+        <span
+          className={
+            status.includes('失败') ||
+            status.includes('错误') ||
+            status.includes('UNAVAILABLE')
+              ? 'rounded-md border border-destructive/20 bg-destructive/10 p-2.5 text-xs text-destructive'
+              : 'muted text-xs'
+          }
+          role={
+            status.includes('失败') || status.includes('错误')
+              ? 'alert'
+              : 'status'
+          }
+        >
+          {status}
+        </span>
+      ) : null}
     </main>
   );
 }
