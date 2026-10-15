@@ -106,8 +106,8 @@
 | `docs/architecture/modules/files-jobs.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/architecture/modules/frontends.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/architecture/overview.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
-| `docs/guides/operations.md` | TASK-0703、TASK-0704、TASK-0705、TASK-0706、TASK-0802、TASK-0804 | 已补充0703告警生命周期、接收器和D2退款规则；后续任务继续同步 |
-| `docs/guides/testing.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
+| `docs/development/operations.md` | TASK-0703、TASK-0704、TASK-0705、TASK-0706、TASK-0802、TASK-0804 | 已补充0703告警生命周期、接收器和D2退款规则；后续任务继续同步 |
+| `docs/development/testing.md` | TASK-0804 | 本轮不修改；实施任务获派发后按清单修改 |
 | `docs/plans/subscription-billing-centralization/design.md` | TASK-0003、TASK-0101、TASK-0102 | 当前 Plan；后续执行记录按实际更新 |
 | `docs/plans/subscription-billing-centralization/plan.md` | TASK-0003、TASK-0804 | 当前 Plan；后续执行记录按实际更新 |
 | `docs/plans/subscription-billing-centralization/repair-issues.md` | TASK-0001、TASK-0804 | 当前 Plan；后续执行记录按实际更新 |

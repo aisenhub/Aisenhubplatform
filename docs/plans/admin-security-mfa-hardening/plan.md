@@ -21,9 +21,9 @@
 
 每个执行 Agent 开始前必须：
 
-1. 阅读根 `AGENTS.md`、`docs/README.md`、`docs/architecture/overview.md`、`docs/agents.md`、`docs/guides/development-release-workflow.md`。
-2. 阅读本文、相关架构、reference、proposal 和实际源码。
-3. 涉及 BFF、Auth、SDK、公共合同、Registry 或环境配置时，阅读 `docs/guides/platform-onboarding.md`。
+1. 阅读根 `AGENTS.md`、`docs/README.md`、`docs/architecture/overview.md`、`docs/development/documentation-governance.md`、`docs/development/development-release-workflow.md`。
+2. 阅读本文、相关架构、reference、Plan 和实际源码。
+3. 涉及 BFF、Auth、SDK、公共合同、Registry 或环境配置时，阅读 `docs/development/platform-onboarding.md`。
 4. 涉及 Supabase 时核对当前官方文档和仓库固定版本，并遵循 Supabase skill。
 5. 报告任务标识、起始 HEAD、已有改动、风险分级、受影响消费者、本地验证、本地 Supabase 验证、生产门槛和授权边界。
 6. 从最新已确认的 `main` 创建 `codex/<任务ID小写>` 短期分支；已有其他任务改动时先隔离或确认归属，不自动 stash、覆盖或混入提交。

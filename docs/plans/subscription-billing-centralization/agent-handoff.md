@@ -6,7 +6,7 @@
 
 ~~~text
 请实施本次明确指定的 TASK-XXXX，仅执行该任务和必要前置检查。
-先读根AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/agents.md，
+先读根AGENTS.md、docs/README.md、docs/architecture/overview.md、docs/development/documentation-governance.md，
 再读本 Plan 的 plan.md、design.md、repair-issues.md、repair-matrices.md、
 verification-record.md、对应阶段文件和归档来源；最后核对当前源码/配置/测试。
 核对HEAD/branch/status，记录已有未提交迁移配置归属，保护其他工作。

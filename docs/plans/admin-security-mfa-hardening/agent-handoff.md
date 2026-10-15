@@ -14,12 +14,12 @@
 
 ## 必读顺序
 
-1. 根 `AGENTS.md`、`docs/README.md`、`docs/agents.md`。
-2. `docs/guides/development-release-workflow.md`。
+1. 根 `AGENTS.md`、`docs/README.md`、`docs/development/documentation-governance.md`。
+2. `docs/development/development-release-workflow.md`。
 3. 本 Plan 的 `design.md`、`plan.md`、当前阶段文件和 `verification-record.md`。
 4. `docs/architecture/modules/identity-security.md`、`docs/architecture/modules/frontends.md`。
 5. `docs/architecture/reference/api.md`、`docs/architecture/reference/contracts.md`、`docs/architecture/reference/configuration.md`。
-6. `docs/guides/operations.md`；涉及 BFF/Auth/API 时再读 `docs/guides/platform-onboarding.md`。
+6. `docs/development/operations.md`；涉及 BFF/Auth/API 时再读 `docs/development/platform-onboarding.md`。
 7. 当前任务涉及的实际源码、迁移和测试。
 
 ## 通用执行提示词
