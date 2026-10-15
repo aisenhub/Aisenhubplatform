@@ -124,4 +124,4 @@ Storage提供putImmutable/getInfo/download/remove四种受控adapter操作；收
 - 新增或修改公共字段、稳定错误码、状态枚举、鉴权要求、分页游标、幂等语义或 SQL 入口时，先更新本文件及必要的架构决策，再同步所有消费者和测试。
 - 以当前代码、已应用迁移和实际命令输出作为实现证据。文档中尚未被代码或验证记录支持的内容必须标为待实现或待验证。
 - 使用 `pnpm contracts:check` 检查 OpenAPI 引用、`operationId`、鉴权、错误枚举、二进制响应和缓存约束；检查通过不等于每个业务操作都已在真实环境完成。
-- 任何会改变数据保留、权限边界、身份生命周期或恢复语义的合同变更，都要同步 `docs/architecture/`、`docs/decisions/` 和对应验证记录。
+- 任何会改变数据保留、权限边界、身份生命周期或恢复语义的合同变更，都要同步 `docs/architecture/`、`docs/architecture/decisions/` 和对应验证记录。

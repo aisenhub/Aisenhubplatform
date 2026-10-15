@@ -108,4 +108,4 @@ schedule metadata、migration 或 job handler 存在只能证明实现能力；�
 
 ## Domain Verification
 
-当前 Implemented 基线来自 canonical Audit/Idempotency/Deletion/Retention/Lease/Barrier/Tombstone SQL、Maintenance runtime、`repair_task_d3_lifecycle.sql`、Account lifecycle/workbench 与 file/feedback lifecycle tests。`docs/reference/maintenance-callers.md` 在目录收敛前继续保存 Local 与 Hosted/NOT_RUN 的精确调用证据；后续迁移不得把“静态实现存在”升级成“生产已运行”。
+当前 Implemented 基线来自 canonical Audit/Idempotency/Deletion/Retention/Lease/Barrier/Tombstone SQL、Maintenance runtime、`repair_task_d3_lifecycle.sql`、Account lifecycle/workbench 与 file/feedback lifecycle tests。`docs/architecture/reference/maintenance-callers.md` 保存 Local 与 Hosted/NOT_RUN 的精确调用证据；不得把“静态实现存在”升级成“生产已运行”。

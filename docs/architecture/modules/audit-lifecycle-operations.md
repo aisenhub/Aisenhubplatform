@@ -200,7 +200,7 @@ Global Delete 的 Auth 删除对 HTTP 404 按幂等成功处理；网络 timeout
 - Files/jobs：`maintenance/files.ts`；
 - Billing jobs：`maintenance/billing.ts`；
 - Admin UI：audit、accounts/deletion-jobs、billing metrics。
-- Maintenance 调用证据矩阵：`docs/reference/maintenance-callers.md`（迁移完成前的精确环境证据来源）。
+- Maintenance 调用证据矩阵：`docs/architecture/reference/maintenance-callers.md`（精确环境证据来源；区分 Local 与 Hosted/NOT_RUN）。
 
 重点验证：job duplicate/timeout、stale fence、checkpoint recovery、Global Delete 并发激活、Auth delete failure、retention missing fail-closed、backup barrier、tombstone recovery、idempotency same/different body、Audit platform/actor/outcome 语义。代表性 SQL 包括 `repair_task_d3_lifecycle.sql`、Account workbench lifecycle tests 与 file/feedback lifecycle suites。
 
