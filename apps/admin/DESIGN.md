@@ -157,7 +157,7 @@ components:
 
 - **Buttons:** 主操作为青绿实体；次操作为描边；低强调操作为 ghost；危险操作保留危险文字色。默认高度 2rem，sm 为 1.75rem；40rem 以下按钮最小高度 2.75rem。禁用态降低透明度并阻止操作。共享主按钮的悬停透明色仅用于链接实例，认证按钮另有深青绿悬停。
 - **Search / fields:** 白底、输入色边界、md 圆角，最小高度 2.5rem；搜索有隐藏或可见标签。悬停边界变青绿，键盘焦点显示边界与轮廓；无效、提交中和禁用态保留共享组件语义。
-- **Navigation:** 中文任务分组，Global 与 URL 指定的 Platform 范围使用不同菜单。活动项使用青灰背景、薄荷图标与较重文字，并设置 aria-current；图标折叠模式保留 tooltip。Global 一级导航以“统一用户”承载 Identity 生命周期治理，删除任务统一位于 `/admin/accounts/deletion-jobs`；Billing 的唯一 Global 入口为 `/admin/billing/orders`。Platform Sidebar 只保留当前平台资源，不常驻平台目录、全局 Billing、Audit、Consumer Lab 或安全入口；返回 Global scope 统一使用 PlatformSwitcher 的“所有平台”，对象级显式深链不受此限制。Origin 与 Platform Key 不再各占一个常驻导航项，统一进入“平台设置 → 接入配置”。
+- **Navigation:** 中文任务分组，Global 与 URL 指定的 Platform 范围使用不同菜单。活动项使用青灰背景、薄荷图标与较重文字，并设置 aria-current；图标折叠模式保留 tooltip。Global 一级导航以“统一用户”承载 Identity 生命周期治理，删除任务统一位于 `/admin/accounts/deletion-jobs`；Billing 的唯一 Global 入口为 `/admin/billing/orders`。Platform Sidebar 只保留当前平台资源，不常驻平台目录、全局 Billing、Audit 或安全入口；返回 Global scope 统一使用 PlatformSwitcher 的“所有平台”，对象级显式深链不受此限制。Origin 与 Platform Key 不再各占一个常驻导航项，统一进入“平台设置 → 接入配置”。Consumer 接入资料不进入 Admin 导航，统一由仓库根 `platform-integration/` 提供。
 - **Platform integration:** 接入配置的中央进度只由平台 active/allow_activation、完整 active Origin、active Platform Key、Key deployment confirmation 四类权威事实计算；商业配置为按需项。目标平台 Auth/BFF/protected route 与独立 E2E 始终标为外部验证，不允许用访问页面或手工勾选伪造完成。平台创建成功后使用服务端返回的真实 platform_id 进入首次接入页。
 - **Tables / status:** 表头高度 2.75rem，字体较小；单元格纵向留白 0.875rem。行悬停为 muted，详情所选账户行为 primary-soft；状态胶囊有文字、小圆点和色调，unknown 使用更强警告底色。
 - **Audit center:** 全局审计中心的一级表格固定围绕“操作者 / 平台范围 / 对象 / 操作 / 结果 / 时间”组织。已知 event/target code 使用中文业务语义，原始 code、UUID、request_id 只在详情技术区保留；缺失 outcome 明确显示“未记录”，不得默认成功。操作者、平台、动作、对象类型、结果与关键词筛选写入 URL，并由服务端在游标分页前组合执行。

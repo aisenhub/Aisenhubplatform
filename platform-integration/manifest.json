@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "name": "aisenhub-platform-integration",
+  "contract_first": true,
+  "runtime_sdk": false,
+  "entrypoints": {
+    "developer": "platform-integration/README.md",
+    "agent": "platform-integration/AGENTS.md",
+    "capabilities": "platform-integration/ai/capabilities.json",
+    "rules": "platform-integration/ai/rules.md",
+    "workflow": "platform-integration/ai/workflow.md",
+    "conformance": "platform-integration/conformance/README.md"
+  },
+  "contracts": {
+    "account": {
+      "major": "v1",
+      "openapi": "contracts/account/v1/openapi.json",
+      "compatibility": "contracts/account/v1/COMPATIBILITY.md",
+      "changelog": "contracts/account/v1/CHANGELOG.md"
+    }
+  },
+  "conformance": {
+    "implementation": "tests/consumer-harness",
+    "static_command": "pnpm test:consumer-harness",
+    "local_e2e_command": "pnpm test:e2e:consumer-harness",
+    "package_check_command": "pnpm platform-integration:check"
+  }
+}

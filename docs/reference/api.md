@@ -124,11 +124,11 @@ V1 Principal、权益、Profile、文件、Auth和Admin响应均private,no-store
 
 Account handler不依赖Consumer浏览器正确判断，服务端再次鉴权。业务保护判断platform/account状态；需付费能力还检查effective_status和features，不能只看Auth成功。Consumer 遇到中央不可用必须 fail closed，不能本地降级成 Free 或授权成功。
 
-## 5. Consumer Harness、Registry 与版本
+## 5. Consumer Integration、Harness、Registry 与版本
 
-Registry `contract_compatibility` 记录 Account/Admin `v1` canonical contract、Consumer Harness 与 Admin Consumer Lab 路径，并记录静态/Local E2E 验证命令；不再维护页面模板 inventory 或 starter 分发元数据。
+Registry `contract_compatibility` 记录 Account/Admin `v1` canonical contract、`platform-integration` 与 Consumer Harness 路径，并记录静态/Local E2E 验证命令；不再维护 Admin Consumer 展示页、页面模板 inventory 或 starter 分发元数据。`platform-integration/manifest.json` 和 `ai/capabilities.json` 为开发者/Agent 提供合同与 capability 索引，但不复制 wire schema。
 
-新平台不安装 AisenHub runtime SDK。接入时先固定中央 commit 与 contract major，阅读 changelog/compatibility，再按目标技术栈自行实现并拥有 Auth/BFF/integration，并用 Harness 对照协议/安全行为。品牌、页面布局和平台业务可以定制；金额、期限、授权、配额、支付进度和错误语义不能随 UI 改写。
+新平台不安装 AisenHub runtime SDK。接入时从 [`platform-integration`](../../platform-integration/README.md) 开始，先固定中央 commit 与 contract major，阅读 changelog/compatibility，再按目标技术栈自行实现并拥有 Auth/BFF/integration，并用 Harness 对照协议/安全行为。品牌、页面布局和平台业务可以定制；金额、期限、授权、配额、支付进度和错误语义不能随 UI 改写。
 
 API保持 `/v1` 向后兼容扩展；破坏字段、鉴权或语义必须进入新 major 或经过明确兼容迁移。`pnpm contracts:breaking` 对基线检查删除 operation、删除 schema 字段、收窄 enum 等破坏性变化；`pnpm test:consumer-harness` 防止 `@kit/*`、Next/React、Admin/Domain 私有实现或 server credential marker 进入 Harness。
 

@@ -35,7 +35,7 @@
 
 中央 API 的隔离 Deno 测试为 [index.test.ts](../../supabase/functions/account-api/index.test.ts)，Storage 与上传读取器测试位于 [共享目录](../../supabase/functions/_shared)。
 
-Consumer Harness、Registry contract surface 与 Consumer/Admin E2E 必须针对当前版本核对与实际执行，不能复用其他版本的成功结论。Admin `/admin/consumer-lab` 是合同可视化，不替代 Harness PASS。
+`platform-integration` package check、Consumer Harness、Registry contract surface 与 Consumer/Admin E2E 必须针对当前版本核对与实际执行，不能复用其他版本的成功结论。文档或 capability 索引存在不替代 Harness/目标平台实际 PASS。
 
 ## 结果解释
 
