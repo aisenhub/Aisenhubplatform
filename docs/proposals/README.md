@@ -68,6 +68,8 @@ proposals/
 - [移除 Consumer SDK 与 Contract-First 接入](remove-sdk-contract-first/design.md)：[总计划](remove-sdk-contract-first/plan.md)，把公共集成边界收敛为 OpenAPI/HTTP，并以 Reference Consumer、兼容检查和真实 HTTP/E2E 替代 SDK 发行体系。
 - [Admin Consumer Lab 与 Consumer Conformance Harness](admin-consumer-lab-harness/design.md)：[总计划](admin-consumer-lab-harness/plan.md)，删除完整 `apps/template-preview` Reference Consumer，把人工检查入口收敛到 Admin Consumer Lab，并以 test-only 极薄 Harness 保留独立外部 Consumer 边界证明。
 
+- [Consumer Integration Surface 重构](consumer-integration-surface-refactor/design.md)：[总计划](consumer-integration-surface-refactor/plan.md)，移除 Admin Consumer Lab，将新平台接入资料收敛为仓库根 `platform-integration/` 的开发者/AI 双入口，并继续以 test-only Consumer Harness 作为独立 Conformance 证据。
+
 已完成方案见[归档资料](../archive/README.md)。
 
 ## 给计划 Agent 的执行要求

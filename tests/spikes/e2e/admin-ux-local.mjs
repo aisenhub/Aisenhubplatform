@@ -700,7 +700,6 @@ try {
     '/admin/accounts',
     '/admin/billing/orders',
     '/admin/audit',
-    '/admin/consumer-lab',
     '/admin/security',
   ]) {
     assert.equal(

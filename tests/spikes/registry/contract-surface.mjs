@@ -15,7 +15,7 @@ const manifest = JSON.parse(
 );
 
 assert.equal(manifest.status, 'local-only');
-assert.equal(manifest.schema_version, '3.0.0');
+assert.equal(manifest.schema_version, '4.0.0');
 assert.equal(manifest.contract_compatibility?.account?.major, 'v1');
 assert.equal(manifest.contract_compatibility?.admin?.major, 'v1');
 assert.equal(
@@ -23,8 +23,8 @@ assert.equal(
   'tests/consumer-harness',
 );
 assert.equal(
-  manifest.contract_compatibility?.consumer_lab,
-  'apps/admin/app/admin/consumer-lab/page.tsx',
+  manifest.contract_compatibility?.consumer_integration,
+  'platform-integration/manifest.json',
 );
 assert.ok(!('sdk_compatibility' in manifest));
 assert.ok(!('templates' in manifest));
@@ -39,10 +39,13 @@ for (const surface of ['account', 'admin']) {
 }
 
 for (const required of [
+  'platform-integration/README.md',
+  'platform-integration/AGENTS.md',
+  'platform-integration/manifest.json',
+  'platform-integration/ai/capabilities.json',
   'tests/consumer-harness/server.mjs',
   'tests/consumer-harness/contract.mjs',
   'tests/consumer-harness/public/index.html',
-  'apps/admin/app/admin/consumer-lab/page.tsx',
 ]) {
   assert.ok(
     fs.existsSync(path.join(repositoryRoot, required)),
@@ -74,8 +77,8 @@ console.log(
     {
       manifest: 'PASS',
       canonicalContracts: 'PASS',
+      consumerIntegration: 'PASS',
       consumerHarness: 'PASS',
-      adminConsumerLab: 'PASS',
       templateInventoryRetired: 'PASS',
       browserSecretBoundary: 'PASS',
     },

@@ -113,11 +113,6 @@ describe('admin navigation model', () => {
     expect(adminNavigationLabel('/admin/mfa')).toBe('管理员控制台');
   });
 
-  it('exposes the global Consumer Lab without platform context', () => {
-    expect(adminNavigationLabel('/admin/consumer-lab')).toBe('Consumer Lab');
-    expect(parseAdminPlatformPath('/admin/consumer-lab')).toBeNull();
-  });
-
   it('verifies refined navigation groups for dual-scope IA', () => {
     const globalLabels = adminNavigationGroups.map((g) => g.label);
     expect(globalLabels).toEqual(['工作台', '商业中心', '系统治理', '设置']);
@@ -151,7 +146,6 @@ describe('admin navigation model', () => {
     );
     expect(platformKeys).not.toContain('billing');
     expect(platformKeys).not.toContain('audit');
-    expect(platformKeys).not.toContain('consumer-lab');
     expect(platformKeys).not.toContain('platforms');
     expect(adminNavigationLabel('/admin/accounts/deletion-jobs')).toBe(
       '统一用户',

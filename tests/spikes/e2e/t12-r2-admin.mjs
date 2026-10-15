@@ -2330,7 +2330,6 @@ async function runResponsiveA11yMatrix() {
       path: `/admin/platforms/${platformId}/redemption-batches`,
     },
     { label: 'Audit', path: '/admin/audit' },
-    { label: 'Consumer Lab', path: '/admin/consumer-lab' },
     { label: 'Security', path: '/admin/security' },
     { label: 'MFA', path: '/admin/mfa' },
   ];

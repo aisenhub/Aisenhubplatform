@@ -16,7 +16,7 @@
 - [运维操作](guides/operations.md)
 - [API](reference/api.md)
 - [跨模块合同](reference/contracts.md)
-- [新平台用户系统接入手册（Agent与维护者）](guides/platform-onboarding.md)
+- [平台接入包（开发者与 AI Agent）](../platform-integration/README.md)
 - [数据模型](reference/data-model.md)
 - [配置](reference/configuration.md)
 - [工具链](reference/toolchain.md)
@@ -33,7 +33,7 @@
 
 | 旧文件 | 当前文档 |
 | --- | --- |
-| `docs/api-sdk.md` | [API](reference/api.md)；新平台接入与 Registry 见[接入手册](guides/platform-onboarding.md) |
+| `docs/api-sdk.md` | [API](reference/api.md)；新平台接入与 Registry 见[平台接入包](../platform-integration/README.md) |
 | `docs/auth-security.md` | [身份、安全与生命周期](architecture/modules/identity-security.md) |
 | `docs/config-files.md` | [配置文件与持久任务](architecture/modules/files-jobs.md) |
 | `docs/data-model.md` | [核心数据模型](reference/data-model.md) |

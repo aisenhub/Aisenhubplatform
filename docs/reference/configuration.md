@@ -96,7 +96,7 @@ Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 �
 
 维护入口的调用方、批量预算和环境证据见[Maintenance 调用方与环境差异矩阵](maintenance-callers.md)。
 
-目标 Consumer 的变量名由其仓库自己定义，但安全语义必须等价：Platform Key 只在可信服务端；浏览器只调用同源 BFF；各环境使用独立 Key、Origin 与 Auth 配置。新平台接入步骤见[接入手册](../guides/platform-onboarding.md)。
+目标 Consumer 的变量名由其仓库自己定义，但安全语义必须等价：Platform Key 只在可信服务端；浏览器只调用同源 BFF；各环境使用独立 Key、Origin 与 Auth 配置。新平台接入步骤与示例变量见 [`platform-integration`](../../platform-integration/README.md)。
 
 Maintenance 调度器应每分钟调用 `/maintenance/v1/billing/jobs/run`，请求体使用 `{ "limit": 5 }`；该路由领取任务并在同一固定 `MAINTENANCE_WORKER_ID` 下分派发现、查询和结算。`schedule.json` 只描述调用元数据，仍需由受控外部调度器实际发起请求。
 

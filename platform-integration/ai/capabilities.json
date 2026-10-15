@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "contract": "contracts/account/v1/openapi.json",
+  "capabilities": [
+    {
+      "id": "auth-session",
+      "required": true,
+      "operation_ids": [],
+      "guide": "platform-integration/guides/authentication.md",
+      "conformance_profile": "auth",
+      "notes": "Supabase Auth + platform-owned same-origin BFF; Auth endpoints are not duplicated into Account OpenAPI."
+    },
+    {
+      "id": "account-principal",
+      "required": true,
+      "operation_ids": ["getPrincipal"],
+      "guide": "platform-integration/guides/account.md",
+      "conformance_profile": "account",
+      "notes": "Resolve the current platform principal after Auth session establishment."
+    },
+    {
+      "id": "account-activation",
+      "required": true,
+      "operation_ids": ["activateAccount"],
+      "guide": "platform-integration/guides/account.md",
+      "conformance_profile": "account",
+      "notes": "Login success is not account activation."
+    },
+    {
+      "id": "authorization-entitlement",
+      "required": true,
+      "operation_ids": ["getSubscription"],
+      "guide": "platform-integration/guides/authorization.md",
+      "conformance_profile": "authorization",
+      "notes": "Protected business routes must fail closed and require an active effective entitlement plus the required feature."
+    },
+    {
+      "id": "errors-observability",
+      "required": true,
+      "operation_ids": [],
+      "guide": "platform-integration/guides/errors-observability.md",
+      "conformance_profile": "core",
+      "notes": "Preserve request_id, bounded deadlines, no-store, deterministic error handling and fail-closed behavior."
+    },
+    {
+      "id": "profile-preferences",
+      "required": false,
+      "operation_ids": [
+        "getProfile",
+        "patchProfile",
+        "getPreferences",
+        "patchPreferences"
+      ],
+      "guide": "platform-integration/guides/account.md",
+      "conformance_profile": "account",
+      "notes": "Use ETag/If-Match exactly as declared by the canonical contract."
+    },
+    {
+      "id": "config",
+      "required": false,
+      "operation_ids": [
+        "listConfigs",
+        "createConfig",
+        "getConfig",
+        "patchConfig",
+        "deleteConfig",
+        "listConfigVersions",
+        "createConfigVersionUploadIntent",
+        "getConfigVersionContent",
+        "putConfigVersionContent",
+        "submitConfigToGallery"
+      ],
+      "guide": "platform-integration/guides/config.md",
+      "conformance_profile": "config",
+      "notes": "Config Version is the user-facing file surface; private Storage is never browser-direct."
+    },
+    {
+      "id": "config-gallery",
+      "required": false,
+      "operation_ids": [
+        "listConfigGallery",
+        "getConfigGalleryEntry",
+        "likeConfigGalleryEntry",
+        "unlikeConfigGalleryEntry",
+        "downloadConfigGalleryContent",
+        "applyConfigGalleryContent"
+      ],
+      "guide": "platform-integration/guides/config.md",
+      "conformance_profile": "config",
+      "notes": "Only centrally approved immutable versions are public through the gallery contract."
+    },
+    {
+      "id": "feedback",
+      "required": false,
+      "operation_ids": [
+        "listFeedback",
+        "createFeedback",
+        "getFeedback",
+        "patchFeedback",
+        "createFeedbackAttachmentIntent",
+        "uploadFeedbackAttachmentContent",
+        "deleteFeedbackAttachment",
+        "submitFeedback"
+      ],
+      "guide": "platform-integration/guides/feedback.md",
+      "conformance_profile": "feedback",
+      "notes": "Draft -> private image attachments -> submit; ownership and contact email come from authenticated central context."
+    },
+    {
+      "id": "commerce",
+      "required": false,
+      "operation_ids": [
+        "listPublicPlans",
+        "listCommerceOffers",
+        "getSubscription",
+        "getSubscriptionCheckoutByIdempotencyKey",
+        "createSubscriptionCheckout",
+        "getSubscriptionCheckout",
+        "redeemSubscriptionCode"
+      ],
+      "guide": "platform-integration/guides/commerce.md",
+      "conformance_profile": "commerce",
+      "notes": "Consumer never handles Provider webhook or settlement credentials."
+    },
+    {
+      "id": "lifecycle",
+      "required": false,
+      "operation_ids": [
+        "issueRecentAuthProof",
+        "closeAccount",
+        "createIdentityDeleteRequest"
+      ],
+      "guide": "platform-integration/guides/account.md",
+      "conformance_profile": "lifecycle",
+      "notes": "Keep platform account close distinct from global identity deletion; recent-auth operations are not auto-replayed."
+    }
+  ]
+}
