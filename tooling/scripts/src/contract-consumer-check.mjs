@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
-const manifestPath = path.join(root, 'docs/reference/contract-consumers.json');
+const manifestPath = path.join(
+  root,
+  'docs/architecture/reference/contract-consumers.json',
+);
 
 function fail(message) {
   throw new Error(`Consumer compatibility check failed: ${message}`);
@@ -49,7 +52,9 @@ function assertSchemaField(schema, field, role) {
     fail(`${role} schema is missing field ${field}`);
 }
 
-const manifest = readJson('docs/reference/contract-consumers.json');
+const manifest = readJson(
+  'docs/architecture/reference/contract-consumers.json',
+);
 if (manifest.schema_version !== '1.0.0')
   fail(`unsupported manifest version ${manifest.schema_version}`);
 if (!Array.isArray(manifest.contracts) || manifest.contracts.length === 0)

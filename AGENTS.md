@@ -10,7 +10,7 @@
 
 ## 阅读与边界
 
-先阅读 docs/README.md、docs/architecture/overview.md、docs/agents.md 和 [Agent 开发与发布流程](docs/guides/development-release-workflow.md)，再阅读当前任务相关模块、reference 合同、对应 proposal 及实际源码。开发前必须按该流程标注 R0/R1/R2/R3、受影响消费者、本地验证、生产门槛。architecture 维护当前实现，proposals 维护优化设计、总计划和分阶段计划；计划存在不代表已实现或已授权执行。任务范围以用户当前派发为准。用户指令优先于本文件；公共合同冲突须先核对代码并同步修订，不在局部代码静默选择另一套规则。
+先阅读 docs/README.md、docs/architecture/overview.md、[文档维护规则](docs/development/documentation-governance.md) 和 [Agent 开发与发布流程](docs/development/development-release-workflow.md)，再阅读当前任务相关模块、architecture/reference 合同、对应 Plan 及实际源码。开发前必须按该流程标注 R0/R1/R2/R3、受影响消费者、本地验证、生产门槛。architecture 维护当前实现，plans 维护优化设计、总计划和分阶段计划；计划存在不代表已实现或已授权执行。任务范围以用户当前派发为准。用户指令优先于本文件；公共合同冲突须先核对代码并同步修订，不在局部代码静默选择另一套规则。
 
 只执行已派发的任务及必要依赖检查；任务清单的存在不等于获准自动开发全部模块。不要自行增加组织、支付、微服务或第三方接入能力。依赖门槛未通过时完成独立准备，报告具体阻塞，不伪造通过结果。
 
@@ -28,7 +28,7 @@ Supabase操作先核对当前官方文档及固定版本；遵循可用技能要
 
 ## 交接与 GitHub 阶段同步
 
-单人单机默认一次一个任务，使用main与短期codex/任务分支，不要求长期develop分支。用户已长期授权Agent对明确派发的任务创建分支、小提交、推送，并在[开发与发布流程](docs/guides/development-release-workflow.md)第2.2节全部条件满足后自动合并main及推送，无须逐次询问。目标为https://github.com/aisenhub/Aisenhubplatform.git；推送后核对远端commit，不把本地commit当作已上传。
+单人单机默认一次一个任务，使用main与短期codex/任务分支，不要求长期develop分支。用户已长期授权Agent对明确派发的任务创建分支、小提交、推送，并在[开发与发布流程](docs/development/development-release-workflow.md)第2.2节全部条件满足后自动合并main及推送，无须逐次询问。目标为https://github.com/aisenhub/Aisenhubplatform.git；推送后核对远端commit，不把本地commit当作已上传。
 
 先检查分支、远端main与工作区，不强推、不覆盖用户工作；只暂存本任务明确文件，提交前检查差异及敏感信息。R0/R1满足适用检查和门槛条件后可合并，R2/R3完成适用Local、本地 Supabase及领域验收；CI、Hosted Staging和远程Provider不增加测试门槛。main更新或解决冲突后重验；必需本地检查失败、未决业务规则或归属不明时保留分支并处理阻塞。若main合并/推送会自动部署生产，须先核对生产目标和发布清单并已有生产授权；绑定未知不得擅自合并。生产部署、真实支付、费用变更与破坏性操作不在Git长期授权内，已有明确授权不重复询问。
 

@@ -2,7 +2,9 @@
 
 爱发电 Webhook 的 hash-only Inbox 使用有序 JSON 数组编码已签名订单事实，再计算摘要；状态变化不改变事实摘要，字段边界不允许无分隔拼接歧义。Provider 签名算法保持原协议。
 
-本文件描述当前订阅、权益和兑换实现，属于 [系统架构](../overview.md) 的权益模块，依赖 [核心数据模型](../../reference/data-model.md)。Admin 与 Account API 必须共用数据库领域写入口。
+当前 Afdian 集成采用 **Webhook + 服务端 API**：Webhook 负责实时入站，Maintenance 通过 `query-order` 负责权威订单查询、重试和补偿；OAuth2.0 不属于当前收款/核验链路。API 请求只在服务端使用 `AFDIAN_USER_ID` 与 `AFDIAN_API_TOKEN`，签名为 `MD5(token + "params" + params + "ts" + timestamp + "user_id" + userId)`，Token 不进入浏览器、URL、日志或仓库。标准订单 Webhook 要求 `ec=200`、`data.type=order`，并使用 `data.sign` 对 `out_trade_no + user_id + plan_id + total_amount` 的 UTF-8 拼接值执行 RSA PKCS#1 v1.5 / SHA-256 验证；公钥是 Provider 配置，可由 `AFDIAN_WEBHOOK_PUBLIC_KEY` 覆盖以支持轮换。Webhook 的 status 字段不属于该签名 canonical，不能作为 Inbox 唯一身份；事件键只绑定订单号，同订单不同 payload 由 payload hash 冲突保留证据。API 非 2xx、格式异常、网络失败或超时统一视为 temporarily unavailable，不能猜测订单不存在或已支付。环境变量与 Secret 约束见[配置参考](../reference/configuration.md)，具体协议实现以 `supabase/functions/_shared/afdian.ts` 为准。
+
+本文件描述当前订阅、权益和兑换实现，属于 [系统架构](../overview.md) 的权益模块，依赖 [核心数据模型](../reference/data-model.md)。Admin 与 Account API 必须共用数据库领域写入口。
 
 ## 1. 唯一权益规则
 

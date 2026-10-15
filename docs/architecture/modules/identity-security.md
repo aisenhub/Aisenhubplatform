@@ -2,6 +2,10 @@
 
 本文件描述当前身份、安全与生命周期实现，属于 [系统架构](../overview.md) 的身份模块。身份是全局共享的，业务状态是平台本地的，两者不能互相替代。
 
+## Requirements
+
+本模块主要承担 [身份与安全需求](../../spec/identity-security.md) `REQ-IAM-001` ～ `REQ-IAM-011`，并共同满足 `REQ-SYS-001` ～ `REQ-SYS-006`、`REQ-SYS-008`。仍在执行的 MFA 整改计划只能把已完成实现同步到本架构；`REQ-IAM-011` 等未完成目标保留为 Partial/Plan/Review，不提前写成当前能力。
+
 ## 1. 平台信任边界
 
 V1 全部为同一运营主体控制的自营平台。Platform API Key 只证明调用服务所属平台；Global JWT 证明用户身份，**不证明用户是在目标平台完成登录，也不是平台绑定的授权令牌**。
@@ -52,11 +56,17 @@ Principal 从验证后的 user + Platform Key 得到 userId、platformId、platf
 
 Admin Shell 在渲染普通管理页面前读取该状态：未登录转登录；active AAL1 管理员只进入 `/admin/mfa`；active AAL2 管理员进入普通管理页面；pending 管理员只允许 `/admin/mfa` 与 `/admin/security` 完成双 TOTP onboarding 和查看 readiness；非管理员和授权服务故障保持在无业务内容的阻断界面。`/admin/login` 是唯一不读取 status 的登录入口；BFF 只代理状态与 membership API，不复制 active-floor 或 factor 数量算法。
 
-普通 Admin 操作以 active membership + 活动 session + AAL2 为统一授权基线。关键密钥生命周期（Platform Key 创建、部署确认、撤销）、Global Delete 启动/重试、平台账户状态变更（通用 PATCH 以及 suspend/restore/close）、Billing 人工 requery/resolve，以及 System Admin `add / activate / remove` 都要求近期 step-up；近期 MFA 证明最长有效 30 分钟。System Admin mutation 在数据库中先取得统一 membership advisory lock，再重新校验 actor/recent-MFA：新增只创建 pending membership，激活前服务端确认目标至少 2 个 verified TOTP，移除 active member 时事务内保证结果仍有至少 2 名 active，并立即撤销目标 Auth session 与 recent-proof。Plan 与订阅配置、兑换码批次与交付、配置文件读取/下载/普通删除与文件策略等其他管理操作仍以 AAL2 为边界，不额外要求 recent MFA。
+普通 Admin 操作以 active membership + 活动 session + AAL2 为统一授权基线。当前 recent-MFA 范围已经扩展到多个高风险 mutation，包括 System Admin `add / activate / remove`、Platform Key 创建/部署确认/撤销、Global Delete 启动/重试、Platform Account suspend/restore/close、Billing 人工 requery/resolve、Plan command、Offer/Price/Provider Mapping 商业配置变更、Redemption Campaign 创建、Subscription/Entitlement command、Config Gallery review/governance、Feedback batch delete，以及提高平台 Storage 总容量等条件式敏感变更。具体 operation 是否需要 step-up 以当前 Admin OpenAPI 的 `x-requires-step-up` / `x-requires-step-up-when` 和服务端实际 `adminStepUp` enforcement 共同为准，不能维护一份脱离合同/代码的静态白名单。近期 MFA proof 最长有效 30 分钟。System Admin mutation 在数据库中先取得统一 membership advisory lock，再重新校验 actor/recent-MFA：新增只创建 pending membership，激活前服务端确认目标至少 2 个 verified TOTP，移除 active member 时事务内保证结果仍有至少 2 名 active，并立即撤销目标 Auth session 与 recent-proof。
 
 全局 Identity 的 Admin 读取继续把 Auth PII 与业务生命周期分层：`GET /admin/api/v1/accounts` 用服务端 Auth Admin API 枚举/精确解析允许的 Auth identity，再由 `private.admin_identity_accounts` 补平台账户关系；`GET /admin/api/v1/accounts/{userId}` 对一个仍存在的 Auth identity 复用同一 Auth 读取，并通过只授予 `admin_executor` 的 `private.admin_identity_lifecycle_read` 补当前/最近删除 request 与关联 job。该只读投影固定 security-definer search_path，只返回 Admin UI 做状态判断所需的 request/job 字段，不返回 request session、job fence 或 lease 等执行内部信息。读取仍只要求普通 Admin AAL2；Global Delete 启动/重试继续走既有 recent-MFA mutation 边界。
 
-Admin Auth adapter完成官方MFA验证后，由Admin BFF使用共享服务端HMAC Secret签发最多60秒的attestation，绑定user_id、session_id、factor_id、verified_at和随机nonce；中央Account API必须验证签名、当前AAL2 bearer的user/session绑定与时效后，才调用private.admin_step_up_issue写入private.admin_step_up。attestation 只负责证明“刚完成 MFA”并保持 60 秒短寿命，真正的 step-up 证明最长有效 30 分钟。证明记录保存user_id、session_id、verified_at、expires_at、factor_id和attestation_nonce；nonce按当前管理员会话唯一消费，重放拒绝。普通token refresh不延长窗口；撤销会话或移除管理员 membership 会立即使证明不可用。浏览器提交的factor id、挑战完成布尔值或已有AAL2本身都不构成近期MFA证明。
+Admin Auth adapter 先在当前 Supabase Auth session 内对指定 TOTP factor 执行真实 challenge/verify；成功获得 elevated session 后还必须确认 session ID 与原登录 acknowledgement 相同。随后 Admin BFF 用共享服务端 HMAC Secret 签发最多 60 秒的 attestation，绑定 user_id、session_id、factor_id、verified_at 和随机 nonce；中央 Account API 验证签名、当前 AAL2 bearer 的 user/session 绑定与时效后，才调用 `private.admin_step_up_issue` 写入 `private.admin_step_up`。中央 API 不重新向 Auth Provider 查询 factor，而是信任“当前 session 已完成 Provider challenge + server-signed attestation”这条链。数据库只接受 verified_at 在当前时间前 90 秒以内且不能超过未来 5 秒的证明输入；最终 step-up proof 最长有效 30 分钟。证明记录保存 user_id、session_id、verified_at、expires_at、factor_id 和 attestation_nonce；nonce 按当前管理员会话唯一消费，重放拒绝。普通 token refresh 不延长窗口；撤销会话或移除管理员 membership 会立即使证明不可用。浏览器单独提交的 factor id、挑战完成布尔值或已有 AAL2 本身都不构成近期 MFA 证明。
+
+### 当前 TOTP 因子生命周期边界
+
+Admin 当前已经支持列出 verified TOTP、首因子注册、在已有因子时继续添加备用 TOTP，并在 enrollment/普通验证成功后刷新 Auth session。开始新的 enrollment 前只会清理由失败渲染等原因遗留的 **unverified** TOTP，不会自动触碰 verified factor。
+
+当前 Admin **没有已验证 TOTP 的 unenroll/delete 产品入口**；源码中的 `unenroll` 仅用于清理 unverified enrollment。因此 `REQ-IAM-011` 仍是 Partial：第二 verified factor 的添加能力已经存在，但“已有 factor 的安全删除、在线最后因子保护、因子删除后主动失效旧 recent proof”尚未成为完整产品能力。历史固定版本探针还证明 Supabase 原生 unenroll 以及两个并发会话可以把 verified factor 删除到 0，所以未来应用层最后因子检查也只能描述为受控 Admin 入口保护，不能夸大为 Auth Provider 全局原子保证。离线恢复继续属于受控运维路径，不在网页提供 MFA bypass。
 
 中央 Account API 对普通 Admin Route 统一要求 active System Admin、活动管理员会话与 AAL2；私有数据库包装函数继续重新检查 active membership 和 session。System Admin membership mutation、Global Delete、关键密钥生命周期、平台账户状态变更与 Billing requery/resolve 使用同一 recent-MFA 边界；membership 的 active-floor、目标 MFA readiness 和并发串行化只在 private domain function 内决定。Account executor无权调用 Admin 包装或记录 step-up。数据库不自行验证 HTTP JWT 签名，由服务器 Auth adapter 验证后传入受控上下文。
 
@@ -88,7 +98,7 @@ Supabase Secret Key用于服务器Storage/Auth API；独立于SQL凭据和SSR用
 
 Platform Suspend保留数据，拒绝业务及账户修改；恢复需Admin审计。Close默认不可自助重开，保留身份关联；普通平台注销不能调用Supabase删除用户API。
 
-V1 Close后30天清理Profile/Preferences/文件内容，保留墓碑账户与最小业务历史。暂停不触发清理。若需其他保留期限，由运营在上线前明确配置并记录，不将这里的默认值当作法律合规结论。
+Close 后个人资料匿名化/清理期限**不在代码中硬编码为固定 30 天**。`private.account_retention_policy` 是显式法务/财务 policy source，记录 `personal_data_retention_days`、来源和依据；没有 policy row 时 retention cutoff 直接返回 `retention_policy_not_configured`，匿名化任务 fail closed。暂停不触发清理。数据库/Storage 备份最长保留窗口与个人信息 retention 是不同政策，不能互相替代。
 
 Global Delete由用户近期重新认证后提交请求，Admin近期MFA确认执行；流程可中断续跑：
 

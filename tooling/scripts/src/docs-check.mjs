@@ -9,13 +9,22 @@ const root = path.resolve(
 const docsRoot = path.join(root, 'docs');
 const requiredFiles = [
   'README.md',
-  'agents.md',
+  'spec/README.md',
+  'architecture/README.md',
   'architecture/overview.md',
-  'guides/development.md',
-  'guides/testing.md',
-  'reference/api.md',
-  'reference/configuration.md',
-  'reference/data-model.md',
+  'architecture/decisions/README.md',
+  'architecture/reference/api.md',
+  'architecture/reference/configuration.md',
+  'architecture/reference/data-model.md',
+  'development/README.md',
+  'development/documentation-governance.md',
+  'development/development-release-workflow.md',
+  'development/development.md',
+  'development/testing.md',
+  'development/operations.md',
+  'development/platform-onboarding.md',
+  'plans/README.md',
+  'review/README.md',
 ];
 const requiredRootFiles = [
   'contracts/account/v1/openapi.json',
@@ -40,10 +49,7 @@ function markdownFiles(directory) {
     return entry.isFile() && entry.name.endsWith('.md') ? [absolute] : [];
   });
 }
-const localReferenceRoots = [path.join(docsRoot, 'aifadian') + path.sep];
-const documents = markdownFiles(docsRoot).filter(
-  (file) => !localReferenceRoots.some((rootPath) => file.startsWith(rootPath)),
-);
+const documents = markdownFiles(docsRoot);
 const files = [
   ...documents,
   ...['README.md', 'AGENTS.md', 'registry/README.md'].map((name) =>

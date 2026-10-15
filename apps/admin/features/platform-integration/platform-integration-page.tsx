@@ -256,7 +256,7 @@ export function PlatformIntegrationPage() {
           <h2 className="mt-2">目标平台仍需独立验证</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
             下面两项不提供手工“完成”按钮。请按
-            `docs/guides/platform-onboarding.md`
+            `docs/development/platform-onboarding.md`
             在目标平台仓库验证，再把真实测试记录留在目标项目中。
           </p>
         </div>

@@ -1,0 +1,115 @@
+# 配置参考
+
+只列当前源码读取的应用配置；值由环境注入。公开配置与 Secret 分离，真实凭据不得进入文档。
+
+## Admin
+
+来源：[认证配置](../../../apps/admin/app/api/auth/_lib.ts)和[资源代理](../../../apps/admin/app/api/v1/%5B...path%5D/route.ts)。
+
+| 变量 | 用途与优先级 |
+| --- | --- |
+| SUPABASE_URL | Auth URL；回退 NEXT_PUBLIC_SUPABASE_URL |
+| SUPABASE_PUBLISHABLE_KEY | 优先，其次 SUPABASE_ANON_KEY、NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY、NEXT_PUBLIC_SUPABASE_ANON_KEY |
+| ADMIN_ORIGIN | 同源校验的精确 origin |
+| ACCOUNT_API_URL | 中央 API base URL；代理在其后追加资源路径 |
+| ACCOUNT_API_TIMEOUT_MS | Admin BFF 到中央 Account API 的请求超时，默认 5000ms，最大 30000ms |
+| ADMIN_MFA_ATTESTATION_SECRET | Admin BFF 与中央 API 共享的服务端 HMAC Secret，至少 32 bytes；仅用于签发最多 60 秒的近期 MFA attestation，不得进入浏览器或日志 |
+| NODE_ENV | production 时写 Secure Cookie |
+
+## Consumer Conformance Harness
+
+Harness 位于 `tests/consumer-harness`，仅用于 Local conformance，不参与 workspace/生产部署。浏览器资源不读取任何服务端 Secret；Platform Key、access/refresh token 都由 Harness server 边界持有或以 HttpOnly Cookie 保存。
+
+| 变量 | 行为 |
+| --- | --- |
+| `HARNESS_ORIGIN` | 必须是 loopback origin，默认 `http://127.0.0.1:3110`；用于精确 Origin/CSRF 校验 |
+| `HARNESS_PORT` | loopback server 端口；Local E2E 使用 3110/3111 |
+| `SUPABASE_URL` | Local/目标测试 Auth URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Auth publishable key；不是 secret/service_role |
+| `ACCOUNT_API_URL` | Harness server 到中央 Account API 的 base URL |
+| `ACCOUNT_API_TIMEOUT_MS` | 上游请求 deadline，默认 5000ms，最大 30000ms |
+| `ACCOUNT_PLATFORM_KEY` | test process 注入的 server-only Platform Key；禁止进入 HTML/JS/日志/Git |
+
+## 中央 API
+
+来源：[account-api](../../../supabase/functions/account-api/index.ts)。
+
+| 变量 | 行为 |
+| --- | --- |
+| SUPABASE_URL | Auth 与 Storage 地址 |
+| SUPABASE_ANON_KEY、SUPABASE_PUBLISHABLE_KEY | Auth 验证优先使用前者，后者为回退 |
+| ACCOUNT_API_JWT_SECRET | 可选 HS256 JWT 验证 Secret；ES256 access token 使用 `SUPABASE_URL` 的 Auth JWKS。两者均保留数据库 session/revocation 检查；公钥不可用时回退 Auth `/user` |
+| ACCOUNT_DB_URL | Account 独立数据库连接 |
+| ADMIN_DB_URL | Admin 独立数据库连接 |
+| ACCOUNT_API_DB_URL、SUPABASE_DB_URL | 独立连接缺失时依次回退 |
+| ACCOUNT_API_DB_POOL_MAX | Account API 数据库连接池上限，允许 4–64，默认 8；按实际数据库连接预算调整 |
+| ACCOUNT_API_DB_ROLE_MODE | 默认 `transaction`，每个事务设置 executor 角色；设为 `startup` 时在 Account/Admin 独立连接池建立时固定对应 executor 角色，需确认连接用户允许 `SET ROLE` |
+| ADMIN_MFA_ATTESTATION_SECRET | 与 Admin BFF 相同的服务端 HMAC Secret；中央 API 用它验证 user/session/factor/时间绑定后才允许签发 recent proof |
+| PLATFORM_KEY_HMAC_SECRET | 当前平台 Key HMAC Secret |
+| PLATFORM_KEY_HMAC_SECRET_PREVIOUS | 可选上一平台 Secret |
+| REDEMPTION_HMAC_SECRET | 当前兑换 Secret |
+| REDEMPTION_HMAC_KEY_VERSION | 当前版本，默认 1 |
+| REDEMPTION_HMAC_SECRET_PREVIOUS | 可选上一兑换 Secret |
+| REDEMPTION_HMAC_PREVIOUS_KEY_VERSION | 上一兑换 Secret 的版本 |
+| SUPABASE_SERVICE_ROLE_KEY | Storage 服务端凭据 |
+| ACCOUNT_API_PORT | 直接 Deno 运行端口，默认 8000 |
+| ACCOUNT_API_AUTH_TIMEOUT_MS | JWKS 与 Supabase Auth `/auth/v1/user` 上游超时，默认 5000ms，最大 30000ms |
+| BILLING_CHECKOUT_SECRET | 服务端 Checkout 绑定令牌的 HMAC Secret；只用于生成 hash，不得进入浏览器、日志或 Git；未配置时 Checkout 拒绝签发 |
+| BILLING_CHECKOUT_KEY_VERSION | Checkout HMAC Secret 版本，必须是正整数，并与 Secret 轮换记录一致 |
+| BILLING_PROVIDER_ACCOUNT_ID | Checkout 与 Webhook 共用的 active `billing_provider_accounts.id`；必须与当前 Provider mapping 一致，禁止写入前端 |
+| BILLING_CHECKOUT_ENABLED | `false` 时仅停止新 Checkout 签发；已有订单和 webhook 不受此开关影响，默认关闭，须在 G-PROVIDER/G-OPS 通过后显式开启 |
+| AFDIAN_CHECKOUT_BASE_URL | 可选；服务端生成 Afdian Checkout URL 的 base，默认 `https://afdian.com/order/create`；不能由浏览器传入；仅明确的 Local loopback 可使用 HTTP 测试地址，其余情况 fail closed 并要求 HTTPS |
+
+## Maintenance
+
+来源：[maintenance](../../../supabase/functions/maintenance/index.ts)。
+
+| 变量 | 行为 |
+| --- | --- |
+| MAINTENANCE_FILES_TOKEN | 文件 cleanup/run/reconcile 专用 Bearer token |
+| MAINTENANCE_IDENTITY_TOKEN | deletion-jobs、account retention、idempotency cleanup 专用 Bearer token |
+| MAINTENANCE_BILLING_TOKEN | Billing job/alert/reconciliation 专用 Bearer token；Hosted Billing Cron 的 `billing_maintenance_job_token` 必须只映射到该 capability |
+| MAINTENANCE_DB_URL | 优先连接；回退 SUPABASE_DB_URL，再 ACCOUNT_API_DB_URL |
+| MAINTENANCE_WORKER_ID | 受控 Worker 身份；staging/生产调度必须固定且每个并发 Worker 唯一，未配置时每次请求生成临时 maintenance-UUID，仅适合单次本地调用 |
+| MAINTENANCE_PORT | 直接运行默认 8001 |
+| SUPABASE_URL、SUPABASE_SERVICE_ROLE_KEY | Storage 和 Auth Admin API |
+| BILLING_WEBHOOK_DB_URL | Webhook Inbox 数据库连接；缺失时回退 `SUPABASE_DB_URL`、`ACCOUNT_API_DB_URL` |
+| BILLING_WEBHOOK_INGRESS_ENABLED | `false` 时拒绝新的 Provider webhook 且不写入 Inbox；独立于 Checkout，默认开启 |
+| BILLING_PROVIDER_ACCOUNT_ID | Webhook 使用的 `billing_provider_accounts.id`；必须与 active Afdian provider account 一致，禁止写入前端 |
+| AFDIAN_WEBHOOK_PATH_SECRET | 可选；为爱发电回调 URL 增加不可猜路径段。配置后 URL 必须使用 `/webhooks/afdian/<secret>` |
+| AFDIAN_WEBHOOK_PUBLIC_KEY | 可选；爱发电 Webhook RSA/SHA-256 签名校验使用的 PEM 公钥。默认内置教程公布的公钥，爱发电轮换公钥时通过 Secret/环境变量覆盖 |
+| BILLING_BACKGROUND_PROCESSING_ENABLED | `false` 时停止领取新的 Billing job，既有 lease 等待超时后可恢复，默认开启 |
+| BILLING_AUTO_SETTLEMENT_ENABLED | `false` 时停止 Provider 查询与自动结算，已入队任务保留并可恢复，默认开启 |
+| AFDIAN_USER_ID | 爱发电开发者账号 `user_id`；仅供 maintenance 服务端 API 调用，禁止进入浏览器 |
+| AFDIAN_API_TOKEN | 爱发电开发者 API Token；仅供 maintenance 服务端签名 API 请求，必须通过 Secret 注入 |
+| AFDIAN_API_BASE_URL | 可选；默认 `https://afdian.com/api/open`；仅明确的 Local loopback 可指向 HTTP 测试代理，其余情况 fail closed 并强制 HTTPS |
+| AFDIAN_API_TIMEOUT_MS | 可选；Provider API 超时毫秒数，默认 5000 |
+
+Afdian 的 API MD5 canonical、Webhook RSA/SHA-256 签名字段、Inbox 身份和 fail-closed 语义见[支付、订单与结算](../modules/billing-settlement.md)和[权益、订阅投影与兑换](../modules/entitlements-redemption.md)；实现以 `supabase/functions/_shared/afdian.ts` 为准。这里仅维护运行时配置名称，不保存 Provider 网页快照、账号材料或 Secret 值。
+
+Hosted Billing 调度只从 Vault 读取两个运行时 Secret：
+
+| Vault name | 约束 |
+| --- | --- |
+| `billing_maintenance_function_url` | 必须是 HTTPS maintenance 函数基址，路径以 `/maintenance` 结尾；系统规范化后只调用 `/maintenance/v1/billing/jobs/run`，拒绝缺少 maintenance 路径、query 或 fragment 的值 |
+| `billing_maintenance_job_token` | 仅作为 Billing capability Bearer，必须与函数 `MAINTENANCE_BILLING_TOKEN` 对应；不能复用于 files/identity capability；缺失或空值时 Cron 记录 `MISSING_RUNTIME_CONFIG` 并安全跳过 |
+
+Cron 每分钟先观察上一批 `pg_net` 响应，再提交下一批最多 5 个任务。`private.billing_cron_invocations` 分开记录 scheduler 调用、请求受理、HTTP 完成和 Worker 业务结果；该表不是 Data API 消费者入口，响应摘要只保留计数和非敏感错误码。
+
+维护入口的调用方、批量预算和环境证据见[Maintenance 调用方与环境差异矩阵](maintenance-callers.md)。
+
+目标 Consumer 的变量名由其仓库自己定义，但安全语义必须等价：Platform Key 只在可信服务端；浏览器只调用同源 BFF；各环境使用独立 Key、Origin 与 Auth 配置。新平台接入步骤与示例变量见 [`platform-integration`](../../../platform-integration/README.md)。
+
+Billing processing 当前由 canonical migration 安装 `private.billing_maintenance_cron()` 每分钟经 Vault + pg_net 调用 `/maintenance/v1/billing/jobs/run`，请求体使用 `{ "limit": 5 }`；该路由领取任务并在同一固定 `MAINTENANCE_WORKER_ID` 下分派发现、查询和结算。Hosted 是否真的配置 Vault、pg_cron/pg_net、网关和健康 Worker 仍需环境证据。除 Billing 这个数据库 Cron 例外外，`schedule.json` 中 files/reconcile/retention/idempotency 等 cadence 仍只是调用元数据，仓库内没有同等级的已安装 scheduler 证据。
+
+调度清单每天调用 `/maintenance/v1/idempotency/cleanup`，通过 `job_executor` 受限 wrapper 批量删除已过期的普通用户/Admin 幂等缓存。该任务不删除 `billing_checkout_intents` 或 `billing_orders` 等长期交易绑定；无需新增环境变量。
+
+数据库回退是代码行为，不保证连接凭据权限最小化。各服务仍在事务内切换 executor 角色。Hosted Supabase 需要将 `postgres` 加入这些 executor 角色，见 `20260912143000_hosted_runtime_role_membership.sql`；否则 `SET LOCAL ROLE` 会在本地超级用户测试之外失败。
+
+## 开发与共享设施
+
+- LOGGER：共享日志实现，默认 pino。
+- NEXT_PUBLIC_DEFAULT_LOCALE：共享 i18n 默认 en。
+- NEXT_PUBLIC_VERSION_UPDATER_REFETCH_INTERVAL_SECONDS：共享版本检查组件间隔。
+
+本地端口、Auth 和函数配置以 [supabase/config.toml](../../../supabase/config.toml)为准。示例 env 文件不是完整的服务配置清单。
