@@ -13,7 +13,7 @@ describe('admin navigation model', () => {
   it('separates global and platform routes', () => {
     expect(parseAdminPlatformPath('/admin/platforms')).toBeNull();
     expect(parseAdminPlatformPath('/admin/accounts')).toBeNull();
-    expect(adminNavigationLabel('/admin/accounts')).toBe('统一用户');
+    expect(adminNavigationLabel('/admin/accounts')).toBe('用户中心');
     expect(
       parseAdminPlatformPath('/admin/platforms/platform-1/accounts'),
     ).toEqual({
@@ -105,17 +105,29 @@ describe('admin navigation model', () => {
   });
 
   it('uses the canonical Billing orders route', () => {
-    expect(adminNavigationLabel('/admin/billing/orders')).toBe('计费管理');
+    expect(adminNavigationLabel('/admin/billing/orders')).toBe('业务中心');
   });
 
   it('consolidates security navigation away from the MFA flow', () => {
-    expect(adminNavigationLabel('/admin/security')).toBe('安全与账户');
+    expect(adminNavigationLabel('/admin/security')).toBe('安全中心');
     expect(adminNavigationLabel('/admin/mfa')).toBe('管理员控制台');
   });
 
   it('verifies refined navigation groups for dual-scope IA', () => {
     const globalLabels = adminNavigationGroups.map((g) => g.label);
-    expect(globalLabels).toEqual(['工作台', '商业中心', '系统治理', '设置']);
+    expect(globalLabels).toEqual(['']);
+    expect(
+      adminNavigationGroups.flatMap((group) =>
+        group.items.map((item) => [item.label, item.compactLabel]),
+      ),
+    ).toEqual([
+      ['仪表盘', '仪表盘'],
+      ['平台中心', '平台'],
+      ['用户中心', '用户'],
+      ['业务中心', '业务'],
+      ['审计中心', '审计'],
+      ['安全中心', '安全'],
+    ]);
 
     const platformGroups = platformNavigationGroups('p1');
     const platformLabels = platformGroups.map((g) => g.label);
@@ -148,7 +160,7 @@ describe('admin navigation model', () => {
     expect(platformKeys).not.toContain('audit');
     expect(platformKeys).not.toContain('platforms');
     expect(adminNavigationLabel('/admin/accounts/deletion-jobs')).toBe(
-      '统一用户',
+      '用户中心',
     );
   });
 });

@@ -55,6 +55,7 @@ proposals/
 - [OPT-009 单平台账户工作台与账户治理](platform-account-workbench/design.md)：[计划](platform-account-workbench/plan.md)，将单平台账户页升级为 Platform Account 360，补齐服务端 cursor/filter、Admin-only tags/notes、权威治理 reason/timeline，以及 Profile/Subscription/Billing/Config/Feedback 摘要聚合。
 
 - [OPT-010 全局商业治理与单平台订阅运营](commercial-subscription-operations/design.md)：[计划](commercial-subscription-operations/plan.md)，建立 Plan/Offer/immutable Price 商业目录与兼容 Checkout，升级经营摘要、权益用户、Redemption Campaign 和 Global/Platform 商业工作台，同时保留现有 Entitlement/Billing 安全账本。
+- [OPT-011 Admin 全局侧边栏导航收敛](admin-global-sidebar-navigation/design.md)：[计划](admin-global-sidebar-navigation/plan.md)，移除 Global Sidebar 的分组标题，统一六个业务入口名称，补齐带精简文字的折叠态，并收窄 PlatformSwitcher 浮层与修复搜索框图标间距。
 
 - [预上线单轨化清理与缺陷修复](prelaunch-canonicalization-and-remediation/design.md)：[计划](prelaunch-canonicalization-and-remediation/plan.md)，基于项目尚未正式上线、无正式数据的前提，删除旧数据/旧接口兼容双轨，收敛 Commerce 与 Config 权威模型，并分阶段修复 OPT-001～OPT-010 已确认缺陷。
 

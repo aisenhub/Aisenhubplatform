@@ -1,53 +1,67 @@
 ﻿# 项目优化事项收集区
 
-状态：Intake / 仅收集与分析，尚未形成正式实施 Proposal。
+状态：Intake / 本轮优化批次已建立；新增事项按条提升为正式 Proposal、实施并验证。
 
-本目录用于记录用户连续提出的多方面项目优化修改点。当前阶段只做问题澄清、代码/文档证据核对和影响分析，不修改产品代码、不安装依赖、不部署、不启动实施任务。
+本目录用于记录用户连续提出的多方面项目优化修改点。收集单条需求时先做问题澄清、代码/文档证据核对和影响分析；当该条需求进入本轮优化批次后，再按下方“详细计划 → 实施 → 验证”的流程执行。未经登记和规划的后续事项不得顺手实施。
 
 ## 工作方式
 
-1. 所有修改点统一追加到本文件，不为每条事项默认创建独立文档；如果用户明确要求把某项已确认的复杂架构分析单独沉淀，可新增预研文档，但本表仍保留该事项的唯一摘要入口并链接详细文档。
-2. 每收到一条修改点，先结合当前代码和文档进行必要分析，再登记为一个新的 `OPT-XXX` 条目。
-3. 条目以“后续制定优化计划时能够明确知道要优化什么”为目标，重点记录优化内容、当前问题/依据、涉及范围、关键约束和必要备注；不在收集阶段提前展开成完整实施步骤。
-4. 只把已核实的代码、合同和文档事实写成当前状态；尚未核实但可能影响规划的内容明确标记为“待验证”。
-5. 多个修改点存在共同根因、共享文件或依赖时，在备注中标记关联编号，等收集完成后再统一判断合并、拆分和实施顺序。
-6. 收集完成后，再依据本清单提升为 `docs/proposals/<明确名称>/` 下的正式 `design.md`、`plan.md` 和必要的 `phases/`。
-7. 本清单只表示“需要纳入后续优化规划”，不表示已授权实施，也不表示功能已完成或验证已通过。
+1. 所有修改点统一追加到本文件，不为每条事项默认创建第二份“需求清单”；复杂事项可以建立独立预研或正式 Proposal，但本表始终保留该事项的唯一摘要入口并链接详细文档。
+2. 每收到一条修改点，先结合最新代码和文档进行必要分析，再登记为一个新的 `OPT-XXX` 条目；本轮新需求从 `OPT-011` 起继续编号。
+3. 每个新 `OPT-XXX` 登记后，先建立或更新 `docs/proposals/<明确名称>/` 下的正式 `design.md`、`plan.md`、必要的 `phases/`、`agent-handoff.md` 和 `verification-record.md`，形成可直接执行的详细优化计划；计划完成前不得开始产品代码实施。
+4. 详细计划确认后，立即按该计划实施当前 OPT，完成适用的本地验证、合同/消费者同步和文档同步，再进入下一条用户需求；默认串行处理，一次只闭环一个 OPT 的实现与验证。
+5. 只把已核实的代码、合同和文档事实写成当前状态；尚未核实但可能影响规划的内容明确标记为“待验证”。多个修改点存在共同根因、共享文件或依赖时，在备注中标记关联编号，并在正式计划中处理依赖顺序。
+6. “完成当前 OPT”在本轮批次内表示：设计、计划、代码/迁移/合同/测试/文档修改和适用验证均已完成；GitHub push、合并 `main` 和任务分支删除统一延后到本轮所有 OPT 全部完成后执行。
+7. 本清单中的状态不得把计划当成实现、把未运行验证写成 PASS，或把尚未同步的远端状态写成已部署。
+
+## 当前优化批次（2026-10-15）
+
+- 批次目标：持续接收用户后续优化需求，逐条完成“登记 → 详细计划 → 实施 → 验证”，最后统一交付 GitHub。
+- 起始基线：`main` / `3b82c1d483879877e0716bc65578d3d85a4c19a8`；创建批次时本地与 `origin/main` 一致、工作区干净。
+- 批次分支：`codex/optimization-batch-20261015`。
+- 新需求编号：从 `OPT-011` 开始递增。
+- GitHub 策略：本轮实施期间允许按阶段形成必要的本地小提交以保护历史，但不把本批次分支 push/merge 到 GitHub；待用户本轮所有优化需求均已完成并通过适用验证后，统一审查全部差异、提交/整理剩余改动、push 批次分支、合并并 push `main`，核对远端 `main` 最终 SHA，再删除已合并的本地和远端批次分支。
+- Supabase 策略：任何 OPT 若修改 migration、Edge Function、数据库函数/RLS/权限、Storage、Auth 或 Supabase 项目配置，必须在对应阶段及时同步到计划明确且已获授权的目标 Supabase 环境并验证实际状态；涉及 Production 时仍须先完成 `docs/guides/development-release-workflow.md` 的生产门槛、目标核对和恢复准备，不能把环境不明或部署结果未知记为完成。
+- 批次结束条件：所有本轮新增 OPT 均完成计划、实施、适用验证与 Supabase 同步（如适用），最终整批 diff 审查通过，GitHub `main` 已包含全部有效改动，且已合并分支完成安全清理。
 
 ## 正式开发执行要求
 
-当用户明确要求开始实施本清单时，后续开发必须按 `OPT-001 → OPT-002 → OPT-003 → ...` 的编号顺序**串行闭环**，默认一次只实施一个优化项。前一项没有完成设计、实施、验证、GitHub 合并和分支清理，不得开始下一项；也不得因为后续 OPT 与当前文件相邻就顺手提前实施。若发现跨 OPT 依赖，只处理当前 OPT 完成所必需的最小兼容/前置内容，并把其余依赖记录回对应后续条目或正式 Proposal。
+本轮开发按新增 OPT 编号顺序**串行推进**，默认一次只实施一个优化项。前一项没有完成设计、实施和适用验证，不得开始下一项；GitHub push、合并 `main` 和批次分支清理属于整个批次的最终收口步骤，不再作为每个 OPT 之间的前置条件。若发现跨 OPT 依赖，只处理当前 OPT 完成所必需的最小兼容/前置内容，并把其余依赖记录回对应后续条目或正式 Proposal。
 
 每一个 OPT 固定沿以下交付链执行：
 
 ```text
 OPT-XXX 清单条目
   → 读取该项初步/预研架构文档（有则必须作为输入；没有则直接从清单进入源码核验）
-  → 从最新 main 重新核对源码、迁移、合同、测试和当前文档，修正已经过时的预研判断
+  → 从本批次当前基线重新核对源码、迁移、合同、测试和当前文档，修正已经过时的预研判断
   → 建立正式 docs/proposals/<name>/design.md，冻结目标架构、边界和关键决策
   → 建立 plan.md + 必要的 phases/，并按模板补齐 agent-handoff.md / verification-record.md
-  → 从最新且已确认的 main 创建短期 codex/<OPT编号或任务名> 分支，按 phase 顺序实施
+  → 在 codex/optimization-batch-20261015 批次分支上按 phase 顺序实施
   → 同步产品代码、迁移/API/合同/消费者/测试以及已实现后的 architecture/reference/guides 文档
-  → 每个 phase 完成其本地验证后，如该 phase 涉及远端 Supabase 状态变化，则把 migration、Edge Function、Storage/Auth/Policy/配置等变更同步部署到该 phase 计划指定且已获授权的远端 Supabase 环境，并核对远端实际状态与仓库声明一致
+  → 每个 phase 完成其本地验证后，如该 phase 涉及 Supabase 状态变化，则及时把 migration、Edge Function、Storage/Auth/Policy/配置等变更同步部署到该 phase 计划指定且已获授权的目标 Supabase 环境，并核对实际状态与仓库声明一致
   → 在对应 phase / verification record 中记录本地验证、远端 Supabase 部署与验证结果；远端部署失败、状态未知或版本漂移时，该 phase 不得标记完成或进入依赖它的下一 phase
-  → 完成该 OPT 适用的最终 diff 审查、文档检查和总体回归
-  → 将该 OPT 产生并归属于该 OPT 的全部项目改动提交并 push 到 GitHub 任务分支
-  → 满足仓库合并门槛后合并并 push 到 main，核对远端 main 已包含最终提交，并再次确认所有该 OPT 要求的远端 Supabase 状态已经部署且与最终 main 一致
-  → 确认任务分支没有独有提交、未提交改动或仍需保留的工作后，删除已合并的本地和远端任务分支
-  → 重新同步/核对最新 main，再进入下一个 OPT
+  → 完成该 OPT 适用的 diff 审查、文档检查和总体回归；需要时形成仅保存在本地批次分支的小提交
+  → 更新 Intake / Proposal 状态并进入下一个用户需求
+
+全部本轮 OPT 完成后：
+  → 对整个批次相对于起始 main 的完整差异做最终审查、敏感信息检查和必要的整体验证
+  → 将批次分支全部有效改动提交并 push 到 GitHub
+  → 满足仓库合并门槛后合并并 push 到 main，核对远端 main 已包含本批次全部最终提交
+  → 再次确认所有涉及 Supabase 的目标环境状态已经部署且与最终 main 一致
+  → 确认批次分支没有独有提交、未提交改动或仍需保留的工作后，删除已合并的本地和远端批次分支
 ```
 
 执行时还必须遵守以下约束：
 
-1. **重新核对最新源码是强制步骤。** Intake 和预研架构只是历史设计输入，不能因为已经存在预研文档就直接照抄实施；正式 `design.md` 必须以实施当时最新 `main` 的真实代码、迁移、OpenAPI/DTO、测试和文档为事实基线，并明确处理与预研之间的漂移。
+1. **重新核对最新源码是强制步骤。** Intake 和预研架构只是历史设计输入，不能因为已经存在预研文档就直接照抄实施；正式 `design.md` 必须以本批次实施当时的真实代码、迁移、OpenAPI/DTO、测试和文档为事实基线，并同时核对起始 `main` 与已完成前置 OPT 带来的变化，明确处理与预研之间的漂移。
 2. **正式设计先于实施。** 即使 OPT 很小，也应先判断是否需要独立 Proposal；本清单中会改变模块边界、数据/API、权限、状态机、持久任务或页面流程的事项，必须先完成 `design.md → plan.md → phases/` 再开发，不允许边写代码边补架构。
 3. **阶段按依赖顺序交付。** 一个 OPT 内可由 `plan.md` 明确允许安全并行的子任务，但最终集成、验证和 Git 交付仍属于同一个 OPT 闭环；阶段状态和实际验证结果写入 Proposal 的计划/验证记录，不预填 PASS。
 4. **当前 OPT 的全部改动必须完整交付。** “全部改动”指本 OPT 实施过程中产生或明确归属于本 OPT 的代码、数据库迁移、合同、测试和文档；工作区中已有的其他任务/人工修改不得被擅自吸收、覆盖、reset 或一起提交，必要时使用独立 worktree/分支隔离或报告阻塞。
-5. **远端 Supabase 是阶段交付的一部分。** 只要某个 phase 新增或修改了需要远端生效的 Supabase migration、Edge Function、Storage bucket/policy、Auth 配置、数据库函数/RLS/权限、Secrets 或其他 Supabase 项目配置，就必须在该 phase 的计划与验证记录中明确目标环境、部署步骤、部署结果和远端验证；不能只把 SQL/函数文件提交 GitHub 后把“远端尚未更新”留到整个 OPT 结束。部署完成后要以远端 migration/version、函数版本、策略/配置读取或真实 smoke/E2E 等适用证据确认生效，失败或结果未知时不得把该 phase 标记 PASS。
-6. **合并 main 是 OPT 完成条件之一。** 只有适用验证通过、最终差异已审查、必需文档已同步、任务分支已 push、GitHub/分支保护条件满足，并确认远端 `main` 已包含最终结果，同时该 OPT 要求的已授权远端 Supabase 变更已部署且与最终仓库状态一致后，该 OPT 才能标记完成并开始下一项。禁止 force push、绕过保护或以未合并任务分支/未部署远端状态作为“完成”。
-7. **分支完成后清理。** 合并完成并确认 `main` 保存全部有效提交后，删除该 OPT 的本地和远端短期分支；若分支仍有独有提交、未提交改动或后续恢复价值，则先解决这些问题，不能为了形式上的“清理”丢失工作。不得删除其他任务的分支。
-8. **远端部署与生产授权分开判断。** 按 `docs/guides/development-release-workflow.md` 执行 R0–R3、验证和合并门槛。开发/预发等已授权 Supabase 环境应按 phase 同步；若某个 phase 需要更新 Production Supabase，或 push/merge `main` 会自动触发 Production，则必须在触发前完成对应 G0–G5、回滚/恢复准备和明确生产授权。没有生产授权时不能把“需要按 phase 同步远端”解释为可绕过发布门槛；应明确记录生产部署待授权，而不是伪报完成。
-9. **完成后再进入下一项。** 例如 OPT-001 必须完成 `预研（如有） → 最新源码核验 → 正式 design → plan/phases → 实施 → 每阶段本地验证与适用的远端 Supabase 部署/验证 → GitHub push → merge main → 远端状态与 main 一致性确认 → 分支清理` 的完整链路，随后才从最新 `main` 开始 OPT-002；同样规则依次适用于后续所有 OPT。
+5. **Supabase 同步是阶段交付的一部分。** 只要某个 phase 新增或修改了需要目标环境生效的 Supabase migration、Edge Function、Storage bucket/policy、Auth 配置、数据库函数/RLS/权限、Secrets 或其他 Supabase 项目配置，就必须在该 phase 的计划与验证记录中明确目标环境、部署步骤、部署结果和远端验证；不能等到整个批次结束才补部署。部署完成后要以 migration/version、函数版本、策略/配置读取或真实 smoke/E2E 等适用证据确认生效，失败或结果未知时不得把该 phase 标记 PASS。
+6. **GitHub 合并是批次完成条件。** 单个 OPT 在批次内可以完成设计、实施和验证后继续下一项，但整个批次只有在全部 OPT 完成、最终差异已审查、必需文档已同步、批次分支已 push、GitHub/分支保护条件满足，并确认远端 `main` 已包含全部结果，同时所有适用且已授权的 Supabase 变更已部署且与最终仓库状态一致后，才能标记完成。禁止 force push、绕过保护或以未合并批次分支/未部署远端状态作为“整批完成”。
+7. **批次分支最终清理。** 合并完成并确认 `main` 保存全部有效提交后，删除 `codex/optimization-batch-20261015` 的本地和远端分支；若分支仍有独有提交、未提交改动或后续恢复价值，则先解决这些问题，不能为了形式上的“清理”丢失工作。不得删除其他任务分支。
+8. **远端部署与生产门槛分开判断。** 按 `docs/guides/development-release-workflow.md` 执行 R0–R3、验证和合并门槛。已授权的目标 Supabase 环境应按 phase 及时同步；若某个 phase 需要更新 Production Supabase，或 push/merge `main` 会自动触发 Production，则必须在触发前完成对应 G0–G5、目标核对和回滚/恢复准备。环境或授权范围不明确时先完成不依赖该问题的准备并明确记录阻塞，不伪报部署成功。
+9. **完成当前项后再进入下一项。** 本轮每个新 OPT 必须完成 `需求登记 → 最新源码核验 → 正式 design → plan/phases → 实施 → 每阶段本地验证与适用 Supabase 部署/验证 → 当前 OPT diff/文档回归`，然后才能进入下一条用户需求；GitHub push/merge/main 核对与分支清理统一放在整个批次最后执行。
 
 ## 优化事项总清单
 
@@ -64,6 +78,7 @@ OPT-XXX 清单条目
 
 | OPT-009 | Admin / 单平台账户工作台与账户治理 | 将 `/admin/platforms/:id/accounts` 从“Account ID + 状态开关”重构为面向当前平台的 **Platform Account 360 / 用户账户工作台**。账户列表一级信息应优先展示可识别的用户资料（头像/显示名，必要时只读显示全局身份邮箱）、平台账户状态、当前有效 Plan/订阅、加入时间，并在有权威数据后展示当前平台最近活跃；支持服务端结构化筛选和稳定分页，而不是固定最多 100 条。点开账户后，以分区/Tab 汇总“概览、平台资料、订阅与权益、订单/商业摘要、配置资源、用户反馈/支持上下文、管理员标签与内部备注、账户操作与时间线”等信息，使管理员能回答“这个用户是谁、当前能用什么、付费情况如何、最近发生了什么、提交过什么内容、为什么被限制、下一步该处理什么”。平台范围内的治理动作继续包括暂停/恢复/关闭，并完善为有原因、有操作者、有时间线的受控动作；已有订阅/Grant/Billing 等能力从账户详情下钻或嵌入摘要，不再让管理员在多个孤立页面靠 UUID 手工串联。 | 当前 `platform-accounts-page.tsx` 列表只展示 `platform_account_id / user_id / status / created_at / updated_at`，搜索仅支持账户 ID、用户 ID、状态且请求固定 `limit=100`；详情只展示 ID、状态与激活/暂停/关闭/创建/更新时间，并仅提供“查看订阅投影”跳转。实际可执行动作只有 `suspend / restore / close`。仓库其实已经存在 `platform_profiles`（display_name、avatar_url、bio、locale、timezone、metadata）、Preferences、Subscription、Billing、配置文件以及 Global Identity 的 email/last_sign_in_at 等信息，但当前账户页没有聚合。还存在一个治理缺口：UI 的暂停/恢复/关闭确认框要求填写 `reason` 并 POST，但 `admin.ts` 的账户动作路由没有读取 body，`private.admin_account_transition` 也没有 reason 参数，审计 metadata 写的是空对象，因此当前“操作原因”实际上没有进入权威领域记录。成熟系统通常把用户档案、标识/元数据、安全状态、订阅/支付、事件/活动和支持标签/备注集中在用户详情中：Clerk User Profile 提供个人信息、标识、metadata、账户动作及 Billing；Firebase Admin 暴露创建/最后登录、禁用/删除及身份属性管理；Stripe Customer 页面汇总联系信息、购买历史、订阅/支付/发票、活动与内部备注；Intercom Contact 则强调用户属性、事件、标签与 Notes。 | 正式设计必须严格保持 **Global Identity 与 Platform Account 分层**：邮箱/密码、MFA、全局会话撤销、全局身份删除等仍属于 OPT-003 的统一用户/Identity 治理，平台账户页最多以只读方式展示必要身份摘要并提供跳转，不复制第二套身份管理。平台账户页重点治理当前平台关系：状态、Profile、有效 Plan/Entitlement、订单/订阅摘要、配置资源、反馈与支持上下文。若展示“最近活跃”，必须来自当前平台真实行为/telemetry 或明确的平台访问事实，不能把 Supabase Auth 的全局 `last_sign_in_at` 冒充单平台活跃。建议新增 Admin-only tags/notes，与用户可编辑 Profile 分开；暂停应至少记录 reason、actor、时间，并评估可选 `suspended_until`，恢复同样形成时间线；关闭继续作为高风险/不可逆平台生命周期动作。高风险批量封禁、直接改用户密码/MFA、无痕 impersonation 不应作为首版默认能力；若未来确有客服代入需求，应采用短时、显式标记、recent-MFA、全审计的 Support Session 模型单独评审。账户聚合 API 与筛选必须服务端完成，支持 cursor/稳定排序及 status/plan/subscription/date/tag 等结构化条件；未来 OPT-007/008 落地后应能从账户详情直接看到该用户配置与反馈摘要。详细分析见[平台账户工作台预研架构](platform-account-workbench-architecture.md)。正式实施已完成服务端 stable cursor/结构化筛选、Account 360、Profile/effective Plan/Subscription/Billing/Config/Feedback 安全聚合、Admin tags/notes/governance、reason 权威事件与 Global Delete/retention privacy cleanup；Local canonical、`workendstaging`、PR #15 / GitHub CI、远端 main 与任务分支清理均已闭环，详见[OPT-009 单平台账户工作台与账户治理](../platform-account-workbench/design.md)。 | 已完成 |
 | OPT-010 | Admin / 全局商业治理 + 单平台套餐、订阅与兑换运营 | 重构当前商业化管理体系，使其从“订单、Plan、订阅投影、兑换批次各自独立的工程页面”升级为有明确商业链路的运营工作台。全局作用域建设跨平台商业治理视图，关注各平台真实订单/结算、支付异常、Provider/处理链路健康、退款/补偿/人工审核以及可核实的业务汇总，并支持按平台、时间、订单/结算状态、Provider 等维度筛选和下钻；单平台作用域围绕“商业概览 → 套餐/权益包 → 售卖商品与价格 → 订阅/付费用户 → 订单 → 兑换码”组织信息。套餐页不再只把 Plan 当作 `code/kind/status/features JSON` 记录展示，而应以用户可理解的方案名称、权益差异、适用状态和关联售卖方式为主；正式架构需评估从当前“一个标准 paid Plan + 全局固定 Monthly/Yearly/Lifetime 商品”的模型演进到“平台可拥有多个 paid Plan，每个 Plan 可关联一个或多个价格/期限 Offer”的产品目录模型，并保留不可变价格版本和历史购买解释。订阅页应由“先搜 Account ID 再看一条 projection”升级为真正的订阅/付费账户列表，可按用户、Plan、权益状态、来源、开始/结束时间等筛选，一级显示用户、当前有效方案、权益来源（购买/兑换/Admin Grant）、状态、开始/到期/下一边界，并从账户详情和订单详情互相下钻。管理员还应能对单个账户执行受控的订阅/权益治理，包括直接授予一段免费/补偿性质的权益、暂停/恢复、立即撤销，以及在未来接入真实 recurring Provider 后执行“本期结束取消 / 立即取消”等订阅动作；这些能力用于客服补偿、测试用户、合作伙伴、误操作修正和风险处置，不应强迫管理员先生成兑换码再让目标用户自助兑换。兑换码页升级为 Campaign/Batch 运营视图，除创建与一次性安全交付外，应展示批次总量、已兑换、剩余、兑换率、到期、状态、创建/交付时间、关联 Plan/商品、渠道/用途备注，并能查看脱敏单码状态、兑换用户和兑换时间；兑换码仍是直接授予权益的 claim code，不与支付优惠券/折扣码混为同一领域。 | 当前平台侧导航把“订单与计费 / 套餐 / 订阅 / 兑换码”作为四个独立入口；`platform-plans-page.tsx` 的 Plan 目录主要展示 code、名称、描述、kind、状态以及“features 有几个字段”，筛选也只作用于已加载结果，产品权益缺乏可读对比。`platform_subscription_config` 只能选择一个 `paid_plan_id`，再打开全局固定 `subscription_products` 的 Monthly/Yearly/Lifetime；`subscription_products` 目前固定 Free、Monthly、Yearly、Lifetime，币种固定 CNY，Lifetime 是 99 年有限权益，价格通过 `price_version` 更新。订阅页当前必须先用 Account/User ID 搜一个账户，之后只显示单个 subscription projection，再执行 pause/resume/grant/revoke/correct，缺少“当前平台所有付费/订阅用户”的运营列表。兑换码页已有很强的安全语义：批次 1–1000、明文仅创建响应显示一次、交付确认后激活、可停用且不追溯撤销已授予权益；但列表最多加载 100 批并前端筛选，一级信息只有名称、Plan、数量、状态、到期和交付时间，没有已兑换/剩余/兑换率和兑换用户运营视角。全局 `/admin/billing/orders` 已有跨平台订单、结构化筛选、结算证据、requery/resolve 和丰富 Worker/告警指标，但首页主要是 pending/retry/manual-review/lease/调度延迟等运行健康数据，更像 Billing 运维台而不是完整商业经营中心。成熟 Billing 产品普遍把 Product/Plan 与 Price/Price Point 分离，并在订阅、交易、优惠和报表之间建立可下钻关系：Stripe 的 Product/Price 模型允许同一服务层级对应月/年/不同币种价格；Paddle/Chargebee 提供 Catalog、Subscription、Transaction、Discount/Coupon、报表及按状态/周期/日期等筛选与导出。成熟后台也允许管理员直接治理订阅：Stripe 可从 Dashboard/API 创建并取消订阅，Paddle 支持管理员在 Dashboard/API 取消订阅并区分本期末与立即生效，Chargebee 可在后台创建订阅、取消订阅并支持立即/期末/指定日期等模式；因此“管理员直接操作指定用户”本身是成熟产品常见能力。现有安全账本和结算体系应保留，但 Admin 信息架构与产品目录层需要向业务运营语义升级。详细现状、产品目录分层、Admin 直接权益治理、取消/退款/撤销边界、兑换 Campaign 与指标口径见[商业业务与订阅运营预研架构](commercial-subscription-operations-architecture.md)。 | 正式设计需先冻结 AisenHub 自己的商业事实口径，不能机械复制 Stripe/Chargebee 指标。当前权益权威事实是 `subscription_grants + subscription_events + subscriptions projection`，Monthly/Yearly/Lifetime 首先是有限期权益商品；只有在 Provider 合同真实具备自动续费、续费扣款、取消续费、past-due 等 recurring 生命周期后，才能展示 MRR、ARR、churn、renewal rate 等订阅指标。未具备时应只展示可证明的“有效付费账户、周期购买数/金额、即将到期权益、兑换授予、订单/结算状态”等指标，且金额必须基于已明确的 paid/verified/finalized/退款口径，不能把订单 `show_amount` 或未结算数据直接当收入。全局商业视图建议分离“经营摘要”和“支付运行/异常治理”：经营层按平台/时间聚合可核实的订单、结算、付费账户和商品表现；运维层继续保留 Provider、Webhook、Job、lease、requery/resolve、refund mismatch 和告警。单平台应新增权威商业聚合边界，供 OPT-004 概览复用。正式设计还需评估 Product/Plan/Offer/Price 的分层、是否支持多 paid Plan、多币种/多价格周期、历史价格版本、Plan 归档与已购权益兼容、商品映射切换 preflight、订阅来源语义、兑换批次服务端分页/筛选/统计，以及批量导出。管理员直接治理与兑换码必须是两条独立路径：指定某个用户时，Admin Grant/撤销/修正直接写入现有 Grant/Event 权威链路，并要求 reason、actor、operation_id、recent-MFA/step-up、并发版本和审计；兑换码则适合活动、合作渠道、礼品、批量分发等“由用户主动领取”的场景，不应用来替代客服对指定账户的直接处理。还必须区分“Billing 取消”和“访问权益撤销”：真实自动续费订阅中，`cancel_at_period_end` 应停止未来续费但保留本期已付访问，`immediate cancel` 是否同时退款/撤销权益需由商业政策明确；在当前仍以有限期 Grant 为权威的模型里，管理员“直接赋予订阅”更准确应称为 `Admin Grant / Complimentary Entitlement`，不能伪装成已发生 Provider 支付或真实 recurring subscription。兑换码是“权益兑换”而非 checkout discount；若未来需要优惠券/促销码，应新增独立 Discount/Promotion 领域，借鉴有效期、最大使用次数、适用商品、活动统计等成熟模型，但不得复用 redemption code 的 Grant 语义。该项与 OPT-004 平台概览、OPT-006 平台接入向导、OPT-009 Account 360 直接关联：商业摘要应下钻到单平台商业中心，接入向导应验证 Plan/Offer/Provider/Checkout/Entitlement 的真实接入状态，账户详情应能看到当前权益、购买/兑换来源和订单历史，并可从账户上下文发起同一套受控 Admin Grant/取消/撤销操作。 | 已完成 |
+| OPT-011 | Admin / 全局侧边栏导航 + 折叠态 + 平台切换器 | 重构 Admin 全局首页左侧导航：取消“工作台 / 商业中心 / 系统治理 / 设置”分组标题，展开态按固定顺序直接显示“仪表盘、平台中心、用户中心、业务中心、审计中心、安全中心”；折叠后仍保留“图标 + 精简文字”，分别显示“仪表盘、平台、用户、业务、审计、安全”，而不是缩成纯图标。平台切换器的展开浮层宽度不再超过侧边栏内容宽度，平台列表只突出平台名称，不再在一级行里同时显示平台代码；搜索仍支持名称/代码，并修复搜索图标与占位文字重叠。 | 当前全局导航在 `admin-navigation.ts` 中分为四个 group，`AdminSidebar` 直接渲染 group label；共享 Sidebar 的 icon collapse 固定为 `3rem` 且菜单按钮折叠成 `size-8`，因此无法保留文字。`PlatformSwitcher` 浮层使用 `w-80`，比默认 `16rem` 侧边栏更宽，平台选项同时展示图标、状态点、名称和 code；搜索图标位于 `left-2.5` 而 input 仅 `pl-8`，当前实机截图已出现图标压住占位文字。 | 已完成 Global 六入口扁平导航、Admin 专用“图标 + compact label”折叠态、Platform compact label、PlatformSwitcher 同宽浮层/name-only option/name+code 搜索与搜索图标安全间距；未改变路由、权限、API 或 Supabase。Local canonical R2 为 22 executable gates PASS（Edge/API 114、DB 63 files/1381 tests、Consumer/Admin 浏览器、docs/contracts 全绿），独立 UX probe 的 60 route/viewport 与新增几何断言也 PASS。正式设计与验证见 [OPT-011 Admin 全局侧边栏导航收敛](../admin-global-sidebar-navigation/design.md)。 | 已完成 |
 
 ## 记录原则
 

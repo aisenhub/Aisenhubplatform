@@ -35,6 +35,33 @@ const account = {
   platform_account_id: accountId,
   user_id: '33333333-3333-4333-8333-333333333333',
   status: 'active',
+  display_name: 'Harness Account',
+  avatar_url: null,
+  plan_id: null,
+  plan_code: null,
+  plan_name: null,
+  plan_kind: null,
+  subscription_status: null,
+  current_period_end: null,
+  subscription_started_at: null,
+  next_transition_at: null,
+  billing_order_count: 0,
+  billing_attention_count: 0,
+  billing_latest: {},
+  config_active_count: 0,
+  config_published_count: 0,
+  config_pending_review_count: 0,
+  config_latest_updated_at: null,
+  feedback_count: 0,
+  feedback_open_count: 0,
+  feedback_latest_submitted_at: null,
+  tags: [],
+  notes: [],
+  governance_events: [],
+  identity: {
+    user_id: '33333333-3333-4333-8333-333333333333',
+    email: 'harness-account@example.invalid',
+  },
   created_at: '2026-10-01T08:00:00Z',
   updated_at: '2026-10-04T08:00:00Z',
   activated_at: '2026-10-01T08:00:00Z',
@@ -257,7 +284,7 @@ await context.route('**/*', async (route) => {
         status: 503,
         json: { error: { code: 'AUTHORIZATION_UNAVAILABLE' } },
       });
-    data = { current_aal: 'aal2' };
+    data = { membership_state: 'active', current_aal: 'aal2' };
   } else if (path === '/platforms') {
     if (platformDelay)
       await new Promise((done) => setTimeout(done, platformDelay));
@@ -266,19 +293,22 @@ await context.route('**/*', async (route) => {
         status: 503,
         json: { error: { code: 'AUTHORIZATION_UNAVAILABLE' } },
       });
-    data =
-      url.searchParams.get('q') === 'no-match'
-        ? []
-        : [
-            platform,
-            {
-              ...platform,
-              platform_id: '44444444-4444-4444-8444-444444444444',
-              name: '示例停用平台',
-              code: 'example-disabled',
-              status: 'disabled',
-            },
-          ];
+    const rows = [
+      platform,
+      {
+        ...platform,
+        platform_id: '44444444-4444-4444-8444-444444444444',
+        name: '示例停用平台',
+        code: 'example-disabled',
+        status: 'disabled',
+      },
+    ];
+    const query = (url.searchParams.get('q') ?? '').trim().toLocaleLowerCase();
+    data = query
+      ? rows.filter((item) =>
+          `${item.name} ${item.code}`.toLocaleLowerCase().includes(query),
+        )
+      : rows;
   } else if (path === `/platforms/${platformId}`) data = platform;
   else if (path === `/platforms/${platformId}/overview`) {
     if (failPlatformOverview)
@@ -519,7 +549,6 @@ try {
   await page.locator('[data-test="config-resource-center"]').waitFor();
   await page.locator('[data-test="config-resource-table"]').waitFor();
   await page.locator('[data-test="config-review-queue"]').waitFor();
-  await page.locator('[data-test="storage-technical-status"]').waitFor();
   assert.match(
     await page.locator('[data-test="config-resource-table"]').innerText(),
     /示例配置作品/u,
@@ -530,10 +559,10 @@ try {
   );
   assert.match(
     await page.locator('[data-test="platform-file-policy"]').innerText(),
-    /平台总容量（Global 分配）/u,
+    /平台总容量/u,
   );
   console.log(
-    'PASS: Config resource center is primary while Storage remains a secondary diagnostic surface',
+    'PASS: Config resource center is primary while Storage Policy remains a secondary governance surface',
   );
 
   reads.length = 0;
@@ -779,11 +808,76 @@ try {
 
   await page.setViewportSize({ width: 1440, height: 960 });
   await goto('/admin/platforms', 'platform-directory-table');
+  const globalSidebar = page.locator('[data-test="admin-sidebar"]');
+  const globalNavigationButtons = globalSidebar.locator(
+    '[data-test^="admin-nav-"]',
+  );
+  assert.deepEqual(await globalNavigationButtons.allInnerTexts(), [
+    '仪表盘',
+    '平台中心',
+    '用户中心',
+    '业务中心',
+    '审计中心',
+    '安全中心',
+  ]);
+  for (const removedHeading of ['工作台', '商业中心', '系统治理', '设置']) {
+    assert.equal(
+      await globalSidebar.getByText(removedHeading, { exact: true }).count(),
+      0,
+      `Global Sidebar no longer renders legacy group heading ${removedHeading}`,
+    );
+  }
+  await page.locator('[data-test="admin-sidebar-toggle"]').click();
+  await page.locator('[data-slot="sidebar"][data-state="collapsed"]').waitFor();
+  assert.deepEqual(await globalNavigationButtons.allInnerTexts(), [
+    '仪表盘',
+    '平台',
+    '用户',
+    '业务',
+    '审计',
+    '安全',
+  ]);
+  assert.equal(
+    await globalNavigationButtons.locator('svg').count(),
+    6,
+    'Collapsed Global Sidebar keeps an icon for every compact label',
+  );
+  await page.locator('[data-test="admin-sidebar-toggle"]').click();
+  await page.locator('[data-slot="sidebar"][data-state="expanded"]').waitFor();
+  assert.deepEqual(await globalNavigationButtons.allInnerTexts(), [
+    '仪表盘',
+    '平台中心',
+    '用户中心',
+    '业务中心',
+    '审计中心',
+    '安全中心',
+  ]);
+  console.log(
+    'PASS: Global Sidebar uses flat business navigation and readable compact labels',
+  );
+
+  const switcherTrigger = page.locator(
+    '[data-test="platform-switcher-trigger"]',
+  );
+  const switcherTriggerBox = await switcherTrigger.boundingBox();
+  assert.ok(
+    switcherTriggerBox,
+    'PlatformSwitcher trigger has a measurable box',
+  );
   await page.locator('[data-test="platform-switcher-trigger"]').click();
   const switcherDropdown = page.locator(
     '[data-test="platform-switcher-dropdown"]',
   );
   await switcherDropdown.waitFor();
+  const desktopSwitcherBox = await switcherDropdown.boundingBox();
+  assert.ok(
+    desktopSwitcherBox,
+    'PlatformSwitcher dropdown has a measurable box',
+  );
+  assert.ok(
+    desktopSwitcherBox.width <= switcherTriggerBox.width + 1,
+    'Sidebar PlatformSwitcher dropdown does not extend beyond its trigger width',
+  );
   assert.equal(
     await switcherDropdown.getByText('查看完整平台目录 →').count(),
     0,
@@ -795,7 +889,41 @@ try {
     'Global scope remains available in PlatformSwitcher',
   );
   const switcherSearch = page.locator('[data-test="platform-switcher-search"]');
+  const switcherSearchIcon = page.locator(
+    '[data-test="platform-switcher-search-icon"]',
+  );
+  const searchBox = await switcherSearch.boundingBox();
+  const searchIconBox = await switcherSearchIcon.boundingBox();
+  const searchPaddingLeft = await switcherSearch.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).paddingLeft),
+  );
+  assert.ok(
+    searchBox && searchIconBox,
+    'PlatformSwitcher search geometry is measurable',
+  );
+  assert.ok(
+    searchIconBox.x + searchIconBox.width <=
+      searchBox.x + searchPaddingLeft - 2,
+    'PlatformSwitcher search text begins after the search icon',
+  );
+  const waitForPlatformSearch = (expectedQuery) =>
+    page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname.endsWith('/api/v1/admin/api/v1/platforms') &&
+        (url.searchParams.get('q') ?? '') === expectedQuery &&
+        response.request().method() === 'GET'
+      );
+    });
+  const nameSearchResponse = waitForPlatformSearch('停用');
   await switcherSearch.fill('停用');
+  await nameSearchResponse;
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll(
+        '[data-test="platform-switcher-dropdown"] [role="option"]',
+      ).length === 1,
+  );
   assert.equal(
     await switcherDropdown.getByRole('option').count(),
     1,
@@ -805,7 +933,15 @@ try {
     await switcherDropdown.getByRole('option').innerText(),
     /示例停用平台/u,
   );
+  const codeSearchResponse = waitForPlatformSearch('example-platform');
   await switcherSearch.fill('example-platform');
+  await codeSearchResponse;
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll(
+        '[data-test="platform-switcher-dropdown"] [role="option"]',
+      ).length === 1,
+  );
   assert.equal(
     await switcherDropdown.getByRole('option').count(),
     1,
@@ -815,7 +951,20 @@ try {
     await switcherDropdown.getByRole('option').innerText(),
     /示例平台 · 产品工作区/u,
   );
+  assert.doesNotMatch(
+    await switcherDropdown.getByRole('option').innerText(),
+    /example-platform/u,
+    'PlatformSwitcher keeps platform code searchable without showing it in the option row',
+  );
+  const clearSearchResponse = waitForPlatformSearch('');
   await switcherSearch.fill('');
+  await clearSearchResponse;
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll(
+        '[data-test="platform-switcher-dropdown"] [role="option"]',
+      ).length === 2,
+  );
   assert.equal(
     await switcherDropdown.getByRole('option').count(),
     2,
@@ -850,7 +999,7 @@ try {
     [
       `/admin/platforms/${platformId}/accounts`,
       'accounts-table-section',
-      '[data-test="accounts-table-section"] .data-table',
+      '[data-test="accounts-table-section"] [aria-label="平台账户列表，可横向滚动"]',
     ],
   ]) {
     await goto(path, test);
@@ -877,7 +1026,7 @@ try {
     const actionTest =
       test === 'platform-directory-table'
         ? 'platform-directory-open'
-        : `account-inspect-${accountId}`;
+        : `account-detail-${accountId}`;
     let actionReached = false;
     for (let index = 0; index < 10; index += 1) {
       await page.keyboard.press('Tab');
@@ -1039,18 +1188,17 @@ try {
     `/admin/platforms/${platformId}/accounts`,
     'accounts-table-section',
   );
-  await page.locator(`[data-test="account-inspect-${accountId}"]`).click();
-  await page.locator('[data-test="resource-inspector"]').waitFor();
-  assert.equal(new URL(page.url()).searchParams.get('selected'), accountId);
+  await page.locator(`[data-test="account-detail-${accountId}"]`).click();
+  await page.waitForURL(
+    `${origin}/admin/platforms/${platformId}/accounts/${accountId}`,
+  );
+  await page.locator('[data-test="account-workbench-page"]').waitFor();
   await page.screenshot({
-    path: join(output, 'inspector.png'),
+    path: join(output, 'account-workbench.png'),
     fullPage: true,
   });
-  await page.locator('[data-test="resource-inspector-close-icon"]').click();
-  await page
-    .locator('[data-test="resource-inspector"]')
-    .waitFor({ state: 'hidden' });
-  assert.equal(new URL(page.url()).searchParams.get('selected'), null);
+  await page.goBack({ waitUntil: 'domcontentloaded' });
+  await page.locator('[data-test="accounts-table-section"]').waitFor();
   await page.locator(`[data-test="account-close-${accountId}"]`).click();
   await page.getByRole('dialog').waitFor();
   assert.match(await page.getByRole('dialog').innerText(), /原因|理由/u);
@@ -1064,7 +1212,7 @@ try {
     'Opening sensitive confirmation never sends a write',
   );
   await page.keyboard.press('Escape');
-  console.log('PASS: inspector deep link, closing and sensitive confirmation');
+  console.log('PASS: Account 360 deep link and sensitive confirmation');
 
   await page.setViewportSize({ width: 390, height: 960 });
   await goto('/admin/platforms', 'platform-directory-table');

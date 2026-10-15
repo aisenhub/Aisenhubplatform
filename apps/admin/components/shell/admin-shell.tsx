@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { SessionExpiredError } from '../../app/_lib/auth/browser';
@@ -219,6 +219,7 @@ export function AdminShell({ children }: AdminShellProps) {
         defaultOpen
         data-test="admin-shell"
         className="admin-shell-root min-h-svh"
+        style={{ '--sidebar-width-icon': '5.75rem' } as CSSProperties}
       >
         <a
           href="#admin-content"

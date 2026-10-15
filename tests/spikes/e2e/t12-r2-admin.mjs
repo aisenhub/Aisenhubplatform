@@ -1989,8 +1989,7 @@ async function runArchitectureBehaviorMatrix(secret) {
   await page.getByLabel('搜索平台').fill(platformCode);
   await page
     .locator('[data-test="platform-switcher-dropdown"]')
-    .getByRole('option')
-    .filter({ hasText: platformCode })
+    .getByRole('option', { name: 'T12 R2 Browser' })
     .click();
   await page.waitForURL(`**/admin/platforms/${platformId}/billing`);
   await page.locator('[data-test="commerce-summary-panel"]').waitFor({
@@ -2028,9 +2027,9 @@ async function runArchitectureBehaviorMatrix(secret) {
   const switcherDropdown = page.locator(
     '[data-test="platform-switcher-dropdown"]',
   );
-  const scopedPlatformOption = switcherDropdown
-    .getByRole('option')
-    .filter({ hasText: platformCode });
+  const scopedPlatformOption = switcherDropdown.getByRole('option', {
+    name: 'T12 R2 Browser',
+  });
   await scopedPlatformOption.waitFor({ state: 'visible' });
   await scopedPlatformOption.click();
   await page.waitForURL(`**/admin/platforms/${platformId}/accounts`);
@@ -2053,8 +2052,7 @@ async function runArchitectureBehaviorMatrix(secret) {
   await page.getByLabel('搜索平台').fill(otherPlatformCode);
   const otherPlatformOption = page
     .locator('[data-test="platform-switcher-dropdown"]')
-    .getByRole('option')
-    .filter({ hasText: otherPlatformCode });
+    .getByRole('option', { name: 'T12 R2 Other Platform' });
   await otherPlatformOption.waitFor({ state: 'visible' });
   await otherPlatformOption.click();
   await page.waitForURL(`**/admin/platforms/${otherPlatformId}/accounts`);
@@ -2113,9 +2111,9 @@ async function runArchitectureBehaviorMatrix(secret) {
     200,
     'Platform switcher server-side scale search',
   );
-  const scaledTargetOption = scaleDropdown
-    .getByRole('option')
-    .filter({ hasText: scalePlatformTargetCode });
+  const scaledTargetOption = scaleDropdown.getByRole('option', {
+    name: 'T12 Scale Target',
+  });
   await scaledTargetOption.waitFor({ state: 'visible' });
   await scaledTargetOption.click();
   await page.waitForURL(`**/admin/platforms/${scalePlatformTargetId}/billing`);
@@ -2227,8 +2225,7 @@ async function runArchitectureBehaviorMatrix(secret) {
     await page.getByLabel('搜索平台').fill(otherPlatformCode);
     await page
       .locator('[data-test="platform-switcher-dropdown"]')
-      .getByRole('option')
-      .filter({ hasText: otherPlatformCode })
+      .getByRole('option', { name: 'T12 R2 Other Platform' })
       .click();
     await page.waitForURL(
       `**/admin/platforms/${otherPlatformId}/settings/integration`,

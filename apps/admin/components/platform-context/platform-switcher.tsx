@@ -2,14 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Check,
-  ChevronsUpDown,
-  Globe,
-  Layers,
-  RefreshCw,
-  Search,
-} from 'lucide-react';
+import { Check, ChevronsUpDown, Globe, RefreshCw, Search } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@kit/ui/alert';
 import { Skeleton } from '@kit/ui/skeleton';
@@ -270,7 +263,7 @@ export function PlatformSwitcher({
       {/* 下拉浮层卡片（自主受控，零外部黑盒崩溃风险） */}
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1.5 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-lg"
+          className="absolute left-0 top-full z-50 mt-1.5 max-h-96 w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-lg"
           role="dialog"
           aria-label="切换平台工作区"
           data-test="platform-switcher-dropdown"
@@ -300,11 +293,14 @@ export function PlatformSwitcher({
 
           <div className="px-1 py-1">
             <label className="relative block">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                data-test="platform-switcher-search-icon"
+              />
               <input
                 aria-label="搜索平台"
                 autoComplete="off"
-                className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+                className="h-9 w-full rounded-md border border-input bg-background pl-10! pr-3 text-xs text-foreground placeholder:text-muted-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
                 data-test="platform-switcher-search"
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索名称或代码"
@@ -342,19 +338,9 @@ export function PlatformSwitcher({
                       : 'text-foreground'
                   }`}
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDotClass(platform.status)}`}
-                      aria-hidden="true"
-                    />
-                    <div className="min-w-0 truncate">
-                      <span className="truncate">{platform.name}</span>
-                      <span className="ml-1.5 font-mono text-xs text-muted-foreground">
-                        {platform.code}
-                      </span>
-                    </div>
-                  </div>
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {platform.name}
+                  </span>
                   {isSelected && (
                     <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
                   )}

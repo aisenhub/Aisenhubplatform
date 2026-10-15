@@ -106,7 +106,9 @@ function NavigationGroups({
 }) {
   return groups.map((group) => (
     <SidebarGroup key={group.label}>
-      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+      {group.label ? (
+        <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+      ) : null}
       <SidebarGroupContent>
         <SidebarMenu>
           {group.items.map((item) => {
@@ -127,7 +129,12 @@ function NavigationGroups({
                   }
                 >
                   <Icon />
-                  <span>{item.label}</span>
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    {item.label}
+                  </span>
+                  <span className="hidden group-data-[collapsible=icon]:inline">
+                    {item.compactLabel ?? item.label}
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );

@@ -718,6 +718,31 @@ select:focus-visible {
 .admin-sidebar [data-slot='sidebar-content']::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.6);
 }
+.group[data-collapsible='icon'] .admin-sidebar [data-sidebar='group'] {
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
+}
+.group[data-collapsible='icon'] .admin-sidebar [data-sidebar='menu-button'] {
+  width: 100% !important;
+  height: 2.5rem !important;
+  padding: 0.4rem 0.5rem !important;
+  gap: 0.375rem;
+}
+.group[data-collapsible='icon']
+  .admin-sidebar
+  [data-sidebar='menu-button']
+  svg {
+  width: 1rem;
+  height: 1rem;
+}
+.group[data-collapsible='icon']
+  .admin-sidebar
+  [data-sidebar='menu-button']
+  span {
+  min-width: 0;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
 .platform-context-header,
 .platform-context-header > div {
   min-width: 0;

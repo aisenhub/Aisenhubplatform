@@ -19,6 +19,7 @@ import {
 export type AdminNavigationItem = {
   key: string;
   label: string;
+  compactLabel?: string;
   href: string;
   description: string;
   icon: LucideIcon;
@@ -33,11 +34,12 @@ export type AdminNavigationGroup = {
 
 export const adminNavigationGroups: AdminNavigationGroup[] = [
   {
-    label: '工作台',
+    label: '',
     items: [
       {
         key: 'overview',
-        label: '概览',
+        label: '仪表盘',
+        compactLabel: '仪表盘',
         href: '/admin',
         description: '查看需要关注的管理事项与平台运行概况',
         icon: LayoutDashboard,
@@ -45,50 +47,40 @@ export const adminNavigationGroups: AdminNavigationGroup[] = [
       },
       {
         key: 'platforms',
-        label: '平台',
+        label: '平台中心',
+        compactLabel: '平台',
         href: '/admin/platforms',
         description: '进入平台目录与平台工作区',
         icon: Boxes,
       },
       {
         key: 'accounts',
-        label: '统一用户',
+        label: '用户中心',
+        compactLabel: '用户',
         href: '/admin/accounts',
         description: '跨平台检索用户账户、身份状态与删除生命周期',
         icon: Users,
       },
-    ],
-  },
-  {
-    label: '商业中心',
-    items: [
       {
         key: 'billing',
-        label: '计费管理',
+        label: '业务中心',
+        compactLabel: '业务',
         href: '/admin/billing/orders',
         description: '中央订单、结算、Provider 与人工处理',
         icon: CreditCard,
       },
-    ],
-  },
-  {
-    label: '系统治理',
-    items: [
       {
         key: 'audit',
         label: '审计中心',
+        compactLabel: '审计',
         href: '/admin/audit',
         description: '按操作者、平台、对象、动作与结果检索审计事件',
         icon: ScrollText,
       },
-    ],
-  },
-  {
-    label: '设置',
-    items: [
       {
         key: 'security',
-        label: '安全与账户',
+        label: '安全中心',
+        compactLabel: '安全',
         href: '/admin/security',
         description: '查看 Admin session、MFA 与认证器状态',
         icon: ShieldCheck,
@@ -115,6 +107,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'platform-overview',
         label: '概览',
+        compactLabel: '概览',
         suffix: '',
         description: '查看当前平台用户、商业摘要与待办',
         icon: LayoutDashboard,
@@ -123,6 +116,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'accounts',
         label: '账户',
+        compactLabel: '账户',
         suffix: '/accounts',
         description: '管理当前平台账户',
         icon: Users,
@@ -135,6 +129,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'platform-billing',
         label: '订单与计费',
+        compactLabel: '订单',
         suffix: '/billing',
         description: '查看当前平台的支付订单、结算状态与处理异常',
         icon: Receipt,
@@ -142,6 +137,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'plans',
         label: '套餐',
+        compactLabel: '套餐',
         suffix: '/plans',
         description: '管理当前平台套餐与默认计划',
         icon: Package,
@@ -149,6 +145,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'subscriptions',
         label: '订阅',
+        compactLabel: '订阅',
         suffix: '/subscriptions',
         description: '查看与管理账户订阅投影',
         icon: CreditCard,
@@ -156,6 +153,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'redemption',
         label: '兑换码',
+        compactLabel: '兑换',
         suffix: '/redemption-batches',
         description: '管理兑换批次与交付状态',
         icon: Ticket,
@@ -168,6 +166,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'files',
         label: '配置资源',
+        compactLabel: '配置',
         suffix: '/files',
         description: '管理 Config、审核队列、Gallery 与 Storage 技术状态',
         icon: Files,
@@ -175,6 +174,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'feedback',
         label: '用户反馈',
+        compactLabel: '反馈',
         suffix: '/feedback',
         description: '处理用户反馈、图片附件、标签与跟进时间线',
         icon: MessageSquareText,
@@ -187,6 +187,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'integration',
         label: '接入配置',
+        compactLabel: '接入',
         suffix: '/settings/integration',
         description: '完成平台首次接入并维护 Origin、回调与服务端密钥',
         icon: Cable,
@@ -194,6 +195,7 @@ const platformNavigationDefinitions: Array<{
       {
         key: 'settings',
         label: '基本设置',
+        compactLabel: '设置',
         suffix: '/settings',
         description: '管理平台状态与基础策略',
         icon: Settings2,
