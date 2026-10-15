@@ -11,7 +11,7 @@
 - 风险：R3
 - 范围：删除 Admin Consumer Lab；建立根 `platform-integration/`；迁移 Developer/AI 接入入口；更新 Registry、Harness/Conformance 周边工具、测试与 active 文档。
 - 明确未修改：共享 Supabase Identity、Platform Account、Principal、Account v1 业务合同、private SQL、Config/Feedback/Commerce 领域语义。
-- Production：NOT_RUN，本任务未授权也不需要生产部署。
+- Production：独立发布步骤；本文件记录实现与 Local/R3 验收，实际 Production 发布结果以发布交接为准。
 
 ## 实施结果
 
