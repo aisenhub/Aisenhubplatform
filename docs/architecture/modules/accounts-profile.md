@@ -130,6 +130,8 @@ Account API 随后按 `user_id` 通过 server-only Auth Admin 边界补充 Ident
 
 Identity 补充读取是独立可降级数据源：`identity.source_state` 明确区分 `available / missing / unavailable / not_applicable`。Auth Admin 网络/服务异常只把 Identity 摘要标为 `unavailable`，不会抹掉已经成功读取的账户、Entitlement、Billing、Config、Feedback、tags/notes 与治理事实；Auth Identity 已不存在和匿名化账户也不会被伪装成“空邮箱”。
 
+该降级边界只作用于 Identity 补充源：账户 Workbench 的平台业务事实仍来自权威 SQL 聚合，不能因为 Auth 暂时不可用而把 Billing/Entitlement/Config/Feedback 等已成功读取的数据改写成空值，也不能把 `missing`、`unavailable` 与 `not_applicable` 合并成一个模糊的 `null` 状态。
+
 ### 时间线语义
 
 当前 Workbench 自身持久/聚合的时间线只包含账户治理 `governance_events`。Billing、Config、Feedback 在 Account 360 中是摘要和深链，不会复制成一张新的跨域 Event Store。若未来需要统一跨域时间线，应保留 source domain/object/time 并下钻到各领域事实；当前架构不能宣称已经存在完整跨域 timeline。

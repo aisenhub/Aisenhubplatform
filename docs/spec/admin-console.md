@@ -177,7 +177,7 @@ Admin Web 响应必须在不破坏 Supabase Auth/MFA/必要资源加载的前提
 
 ## Domain Verification
 
-当前 Implemented/Partial 基线来自 `apps/admin` App Router/BFF/Auth/feature source、`packages/ui` primitives/semantic components、Admin Vitest、Local browser/E2E，以及 `apps/admin/DESIGN.md` / `PRODUCT.md`。2026-10-15 Admin 架构审查保留技术债和评分；历史 2026-10-13 UI/UX 报告只作为静态 Review，不作为当前事实权威。
+当前 Implemented 基线来自 `apps/admin` App Router/BFF/Auth/feature source、`packages/ui` primitives/semantic components、Admin Vitest、Local browser/E2E，以及 `apps/admin/DESIGN.md` / `PRODUCT.md`。2026-10-15 Admin 架构审查保留技术债和评分；历史 2026-10-13 UI/UX 报告只作为静态 Review，不作为当前事实权威。
 
 ## 非目标 / 未接受项
 

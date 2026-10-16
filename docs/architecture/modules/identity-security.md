@@ -4,7 +4,7 @@
 
 ## Requirements
 
-本模块主要承担 [身份与安全需求](../../spec/identity-security.md) `REQ-IAM-001` ～ `REQ-IAM-011`，并共同满足 `REQ-SYS-001` ～ `REQ-SYS-006`、`REQ-SYS-008`。未完成目标以 Spec 的 `Partial/Planned` 状态和 [`docs/plans/TODO.md`](../../plans/TODO.md) 跟踪，不提前写成当前能力。
+本模块主要承担 [身份与安全需求](../../spec/identity-security.md) `REQ-IAM-001` ～ `REQ-IAM-011`，并共同满足 `REQ-SYS-001` ～ `REQ-SYS-006`、`REQ-SYS-008`。当前十一条 Identity/Security Requirement 均为 Implemented；未来新增或重新打开的缺口以 Spec 的 Delivery 和新的 Plan 跟踪，不提前写成当前能力。
 
 ## 1. 平台信任边界
 
@@ -68,7 +68,7 @@ Admin 当前支持列出 verified TOTP、首因子注册、在已有因子时添
 
 verified factor 删除不由浏览器直接调用 Provider：same-origin Auth route 先要求 Origin/CSRF、当前 Admin session 与 recent-proof cookie，再由中央 API 调用 `private.admin_mfa_factor_delete_prepare`。数据库在 System Admin membership 行上串行化 prepare，重新校验活动 session、recent proof、factor 归属和最低剩余数量（active 删除后至少 2 个 verified TOTP，pending 至少保留 1 个），并在 `private.admin_mfa_factor_operations` 创建短租约 operation；同一管理员已有 authorized operation 时第二会话返回 `OPERATION_IN_PROGRESS`。prepare 成功会先撤销当前 session 的旧 recent proof，随后 BFF 才调用 Supabase `mfa.unenroll`；已知 Provider 失败且 factor 仍存在时 finalize 为 failed，factor 已不存在时 finalize 为 completed 并写 `system_admin.mfa_factor_removed` 审计，未知结果则保留 operation/lease 阻止立即重复删除。成功后刷新 Auth session，无法刷新则要求重新登录。
 
-这套串行化只保护本项目受控入口，不改变 Supabase 原生 API。当前候选已通过 Local Supabase/Auth 验收：factor lifecycle pgTAP 17/17、全量 DB 64 files / 1398 tests、双 session deletion prepare 串行化，以及真实 Local GoTrue 三 verified TOTP→Admin Security UI 删除备用 factor→Provider 列表剩余 2 个→session refreshed→旧 recent-proof cookie 清除的浏览器链。历史固定版本探针仍证明原生 unenroll 和绕过本应用的并发会话可能删到 0，因此绝不描述为 Provider 全局原子保证；`REQ-IAM-011` 的 Implemented 结论仅针对受控 Admin 路径。离线恢复继续属于受控运维路径，不在网页提供 MFA bypass。
+这套串行化只保护本项目受控入口，不改变 Supabase 原生 API。Local Supabase/Auth 验证覆盖 factor lifecycle SQL、双 session deletion prepare 串行化，以及真实 GoTrue 三 verified TOTP → Admin Security UI 删除备用 factor → Provider 列表保留双因子 → session refresh → 旧 recent-proof 清除的完整链路。历史固定版本探针仍证明原生 unenroll 和绕过本应用的并发会话可能删到 0，因此绝不描述为 Provider 全局原子保证；`REQ-IAM-011` 的 Implemented 结论只针对受控 Admin 路径。离线恢复继续属于受控运维路径，不在网页提供 MFA bypass。
 
 中央 Account API 对普通 Admin Route 统一要求 active System Admin、活动管理员会话与 AAL2；私有数据库包装函数继续重新检查 active membership 和 session。System Admin membership mutation、Global Delete、关键密钥生命周期、平台账户状态变更与 Billing requery/resolve 使用同一 recent-MFA 边界；membership 的 active-floor、目标 MFA readiness 和并发串行化只在 private domain function 内决定。Account executor无权调用 Admin 包装或记录 step-up。数据库不自行验证 HTTP JWT 签名，由服务器 Auth adapter 验证后传入受控上下文。
 

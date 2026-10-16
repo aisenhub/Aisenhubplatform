@@ -124,4 +124,4 @@ Admin tags/notes 必须与用户可编辑 Profile 分离，Consumer API 不得�
 
 ## Domain Verification
 
-当前基线证据包括 canonical Platform Account/Profile/Preferences/Admin support SQL、Account/Admin runtime 与 OpenAPI、`t14_account_lifecycle.sql`、`t31_account_workbench_domain.sql` 及 Admin Account Workbench tests。`REQ-ACC-004` 的 Auth Identity 局部降级缺口已经由当前 handler 反查确认，因此不能用其余 Account 领域测试把该 Requirement 升级为 Implemented。
+当前基线证据包括 canonical Platform Account/Profile/Preferences/Admin support SQL、Account/Admin runtime 与 OpenAPI、`t14_account_lifecycle.sql`、`t31_account_workbench_domain.sql` 及 Admin Account Workbench tests。Account 360 的 Identity 补充源通过 `identity.source_state` 独立表达 available/missing/unavailable/not_applicable，Auth 服务异常不会抹掉已经成功读取的平台业务聚合。

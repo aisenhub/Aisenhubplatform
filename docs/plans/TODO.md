@@ -1,7 +1,7 @@
 # 当前剩余工作 TODO
 
 更新时间：2026-10-16  
-当前整改候选已于 2026-10-16 通过 `pnpm verify:task:0801` 完整 Local release gate；本轮实施计划见 [`todo-remediation-2026-10-16/plan.md`](todo-remediation-2026-10-16/plan.md)。执行任何环境/发布事项前仍需重新核对当前 HEAD、Spec、Architecture、OpenAPI、源码和测试。
+本清单只记录尚需真实外部条件、政策输入或生产授权的事项。执行任何环境/发布事项前仍需重新核对当前 HEAD、Spec、Architecture、OpenAPI、源码和测试。
 
 本文件只保留**当前还没有真实完成证据**的事项。已经实现并通过适用仓库级验证的任务不继续留在 TODO；Hosted / Provider / Production / 法务政策必须以目标环境或责任人的真实输入证明，不能用代码存在代替。
 

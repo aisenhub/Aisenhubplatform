@@ -6,7 +6,7 @@ Admin 是系统管理员的控制面 Web 应用。当前核心架构是：**Next
 
 ## Requirements
 
-本模块主要承担 [Admin 控制台需求](../../spec/admin-console.md) `REQ-ADM-001` ～ `REQ-ADM-010`，并共同满足系统级 `REQ-SYS-002`、`REQ-SYS-003`、`REQ-SYS-004`、`REQ-SYS-006`、`REQ-SYS-009`。若 spec 与当前实现不一致，以 spec 标记的 Delivery 作为缺口状态，不把 `REQ-ADM-008/009/010` 等 Partial/Planned 缺口写成“架构要求已经满足”。
+本模块主要承担 [Admin 控制台需求](../../spec/admin-console.md) `REQ-ADM-001` ～ `REQ-ADM-010`，并共同满足系统级 `REQ-SYS-002`、`REQ-SYS-003`、`REQ-SYS-004`、`REQ-SYS-006`、`REQ-SYS-009`。当前十条 Admin Requirement 均为 Implemented；未来若 Spec 再出现 Partial/Planned，应以 Spec 为缺口权威，不能用架构文字提前宣称完成。
 
 ## 1. 技术基线
 
@@ -218,9 +218,9 @@ Topbar 使用 `Aisenhub / platform / page` 上下文层级，并在窄屏压缩�
 
 当前稳定基础：skip-to-content、aria-current/expanded/haspopup/selected/busy、role alert/status、sr-only、Base UI Dialog/Sheet、focus-visible、focusable table scroll region、状态非纯颜色、reduced motion、mobile touch target、Cmd/Ctrl+B Sidebar、Cmd/Ctrl+K Command Palette。
 
-PlatformSwitcher 支持 Tab/Escape/click-outside、ArrowUp/Down/Home/End、`aria-activedescendant` active-option 与 Enter/Space 选择；当前候选 Local E2E 已实际覆盖平台 scale pagination/切换、键盘语义、5 个 viewport 与 95 条 Admin 路由，`REQ-ADM-008` 已验收为 Implemented。
+PlatformSwitcher 支持 Tab/Escape/click-outside、ArrowUp/Down/Home/End、`aria-activedescendant` active-option 与 Enter/Space 选择；浏览器 E2E 覆盖搜索、分页追加、平台切换、键盘选择和响应式行为，保证该键盘模型不是只存在于组件单测。
 
-Admin Web 在 `next.config.mjs` 统一返回 `X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、Referrer-Policy、Permissions-Policy，并配置全局强制 `Content-Security-Policy`。策略允许 same-origin、必要 inline style/script、TOTP `data:` QR 与 blob worker/image；当前候选 Local browser 已在该强制策略下完成登录/MFA/BFF/核心工作区、95 路由与 5 个 viewport 回归，并通过 `securitypolicyviolation` 监听断言 0 violation。Feedback 二进制下载继续使用更严格的 sandbox CSP。`REQ-ADM-010` 因此已验收为 Implemented；HSTS 仍是正式 HTTPS/域名发布边界的独立生产硬化。
+Admin Web 在 `next.config.mjs` 统一返回 `X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、Referrer-Policy、Permissions-Policy，并配置全局强制 `Content-Security-Policy`。策略允许 same-origin、必要 inline style/script、TOTP `data:` QR 与 blob worker/image；Admin 浏览器 E2E 在登录、MFA、BFF 和核心工作区链路监听 `securitypolicyviolation` 并要求零未解释 violation。Feedback 二进制下载继续使用更严格的 sandbox CSP。HSTS 仍是正式 HTTPS/域名发布边界的独立生产硬化。
 
 ## 17. 页面业务语义
 

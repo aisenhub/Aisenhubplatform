@@ -11,9 +11,10 @@ PostgreSQL private domain functions 是 Aisenhubplatform 最终业务不变量�
 当前 schema 来源：
 
 1. `20261013210107_prelaunch_canonical_baseline.sql`；
-2. `20261014054854_system_admin_resilience.sql` forward migration。
+2. `20261014054854_system_admin_resilience.sql` forward migration；
+3. `20261016022824_admin_mfa_factor_lifecycle.sql` forward migration。
 
-当前规模：42 个 `public` 业务表；canonical baseline 19 个 `private` 控制/恢复表；forward migration 新增 `private.system_admin_operations`，因此当前合计 20 个 private 控制/恢复表。
+当前规模：42 个 `public` 业务表；canonical baseline 19 个 `private` 控制/恢复表；两条 forward migration 分别新增 `private.system_admin_operations` 与 `private.admin_mfa_factor_operations`，因此当前合计 21 个 private 控制/恢复表。
 
 `public` 仅表示业务 schema，不意味着浏览器可以直接读写。
 

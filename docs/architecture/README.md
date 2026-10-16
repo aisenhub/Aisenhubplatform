@@ -91,7 +91,7 @@ flowchart LR
 
 ## 6. 数据库规模与当前基线
 
-当前 prelaunch canonical baseline 定义 42 个 `public` 业务表和 19 个 `private` 控制/恢复表；随后 `system_admin_resilience` forward migration 新增 `private.system_admin_operations`，因此当前 schema 总体为 **42 个 public 业务表 + 20 个 private 控制/恢复表**。精确字段、索引、FK、CHECK 和函数授权以 `supabase/migrations` 为最终依据。
+当前 prelaunch canonical baseline 定义 42 个 `public` 业务表和 19 个 `private` 控制/恢复表；`system_admin_resilience` forward migration 新增 `private.system_admin_operations`，`admin_mfa_factor_lifecycle` 再新增 `private.admin_mfa_factor_operations`，因此当前 schema 总体为 **42 个 public 业务表 + 21 个 private 控制/恢复表**。精确字段、索引、FK、CHECK 和函数授权以 `supabase/migrations` 为最终依据。
 
 当前 canonical HTTP 合同经 `pnpm contracts:check` 验证为：
 
@@ -131,16 +131,16 @@ flowchart LR
 | [architecture/reference/maintenance-callers.md](reference/maintenance-callers.md) | runtime-deployment、operations | 已迁入 Architecture Reference，继续保存精确 Local/Hosted 调用证据 |
 | [architecture/reference/toolchain.md](reference/toolchain.md) | engineering-stack | 已迁入 Architecture Reference；System Admin terminology 已修正 |
 | `apps/admin/DESIGN.md` / `PRODUCT.md` | admin-console | 已吸收（第一轮），原文继续作为设计系统源 |
-| Admin 前端架构审查 + 历史 UI/UX Review | admin-console、engineering-stack；建议项留在 review | 第二轮 parity 已完成；当前 UI/BFF/Auth/Design System 事实已收敛，ADM-008/009 保持 Partial、ADM-010 保持 Planned，历史静态缺陷不回灌为当前事实 |
-| 已完成/被后续主干吸收的 Billing / MFA 实施计划 | commerce、billing、entitlements、identity、admin、operations | 稳定事实已进入 Architecture/Spec；过程资料按 Git 历史追溯，真实剩余 Requirement 与环境验收统一进入 `docs/plans/TODO.md` |
+| Admin 前端架构审查 + 历史 UI/UX Review | admin-console、engineering-stack；建议项留在 review | 第二轮 parity 与后续整改已完成；PlatformSwitcher 键盘语义、统一安全错误分类和强制 CSP 已进入当前架构，`REQ-ADM-008/009/010` 均为 Implemented；历史静态缺陷不回灌为当前事实 |
+| 已完成/被后续主干吸收的 Billing / MFA 实施计划 | commerce、billing、entitlements、identity、admin、operations | 稳定事实已进入 Architecture/Spec；过程资料按 Git 历史追溯；仍需真实 Hosted / Provider / Production 条件的事项只保留在 `docs/plans/TODO.md` 与对应 Runbook |
 | 已完成历史 Plan/Proposal / Review | 对应模块 | P1–P6 parity 后当前事实已进入长期层；原过程资料按 Git 历史追溯 |
-| `optimization-intake/platform-account-workbench-architecture.md` | accounts-profile + `spec/accounts-profile.md` | 第二轮 parity 已核对；发现 Auth Identity 局部降级尚未实现，`REQ-ACC-004` 标记 Partial |
+| `optimization-intake/platform-account-workbench-architecture.md` | accounts-profile + `spec/accounts-profile.md` | 第二轮 parity 与后续整改已完成；Auth Identity 使用独立 `source_state` 局部降级，`REQ-ACC-004` 已为 Implemented |
 | `optimization-intake/config-resource-system-architecture.md` | config-storage + `spec/config-storage.md` | 第二轮 parity 已核对；slot 降级、live author、schema compatibility 等已按当前 SQL/Test 吸收 |
 | `optimization-intake/commercial-subscription-operations-architecture.md` | commerce-catalog、billing-settlement、entitlements-redemption + 对应 spec | 第二轮 parity 已核对核心运营读模型、Cancel/Refund/Revoke 和指标口径；只写入当前已落地事实 |
 | 历史 `platform-feedback-system` Proposal | feedback-support + `spec/feedback-support.md` | 第二轮 parity 已完成；Submit 终态附件语义、标签上限、Client Context、CSV/batch delete、Overview 聚合等已按当前 SQL/runtime/test 修正 |
 | 历史 `admin-global-audit-center` / lifecycle / prelaunch 运维资料 | audit-lifecycle-operations + `spec/audit-lifecycle-operations.md` | 第二轮 parity 已完成；Audit v2、Retention、Global Delete、Maintenance capability、Billing Cron 与 Hosted 证据边界已按当前 SQL/runtime/test 收敛 |
 | 历史 onboarding / remove-sdk / integration-surface / consumer-harness Proposal | platform-tenancy、consumer-api-integration + 对应 spec | 第二轮 parity 已完成；11 capabilities、无 runtime SDK、Harness/compatibility 边界已核对；历史 Admin Consumer Lab 已确认不属于当前实现 |
-| 历史 system-admin resilience / security review / MFA hardening 计划 | identity-security、`spec/identity-security.md`、Admin spec | 第二轮 parity 与计划清理已完成；多管理员/readiness/recent-proof 当前事实已核对；`REQ-IAM-011` 保持 Partial，verified factor 删除与最后因子保护未落地；全局 Admin CSP 仍未实现，剩余项见 `docs/plans/TODO.md` |
+| 历史 system-admin resilience / security review / MFA hardening 计划 | identity-security、`spec/identity-security.md`、Admin spec | 第二轮 parity 与后续整改已完成；多管理员/readiness/recent-proof、受控 verified-factor 删除/factor floor/session refresh 以及 Admin 强制 CSP 已进入长期架构；Supabase 原生 factor endpoint 绕行风险继续作为 Provider 边界保留 |
 
 ## 9. 删除前的强制检查
 
