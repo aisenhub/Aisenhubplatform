@@ -30,4 +30,4 @@ Billing 的 `/discover`、`/process`、`/finish`、`/requeue`、`/claim` 不是�
 - Local 使用固定 localhost Supabase 和虚构 fixture；本地超级用户能够应用迁移，不等于 Hosted `postgres` 已加入所有 executor 角色。
 - Staging/Production 的函数 URL、Vault Secret、网关前缀、JWT/verify_jwt、Worker token、调度频率、告警接收人和恢复窗口均需要逐环境证据。
 - 当前不存在仓库内可证明“所有 `schedule.json` 条目已安装”的单一外部调度器配置；因此这些条目统一记为 `NOT_RUN`，不由静态文档升级为 PASS。
-- TASK-0702 已增加 `private.billing_cron_invocations`，Billing Cron 能区分 scheduler skip、请求受理、HTTP 完成和 Worker 业务结果；其他入口仍需后续 TASK-0703/0705 的观测和告警闭环。
+- `private.billing_cron_invocations` 已能区分 scheduler skip、请求受理、HTTP 完成和 Worker 业务结果；真实 Hosted 调度、Vault/网关、告警接收与恢复证据仍按 [`docs/plans/TODO.md`](../../plans/TODO.md) 的环境验收项独立跟踪，不由静态实现自动升级为 PASS。

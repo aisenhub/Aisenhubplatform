@@ -135,7 +135,7 @@ Admin 在线 MFA 管理必须支持第二 verified TOTP factor，已有 factor �
 
 当前尚未实现：Admin 对 **verified factor** 的删除产品入口，因此“删除前近期验证、最后因子在线保护、删除后 proof/session 收敛”尚未完成。现有 `unenroll` 代码只删除 unverified enrollment。历史固定版本探针已经证明 Supabase 原生 endpoint 和并发会话能够将 factor 删除至 0；未来即使补充应用入口，也必须继续保留该风险边界。因此 `Delivery` 保持 `Partial`。
 
-Admin MFA 整改计划另外仍承担统一安全语义的剩余覆盖、审计可信度和 Web hardening；这些分别由 `REQ-ADM-009/010` 跟踪，不能用 IAM Requirement 冒充已完成。
+统一安全语义剩余覆盖和 Web hardening 分别由 `REQ-ADM-009/010` 跟踪；当前未完成项统一登记在 [`docs/plans/TODO.md`](../plans/TODO.md)，不能用 IAM Requirement 冒充已完成。
 
 ## Domain Verification
 

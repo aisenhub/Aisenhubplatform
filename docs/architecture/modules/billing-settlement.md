@@ -58,6 +58,12 @@ maintenance <-> Provider query-order │
 
 只有服务端 Catalog resolution 可以生成 Checkout。浏览器不提交价格、Provider SKU 或权益期限。
 
+### Checkout 未知结果恢复
+
+创建 Checkout 的网络结果未知时，Consumer 必须保留原 `Idempotency-Key`，通过 `GET /v1/subscription/checkout` 恢复同一个持久 Checkout；该读取入口不会创建新的购买意图。已知 `checkout_id` 则继续通过详情读取权威状态。客户端不能因为一次超时或响应丢失自动生成新 key、新 Checkout 或第二笔付款意图。
+
+Checkout 的 `progress` / `next_action` 是 Provider、verification、Settlement、Grant 与 Job 事实的只读投影。`expires_at` 只终止仍未支付的购买意图；一旦已经观察到 paid/verified/granted/finalized 等更强事实，不能仅因 Checkout 原始有效期过去而把交易降回“已过期/未支付”。需要人工处置的未知或冲突事实使用 `review_required` 等明确状态，不由 Consumer 猜测成功或失败。
+
 ## 3. Webhook Inbox
 
 `billing_webhook_events` 是 hash-only 入站事实：
@@ -120,6 +126,10 @@ Provider URL 在非明确 loopback 环境强制 HTTPS。
 此外保存 Provider order no、金额、币种、Provider facts、mapping version、paid/observed/resolved 时间等。
 
 这些状态不能压成一个笼统的“订单状态”。例如 Provider `paid` 不等于内部 verified，也不等于 Grant 已成功。
+
+### 未关联 paid 的隔离边界
+
+Provider 已付款但无法可靠绑定 Platform/Account/Checkout 的订单必须保留为 `unlinked` / `manual_review` 可调查事实：保存 Provider 订单、观察、Settlement/Job 和审计证据，但 **不得自动 Grant**，也不得接受浏览器提交的 platform/account 作为认领依据。后续人工 requery/resolve 仍必须经过 Admin 授权、recent MFA、reason、operation ID 与并发保护；无法证明归属时保持隔离，而不是为了清空队列伪造成功。
 
 ## 6. Observation 与 Evidence
 

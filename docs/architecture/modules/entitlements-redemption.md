@@ -84,6 +84,12 @@ Free/none 不通过伪造 Grant 表达。读取时：
 
 month/year 使用 UTC 日历加法，月末夹到目标月最后一天，2 月 29 日 +1 year 为次年 2 月 28 日。
 
+### 99 年有限期商品与重复购买
+
+当前历史上被称为 “Lifetime” 的销售商品在 canonical Commerce/Entitlement 模型中是 **99 年有限期 Offer**，不是 `ends_at = NULL` 的永久权益。真正的永久 Grant 仍只属于受控 Admin 授权，不从商品名称或 Provider 文案推断。
+
+同一有限期 Plan 可以重复购买。每笔成功购买保留独立 Billing Order / Settlement / Grant，新的 Grant 从 `max(now, 同 Plan 所有未撤销有限 Grant 的 ends_at)` 之后继续顺延对应期限；因此重复购买 99 年商品会再顺延 99 年，而不是覆盖、合并删除或改写原 Grant。不同 Plan 的未结束/未来 Grant 继续按冲突规则拒绝，重复购买也不能把 99 年有限权益升级成永久权益。
+
 ## 6. Entitlement 读取
 
 Consumer `GET /v1/subscription` 返回标准化 Entitlement：

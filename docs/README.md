@@ -3,7 +3,7 @@
 - [需求管理](spec/README.md)：项目级 Requirement、验收条件与需求追踪；开发设计和架构都必须引用对应 Requirement ID。
 - [模块化架构文档](architecture/README.md)：当前项目完整模块地图、领域边界、跨模块基础设施和资料吸收矩阵；后续架构整理以此为主入口。
 - [开发、测试与运维指南](development/README.md)：开发/发布流程、本地开发、测试、运维、接入兼容入口与文档治理；当前内容已从旧 Guide 收敛，后续可继续重建。
-- [开发与优化计划](plans/README.md)：从现在开始的新计划权威入口；当前文档架构收敛工作按其详细计划执行。
+- [开发与优化计划](plans/README.md)：未来变更与当前剩余工作入口；现有未完成项统一见 [`plans/TODO.md`](plans/TODO.md)。
 - [审查与审计](review/README.md)：风险、评分、问题与优化建议；当前实现事实回写 Architecture/Spec。
 
 ## 架构与精确参考
@@ -11,7 +11,6 @@
 - [系统概览](architecture/overview.md)
 - [平台账户与安全边界决策](architecture/decisions/0001-platform-account-boundaries.md)
 - [决策记录索引](architecture/decisions/README.md)
-- [Billing 历史输入](plans/subscription-billing-centralization/history/README.md)：仍被活跃 Billing Plan 直接依赖，不作为当前架构事实。
 - [运行拓扑](architecture/deployment.md)
 - [身份与安全](architecture/modules/identity-security.md)；其他业务模块统一从[模块化架构索引](architecture/README.md)进入。
 - [本地开发](development/development.md)

@@ -132,7 +132,7 @@ flowchart LR
 | [architecture/reference/toolchain.md](reference/toolchain.md) | engineering-stack | 已迁入 Architecture Reference；System Admin terminology 已修正 |
 | `apps/admin/DESIGN.md` / `PRODUCT.md` | admin-console | 已吸收（第一轮），原文继续作为设计系统源 |
 | Admin 前端架构审查 + 历史 UI/UX Review | admin-console、engineering-stack；建议项留在 review | 第二轮 parity 已完成；当前 UI/BFF/Auth/Design System 事实已收敛，ADM-008/009 保持 Partial、ADM-010 保持 Planned，历史静态缺陷不回灌为当前事实 |
-| active Billing / MFA Plan | 对应模块只吸收**已实现**事实 | 已迁入 `docs/plans`；未完成 Requirement 保持 Partial/Planned |
+| 已完成/被后续主干吸收的 Billing / MFA 实施计划 | commerce、billing、entitlements、identity、admin、operations | 稳定事实已进入 Architecture/Spec；过程资料按 Git 历史追溯，真实剩余 Requirement 与环境验收统一进入 `docs/plans/TODO.md` |
 | 已完成历史 Plan/Proposal / Review | 对应模块 | P1–P6 parity 后当前事实已进入长期层；原过程资料按 Git 历史追溯 |
 | `optimization-intake/platform-account-workbench-architecture.md` | accounts-profile + `spec/accounts-profile.md` | 第二轮 parity 已核对；发现 Auth Identity 局部降级尚未实现，`REQ-ACC-004` 标记 Partial |
 | `optimization-intake/config-resource-system-architecture.md` | config-storage + `spec/config-storage.md` | 第二轮 parity 已核对；slot 降级、live author、schema compatibility 等已按当前 SQL/Test 吸收 |
@@ -140,7 +140,7 @@ flowchart LR
 | 历史 `platform-feedback-system` Proposal | feedback-support + `spec/feedback-support.md` | 第二轮 parity 已完成；Submit 终态附件语义、标签上限、Client Context、CSV/batch delete、Overview 聚合等已按当前 SQL/runtime/test 修正 |
 | 历史 `admin-global-audit-center` / lifecycle / prelaunch 运维资料 | audit-lifecycle-operations + `spec/audit-lifecycle-operations.md` | 第二轮 parity 已完成；Audit v2、Retention、Global Delete、Maintenance capability、Billing Cron 与 Hosted 证据边界已按当前 SQL/runtime/test 收敛 |
 | 历史 onboarding / remove-sdk / integration-surface / consumer-harness Proposal | platform-tenancy、consumer-api-integration + 对应 spec | 第二轮 parity 已完成；11 capabilities、无 runtime SDK、Harness/compatibility 边界已核对；历史 Admin Consumer Lab 已确认不属于当前实现 |
-| 历史 system-admin resilience / security review + 活跃 MFA hardening Proposal | identity-security、`spec/identity-security.md`、Admin spec | 第二轮 parity 已完成；多管理员/readiness/recent-proof 当前事实已核对；`REQ-IAM-011` 保持 Partial，verified factor 删除与最后因子保护未落地；全局 Admin CSP 仍未实现 |
+| 历史 system-admin resilience / security review / MFA hardening 计划 | identity-security、`spec/identity-security.md`、Admin spec | 第二轮 parity 与计划清理已完成；多管理员/readiness/recent-proof 当前事实已核对；`REQ-IAM-011` 保持 Partial，verified factor 删除与最后因子保护未落地；全局 Admin CSP 仍未实现，剩余项见 `docs/plans/TODO.md` |
 
 ## 9. 删除前的强制检查
 
@@ -153,4 +153,4 @@ flowchart LR
 5. `pnpm docs:check`、`pnpm contracts:check`、`git diff --check` 通过；
 6. 删除不破坏仍在执行的计划或外部链接。
 
-在上述检查完成之前，本轮只新增和完善架构文档，不继续扩大删除范围。
+满足上述检查后，已完成或已被当前 Requirement/Architecture 完整吸收的过程计划默认删除；其历史由 Git 保留，未完成工作统一回到 `docs/plans/TODO.md` 或新的独立 Plan，避免旧计划继续成为第二事实源。

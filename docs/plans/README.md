@@ -4,18 +4,16 @@
 
 项目需求由 [`docs/spec`](../spec/README.md) 管理；当前稳定实现由 [`docs/architecture`](../architecture/README.md) 管理；计划只能描述“如何改变”，不能代替 Requirement，也不能把尚未实现的目标提前写成当前架构。
 
-## 当前计划
+## 当前工作
 
-- [文档架构收敛与知识迁移（2026-10-15）](documentation-architecture-consolidation-2026-10-15/plan.md)
-- [Admin 安全管理与 MFA 整改](admin-security-mfa-hardening/plan.md)
-- [订阅支付审查修复](subscription-billing-centralization/plan.md)；[计划入口/历史说明](subscription-billing-centralization/README.md)
+- [当前剩余工作 TODO](TODO.md)：以 Active Requirement 的 Partial/Planned 缺口、当前源码和真实环境证据为准的唯一剩余工作清单。
 
 ## 计划基础设施
 
 - [计划编写规范](plan-writing.md)
 - 模板：[Design](_template/design.md) · [Plan](_template/plan.md) · [Phase](_template/phases/01-phase.md) · [Agent Handoff](_template/agent-handoff.md) · [Verification Record](_template/verification-record.md)
 
-旧 `docs/proposals` 已在 2026-10-15 文档收敛中退出顶层结构。历史 Completed Proposal 的长期事实进入 Architecture/Spec 后由 Git 历史追溯；仍在执行的计划已完整迁入本目录，Billing 仍直接依赖的旧设计/验证资料保存在其 [`history/`](subscription-billing-centralization/history/README.md)。
+旧 `docs/proposals` 已在 2026-10-15 文档收敛中退出顶层结构。完成或被后续主干吸收的 Plan 在稳定事实进入 Architecture/Spec、真实未完成项迁入 `TODO.md` 后删除，实施过程由 Git 历史追溯；`docs/plans` 不再承担历史档案库职责。
 
 ## 计划要求
 
@@ -35,7 +33,7 @@
 
 执行计划时至少遵循：
 
-1. 阅读根 `AGENTS.md`、`docs/README.md`、`docs/agents.md` 和适用 Requirement。
+1. 阅读根 `AGENTS.md`、`docs/README.md`、`docs/development/documentation-governance.md` 和适用 Requirement。
 2. 阅读当前 Architecture、对应 Plan/Design/Phase 和实际源码/迁移/OpenAPI/测试；历史资料只提供背景，不覆盖当前事实。
 3. 记录任务 ID、起始 HEAD、工作区已有改动、风险级别、受影响消费者和授权边界；不得擅自覆盖其他任务工作区。
 4. 先冻结共享数据/合同/状态机，再实施可独立验收的阶段；共享 migration/OpenAPI/领域函数不得由并行 Agent 各自发明。

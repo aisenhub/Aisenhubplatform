@@ -4,7 +4,7 @@
 
 ## Requirements
 
-本模块主要承担 [身份与安全需求](../../spec/identity-security.md) `REQ-IAM-001` ～ `REQ-IAM-011`，并共同满足 `REQ-SYS-001` ～ `REQ-SYS-006`、`REQ-SYS-008`。仍在执行的 MFA 整改计划只能把已完成实现同步到本架构；`REQ-IAM-011` 等未完成目标保留为 Partial/Plan/Review，不提前写成当前能力。
+本模块主要承担 [身份与安全需求](../../spec/identity-security.md) `REQ-IAM-001` ～ `REQ-IAM-011`，并共同满足 `REQ-SYS-001` ～ `REQ-SYS-006`、`REQ-SYS-008`。未完成目标以 Spec 的 `Partial/Planned` 状态和 [`docs/plans/TODO.md`](../../plans/TODO.md) 跟踪，不提前写成当前能力。
 
 ## 1. 平台信任边界
 
