@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_catalog;
 
-select plan(16);
+select plan(17);
 
 select has_function(
   'private',
@@ -50,7 +50,7 @@ insert into private.system_admin(user_id,state,activated_at)
 values ('00000000-0000-4700-8000-000000000001','active',now());
 insert into private.admin_step_up(id,user_id,session_id,factor_id,verified_at,expires_at)
 values
-  ('00000000-0000-4730-8000-000000000001','00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4720-8000-000000000001',now(),now()+interval '10 minutes'),
+  ('00000000-0000-4730-8000-000000000001','00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4720-8000-000000000001',now()-interval '1 minute',now()+interval '9 minutes'),
   ('00000000-0000-4730-8000-000000000004','00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4720-8000-000000000001',now(),now()+interval '10 minutes'),
   ('00000000-0000-4730-8000-000000000002','00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000002','00000000-0000-4720-8000-000000000002',now(),now()+interval '10 minutes');
 
@@ -64,17 +64,19 @@ select ok(
 );
 
 set local role admin_executor;
+create temporary table mfa_delete_prepare_snapshot on commit drop as
+select * from private.admin_mfa_factor_delete_prepare(
+  row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000001')::private.admin_context,
+  '00000000-0000-4730-8000-000000000004',
+  '00000000-0000-4720-8000-000000000003',
+  '00000000-0000-4750-8000-000000000001'
+);
+set local role postgres;
 select is(
-  (select operation_id::text from private.admin_mfa_factor_delete_prepare(
-    row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000001')::private.admin_context,
-    '00000000-0000-4730-8000-000000000004',
-    '00000000-0000-4720-8000-000000000003',
-    '00000000-0000-4750-8000-000000000001'
-  )),
-  '00000000-0000-4750-8000-000000000001',
+  (select operation_id from mfa_delete_prepare_snapshot),
+  '00000000-0000-4750-8000-000000000001'::uuid,
   'prepare returns the caller operation id'
 );
-reset role;
 
 select is(
   (select count(*)::bigint from private.admin_step_up where session_id='00000000-0000-4710-8000-000000000001'),
@@ -88,44 +90,57 @@ select is(
 );
 
 set local role admin_executor;
-select throws_ok(
-  $$select * from private.admin_mfa_factor_delete_prepare(
-    row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000002','00000000-0000-4740-8000-000000000002')::private.admin_context,
-    '00000000-0000-4730-8000-000000000002',
-    '00000000-0000-4720-8000-000000000002',
-    '00000000-0000-4750-8000-000000000002'
-  )$$,
-  'P0001',
-  'mfa_factor_operation_in_progress',
-  'a second session cannot prepare a concurrent factor deletion'
-);
-reset role;
+do $$
+declare
+  error_message text;
+begin
+  begin
+    perform 1 from private.admin_mfa_factor_delete_prepare(
+      row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000002','00000000-0000-4740-8000-000000000002')::private.admin_context,
+      '00000000-0000-4730-8000-000000000002',
+      '00000000-0000-4720-8000-000000000002',
+      '00000000-0000-4750-8000-000000000002'
+    );
+    raise exception 'concurrent factor deletion unexpectedly prepared';
+  exception when raise_exception then
+    get stacked diagnostics error_message = message_text;
+    if error_message <> 'mfa_factor_operation_in_progress' then
+      raise exception 'expected mfa_factor_operation_in_progress, received %', error_message;
+    end if;
+  end;
+end
+$$;
+set local role postgres;
+select ok(true, 'a second session cannot prepare a concurrent factor deletion');
 
 delete from auth.mfa_factors where id='00000000-0000-4720-8000-000000000003';
 set local role admin_executor;
+create temporary table mfa_delete_finalize_snapshot on commit drop as
+select * from private.admin_mfa_factor_delete_finalize(
+  row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000003')::private.admin_context,
+  '00000000-0000-4750-8000-000000000001',
+  '00000000-0000-4720-8000-000000000003',
+  'completed',
+  null
+);
+create temporary table mfa_delete_replay_snapshot on commit drop as
+select * from private.admin_mfa_factor_delete_finalize(
+  row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000004')::private.admin_context,
+  '00000000-0000-4750-8000-000000000001',
+  '00000000-0000-4720-8000-000000000003',
+  'completed',
+  null
+);
+set local role postgres;
 select is(
-  (select state from private.admin_mfa_factor_delete_finalize(
-    row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000003')::private.admin_context,
-    '00000000-0000-4750-8000-000000000001',
-    '00000000-0000-4720-8000-000000000003',
-    'completed',
-    null
-  )),
+  (select state from mfa_delete_finalize_snapshot),
   'completed',
   'finalize accepts a Provider-confirmed absent factor'
 );
-select is(
-  (select replayed::text from private.admin_mfa_factor_delete_finalize(
-    row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000004')::private.admin_context,
-    '00000000-0000-4750-8000-000000000001',
-    '00000000-0000-4720-8000-000000000003',
-    'completed',
-    null
-  )),
-  'true',
+select ok(
+  (select replayed from mfa_delete_replay_snapshot),
   'finalize replay is idempotent'
 );
-reset role;
 select ok(
   exists(select 1 from public.audit_logs where event_type='system_admin.mfa_factor_removed' and target_id='00000000-0000-4720-8000-000000000003'),
   'successful factor removal is audited only after Provider state is absent'
@@ -134,18 +149,28 @@ select ok(
 insert into private.admin_step_up(id,user_id,session_id,factor_id,verified_at,expires_at)
 values ('00000000-0000-4730-8000-000000000003','00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4720-8000-000000000001',now(),now()+interval '10 minutes');
 set local role admin_executor;
-select throws_ok(
-  $$select * from private.admin_mfa_factor_delete_prepare(
-    row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000005')::private.admin_context,
-    '00000000-0000-4730-8000-000000000003',
-    '00000000-0000-4720-8000-000000000002',
-    '00000000-0000-4750-8000-000000000003'
-  )$$,
-  'P0001',
-  'mfa_factor_floor_required',
-  'active System Admin cannot delete below two verified TOTP factors'
-);
-reset role;
+do $$
+declare
+  error_message text;
+begin
+  begin
+    perform 1 from private.admin_mfa_factor_delete_prepare(
+      row('00000000-0000-4700-8000-000000000001','00000000-0000-4710-8000-000000000001','00000000-0000-4740-8000-000000000005')::private.admin_context,
+      '00000000-0000-4730-8000-000000000003',
+      '00000000-0000-4720-8000-000000000002',
+      '00000000-0000-4750-8000-000000000003'
+    );
+    raise exception 'factor floor unexpectedly allowed deletion';
+  exception when raise_exception then
+    get stacked diagnostics error_message = message_text;
+    if error_message <> 'mfa_factor_floor_required' then
+      raise exception 'expected mfa_factor_floor_required, received %', error_message;
+    end if;
+  end;
+end
+$$;
+set local role postgres;
+select ok(true, 'active System Admin cannot delete below two verified TOTP factors');
 
 select is(
   (select count(*)::bigint from private.admin_mfa_factor_operations where state='authorized'),

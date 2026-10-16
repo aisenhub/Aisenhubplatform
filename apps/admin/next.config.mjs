@@ -1,4 +1,4 @@
-const contentSecurityPolicyReportOnly = [
+const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
@@ -21,8 +21,8 @@ export const ADMIN_SECURITY_HEADERS = [
     value: 'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
   },
   {
-    key: 'Content-Security-Policy-Report-Only',
-    value: contentSecurityPolicyReportOnly,
+    key: 'Content-Security-Policy',
+    value: contentSecurityPolicy,
   },
 ];
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import nextConfig, { ADMIN_SECURITY_HEADERS } from './next.config.mjs';
 
 describe('Admin browser security headers', () => {
-  it('enforces framing and MIME protections while keeping CSP report-only', async () => {
+  it('enforces framing, MIME and the validated CSP policy', async () => {
     const byName = new Map(
       ADMIN_SECURITY_HEADERS.map((header) => [header.key, header.value]),
     );
@@ -12,11 +12,11 @@ describe('Admin browser security headers', () => {
     expect(byName.get('Referrer-Policy')).toBe(
       'strict-origin-when-cross-origin',
     );
-    expect(byName.get('Content-Security-Policy')).toBeUndefined();
-    expect(byName.get('Content-Security-Policy-Report-Only')).toContain(
+    expect(byName.get('Content-Security-Policy-Report-Only')).toBeUndefined();
+    expect(byName.get('Content-Security-Policy')).toContain(
       "frame-ancestors 'none'",
     );
-    expect(byName.get('Content-Security-Policy-Report-Only')).toContain(
+    expect(byName.get('Content-Security-Policy')).toContain(
       "img-src 'self' data: blob:",
     );
 

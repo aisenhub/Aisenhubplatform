@@ -81,7 +81,9 @@ function restartLocalKong() {
 }
 
 async function waitForLocalAuth(apiUrl) {
-  const deadline = Date.now() + 60_000;
+  // A Docker/Desktop restart can make Postgres perform recovery fsync work after db reset.
+  // Keep this bounded, but allow Auth enough time to restart behind a healthy database.
+  const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     try {
       const response = await fetch(`${apiUrl}/auth/v1/health`);

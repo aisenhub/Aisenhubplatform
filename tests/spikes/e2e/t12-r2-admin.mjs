@@ -63,7 +63,6 @@ let consumerUserId;
 let consumerSessionId;
 const consumerEmail = `t12-r2-consumer-${crypto.randomUUID()}@example.test`;
 let userId;
-let factorId;
 let lifecycleUserId;
 let lifecycleRequestId;
 let lifecycleJobId;
@@ -158,6 +157,59 @@ async function browserRequest(path, options = {}) {
   );
 }
 
+async function enrollVerifiedTotp(accessToken, friendlyName) {
+  const enroll = await authRequest('/auth/v1/factors', accessToken, {
+    method: 'POST',
+    body: JSON.stringify({ factor_type: 'totp', friendly_name: friendlyName }),
+  });
+  assertStatus(
+    enroll.response.status,
+    200,
+    `Local TOTP enrollment (${friendlyName})`,
+  );
+  const id = enroll.body?.id;
+  const secret = enroll.body?.totp?.secret;
+  assert.ok(
+    id && secret,
+    `TOTP enrollment ${friendlyName} must return factor and secret`,
+  );
+
+  const challenge = await authRequest(
+    `/auth/v1/factors/${id}/challenge`,
+    accessToken,
+    {
+      method: 'POST',
+      body: '{}',
+    },
+  );
+  assertStatus(
+    challenge.response.status,
+    200,
+    `Local TOTP challenge (${friendlyName})`,
+  );
+  const verify = await authRequest(
+    `/auth/v1/factors/${id}/verify`,
+    accessToken,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        challenge_id: challenge.body?.id,
+        code: totp(secret),
+      }),
+    },
+  );
+  assertStatus(
+    verify.response.status,
+    200,
+    `Local TOTP verification (${friendlyName})`,
+  );
+  assert.ok(
+    verify.body?.access_token,
+    `TOTP verification ${friendlyName} must return an elevated access token`,
+  );
+  return { id, secret, accessToken: verify.body.access_token };
+}
+
 async function signupAndEnroll() {
   const signup = await authRequest('/auth/v1/signup', null, {
     method: 'POST',
@@ -168,39 +220,18 @@ async function signupAndEnroll() {
   const accessToken = signup.body?.access_token;
   assert.ok(userId && accessToken, 'signup must return user and session');
 
-  const enroll = await authRequest('/auth/v1/factors', accessToken, {
-    method: 'POST',
-    body: JSON.stringify({
-      factor_type: 'totp',
-      friendly_name: 't12-r2-browser',
-    }),
-  });
-  assertStatus(enroll.response.status, 200, 'Local TOTP enrollment');
-  factorId = enroll.body?.id;
-  const secret = enroll.body?.totp?.secret;
-  assert.ok(
-    factorId && secret,
-    'TOTP enrollment must return factor and secret',
-  );
-
-  const challenge = await authRequest(
-    `/auth/v1/factors/${factorId}/challenge`,
+  const primary = await enrollVerifiedTotp(
     accessToken,
-    { method: 'POST', body: '{}' },
+    't12-r2-browser-primary',
   );
-  assertStatus(challenge.response.status, 200, 'Local TOTP challenge');
-  const verify = await authRequest(
-    `/auth/v1/factors/${factorId}/verify`,
-    accessToken,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        challenge_id: challenge.body?.id,
-        code: totp(secret),
-      }),
-    },
+  const backup = await enrollVerifiedTotp(
+    primary.accessToken,
+    't12-r2-browser-backup',
   );
-  assertStatus(verify.response.status, 200, 'Local TOTP verification');
+  const recovery = await enrollVerifiedTotp(
+    backup.accessToken,
+    't12-r2-browser-recovery',
+  );
   const passwordLogin = await authRequest(
     '/auth/v1/token?grant_type=password',
     null,
@@ -214,7 +245,12 @@ async function signupAndEnroll() {
     200,
     `Local password login (${JSON.stringify(passwordLogin.body?.msg ?? passwordLogin.body?.error)})`,
   );
-  return { secret };
+  return {
+    secret: primary.secret,
+    primaryFactorId: primary.id,
+    backupFactorId: backup.id,
+    recoveryFactorId: recovery.id,
+  };
 }
 
 async function createFixtures() {
@@ -511,7 +547,12 @@ async function createPlatformScaleFixtures() {
   assert.deepEqual(scaleFacts, { platform_count: 106, target_count: 1 });
 }
 
-async function runBrowserFlow(secret) {
+async function selectRecentMfaFactor(factorId) {
+  const selector = page.locator('[data-test="recent-mfa-factor"]');
+  if ((await selector.count()) > 0) await selector.selectOption(factorId);
+}
+
+async function runBrowserFlow(secret, primaryFactorId, backupFactorId) {
   browser = await chromium.launch({
     channel: process.env.T12_BROWSER_CHANNEL ?? 'chrome',
     headless: true,
@@ -520,6 +561,20 @@ async function runBrowserFlow(secret) {
   const context = await browser.newContext();
   page = await context.newPage();
   page.setDefaultTimeout(10_000);
+  const cspViolations = [];
+  await page.exposeBinding('__t12RecordCspViolation', (_source, violation) => {
+    cspViolations.push(violation);
+  });
+  await page.addInitScript(() => {
+    document.addEventListener('securitypolicyviolation', (event) => {
+      void globalThis.__t12RecordCspViolation?.({
+        blockedURI: event.blockedURI,
+        effectiveDirective: event.effectiveDirective,
+        violatedDirective: event.violatedDirective,
+        disposition: event.disposition,
+      });
+    });
+  });
   const securityStatusResponses = [];
   page.on('response', (response) => {
     if (response.url().includes('/api/v1/admin/api/v1/security/status'))
@@ -595,6 +650,68 @@ async function runBrowserFlow(secret) {
   );
   assertStatus(aal2Status.status, 200, 'AAL2 Admin security status');
   assert.equal(aal2Status.payload?.data?.current_aal, 'aal2');
+
+  await page.goto(`${appUrl}/admin/security`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page
+    .locator('[data-test="admin-security-page"]')
+    .waitFor({ state: 'visible' });
+  await page
+    .locator('[data-test="security-factor-list"]')
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await page.locator('[data-test="security-factor-list"] > li').count(),
+    3,
+    'active administrator starts controlled deletion with three verified TOTP factors',
+  );
+  await page
+    .locator(`[data-test="security-factor-delete-${backupFactorId}"]`)
+    .click();
+  const [factorDeleteResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/auth/mfa/factors/${backupFactorId}`) &&
+        response.request().method() === 'DELETE',
+    ),
+    page.locator('[data-test="confirm-action-submit"]').click(),
+  ]);
+  assertStatus(
+    factorDeleteResponse.status(),
+    200,
+    'controlled verified TOTP deletion',
+  );
+  const factorDeletePayload = await factorDeleteResponse.json();
+  assert.equal(factorDeletePayload?.data?.deleted, true);
+  assert.equal(
+    factorDeletePayload?.data?.session_state,
+    'refreshed',
+    'factor deletion refreshes the current Auth session',
+  );
+  await page
+    .locator('[data-test="security-factor-list"] > li')
+    .nth(1)
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await page.locator('[data-test="security-factor-list"] > li').count(),
+    2,
+    'controlled deletion preserves the active-admin two-factor floor',
+  );
+  assert.equal(
+    await page
+      .locator(`[data-test="security-factor-delete-${backupFactorId}"]`)
+      .count(),
+    0,
+    'deleted verified factor disappears from the Provider-backed factor list',
+  );
+  const cookiesAfterFactorDelete = await context.cookies();
+  assert.equal(
+    cookiesAfterFactorDelete.some(
+      (cookie) => cookie.name === 'aisenhub-admin-recent-auth-proof',
+    ),
+    false,
+    'verified factor deletion invalidates the previous recent-MFA proof cookie',
+  );
 
   const loadPlansResponsePromise = page.waitForResponse((response) =>
     response
@@ -702,6 +819,7 @@ async function runBrowserFlow(secret) {
   );
   const waitForCommerceTotpMs = 31_000 - (Date.now() % 30_000);
   await new Promise((resolve) => setTimeout(resolve, waitForCommerceTotpMs));
+  await selectRecentMfaFactor(primaryFactorId);
   await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
   const [commerceMfaResponse] = await Promise.all([
     page.waitForResponse((response) =>
@@ -842,6 +960,7 @@ async function runBrowserFlow(secret) {
   await page.locator('[data-test="recent-mfa-panel"]').waitFor({
     state: 'visible',
   });
+  await selectRecentMfaFactor(primaryFactorId);
   await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
   const [recentMfaResponse] = await Promise.all([
     page.waitForResponse((response) =>
@@ -1064,6 +1183,7 @@ async function runBrowserFlow(secret) {
     .waitFor({ state: 'visible' });
   const waitForFeedbackTotpMs = 31_000 - (Date.now() % 30_000);
   await new Promise((resolve) => setTimeout(resolve, waitForFeedbackTotpMs));
+  await selectRecentMfaFactor(primaryFactorId);
   await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
   const [feedbackMfaResponse] = await Promise.all([
     page.waitForResponse((response) =>
@@ -1149,6 +1269,7 @@ async function runBrowserFlow(secret) {
   });
   const waitForNextTotpMs = 31_000 - (Date.now() % 30_000);
   await new Promise((resolve) => setTimeout(resolve, waitForNextTotpMs));
+  await selectRecentMfaFactor(primaryFactorId);
   await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
   const [capacityMfaResponse] = await Promise.all([
     page.waitForResponse((response) =>
@@ -1353,11 +1474,19 @@ async function runBrowserFlow(secret) {
   });
   await page.unroute(plansRoute);
 
-  const architectureBehavior = await runArchitectureBehaviorMatrix(secret);
+  const architectureBehavior = await runArchitectureBehaviorMatrix(
+    secret,
+    primaryFactorId,
+  );
   const responsiveA11y = await runResponsiveA11yMatrix();
 
   await page.getByRole('button', { name: '退出登录' }).click();
   await page.waitForURL(/\/admin\/login$/u);
+  assert.deepEqual(
+    cspViolations,
+    [],
+    `Admin browser must have no CSP violations: ${JSON.stringify(cspViolations)}`,
+  );
   const cookiesAfterLogout = await context.cookies();
   assert.equal(
     cookiesAfterLogout.some(
@@ -1419,7 +1548,7 @@ async function runBrowserFlow(secret) {
   };
 }
 
-async function runArchitectureBehaviorMatrix(secret) {
+async function runArchitectureBehaviorMatrix(secret, primaryFactorId) {
   await sql`
     insert into public.platform_feedback (
       platform_id, platform_account_id, user_id, category, title, body, status, submitted_at
@@ -1649,6 +1778,7 @@ async function runArchitectureBehaviorMatrix(secret) {
   });
   const waitForAccountTotpMs = 31_000 - (Date.now() % 30_000);
   await new Promise((resolve) => setTimeout(resolve, waitForAccountTotpMs));
+  await selectRecentMfaFactor(primaryFactorId);
   await page.locator('[data-test="recent-mfa-code"]').fill(totp(secret));
   const [accountMfaResponse] = await Promise.all([
     page.waitForResponse((response) =>
@@ -2486,9 +2616,9 @@ async function runResponsiveA11yMatrix() {
 }
 
 try {
-  const { secret } = await signupAndEnroll();
+  const { secret, primaryFactorId, backupFactorId } = await signupAndEnroll();
   await createFixtures();
-  const result = await runBrowserFlow(secret);
+  const result = await runBrowserFlow(secret, primaryFactorId, backupFactorId);
   console.log(JSON.stringify(result));
 } finally {
   if (browser) await browser.close().catch(() => undefined);

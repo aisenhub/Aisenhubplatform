@@ -51,8 +51,8 @@
 ### P0-E Admin Web 安全头
 
 1. 在应用层配置一致的 `X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、Referrer-Policy、Permissions-Policy。
-2. CSP 先使用 Report-Only，覆盖 Next 静态资源、same-origin BFF、Supabase Auth、TOTP data: QR；不启用 HSTS 或强制 CSP 生产策略。
-3. 增加配置/响应头静态测试，真实候选部署头部验收仍在发布阶段记录。
+2. CSP 先使用 Report-Only 覆盖 Next 静态资源、same-origin BFF、Supabase Auth、TOTP data: QR；只有真实候选浏览器捕获 `securitypolicyviolation` 且 0 未解释 violation 后才升级为强制 CSP。HSTS 始终保留为独立 HTTPS 发布动作。
+3. 增加配置/响应头静态测试和真实浏览器 violation 断言；强制 CSP 只有在本地候选回归通过后才进入最终候选。
 
 ## 阶段 2：本地验证与需求收口
 
@@ -67,8 +67,8 @@
 
 ## 当前退出状态
 
-仓库实现、静态/单元/合同/build 门禁与外部事项 Runbook 已完成；`REQ-ACC-004`、`REQ-ADM-009` 已升级为 Implemented。`REQ-ADM-008`、`REQ-IAM-011` 的实现已落地但仍等待当前候选 Local browser/Supabase 证据；`REQ-ADM-010` 已从 Planned 收敛为 Partial，等待候选浏览器 CSP violation 回归后才能强制完整 CSP。
+仓库实现、静态/单元/合同/build 门禁与外部事项 Runbook 已完成；`REQ-ACC-004`、`REQ-ADM-008`、`REQ-ADM-009`、`REQ-ADM-010`、`REQ-IAM-011` 均已升级为 Implemented。强制 CSP 已在真实候选浏览器 0 `securitypolicyviolation` 证据后进入最终候选；HSTS 仍留在正式 HTTPS 发布边界。
 
-完整 `pnpm verify:task:0801` 已实际运行，但在 `start Local Supabase` 阶段因当前 Runner 无权启动 stopped 的 Windows `com.docker.service`、`dockerDesktopLinuxEngine` 不存在而 BLOCKED；不能把后续 DB/Auth/browser 用例伪造为 PASS。Hosted/Provider/Retention/Production 项也只剩明确目标环境、政策输入或生产授权，执行入口已经迁入 `docs/development/runbooks/`。
+Docker 恢复后，同一候选重新执行完整 `pnpm verify:task:0801` 并以 24/24 executable gates PASS 收口：Local migration reset、64 files / 1398 pgTAP、MFA/System Admin/Billing 并发、115 Edge/API tests、Consumer Harness、Admin T12 浏览器、docs/contracts 均通过。Hosted/Provider/Retention/正式 Production 项仍只在具备明确目标环境、政策输入或生产授权时执行，入口统一位于 `docs/development/runbooks/`。
 
 详细证据见 [`verification-record.md`](verification-record.md)。

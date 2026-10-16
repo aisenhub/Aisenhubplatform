@@ -218,9 +218,9 @@ Topbar 使用 `Aisenhub / platform / page` 上下文层级，并在窄屏压缩�
 
 当前稳定基础：skip-to-content、aria-current/expanded/haspopup/selected/busy、role alert/status、sr-only、Base UI Dialog/Sheet、focus-visible、focusable table scroll region、状态非纯颜色、reduced motion、mobile touch target、Cmd/Ctrl+B Sidebar、Cmd/Ctrl+K Command Palette。
 
-PlatformSwitcher 当前源码已支持 Tab/Escape/click-outside、ArrowUp/Down/Home/End、`aria-activedescendant` active-option 与 Enter/Space 选择；对应真实浏览器路径已加入 Local E2E，候选证据仍按实际运行记录。
+PlatformSwitcher 支持 Tab/Escape/click-outside、ArrowUp/Down/Home/End、`aria-activedescendant` active-option 与 Enter/Space 选择；当前候选 Local E2E 已实际覆盖平台 scale pagination/切换、键盘语义、5 个 viewport 与 95 条 Admin 路由，`REQ-ADM-008` 已验收为 Implemented。
 
-Admin Web 在 `next.config.mjs` 统一返回 `X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、Referrer-Policy、Permissions-Policy，并配置全局 `Content-Security-Policy-Report-Only`。Report-Only 当前允许 same-origin、必要 inline style/script、TOTP `data:` QR 与 blob worker/image；它用于先发现 Next/Auth/MFA 兼容问题，不等于完整强制 CSP 已发布。Feedback 二进制下载继续使用更严格的 sandbox CSP。完整 CSP 强制与 HSTS 仍需候选浏览器/HTTPS 发布证据，因此 `REQ-ADM-010` 目前为 Partial。
+Admin Web 在 `next.config.mjs` 统一返回 `X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、Referrer-Policy、Permissions-Policy，并配置全局强制 `Content-Security-Policy`。策略允许 same-origin、必要 inline style/script、TOTP `data:` QR 与 blob worker/image；当前候选 Local browser 已在该强制策略下完成登录/MFA/BFF/核心工作区、95 路由与 5 个 viewport 回归，并通过 `securitypolicyviolation` 监听断言 0 violation。Feedback 二进制下载继续使用更严格的 sandbox CSP。`REQ-ADM-010` 因此已验收为 Implemented；HSTS 仍是正式 HTTPS/域名发布边界的独立生产硬化。
 
 ## 17. 页面业务语义
 

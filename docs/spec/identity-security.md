@@ -114,7 +114,7 @@ pending/active System Admin 专用 Auth Identity 必须被普通平台 Principal
 ## REQ-IAM-011 — Admin TOTP 因子生命周期必须安全可恢复
 
 - **Status**: Active
-- **Delivery**: Partial
+- **Delivery**: Implemented
 - **Priority**: P0
 - **Type**: Security
 
@@ -129,14 +129,14 @@ Admin 在线 MFA 管理必须支持第二 verified TOTP factor，已有 factor �
 - factor 变化后旧 recent proof 不再可用。
 - Supabase 原生 endpoint/并发绕行边界有明确测试和风险记录，不把应用层检查夸大成 Provider 全局原子保证。
 
-## 当前缺口
+## 当前实现
 
 当前源码已经实现 verified TOTP 列表、首因子/第二备用因子注册，以及 verified factor 的受控删除入口。删除前中央数据库重新校验 membership、活动 session、recent MFA、factor 归属与最低剩余因子数，并通过 `admin_mfa_factor_operations` 序列化同一管理员的并发删除；prepare 会使当前 session 旧 recent proof 失效，Provider `unenroll` 后必须 finalize，成功 finalization 只有在 Auth factor 已不存在时才写删除审计。BFF 随后刷新 session；未知 Provider 结果保留 operation/lease 供恢复，不自动发起第二次删除。
 
-`Delivery` 暂保持 `Partial` 的原因已经从“缺少产品入口”收缩为**当前候选验证证据缺口**：pgTAP `sec_admin_04_mfa_factor_lifecycle.sql`、双会话并发脚本和 browser flow 已加入仓库，但本次 Runner 无权启动本机 `com.docker.service`，因此真实 Local Supabase/Auth 回归尚未执行。历史固定版本探针仍证明 Supabase 原生 endpoint 可绕过应用入口并在并发会话下删到 0；即使本项目受控路径验证通过，也只能承诺应用路径保护，不能夸大为 Provider 全局原子保证。
+当前候选已经完成真实 Local Supabase/Auth 验收：`sec_admin_04_mfa_factor_lifecycle.sql` 17/17 PASS，全量 DB 为 64 files / 1398 tests PASS，双会话 deletion prepare 串行化 PASS；浏览器 T12 使用真实 Local GoTrue 创建 3 个 verified TOTP，通过 `/admin/security` 受控入口删除一个备用 factor，验证 Provider factor 实际消失、active admin 仍保留 2 个 verified TOTP、Auth session 返回 refreshed，且旧 recent-proof cookie 被删除。历史固定版本探针仍证明 Supabase 原生 endpoint 可绕过应用入口并在并发会话下删到 0；因此本 Requirement 的 Implemented 只声明受控 Admin 路径满足验收，不夸大为 Provider 全局原子保证。
 
-统一安全语义剩余覆盖和 Web hardening 分别由 `REQ-ADM-009/010` 跟踪；当前未完成项统一登记在 [`docs/plans/TODO.md`](../plans/TODO.md)，不能用 IAM Requirement 冒充已完成。
+统一安全语义和 Web hardening 分别由 `REQ-ADM-009/010` 跟踪；Supabase 原生绕行风险继续作为明确边界记录，不作为受控 Admin 路径已经满足本 Requirement 的反证。
 
 ## Domain Verification
 
-当前基线证据包括 Admin MFA routes/page、`@kit/domain/admin-mfa-attestation` 及其测试、canonical `admin_step_up_issue/admin_step_up_valid`、Admin security status、System Admin domain tests，以及历史 `SEC-PROBE-00` 对原生 factor 删除/AAL refresh 边界的 Local Supabase 探针。历史探针只证明被记录版本/环境中的 Provider 行为，当前代码事实仍以源码与最新验证为准。
+当前基线证据包括 Admin MFA routes/page、`@kit/domain/admin-mfa-attestation` 及其测试、canonical `admin_step_up_issue/admin_step_up_valid`、Admin security status、System Admin domain tests、`sec_admin_04_mfa_factor_lifecycle.sql`、双 session deletion prepare 并发脚本，以及 T12 真实 Local GoTrue 三因子→受控 UI 删除→session/proof 收敛浏览器链。历史 `SEC-PROBE-00` 继续记录原生 factor 删除/AAL refresh 绕行边界。

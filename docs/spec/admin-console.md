@@ -121,7 +121,7 @@ Admin 必须提供稳定的信息架构和快速导航方式，使管理员能�
 ## REQ-ADM-008 — 可访问状态不得仅依赖颜色
 
 - **Status**: Active
-- **Delivery**: Partial
+- **Delivery**: Implemented
 - **Priority**: P1
 - **Type**: UX
 
@@ -133,11 +133,11 @@ Admin 必须提供稳定的信息架构和快速导航方式，使管理员能�
 
 - 状态组件具有文本语义。
 - focus-visible、skip link、reduced motion 等基础能力存在。
-- PlatformSwitcher 源码已经实现 ArrowUp/ArrowDown/Home/End、`aria-activedescendant` 与 Enter/Space 选择；当前候选的真实 Local browser 回归已加入 E2E，但因本机 Docker/Supabase 服务权限阻塞尚未执行，因此 Delivery 暂保持 Partial。
+- PlatformSwitcher 支持 ArrowUp/ArrowDown/Home/End、`aria-activedescendant` 与 Enter/Space 选择，并已在当前候选 Local browser 回归中通过键盘、分页、窄屏与鼠标兼容验证。
 
 **Current state**
 
-PlatformSwitcher 当前已有 dialog/listbox/option/aria-selected、Tab、Escape、点击外部关闭，并通过 `aria-activedescendant` 管理 active option；搜索框/触发按钮可用方向键进入列表，列表支持 ArrowUp/ArrowDown/Home/End 与 Enter/Space 选择。模型单测已经覆盖 wrap/Home/End，真实浏览器用例已经进入 `admin-ux-local.mjs`；本 Requirement 只等待当前候选的 Local browser 证据。
+PlatformSwitcher 当前已有 dialog/listbox/option/aria-selected、Tab、Escape、点击外部关闭，并通过 `aria-activedescendant` 管理 active option；搜索框/触发按钮可用方向键进入列表，列表支持 ArrowUp/ArrowDown/Home/End 与 Enter/Space 选择。模型单测覆盖 wrap/Home/End；当前候选 `verify:task:0801` 的真实浏览器路径验证了平台分页/切换、键盘语义、5 个 viewport 与 95 条 Admin 路由无回退，因此本 Requirement 已满足。
 
 ## REQ-ADM-009 — Admin 安全状态与错误语义必须统一
 
@@ -163,7 +163,7 @@ Shell 与共享错误分类器统一消费服务端 security status / machine co
 ## REQ-ADM-010 — Admin Web 必须具备受控浏览器安全头
 
 - **Status**: Active
-- **Delivery**: Partial
+- **Delivery**: Implemented
 - **Priority**: P1
 - **Type**: Security
 
@@ -171,9 +171,9 @@ Shell 与共享错误分类器统一消费服务端 security status / machine co
 
 Admin Web 响应必须在不破坏 Supabase Auth/MFA/必要资源加载的前提下配置明确的浏览器安全头与 CSP，并通过真实浏览器回归验证登录、MFA、BFF 和核心工作区仍可用。
 
-**Current Gap**
+**Current state**
 
-`next.config.mjs` 已统一配置 `X-Frame-Options: DENY`、`nosniff`、Referrer-Policy、Permissions-Policy，并对全部页面输出 CSP Report-Only（允许当前 same-origin、TOTP `data:` QR、必要 blob）。Feedback binary proxy 继续使用更严格的 sandbox CSP。当前尚缺：在真实候选浏览器中完成登录/MFA/BFF/QR/核心工作区 CSP violation 回归，并据此把完整 CSP 从 Report-Only 升为受控强制策略；HSTS 仍必须在正式 HTTPS/域名发布边界确认后启用。因此 Delivery 为 Partial。
+`next.config.mjs` 已统一配置 `X-Frame-Options: DENY`、`nosniff`、Referrer-Policy、Permissions-Policy，并对全部页面输出强制 `Content-Security-Policy`（允许当前 same-origin、TOTP `data:` QR、必要 blob）。Feedback binary proxy 继续使用更严格的 sandbox CSP。当前候选 Local browser 在强制 CSP 下通过登录、MFA、BFF、核心工作区、95 路由与 5 个 viewport，并通过 `securitypolicyviolation` 监听断言整个流程 0 violation，因此本 Requirement 已满足。HSTS 仍属于正式 HTTPS/域名发布边界的独立生产硬化，不作为本 Requirement 的完成条件。
 
 ## Domain Verification
 
