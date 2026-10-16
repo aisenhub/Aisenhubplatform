@@ -970,6 +970,45 @@ try {
     2,
     'Clearing PlatformSwitcher search restores loaded options',
   );
+  await switcherSearch.focus();
+  await page.keyboard.press('ArrowDown');
+  const switcherListbox = page.locator(
+    '[data-test="platform-switcher-listbox"]',
+  );
+  await switcherListbox.waitFor({ state: 'visible' });
+  assert.equal(
+    await switcherListbox.evaluate(
+      (element) => document.activeElement === element,
+    ),
+    true,
+    'ArrowDown from search moves keyboard focus into the PlatformSwitcher listbox',
+  );
+  const secondOptionId = await switcherListbox.getAttribute(
+    'aria-activedescendant',
+  );
+  assert.ok(secondOptionId, 'PlatformSwitcher exposes an active descendant');
+  await page.keyboard.press('Home');
+  const firstOptionId = await switcherListbox.getAttribute(
+    'aria-activedescendant',
+  );
+  assert.ok(
+    firstOptionId && firstOptionId !== secondOptionId,
+    'Home moves to the first option',
+  );
+  await page.keyboard.press('End');
+  assert.equal(
+    await switcherListbox.getAttribute('aria-activedescendant'),
+    secondOptionId,
+    'End moves to the last option',
+  );
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Enter');
+  await page.waitForURL(/\/admin\/platforms\/[^/]+/u);
+  assert.ok(
+    /\/admin\/platforms\/[^/]+/u.test(new URL(page.url()).pathname),
+    'Enter selects the active PlatformSwitcher option without a mouse',
+  );
+  await goto('/admin/platforms', 'platform-directory-table');
   await page.keyboard.press('Escape');
   await switcherDropdown.waitFor({ state: 'hidden' });
 

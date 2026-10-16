@@ -1,8 +1,6 @@
 # 开发、测试与运维指南
 
-`docs/development` 是当前开发执行资料的统一入口。2026-10-15 文档架构收敛后，原 `docs/guides` 与顶层 `docs/agents.md` 的有效内容先完整迁入本目录；后续可以在不改变 `spec / architecture / plans / review` 权威边界的前提下继续重建和拆分。
-
-当前文件保持既有规则与操作信息，不把“迁入 development”解释为规则已重新设计或环境已经验证。
+`docs/development` 是当前开发执行资料的统一入口。2026-10-15 先完成旧 Guide 的职责迁移；2026-10-16 在不改变 `spec / architecture / plans / review` 权威边界的前提下完成第二轮结构收敛：稳定工作规则留在本目录，目标环境/Provider/恢复等可执行步骤拆入 `runbooks/`，不再把一次性运行证据混进 Architecture 或 Plan。
 
 ## 当前入口
 
@@ -10,6 +8,7 @@
 - [本地开发](development.md)
 - [测试](testing.md)
 - [运维、备份、恢复与发布](operations.md)
+- [运维与发布 Runbook](runbooks/README.md)：Hosted Maintenance、Provider、备份恢复、Retention、Production 执行清单
 - [新平台接入兼容入口](platform-onboarding.md)
 - [文档维护规则](documentation-governance.md)
 

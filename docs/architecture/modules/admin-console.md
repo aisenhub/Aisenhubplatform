@@ -69,7 +69,7 @@ Sidebar 下拉宽度不超过 sidebar content；列表一级视觉突出平台�
 
 切换平台时，实体 detail 回到目标平台对应 collection，不把旧平台 entity ID 带过去。
 
-它当前以 `role=dialog` 包裹搜索与 `role=listbox/option + aria-selected` 平台列表；搜索框可直接 Tab 聚焦，Escape 关闭。实现中没有 ArrowUp/ArrowDown/Home/End、roving focus 或 `aria-activedescendant` 的 active-option 管理，所以 `REQ-ADM-008` 保持 Partial。这里是当前能力边界，不应因为存在 listbox role 就宣称完整键盘 listbox pattern 已实现。
+它以 `role=dialog` 包裹搜索与 `role=listbox/option + aria-selected` 平台列表，并使用稳定 option id + `aria-activedescendant` 管理 active option。搜索框可 Tab 聚焦并用 ArrowUp/ArrowDown/Home/End 把焦点移入列表；listbox 支持方向键循环、Home/End 和 Enter/Space 选择，Escape/click-outside 关闭。active option 在搜索、分页追加和当前平台变化时保持合法，并在键盘移动时滚入可视区。
 
 ## 6. AdminShell 安全 Gate
 
@@ -119,7 +119,7 @@ Admin BFF 在官方 MFA 验证后签发短寿命 HMAC attestation，中央 API �
 - forwards `If-Match`、`If-None-Match`、`Idempotency-Key`；
 - JSON `private,no-store`；
 - request ID 透传；
-- DELETE 当前无 allowlist endpoint。
+- 通用 `/api/v1/**` 代理当前无 DELETE allowlist；verified MFA factor 删除走独立 same-origin `/api/auth/mfa/factors/{factorId}` Auth route，并在中央 API 使用 prepare/finalize 两阶段合同。
 
 Feedback attachment binary proxy 额外设置 `nosniff`、restrictive CSP、safe disposition 和 private no-store。
 
@@ -131,7 +131,7 @@ PlatformWorkspace 以 URL ID 加载当前平台，并拒绝 stale/other-platform
 
 资源页普遍显式区分 loading、read error、success、refreshing、refresh error、access error、empty、mutation unknown outcome。
 
-共享 `admin-resource-utils` 已按稳定机器码区分 `MFA_REQUIRED`、`RECENT_MFA_REQUIRED`、`ADMIN_REQUIRED`、`FORBIDDEN`、`RATE_LIMITED`、幂等冲突、precondition 和授权/Storage 服务不可用；AuthSessionManager 也能从响应机器码进入 MFA/recent-MFA step-up 状态。但若干页面自己的 load-state 分支仍先把 HTTP 401/403 合并为 `access` bucket，再调用共享错误说明。因此当前已经有统一语义基础，却尚未证明“所有页面控制流只消费同一分类器”，`REQ-ADM-009` 继续为 Partial。
+共享 `admin-resource-utils` 按稳定机器码区分 `MFA_REQUIRED`、`RECENT_MFA_REQUIRED`、`ADMIN_REQUIRED`、`FORBIDDEN`、`RATE_LIMITED`、幂等冲突、precondition 和授权/Storage 服务不可用；`isResourceAccessError()` 只把 401 与明确 access machine code 归入 access bucket，5xx/`AUTHORIZATION_UNAVAILABLE` 保持服务故障。Security、Platform workspace、Audit、Platform directory 已统一使用该分类器，不再根据裸 403 猜测 MFA/权限；AuthSessionManager 继续从响应机器码进入 MFA/recent-MFA step-up，Step-up 后不自动重放副作用。
 
 ## 11. UI 技术栈
 
@@ -218,9 +218,9 @@ Topbar 使用 `Aisenhub / platform / page` 上下文层级，并在窄屏压缩�
 
 当前稳定基础：skip-to-content、aria-current/expanded/haspopup/selected/busy、role alert/status、sr-only、Base UI Dialog/Sheet、focus-visible、focusable table scroll region、状态非纯颜色、reduced motion、mobile touch target、Cmd/Ctrl+B Sidebar、Cmd/Ctrl+K Command Palette。
 
-PlatformSwitcher 已支持 Tab/Escape/click-outside，但完整 ArrowUp/Down/Home/End/active-option listbox semantics 仍应视为 review 中的增强项，不写成当前已完成能力。
+PlatformSwitcher 当前源码已支持 Tab/Escape/click-outside、ArrowUp/Down/Home/End、`aria-activedescendant` active-option 与 Enter/Space 选择；对应真实浏览器路径已加入 Local E2E，候选证据仍按实际运行记录。
 
-Admin Web 当前没有应用级统一 CSP / X-Frame-Options headers：`next.config.mjs` 未配置全局 headers。BFF 对 Feedback 二进制下载单独返回 `Content-Security-Policy: sandbox; default-src 'none'` 与 `nosniff`，这只保护下载响应，不能等价为整个 Admin Web 已完成 CSP hardening。因此 `REQ-ADM-010` 保持 Planned。
+Admin Web 在 `next.config.mjs` 统一返回 `X-Frame-Options: DENY`、`X-Content-Type-Options: nosniff`、Referrer-Policy、Permissions-Policy，并配置全局 `Content-Security-Policy-Report-Only`。Report-Only 当前允许 same-origin、必要 inline style/script、TOTP `data:` QR 与 blob worker/image；它用于先发现 Next/Auth/MFA 兼容问题，不等于完整强制 CSP 已发布。Feedback 二进制下载继续使用更严格的 sandbox CSP。完整 CSP 强制与 HSTS 仍需候选浏览器/HTTPS 发布证据，因此 `REQ-ADM-010` 目前为 Partial。
 
 ## 17. 页面业务语义
 

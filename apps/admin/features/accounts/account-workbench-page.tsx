@@ -42,6 +42,7 @@ import {
 
 import {
   accountActionLabel,
+  accountIdentityEmailLabel,
   type AccountIntent,
   type AccountWorkbench,
 } from './account-types';
@@ -440,7 +441,7 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
             </div>
             <div>
               <dt>Global Identity email</dt>
-              <dd>{detail.identity?.email ?? '未设置 / 已匿名化'}</dd>
+              <dd>{accountIdentityEmailLabel(detail.identity)}</dd>
             </div>
             <div>
               <dt>加入时间</dt>

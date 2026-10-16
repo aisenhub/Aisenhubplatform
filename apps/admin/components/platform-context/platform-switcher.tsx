@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Check, ChevronsUpDown, Globe, RefreshCw, Search } from 'lucide-react';
 
@@ -14,6 +15,11 @@ import {
 import { mapAdminScopeRoute } from '../navigation/admin-navigation';
 import { apiErrorDescription } from '../../features/resources/admin-resource-utils';
 import type { Platform, PlatformListResponse } from './platform-types';
+import {
+  nextPlatformOptionIndex,
+  platformOptionDomId,
+  type PlatformOptionNavigationKey,
+} from './platform-switcher-model';
 
 type PlatformSwitcherProps = {
   current?: Platform | null;
@@ -46,6 +52,8 @@ export function PlatformSwitcher({
   const containerRef = useRef<HTMLDivElement>(null);
   const loadGeneration = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
+  const listboxRef = useRef<HTMLDivElement>(null);
+  const [activeOptionId, setActiveOptionId] = useState<string | null>(null);
 
   // 点击外部自动收起下拉面板
   useEffect(() => {
@@ -180,6 +188,76 @@ export function PlatformSwitcher({
     return hasCurrent ? platforms : [current, ...platforms];
   }, [current, debouncedQuery, platforms]);
 
+  useEffect(() => {
+    if (!open || options.length === 0) {
+      setActiveOptionId(null);
+      return;
+    }
+    setActiveOptionId((active) => {
+      if (active && options.some((option) => option.platform_id === active)) {
+        return active;
+      }
+      return (
+        options.find((option) => option.platform_id === current?.platform_id)
+          ?.platform_id ?? options[0]!.platform_id
+      );
+    });
+  }, [current?.platform_id, open, options]);
+
+  useEffect(() => {
+    if (!activeOptionId) return;
+    document
+      .getElementById(platformOptionDomId(activeOptionId))
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [activeOptionId]);
+
+  function moveActiveOption(key: PlatformOptionNavigationKey) {
+    if (!options.length) return;
+    const currentIndex = options.findIndex(
+      (option) => option.platform_id === activeOptionId,
+    );
+    const nextIndex = nextPlatformOptionIndex(
+      currentIndex,
+      options.length,
+      key,
+    );
+    if (nextIndex >= 0) setActiveOptionId(options[nextIndex]!.platform_id);
+  }
+
+  function focusListbox(key: PlatformOptionNavigationKey) {
+    setOpen(true);
+    requestAnimationFrame(() => {
+      moveActiveOption(key);
+      listboxRef.current?.focus();
+    });
+  }
+
+  function handleTriggerKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    focusListbox(event.key as PlatformOptionNavigationKey);
+  }
+
+  function handleListboxKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return;
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      moveActiveOption(event.key as PlatformOptionNavigationKey);
+      return;
+    }
+    if ((event.key === 'Enter' || event.key === ' ') && activeOptionId) {
+      event.preventDefault();
+      changePlatform(activeOptionId);
+    }
+  }
+
+  function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    moveActiveOption(event.key as PlatformOptionNavigationKey);
+    listboxRef.current?.focus();
+  }
+
   function changePlatform(nextId: string) {
     if (!nextId) return;
     const targetId = nextId === ALL_PLATFORMS_VALUE ? null : nextId;
@@ -219,6 +297,7 @@ export function PlatformSwitcher({
           if (open) setQuery('');
           setOpen((prev) => !prev);
         }}
+        onKeyDown={handleTriggerKeyDown}
         aria-label="切换平台工作区"
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -303,13 +382,24 @@ export function PlatformSwitcher({
                 className="h-9 w-full rounded-md border border-input bg-background pl-10! pr-3 text-xs text-foreground placeholder:text-muted-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
                 data-test="platform-switcher-search"
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 placeholder="搜索名称或代码"
                 value={query}
               />
             </label>
           </div>
 
-          <div role="listbox" aria-label="平台工作区">
+          <div
+            ref={listboxRef}
+            role="listbox"
+            aria-label="平台工作区"
+            aria-activedescendant={
+              activeOptionId ? platformOptionDomId(activeOptionId) : undefined
+            }
+            tabIndex={0}
+            onKeyDown={handleListboxKeyDown}
+            data-test="platform-switcher-listbox"
+          >
             <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               已加载平台 ({options.length})
             </div>
@@ -328,9 +418,13 @@ export function PlatformSwitcher({
               return (
                 <button
                   key={platform.platform_id}
+                  id={platformOptionDomId(platform.platform_id)}
                   type="button"
                   role="option"
                   aria-selected={isSelected}
+                  tabIndex={-1}
+                  data-active={activeOptionId === platform.platform_id}
+                  onMouseMove={() => setActiveOptionId(platform.platform_id)}
                   onClick={() => changePlatform(platform.platform_id)}
                   className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
                     isSelected

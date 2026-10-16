@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
 import { Button } from '@kit/ui/button';
+import { ConfirmActionDialog } from '@kit/ui/confirm-action-dialog';
+import type { MutationState } from '@kit/ui/mutation-state';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 
@@ -15,8 +17,15 @@ import {
   sessionErrorMessage,
   useAdminSessionSnapshot,
 } from '../../_lib/auth-session';
-import { resourceError } from '../../../features/resources/admin-resource-utils';
+import {
+  isRecentMfaRequired,
+  isResourceAccessError,
+  readApiPayload,
+  resourceError,
+  type ResourceError,
+} from '../../../features/resources/admin-resource-utils';
 import { SystemAdminMembersPanel } from '../../../features/security/system-admin-members-panel';
+import { AdminRecentMfaPanel } from '../../../features/security/admin-recent-mfa-panel';
 
 type Factor = {
   id: string;
@@ -31,6 +40,9 @@ export default function AdminSecurityPage() {
     'loading' | 'success' | 'access' | 'error'
   >('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const [deleteFactor, setDeleteFactor] = useState<Factor | null>(null);
+  const [deleteState, setDeleteState] = useState<MutationState>('idle');
+  const [deleteError, setDeleteError] = useState<ResourceError | null>(null);
 
   const loadFactors = useCallback(async () => {
     setState('loading');
@@ -44,11 +56,7 @@ export default function AdminSecurityPage() {
         error?: { code?: string };
       } | null;
       if (!response.ok) {
-        setState(
-          response.status === 401 || response.status === 403
-            ? 'access'
-            : 'error',
-        );
+        setState(isResourceAccessError(response, payload) ? 'access' : 'error');
         setErrorMessage(
           resourceError(response, payload, 'MFA 状态').description,
         );
@@ -78,6 +86,69 @@ export default function AdminSecurityPage() {
       setErrorMessage('管理员会话已结束，请重新登录。');
     }
   }, [sessionSnapshot.resolved, sessionSnapshot.state]);
+
+  function openDeleteFactor(factor: Factor) {
+    setDeleteFactor(factor);
+    setDeleteError(null);
+    setDeleteState('confirm_required');
+  }
+
+  async function confirmDeleteFactor() {
+    if (!deleteFactor) return;
+    setDeleteError(null);
+    setDeleteState('pending');
+    const epoch = adminAuthSession.getEpoch();
+    try {
+      const response = await adminAuthSession.request(
+        `/api/auth/mfa/factors/${encodeURIComponent(deleteFactor.id)}`,
+        { method: 'DELETE' },
+        { replay: 'never' },
+      );
+      const payload = await readApiPayload<{
+        deleted?: boolean;
+        session_state?: 'refreshed' | 'reauth_required';
+      }>(response);
+      if (!adminAuthSession.isCurrentEpoch(epoch)) return;
+      if (!response.ok) {
+        if (isRecentMfaRequired(response, payload)) {
+          setDeleteState('step_up_required');
+          return;
+        }
+        if (payload?.error?.code === 'MFA_FACTOR_FLOOR_REQUIRED') {
+          setDeleteError({
+            title: '必须保留足够的已验证认证器',
+            description:
+              'Active System Admin 删除后仍必须至少保留 2 个 verified TOTP；pending Admin 也不能删除最后一个已验证因子。请先添加备用认证器。',
+            requestId:
+              response.headers.get('x-request-id') ??
+              payload.request_id ??
+              null,
+            technicalDetail: payload.error.code,
+          });
+        } else {
+          setDeleteError(resourceError(response, payload, 'MFA 认证器'));
+        }
+        setDeleteState('failure');
+        return;
+      }
+      if (payload?.data?.session_state === 'reauth_required') {
+        adminAuthSession.completeAuthentication('admin_mfa');
+        window.location.assign('/admin/login');
+        return;
+      }
+      await loadFactors();
+      setDeleteState('success');
+      setDeleteFactor(null);
+    } catch (caught) {
+      setDeleteError({
+        title: '删除认证器失败',
+        description: sessionErrorMessage(caught),
+        requestId: null,
+        technicalDetail: null,
+      });
+      setDeleteState('unknown_outcome');
+    }
+  }
 
   const sessionLabel =
     sessionSnapshot.state === 'authenticated'
@@ -183,7 +254,18 @@ export default function AdminSecurityPage() {
                       已验证 · {factor.factor_type}
                     </small>
                   </span>
-                  <ResourceId value={factor.id} />
+                  <span className="flex items-center gap-2">
+                    <ResourceId value={factor.id} />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openDeleteFactor(factor)}
+                      data-test={`security-factor-delete-${factor.id}`}
+                    >
+                      删除
+                    </Button>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -200,6 +282,32 @@ export default function AdminSecurityPage() {
           </Button>
         </div>
       </section>
+
+      {deleteFactor ? (
+        <ConfirmActionDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && deleteState !== 'pending') setDeleteFactor(null);
+          }}
+          title="删除已验证 MFA 认证器"
+          targetIdentity={deleteFactor.id}
+          impact="删除后无法恢复该因子。服务端会重新验证因子归属、近期 MFA 和最低因子数量，并在调用 Auth Provider 删除前使当前 session 的旧 recent proof 失效。"
+          reversible={false}
+          asyncOperation={false}
+          historyRetained={false}
+          state={deleteState}
+          error={deleteError}
+          stepUpContent={
+            deleteState === 'step_up_required' ? (
+              <AdminRecentMfaPanel
+                onVerified={() => setDeleteState('confirm_required')}
+              />
+            ) : null
+          }
+          onCheckUnknown={() => loadFactors()}
+          onConfirm={() => confirmDeleteFactor()}
+        />
+      ) : null}
 
       <SystemAdminMembersPanel />
     </main>

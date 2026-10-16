@@ -128,7 +128,7 @@ Auth email 只作为必要的全局身份摘要只读展示；Auth `last_sign_in
 
 Account API 随后按 `user_id` 通过 server-only Auth Admin 边界补充 Identity email。浏览器因此消费一个服务端 Workbench DTO，而不是成为跨领域聚合器。
 
-当前这里还有一个明确边界：Auth Admin lookup 网络/服务异常会使详情整体返回 `503 AUTHORIZATION_UNAVAILABLE`；尚未实现“业务摘要正常、Identity email 单独 unavailable”的局部降级。因此 [REQ-ACC-004](../../spec/accounts-profile.md) 当前为 Partial，不能把旧预研中的细粒度降级描述成已经实现。
+Identity 补充读取是独立可降级数据源：`identity.source_state` 明确区分 `available / missing / unavailable / not_applicable`。Auth Admin 网络/服务异常只把 Identity 摘要标为 `unavailable`，不会抹掉已经成功读取的账户、Entitlement、Billing、Config、Feedback、tags/notes 与治理事实；Auth Identity 已不存在和匿名化账户也不会被伪装成“空邮箱”。
 
 ### 时间线语义
 

@@ -133,16 +133,16 @@ Admin 必须提供稳定的信息架构和快速导航方式，使管理员能�
 
 - 状态组件具有文本语义。
 - focus-visible、skip link、reduced motion 等基础能力存在。
-- PlatformSwitcher 完整方向键 listbox 行为仍属于待补齐项，因此 Delivery 保持 Partial。
+- PlatformSwitcher 源码已经实现 ArrowUp/ArrowDown/Home/End、`aria-activedescendant` 与 Enter/Space 选择；当前候选的真实 Local browser 回归已加入 E2E，但因本机 Docker/Supabase 服务权限阻塞尚未执行，因此 Delivery 暂保持 Partial。
 
-**Current Gap**
+**Current state**
 
-PlatformSwitcher 已有 dialog/listbox/option/aria-selected、Tab、Escape 和点击外部关闭，但当前源码没有 ArrowUp/ArrowDown/Home/End、roving focus 或 aria-activedescendant，因此尚未满足完整键盘 listbox 行为。
+PlatformSwitcher 当前已有 dialog/listbox/option/aria-selected、Tab、Escape、点击外部关闭，并通过 `aria-activedescendant` 管理 active option；搜索框/触发按钮可用方向键进入列表，列表支持 ArrowUp/ArrowDown/Home/End 与 Enter/Space 选择。模型单测已经覆盖 wrap/Home/End，真实浏览器用例已经进入 `admin-ux-local.mjs`；本 Requirement 只等待当前候选的 Local browser 证据。
 
 ## REQ-ADM-009 — Admin 安全状态与错误语义必须统一
 
 - **Status**: Active
-- **Delivery**: Partial
+- **Delivery**: Implemented
 - **Priority**: P0
 - **Type**: Security
 
@@ -156,14 +156,14 @@ PlatformSwitcher 已有 dialog/listbox/option/aria-selected、Tab、Escape 和�
 - 共享分类器统一处理稳定机器错误码。
 - Step-up 成功不会自动重放原高风险 mutation。
 
-**Current Gap**
+**Current implementation**
 
-Shell 与共享错误分类器已经存在，AuthSessionManager 也能识别 `MFA_REQUIRED/RECENT_MFA_REQUIRED`；但部分页面仍以 HTTP 401/403 自己决定 `access` load-state bucket。正式升级为 Implemented 前，需要证明所有关键工作区的控制流不会因局部 status 分支重新混淆稳定机器语义。
+Shell 与共享错误分类器统一消费服务端 security status / machine code；当前已清理 Security、Platform workspace、Audit、Platform directory 中最后几处裸 `401 || 403` load-state 分桶。`isResourceAccessError()` 只把 401 以及 `MFA_REQUIRED / RECENT_MFA_REQUIRED / ADMIN_REQUIRED / FORBIDDEN` 归为 access，`AUTHORIZATION_UNAVAILABLE`/5xx 保持服务故障；Step-up 完成仍不会自动重放原高风险 mutation。MFA 页面与服务端 recent-proof 窗口也统一为最长 30 分钟。
 
 ## REQ-ADM-010 — Admin Web 必须具备受控浏览器安全头
 
 - **Status**: Active
-- **Delivery**: Planned
+- **Delivery**: Partial
 - **Priority**: P1
 - **Type**: Security
 
@@ -173,7 +173,7 @@ Admin Web 响应必须在不破坏 Supabase Auth/MFA/必要资源加载的前提
 
 **Current Gap**
 
-当前 `next.config.mjs` 没有应用级 security headers/CSP。Feedback binary proxy 的 sandbox CSP 只保护下载响应，不能满足本 Requirement，因此 Delivery 保持 Planned。
+`next.config.mjs` 已统一配置 `X-Frame-Options: DENY`、`nosniff`、Referrer-Policy、Permissions-Policy，并对全部页面输出 CSP Report-Only（允许当前 same-origin、TOTP `data:` QR、必要 blob）。Feedback binary proxy 继续使用更严格的 sandbox CSP。当前尚缺：在真实候选浏览器中完成登录/MFA/BFF/QR/核心工作区 CSP violation 回归，并据此把完整 CSP 从 Report-Only 升为受控强制策略；HSTS 仍必须在正式 HTTPS/域名发布边界确认后启用。因此 Delivery 为 Partial。
 
 ## Domain Verification
 

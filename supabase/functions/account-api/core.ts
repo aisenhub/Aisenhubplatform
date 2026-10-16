@@ -628,6 +628,14 @@ export function mapSqlFault(error: unknown): ApiFault {
     return new ApiFault(409, 'SYSTEM_ADMIN_MFA_READINESS_REQUIRED');
   if (message.includes('minimum_active_system_admins_required'))
     return new ApiFault(409, 'MINIMUM_ACTIVE_SYSTEM_ADMINS_REQUIRED');
+  if (message.includes('mfa_factor_floor_required'))
+    return new ApiFault(409, 'MFA_FACTOR_FLOOR_REQUIRED');
+  if (message.includes('mfa_factor_operation_in_progress'))
+    return new ApiFault(409, 'OPERATION_IN_PROGRESS');
+  if (message.includes('mfa_factor_still_present'))
+    return new ApiFault(409, 'MFA_FACTOR_STILL_PRESENT');
+  if (message.includes('mfa_factor_result_unknown'))
+    return new ApiFault(409, 'MFA_FACTOR_RESULT_UNKNOWN');
   if (message.includes('dedicated_admin_identity_required'))
     return new ApiFault(409, 'DEDICATED_ADMIN_IDENTITY_REQUIRED');
   if (message.includes('system_admin_member_exists'))

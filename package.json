@@ -30,6 +30,7 @@
     "test:sql:bill-05-concurrency": "node tests/spikes/sql/bill-05-settlement-concurrency.mjs",
     "test:sql:prelaunch-commerce-concurrency": "node tests/spikes/sql/prelaunch-commerce-concurrency.mjs",
     "test:sql:system-admin-resilience-concurrency": "node tests/spikes/sql/system-admin-resilience-concurrency.mjs",
+    "test:sql:admin-mfa-factor-concurrency": "node tests/spikes/sql/admin-mfa-factor-concurrency.mjs",
     "test:api:m4-10-g4-l": "node tests/spikes/api/m4-10-g4-l.mjs",
     "test:api:m4-05-maintenance": "node tests/spikes/api/m4-05-maintenance.mjs",
     "test:ops:m6-02-local": "node tests/spikes/ops/m6-02-local-backup.mjs",

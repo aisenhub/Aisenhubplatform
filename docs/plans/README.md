@@ -7,6 +7,7 @@
 ## 当前工作
 
 - [当前剩余工作 TODO](TODO.md)：以 Active Requirement 的 Partial/Planned 缺口、当前源码和真实环境证据为准的唯一剩余工作清单。
+- [TODO 缺口收敛实施计划](todo-remediation-2026-10-16/plan.md)：本轮仓库实现已完成，当前仅被 Local Supabase 服务权限及真实外部环境/政策/生产授权阻塞；验证证据见同目录 `verification-record.md`。
 
 ## 计划基础设施
 

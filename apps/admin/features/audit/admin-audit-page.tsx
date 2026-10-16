@@ -48,6 +48,7 @@ import {
   useAdminSessionSnapshot,
 } from '../../app/_lib/auth-session';
 import {
+  isResourceAccessError,
   readApiPayload,
   resourceError,
   type ResourceError,
@@ -444,9 +445,7 @@ function AdminAuditPageContent() {
           if (mode === 'initial') {
             setLoadError(nextError);
             setRemoteState(
-              response.status === 401 || response.status === 403
-                ? 'access'
-                : 'error',
+              isResourceAccessError(response, payload) ? 'access' : 'error',
             );
           } else {
             setRefreshError(nextError);

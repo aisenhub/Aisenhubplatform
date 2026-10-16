@@ -26,7 +26,25 @@ export type Account = {
 export type AccountIdentitySummary = {
   user_id: string | null;
   email: string | null;
+  source_state: 'available' | 'missing' | 'unavailable' | 'not_applicable';
 };
+
+export function accountIdentityEmailLabel(
+  identity: AccountIdentitySummary | null | undefined,
+): string {
+  switch (identity?.source_state) {
+    case 'unavailable':
+      return '身份服务暂时不可用';
+    case 'missing':
+      return 'Auth Identity 已不存在';
+    case 'not_applicable':
+      return '已匿名化 / 不适用';
+    case 'available':
+      return identity.email ?? '未设置邮箱';
+    default:
+      return '身份状态未知';
+  }
+}
 
 export type AccountAdminNote = {
   id: string;

@@ -128,7 +128,7 @@ describe('admin BFF', () => {
       }
     }
 
-    expect(operationCount).toBe(76);
+    expect(operationCount).toBe(78);
   });
 
   it('proxies private Feedback images as binary and allows label replacement', async () => {

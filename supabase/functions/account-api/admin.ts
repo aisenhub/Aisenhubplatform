@@ -526,6 +526,63 @@ export async function dispatchAdmin(
     if (!proof) throw new ApiFault(403, 'MFA_REQUIRED');
     return { status: 201, data: proof };
   }
+  const factorDeleteAuthorizationMatch = path.match(
+    /^admin\/api\/v1\/auth\/mfa-factors\/([0-9a-f-]+)\/delete-authorization$/iu,
+  );
+  if (factorDeleteAuthorizationMatch && request.method === 'POST') {
+    const factorId = uuidValue(factorDeleteAuthorizationMatch[1]);
+    if (!factorId) throw new ApiFault(400, 'INVALID_INPUT');
+    await adminStepUp(transaction, session, request);
+    const proofId = uuidValue(request.headers.get('x-recent-auth-proof'));
+    const input = await body(request);
+    const operationId = uuidValue(input.operation_id);
+    if (!proofId || !operationId) throw new ApiFault(400, 'INVALID_INPUT');
+    const [authorization] = await transaction.unsafe<Row>(
+      'select * from private.admin_mfa_factor_delete_prepare(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::uuid)',
+      [...context, proofId, factorId, operationId],
+    );
+    if (!authorization) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return {
+      status: 200,
+      data: {
+        authorized: true,
+        operation_id: authorization.operation_id,
+        membership_state: authorization.membership_state,
+        verified_totp_count: Number(authorization.verified_totp_count),
+        minimum_remaining_factor_count: Number(
+          authorization.minimum_remaining_factor_count,
+        ),
+        lease_until: authorization.lease_until,
+        revoked_proof_count: Number(authorization.revoked_proof_count),
+      },
+    };
+  }
+  const factorDeleteFinalizationMatch = path.match(
+    /^admin\/api\/v1\/auth\/mfa-factors\/([0-9a-f-]+)\/delete-finalization$/iu,
+  );
+  if (factorDeleteFinalizationMatch && request.method === 'POST') {
+    if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
+    const factorId = uuidValue(factorDeleteFinalizationMatch[1]);
+    if (!factorId) throw new ApiFault(400, 'INVALID_INPUT');
+    const input = await body(request);
+    const operationId = uuidValue(input.operation_id);
+    const result = stringValue(input.result);
+    const errorCode = stringValue(input.error_code);
+    if (!operationId || !result || !['completed', 'failed'].includes(result))
+      throw new ApiFault(400, 'INVALID_INPUT');
+    const [finalization] = await transaction.unsafe<Row>(
+      'select * from private.admin_mfa_factor_delete_finalize(row($1::uuid, $2::uuid, $3::uuid)::private.admin_context, $4::uuid, $5::uuid, $6::text, $7::text)',
+      [...context, operationId, factorId, result, errorCode],
+    );
+    if (!finalization) throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
+    return {
+      status: 200,
+      data: {
+        state: finalization.state,
+        replayed: Boolean(finalization.replayed),
+      },
+    };
+  }
   if (session.aal !== 'aal2') throw new ApiFault(403, 'MFA_REQUIRED');
   if (
     path === 'admin/api/v1/security/system-admins' &&
@@ -1568,9 +1625,28 @@ export async function dispatchAdmin(
         !identityUserId
       )
         throw new ApiFault(503, 'AUTHORIZATION_UNAVAILABLE');
-      const authUser = identityUserId
-        ? await getAdminAuthUserById(dependencies, identityUserId)
-        : null;
+      let authUser: AdminAuthIdentity | null = null;
+      let identitySourceState:
+        | 'available'
+        | 'missing'
+        | 'unavailable'
+        | 'not_applicable' = identityUserId ? 'missing' : 'not_applicable';
+      if (identityUserId) {
+        try {
+          authUser = await getAdminAuthUserById(dependencies, identityUserId);
+          identitySourceState = authUser ? 'available' : 'missing';
+        } catch (error) {
+          if (
+            error instanceof ApiFault &&
+            error.status === 503 &&
+            error.code === 'AUTHORIZATION_UNAVAILABLE'
+          ) {
+            identitySourceState = 'unavailable';
+          } else {
+            throw error;
+          }
+        }
+      }
       return {
         status: 200,
         data: {
@@ -1579,6 +1655,7 @@ export async function dispatchAdmin(
           identity: {
             user_id: identityUserId,
             email: authUser?.email ?? null,
+            source_state: identitySourceState,
           },
         },
       };

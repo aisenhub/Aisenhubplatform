@@ -74,6 +74,8 @@ export function isAllowedAdminPath(method: string, path: string): boolean {
   if (method === 'POST') {
     return (
       exact('auth/recent-proof') ||
+      matches(`auth/mfa-factors/${id}/delete-authorization`) ||
+      matches(`auth/mfa-factors/${id}/delete-finalization`) ||
       exact('security/system-admins') ||
       matches(`security/system-admins/${id}/(?:activate|remove)`) ||
       exact('platforms') ||

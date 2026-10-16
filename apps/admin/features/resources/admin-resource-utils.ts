@@ -18,6 +18,24 @@ export type ResourceError = {
 
 export type ResourceLoadState = 'loading' | 'success' | 'error';
 
+const RESOURCE_ACCESS_CODES = new Set([
+  'MFA_REQUIRED',
+  'RECENT_MFA_REQUIRED',
+  'ADMIN_REQUIRED',
+  'FORBIDDEN',
+]);
+
+export function isResourceAccessError(
+  response: Response,
+  payload: ApiErrorPayload | null,
+): boolean {
+  if (response.status === 401) return true;
+  return (
+    response.status === 403 &&
+    RESOURCE_ACCESS_CODES.has(payload?.error?.code ?? '')
+  );
+}
+
 export async function readApiPayload<T>(
   response: Response,
 ): Promise<(ApiErrorPayload & { data?: T }) | null> {

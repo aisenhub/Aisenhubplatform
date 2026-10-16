@@ -133,6 +133,54 @@
         }
       }
     },
+    "/admin/api/v1/auth/mfa-factors/{factorId}/delete-authorization": {
+      "post": {
+        "operationId": "adminAuthorizeMfaFactorDelete",
+        "x-requires-step-up": true,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          {
+            "name": "factorId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "description": "Prepares deletion of a verified TOTP factor for the current System Admin. The database rechecks factor ownership, membership/session state, recent MFA, the application-level factor floor, and any in-progress factor mutation; it then creates a short-lived serialized operation and invalidates all current-session recent proofs before the Provider unenroll call.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/StepUpRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/admin/api/v1/auth/mfa-factors/{factorId}/delete-finalization": {
+      "post": {
+        "operationId": "adminFinalizeMfaFactorDelete",
+        "x-requires-step-up": false,
+        "security": [{ "adminBearer": [] }],
+        "parameters": [
+          {
+            "name": "factorId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "description": "Finalizes the exact serialized MFA factor deletion operation after the Auth Provider result is known. The operation is bound to the same admin user/session/factor; successful finalization requires the verified factor to be absent before the removal audit event is written.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Object" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
     "/admin/api/v1/platforms": {
       "get": {
         "operationId": "adminListPlatforms",
@@ -526,7 +574,7 @@
           }
         }
       },
-      "description": "Reads the platform-scoped account workbench. Status mutations use the explicit suspend, restore, or close command endpoints."
+      "description": "Reads the platform-scoped account workbench. The nested identity source is independently degradable: identity.source_state distinguishes available, missing, unavailable, and anonymized/not_applicable without hiding an otherwise available business workbench. Status mutations use the explicit suspend, restore, or close command endpoints."
     },
     "/admin/api/v1/platforms/{platformId}/accounts/{accountId}/tags": {
       "put": {

@@ -24,7 +24,10 @@ import {
 } from '../../app/_lib/auth-session';
 import { PlatformHeader } from './platform-header';
 import type { Platform, PlatformResponse } from './platform-types';
-import { resourceError } from '../../features/resources/admin-resource-utils';
+import {
+  isResourceAccessError,
+  resourceError,
+} from '../../features/resources/admin-resource-utils';
 
 type WorkspaceState = 'loading' | 'success' | 'access' | 'not-found' | 'error';
 
@@ -120,7 +123,7 @@ export function PlatformWorkspace({
           setError(nextError);
           if (!keepCurrentContext) {
             setState(
-              response.status === 401 || response.status === 403
+              isResourceAccessError(response, payload)
                 ? 'access'
                 : response.status === 404
                   ? 'not-found'

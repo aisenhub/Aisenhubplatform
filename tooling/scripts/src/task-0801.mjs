@@ -264,6 +264,11 @@ async function main() {
     ['test:sql:system-admin-resilience-concurrency'],
     localEnv,
   );
+  runPnpm(
+    'Admin MFA factor deletion concurrency',
+    ['test:sql:admin-mfa-factor-concurrency'],
+    localEnv,
+  );
   runPnpm('admin typecheck', ['--filter', 'admin', 'typecheck'], localEnv);
   runPnpm('contract breaking compatibility', ['contracts:breaking']);
   runPnpm('registry contract test', ['test:registry']);

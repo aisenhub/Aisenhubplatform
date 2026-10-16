@@ -99,7 +99,6 @@ export const AUTH_COOKIE_MAX_AGE = {
   logoutFence: 60 * 60 * 24 * 31,
   loginAck: 60 * 60 * 24 * 30,
   authFlow: 15 * 60,
-  recentProof: 5 * 60,
 } as const;
 
 export const NO_LOGOUT_FENCE = 'none';
@@ -404,6 +403,13 @@ export async function setRequestAuthSession(
 
 export async function listMfaFactors(client: SupabaseClient) {
   return client.auth.mfa.listFactors();
+}
+
+export async function unenrollMfaFactor(
+  client: SupabaseClient,
+  factorId: string,
+) {
+  return client.auth.mfa.unenroll({ factorId });
 }
 
 export async function verifyMfaFactor(

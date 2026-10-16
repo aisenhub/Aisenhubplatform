@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   apiErrorDescription,
   isRecentMfaRequired,
+  isResourceAccessError,
   resourceError,
 } from './admin-resource-utils';
 
@@ -27,6 +28,30 @@ describe('Admin security error semantics', () => {
     expect(isRecentMfaRequired(response, payload)).toBe(
       code === 'RECENT_MFA_REQUIRED',
     );
+  });
+
+  it('uses stable machine codes instead of a naked 403 for access buckets', () => {
+    const unauthorized = failure(401, 'UNAUTHORIZED');
+    expect(
+      isResourceAccessError(unauthorized.response, unauthorized.payload),
+    ).toBe(true);
+    for (const code of [
+      'MFA_REQUIRED',
+      'RECENT_MFA_REQUIRED',
+      'ADMIN_REQUIRED',
+      'FORBIDDEN',
+    ]) {
+      const { response, payload } = failure(403, code);
+      expect(isResourceAccessError(response, payload)).toBe(true);
+    }
+    const invalid = failure(403, 'INVALID_INPUT');
+    expect(isResourceAccessError(invalid.response, invalid.payload)).toBe(
+      false,
+    );
+    const unavailable = failure(503, 'AUTHORIZATION_UNAVAILABLE');
+    expect(
+      isResourceAccessError(unavailable.response, unavailable.payload),
+    ).toBe(false);
   });
 
   it('keeps server failures separate from session and policy errors', () => {

@@ -110,7 +110,7 @@ Root 验证包括 `pnpm test:db`、Account/Admin API Deno suite、executor/secur
 - `pnpm platform-integration:check`；
 - Consumer Harness static/package integration。
 
-当前验证基线：Account 40 ops、Admin 76 ops、Integration 11 capabilities。
+当前验证基线：Account 40 ops、Admin 78 ops、Integration 11 capabilities。
 
 ## 16. Documentation Gate
 

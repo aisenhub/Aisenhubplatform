@@ -240,8 +240,8 @@ export default function AdminMfaPage() {
       <div className="admin-auth-copy">
         <h1>验证管理员身份</h1>
         <p className="muted">
-          Admin 操作需要 AAL2；验证成功后，服务端向当前 session 绑定 5 分钟
-          proof，浏览器不会自行提交 proof。
+          Admin 操作需要 AAL2；验证成功后，服务端向当前 session 绑定最长 30
+          分钟的近期 MFA proof，浏览器不会自行提交 proof。
         </p>
       </div>
 

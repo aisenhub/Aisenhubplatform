@@ -32,7 +32,10 @@ import { Label } from '@kit/ui/label';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
-import { resourceError } from '../resources/admin-resource-utils';
+import {
+  isResourceAccessError,
+  resourceError,
+} from '../resources/admin-resource-utils';
 import {
   Table,
   TableBody,
@@ -320,9 +323,7 @@ function PlatformDirectoryContent() {
           if (mode === 'initial') {
             setLoadError(nextError);
             setRemoteState(
-              response.status === 401 || response.status === 403
-                ? 'access'
-                : 'error',
+              isResourceAccessError(response, payload) ? 'access' : 'error',
             );
           } else {
             setRefreshError(nextError);

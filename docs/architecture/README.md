@@ -96,7 +96,7 @@ flowchart LR
 当前 canonical HTTP 合同经 `pnpm contracts:check` 验证为：
 
 - Account v1：40 operations；
-- Admin v1：76 operations；
+- Admin v1：78 operations；
 - Platform Integration capability index：11 capabilities。
 
 文档中若出现旧的 46/63 等 operation 数量，只代表历史版本，不得作为当前架构事实。
@@ -126,7 +126,7 @@ flowchart LR
 | [architecture/modules/frontends.md](modules/frontends.md) | admin-console、consumer-api | 已吸收（第一轮），原文保留供细节追溯 |
 | [architecture/reference/data-model.md](reference/data-model.md) | 全部领域模块、database | 已迁入 Architecture Reference，继续作为精确查询层 |
 | [architecture/reference/api.md](reference/api.md) | consumer-api、各业务模块 | 已迁入 Architecture Reference；2026-10-15 修正已知 Feedback/Admin 安全语义漂移 |
-| [architecture/reference/contracts.md](reference/contracts.md) / [consumer matrix](reference/contract-consumer-matrix.md) | consumer-api、database | 已迁入 Architecture Reference；当前 Account 40 / Admin 76 contract 事实已核对 |
+| [architecture/reference/contracts.md](reference/contracts.md) / [consumer matrix](reference/contract-consumer-matrix.md) | consumer-api、database | 已迁入 Architecture Reference；当前 Account 40 / Admin 78 contract 事实已核对 |
 | [architecture/reference/configuration.md](reference/configuration.md) | runtime-deployment、billing、security | 已迁入 Architecture Reference；Billing Cron 与其他 schedule metadata 证据边界已核对 |
 | [architecture/reference/maintenance-callers.md](reference/maintenance-callers.md) | runtime-deployment、operations | 已迁入 Architecture Reference，继续保存精确 Local/Hosted 调用证据 |
 | [architecture/reference/toolchain.md](reference/toolchain.md) | engineering-stack | 已迁入 Architecture Reference；System Admin terminology 已修正 |

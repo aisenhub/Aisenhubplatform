@@ -5,6 +5,11 @@ type ApiErrorCode =
   | 'MFA_REQUIRED'
   | 'RECENT_MFA_REQUIRED'
   | 'RATE_LIMITED'
+  | 'RESOURCE_NOT_FOUND'
+  | 'MFA_FACTOR_FLOOR_REQUIRED'
+  | 'MFA_FACTOR_DELETE_FAILED'
+  | 'MFA_FACTOR_RESULT_UNKNOWN'
+  | 'OPERATION_IN_PROGRESS'
   | 'AUTHORIZATION_UNAVAILABLE';
 import {
   authCookieNames,
@@ -87,6 +92,125 @@ export async function issueAdminRecentProof(input: {
     return { ok: true, proofId };
   } catch {
     return { ok: false, status: 503 };
+  }
+}
+
+export async function authorizeAdminMfaFactorDeletion(input: {
+  readonly accountApiUrl: string;
+  readonly accessToken: string;
+  readonly recentProofId: string;
+  readonly factorId: string;
+  readonly operationId: string;
+  readonly fetcher?: typeof fetch;
+}): Promise<
+  | {
+      readonly ok: true;
+      readonly operationId: string;
+      readonly leaseUntil: string;
+    }
+  | { readonly ok: false; readonly status: number; readonly code: string }
+> {
+  try {
+    const response = await (input.fetcher ?? fetch)(
+      `${input.accountApiUrl.replace(/\/$/u, '')}/admin/api/v1/auth/mfa-factors/${encodeURIComponent(input.factorId)}/delete-authorization`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${input.accessToken}`,
+          'Cache-Control': 'no-store',
+          'Content-Type': 'application/json',
+          'X-Recent-Auth-Proof': input.recentProofId,
+        },
+        body: JSON.stringify({ operation_id: input.operationId }),
+        cache: 'no-store',
+        signal: accountApiSignal(),
+      },
+    );
+    const payload = (await response.json().catch(() => null)) as {
+      data?: { operation_id?: unknown; lease_until?: unknown };
+      error?: { code?: unknown };
+    } | null;
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        code:
+          typeof payload?.error?.code === 'string'
+            ? payload.error.code
+            : 'AUTHORIZATION_UNAVAILABLE',
+      };
+    }
+    if (
+      typeof payload?.data?.operation_id !== 'string' ||
+      typeof payload.data.lease_until !== 'string'
+    )
+      return { ok: false, status: 503, code: 'AUTHORIZATION_UNAVAILABLE' };
+    return {
+      ok: true,
+      operationId: payload.data.operation_id,
+      leaseUntil: payload.data.lease_until,
+    };
+  } catch {
+    return { ok: false, status: 503, code: 'AUTHORIZATION_UNAVAILABLE' };
+  }
+}
+
+export async function finalizeAdminMfaFactorDeletion(input: {
+  readonly accountApiUrl: string;
+  readonly accessToken: string;
+  readonly factorId: string;
+  readonly operationId: string;
+  readonly result: 'completed' | 'failed';
+  readonly errorCode?: string;
+  readonly fetcher?: typeof fetch;
+}): Promise<
+  | { readonly ok: true; readonly state: string }
+  | { readonly ok: false; readonly status: number; readonly code: string }
+> {
+  try {
+    const response = await (input.fetcher ?? fetch)(
+      `${input.accountApiUrl.replace(/\/$/u, '')}/admin/api/v1/auth/mfa-factors/${encodeURIComponent(input.factorId)}/delete-finalization`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${input.accessToken}`,
+          'Cache-Control': 'no-store',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation_id: input.operationId,
+          result: input.result,
+          ...(input.errorCode ? { error_code: input.errorCode } : {}),
+        }),
+        cache: 'no-store',
+        signal: accountApiSignal(),
+      },
+    );
+    const payload = (await response.json().catch(() => null)) as {
+      data?: { state?: unknown };
+      error?: { code?: unknown };
+    } | null;
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        code:
+          typeof payload?.error?.code === 'string'
+            ? payload.error.code
+            : 'AUTHORIZATION_UNAVAILABLE',
+      };
+    }
+    return {
+      ok: true,
+      state:
+        typeof payload?.data?.state === 'string'
+          ? payload.data.state
+          : input.result,
+    };
+  } catch {
+    return { ok: false, status: 503, code: 'AUTHORIZATION_UNAVAILABLE' };
   }
 }
 

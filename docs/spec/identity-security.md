@@ -131,9 +131,9 @@ Admin 在线 MFA 管理必须支持第二 verified TOTP factor，已有 factor �
 
 ## 当前缺口
 
-当前已实现：verified TOTP 列表、首因子注册、在已有因子时增加第二/备用 TOTP、Provider challenge/verify、session 绑定的 server-signed attestation 与最长 30 分钟 recent proof。
+当前源码已经实现 verified TOTP 列表、首因子/第二备用因子注册，以及 verified factor 的受控删除入口。删除前中央数据库重新校验 membership、活动 session、recent MFA、factor 归属与最低剩余因子数，并通过 `admin_mfa_factor_operations` 序列化同一管理员的并发删除；prepare 会使当前 session 旧 recent proof 失效，Provider `unenroll` 后必须 finalize，成功 finalization 只有在 Auth factor 已不存在时才写删除审计。BFF 随后刷新 session；未知 Provider 结果保留 operation/lease 供恢复，不自动发起第二次删除。
 
-当前尚未实现：Admin 对 **verified factor** 的删除产品入口，因此“删除前近期验证、最后因子在线保护、删除后 proof/session 收敛”尚未完成。现有 `unenroll` 代码只删除 unverified enrollment。历史固定版本探针已经证明 Supabase 原生 endpoint 和并发会话能够将 factor 删除至 0；未来即使补充应用入口，也必须继续保留该风险边界。因此 `Delivery` 保持 `Partial`。
+`Delivery` 暂保持 `Partial` 的原因已经从“缺少产品入口”收缩为**当前候选验证证据缺口**：pgTAP `sec_admin_04_mfa_factor_lifecycle.sql`、双会话并发脚本和 browser flow 已加入仓库，但本次 Runner 无权启动本机 `com.docker.service`，因此真实 Local Supabase/Auth 回归尚未执行。历史固定版本探针仍证明 Supabase 原生 endpoint 可绕过应用入口并在并发会话下删到 0；即使本项目受控路径验证通过，也只能承诺应用路径保护，不能夸大为 Provider 全局原子保证。
 
 统一安全语义剩余覆盖和 Web hardening 分别由 `REQ-ADM-009/010` 跟踪；当前未完成项统一登记在 [`docs/plans/TODO.md`](../plans/TODO.md)，不能用 IAM Requirement 冒充已完成。
 

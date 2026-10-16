@@ -374,6 +374,29 @@ function fakeDatabase(
           }
           if (
             query.startsWith(
+              'select * from private.admin_mfa_factor_delete_prepare',
+            )
+          ) {
+            return [
+              {
+                operation_id: '00000000-0000-4000-8000-000000000007',
+                membership_state: 'active',
+                verified_totp_count: 3,
+                minimum_remaining_factor_count: 2,
+                lease_until: '2026-10-16T03:15:00.000Z',
+                revoked_proof_count: 1,
+              },
+            ] as unknown as R[];
+          }
+          if (
+            query.startsWith(
+              'select * from private.admin_mfa_factor_delete_finalize',
+            )
+          ) {
+            return [{ state: 'completed', replayed: false }] as unknown as R[];
+          }
+          if (
+            query.startsWith(
               'select * from private.admin_system_admin_self_status',
             )
           )
@@ -2031,6 +2054,79 @@ Deno.test('Admin security status fails closed when its SQL result is malformed',
   assertEquals((await response.json()).error.code, 'AUTHORIZATION_UNAVAILABLE');
 });
 
+Deno.test('Admin MFA factor deletion prepare and finalize use a serialized operation', async () => {
+  const proofId = '00000000-0000-4000-8000-000000000005';
+  const factorId = '00000000-0000-4000-8000-000000000006';
+  const operationId = '00000000-0000-4000-8000-000000000007';
+  const calls: string[] = [];
+  const common = {
+    database: fakeDatabase((query) => calls.push(query)),
+    verifyAccessToken: async () => userId,
+  };
+  const prepared = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/auth/mfa-factors/${factorId}/delete-authorization`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+          'X-Recent-Auth-Proof': proofId,
+        },
+        body: JSON.stringify({ operation_id: operationId }),
+      },
+    ),
+    common,
+  );
+  assertEquals(prepared.status, 200);
+  assertEquals((await prepared.json()).data, {
+    authorized: true,
+    operation_id: operationId,
+    membership_state: 'active',
+    verified_totp_count: 3,
+    minimum_remaining_factor_count: 2,
+    lease_until: '2026-10-16T03:15:00.000Z',
+    revoked_proof_count: 1,
+  });
+
+  const finalized = await handleRequest(
+    new Request(
+      `http://local/functions/v1/account-api/admin/api/v1/auth/mfa-factors/${factorId}/delete-finalization`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fakeJwt('aal2')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation_id: operationId,
+          result: 'completed',
+        }),
+      },
+    ),
+    common,
+  );
+  assertEquals(finalized.status, 200);
+  assertEquals((await finalized.json()).data, {
+    state: 'completed',
+    replayed: false,
+  });
+  assertEquals(
+    calls.some((query) =>
+      query.startsWith('select * from private.admin_mfa_factor_delete_prepare'),
+    ),
+    true,
+  );
+  assertEquals(
+    calls.some((query) =>
+      query.startsWith(
+        'select * from private.admin_mfa_factor_delete_finalize',
+      ),
+    ),
+    true,
+  );
+});
+
 Deno.test('System Admin membership routes expose list and recent-MFA mutations', async () => {
   const common = {
     database: fakeDatabase(),
@@ -2665,6 +2761,7 @@ Deno.test('Account API exposes the OPT-009 Account workbench contract', async ()
   assertEquals(detailPayload.data.identity, {
     user_id: userId,
     email: 'identity@example.invalid',
+    source_state: 'available',
   });
   assertEquals('last_sign_in_at' in detailPayload.data.identity, false);
   assertEquals(detailPayload.data.billing_attention_count, 1);
@@ -2680,11 +2777,15 @@ Deno.test('Account API exposes the OPT-009 Account workbench contract', async ()
       },
     },
   );
-  assertEquals(unavailableDetail.status, 503);
-  assertEquals(
-    (await unavailableDetail.json()).error.code,
-    'AUTHORIZATION_UNAVAILABLE',
-  );
+  assertEquals(unavailableDetail.status, 200);
+  const unavailableDetailPayload = await unavailableDetail.json();
+  assertEquals(unavailableDetailPayload.data.identity, {
+    user_id: userId,
+    email: null,
+    source_state: 'unavailable',
+  });
+  assertEquals(unavailableDetailPayload.data.billing_attention_count, 1);
+  assertEquals(unavailableDetailPayload.data.feedback_open_count, 1);
 
   const tags = await handleRequest(
     new Request(`${base}/${sessionId}/tags`, {

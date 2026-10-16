@@ -54,7 +54,7 @@ Profile 与 Preferences 的可变资料必须使用版本/前置条件避免并�
 ## REQ-ACC-004 — Account 360 提供平台账户统一上下文
 
 - **Status**: Active
-- **Delivery**: Partial
+- **Delivery**: Implemented
 - **Priority**: P1
 - **Type**: Functional
 
@@ -68,9 +68,9 @@ Profile 与 Preferences 的可变资料必须使用版本/前置条件避免并�
 - 详细对象可下钻到相应领域工作区。
 - 聚合读取的局部失败显示 unavailable，而不是伪造 0/null。
 
-**Current gap**
+**Current implementation**
 
-当前领域摘要已由服务端聚合，但 Identity email 仍通过单独的 Auth Admin 查询补充；该查询异常时当前 detail 整体返回 `AUTHORIZATION_UNAVAILABLE`，尚未实现“账户业务摘要可用、身份邮箱局部 unavailable”的细粒度降级。因此本 Requirement 保持 Partial。
+领域摘要由 `private.admin_account_workbench_read` 服务端聚合，Identity email 继续通过独立 Auth Admin 边界补充。该 Identity 数据源现在通过 `identity.source_state = available | missing | unavailable | not_applicable` 独立表达：Auth lookup 暂时失败时 Workbench 仍返回账户状态、权益、Billing、Config、Feedback、tags/notes 和治理时间线，Identity 部分明确 `unavailable`，不再用整体 `503` 或伪造 `null` 隐藏局部失败。
 
 ## REQ-ACC-005 — 平台活跃语义不得伪造
 

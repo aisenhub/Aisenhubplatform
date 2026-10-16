@@ -106,6 +106,8 @@ user_id 可空仅为受控 Global Purge 保留无身份墓碑账户。普通 Clo
 
 `private.system_admin` 是 System Admin membership 权威表：`pending` 只用于管理员 MFA onboarding，只有 `active` 可进入普通 Admin 授权。正常运行 readiness 要求至少 2 名 active member，且每名 active member 至少有 2 个 Supabase Auth verified TOTP factor；新增、激活、移除由 private domain function 串行化，正常路径不能把 active 数量降到 2 以下。System Admin 使用专用 Auth identity，任意 pending/active membership 都会被普通 Consumer Principal 拒绝。
 
+`private.admin_mfa_factor_operations` 保存 verified TOTP 删除的短寿命恢复事实：operation/user/session/factor/request、`authorized | completed | failed`、lease、完成时间和有界错误码；`user_id` 随 System Admin membership 删除级联清理。唯一部分索引保证一个管理员同时最多一个 `authorized` factor mutation。浏览器和 `admin_executor` 都没有表级 DML；只能通过 prepare/finalize private domain function 串行化 Provider `unenroll` 前后的状态。
+
 identity_lifecycle 首次受控访问时 insert-on-conflict 建立。普通写入锁定并检查该身份门闩；Global Delete 设置 deleting 后，激活/兑换/上传/下载和 BFF 授权均拒绝。Auth 中用户缺失时不能重建门闩。
 
 Origin 规范化后存储，不含路径；生产只允许 HTTPS，callback 必须与同一行 origin 同源且路径精确匹配。一个环境内同一 origin 只属于一个平台。该表不是 Supabase allowlist 的替代，部署控制器负责同步和漂移检测。

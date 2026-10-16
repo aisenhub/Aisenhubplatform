@@ -15,7 +15,7 @@ contracts/account/v1/openapi.json
 contracts/admin/v1/openapi.json
 ```
 
-当前 `pnpm contracts:check` 验证：Account v1 40 operations，Admin v1 76 operations。
+当前 `pnpm contracts:check` 验证：Account v1 40 operations，Admin v1 78 operations。
 
 `packages/domain` 是中央内部 package，不是 Consumer runtime contract。Consumer 不安装/复制它来代替 OpenAPI。
 
