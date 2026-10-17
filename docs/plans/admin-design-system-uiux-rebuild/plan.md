@@ -42,7 +42,7 @@
 
 | 阶段 | 目标 | 前置依赖 | 预期风险级别 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- | --- |
-| 01 | 迁移参考项目通用 Design System，冻结设计治理与 ownership | 当前 Plan | R0 | 验收通过待推送 | [阶段 01](phases/01-design-system-migration.md) |
+| 01 | 迁移参考项目通用 Design System，冻结设计治理与 ownership | 当前 Plan | R0 | 已交付 | [阶段 01](phases/01-design-system-migration.md) |
 | 02 | 从零建立新的 Aisenhub Admin `DESIGN.md` / Product Adaptation | 01 | R0 | 未开始 | [阶段 02](phases/02-new-aisenhub-design-direction.md) |
 | 03 | 按真实页面批次并行执行 Foundation/Component 与 UI/UX 全面优化 | 01、02 | 至少 R2 | 未开始 | [阶段 03](phases/03-component-and-uiux-rebuild.md) |
 | 04 | 全站收敛、清旧实现、建立静态治理并完成全量回归 | 03 | 至少 R2 | 未开始 | [阶段 04](phases/04-convergence-and-governance.md) |

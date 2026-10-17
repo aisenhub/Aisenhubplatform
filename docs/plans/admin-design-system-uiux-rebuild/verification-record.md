@@ -18,7 +18,7 @@
 
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | Design System Migration | 验收通过待推送 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 待 commit/push、远端核对 | 未验证 | 未验证 |
+| 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 未开始 | 未验证 | 依赖 01 | 未验证 | 未验证 |
 | 03 | Component + UI/UX Rebuild | 未开始 | 未验证 | 依赖 01、02 | 未验证 | 未验证 |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
@@ -90,7 +90,7 @@
 
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 链接 |
 | --- | --- | --- | --- | --- | --- |
-| 01 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
+| 01 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | `codex/admin-design-system-phase1` | PASS | PASS：`origin/codex/admin-design-system-phase1` 指向同一 SHA | GitHub 分支 |
 | 02 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 | 03 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 | 04 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
@@ -101,5 +101,5 @@
 - 必须先解决的问题：阶段 01 当前无内容阻塞，仍需完成本地检查与 GitHub 交付门槛。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前未提交修改及归属：阶段 01 文档迁移，归属 `codex/admin-design-system-phase1`；待 commit/push。
+- 当前未提交修改及归属：本条记录更新时仅剩阶段 01 交付记录收尾；不包含运行代码或阶段 02 实施。
 - 需要用户决定的事项：阶段 02 的具体视觉方向由新 Design System + Product Requirement 驱动；若出现多个同等方案且无法由约束判断，再请求产品决定。

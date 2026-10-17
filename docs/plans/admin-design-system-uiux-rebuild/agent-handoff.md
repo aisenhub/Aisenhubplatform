@@ -7,8 +7,8 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：Aisenhub Admin Design System 迁移与 UI/UX 全面重构
 - 总计划：[plan.md](plan.md)
-- 当前阶段：阶段 01 — Design System Migration
-- 当前实施分支：`codex/admin-design-system-phase1`；后续阶段仍按当前仓库规则从已确认基线建立新的短期分支。
+- 当前阶段：阶段 02 — New Aisenhub Design Direction（未开始；阶段 01 已交付，等待用户派发）
+- 最近已交付分支：`codex/admin-design-system-phase1`；阶段 02 应按当前仓库规则从已确认基线建立新的短期分支。
 - 远程仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
 
 ## 必读顺序
@@ -18,7 +18,7 @@
 3. `docs/spec/admin-console.md`、`apps/admin/PRODUCT.md`、`docs/architecture/modules/frontends.md`。
 4. `docs/review/admin-frontend-architecture-audit-2026-10-15.md` 与当前 `packages/ui` / `apps/admin` 实际源码。
 5. 阶段 01/02 必须读取参考项目当前 `development/design/**` 及对应 frontend design system 计划/架构资料，不能只依赖本 Plan 的摘要。
-6. 阶段 01 迁移完成后以 [`docs/development/design/README.md`](../../development/design/README.md) 和 [`reference-migration-inventory.md`](../../development/design/reference-migration-inventory.md) 作为后续设计治理入口，不重复回到参考项目复制产品选择。
+6. 阶段 01 已完成；后续以 [`docs/development/design/README.md`](../../development/design/README.md) 和 [`reference-migration-inventory.md`](../../development/design/reference-migration-inventory.md) 作为设计治理入口，不重复回到参考项目复制产品选择。
 
 ## 执行提示词
 

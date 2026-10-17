@@ -1,6 +1,6 @@
 # 阶段 01：迁移通用 Design System
 
-状态：验收通过待推送
+状态：已交付
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -61,4 +61,4 @@
 - [x] `docs/development/design/**` 已建立并成为长期通用设计治理源。
 - [x] 文档导航已同步。
 - [x] `verification-record.md` 已记录真实检查。
-- [ ] 阶段 commit 已 push 且远端核对后，状态才可标记已交付。
+- [x] 阶段 commit `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` 已 push 到 `origin/codex/admin-design-system-phase1`，远端 SHA 已核对一致。
