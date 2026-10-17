@@ -17,6 +17,7 @@ import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -300,13 +301,45 @@ export function AdminOverviewPage() {
         onRetry={() => void loadAll(true)}
       />
 
-      <div className="admin-overview-summary" aria-label="管理员概览关键状态">
-        <SummaryCard
-          label="系统状态"
-          value={health.label}
-          description={health.description}
-          tone={health.tone}
+      <AdminWorkspaceSection
+        title="需要关注"
+        titleId="overview-attention-title"
+        description="这里只放需要管理员判断或处理的异常，不重复普通导航。"
+        actions={
+          <div className="flex flex-wrap gap-3 text-sm">
+            <Link
+              href="/admin/accounts/deletion-jobs"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              删除任务
+            </Link>
+            <Link
+              href="/admin/billing/orders"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              计费管理
+            </Link>
+            <Link
+              href="/admin/accounts"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              统一用户
+            </Link>
+          </div>
+        }
+        data-test="overview-attention"
+      >
+        <AttentionState
+          jobs={jobs}
+          billing={billing}
+          items={attentionItems}
+          onRetry={() =>
+            void Promise.all([loadJobs(false), loadBilling(false)])
+          }
         />
+      </AdminWorkspaceSection>
+
+      <div className="admin-overview-summary" aria-label="管理员概览关键状态">
         <SummaryCard
           label="待处理事项"
           value={attentionReady ? `${attentionItems.length}` : '—'}
@@ -361,93 +394,55 @@ export function AdminOverviewPage() {
                   : 'warning'
           }
         />
+        <SummaryCard
+          label="系统状态"
+          value={health.label}
+          description={health.description}
+          tone={health.tone}
+        />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-        <section className="panel gap-4" data-test="overview-attention">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2>需要关注</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                这里只放需要管理员判断或处理的异常，不重复普通导航。
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <Link
-                href="/admin/accounts/deletion-jobs"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                删除任务
-              </Link>
-              <Link
-                href="/admin/billing/orders"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                计费管理
-              </Link>
-              <Link
-                href="/admin/accounts"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                统一用户
-              </Link>
-            </div>
+      <AdminWorkspaceSection
+        title="平台概况"
+        titleId="overview-platform-summary-title"
+        description="快速确认平台启用状态和激活策略；具体配置继续进入平台工作区。"
+        actions={
+          <Link
+            href="/admin/platforms"
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            查看平台
+          </Link>
+        }
+        data-test="overview-platform-summary"
+      >
+        <SourceStateView
+          state={platforms}
+          resource="平台列表"
+          onRetry={() => void loadPlatforms(false)}
+        />
+
+        {platforms.state === 'success' ? (
+          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricBlock
+              label="目录平台"
+              value={platformCount(stats.total, platformSaturated)}
+            />
+            <MetricBlock
+              label="活跃"
+              value={platformCount(stats.active, platformSaturated)}
+            />
+            <MetricBlock
+              label="停用"
+              value={platformCount(stats.disabled, platformSaturated)}
+            />
+            <MetricBlock
+              label="暂停新激活"
+              value={platformCount(stats.activationPaused, platformSaturated)}
+            />
           </div>
-
-          <AttentionState
-            jobs={jobs}
-            billing={billing}
-            items={attentionItems}
-            onRetry={() =>
-              void Promise.all([loadJobs(false), loadBilling(false)])
-            }
-          />
-        </section>
-
-        <section className="panel gap-4" data-test="overview-platform-summary">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2>平台概况</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                快速确认平台启用状态和激活策略。
-              </p>
-            </div>
-            <Link
-              href="/admin/platforms"
-              className="text-sm text-primary underline-offset-4 hover:underline"
-            >
-              查看平台
-            </Link>
-          </div>
-
-          <SourceStateView
-            state={platforms}
-            resource="平台列表"
-            onRetry={() => void loadPlatforms(false)}
-          />
-
-          {platforms.state === 'success' ? (
-            <div className="grid grid-cols-2 gap-3">
-              <MetricBlock
-                label="目录平台"
-                value={platformCount(stats.total, platformSaturated)}
-              />
-              <MetricBlock
-                label="活跃"
-                value={platformCount(stats.active, platformSaturated)}
-              />
-              <MetricBlock
-                label="停用"
-                value={platformCount(stats.disabled, platformSaturated)}
-              />
-              <MetricBlock
-                label="暂停新激活"
-                value={platformCount(stats.activationPaused, platformSaturated)}
-              />
-            </div>
-          ) : null}
-        </section>
-      </div>
+        ) : null}
+      </AdminWorkspaceSection>
     </main>
   );
 }
@@ -675,7 +670,7 @@ function SummaryCard({
 
 function MetricBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+    <div className="border-b border-border/70 py-2 last:border-b-0 xl:border-b-0">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
     </div>

@@ -37,6 +37,10 @@ import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
@@ -317,7 +321,7 @@ export function CentralAccountsPage() {
         </Alert>
       ) : null}
 
-      <section className="panel gap-4 p-4">
+      <AdminTaskToolbar aria-label="统一身份筛选">
         <form
           onSubmit={handleSearchSubmit}
           className="flex flex-wrap items-center justify-between gap-4"
@@ -391,7 +395,7 @@ export function CentralAccountsPage() {
             * Identity 结果最多 50 条；平台筛选器最多加载最近 100 个平台注册项。
           </span>
         </div>
-      </section>
+      </AdminTaskToolbar>
 
       {accountsState === 'loading' ? <AsyncState state="loading" /> : null}
       {accountsState === 'error' && accountsError ? (
@@ -406,7 +410,7 @@ export function CentralAccountsPage() {
       ) : null}
       {accountsState === 'success' && identities.length === 0 ? (
         <EmptyState
-          className="panel my-4 gap-2 p-12 text-center"
+          className="my-2 min-h-64 gap-2 border-border/70 bg-card text-center"
           data-test="accounts-empty"
         >
           <Users className="mx-auto h-10 w-10 text-muted-foreground/60" />
@@ -419,107 +423,127 @@ export function CentralAccountsPage() {
         </EmptyState>
       ) : null}
       {accountsState === 'success' && identities.length > 0 ? (
-        <section className="panel gap-4 p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>全局 Identity</TableHead>
-                <TableHead>身份状态</TableHead>
-                <TableHead>平台账户关联</TableHead>
-                <TableHead>创建时间</TableHead>
-                <TableHead>最近登录</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {identities.map((identity) => (
-                <TableRow key={identity.user_id}>
-                  <TableCell className="align-top">
-                    <div className="flex items-start gap-2">
-                      <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <Link
-                          href={`/admin/accounts/${encodeURIComponent(identity.user_id)}`}
-                          className="font-medium text-primary underline-offset-4 hover:underline"
-                          data-test={`identity-detail-link-${identity.user_id}`}
-                        >
-                          {identity.email ?? '未设置邮箱'}
-                        </Link>
-                        <div className="mt-1">
-                          <ResourceId value={identity.user_id} />
-                        </div>
-                        <Link
-                          href={`/admin/accounts/${encodeURIComponent(identity.user_id)}`}
-                          className="mt-2 inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          查看身份生命周期
-                        </Link>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <StatusBadge
-                      tone={identityTone(identity.identity_state)}
-                      label={identityStateLabel(identity.identity_state)}
-                    />
-                  </TableCell>
-                  <TableCell className="min-w-[22rem] align-top">
-                    {identity.accounts.length === 0 ? (
-                      <span className="text-sm text-muted-foreground">
-                        尚无平台账户
-                      </span>
-                    ) : (
-                      <div className="grid gap-2">
-                        {identity.accounts.map((account) => (
-                          <div
-                            key={`${account.platform_id}-${account.platform_account_id}`}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 px-3 py-2"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Link
-                                  href={`/admin/platforms/${account.platform_id}`}
-                                  className="font-medium text-primary underline-offset-4 hover:underline"
-                                >
-                                  {account.platform_name}
-                                </Link>
-                                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.68rem] text-muted-foreground">
-                                  {account.platform_code}
-                                </span>
-                                <StatusBadge
-                                  tone={accountTone(account.status)}
-                                  label={accountStatusLabel(account.status)}
-                                />
-                              </div>
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                Account{' '}
-                                <ResourceId
-                                  value={account.platform_account_id}
-                                />
-                              </div>
-                            </div>
-                            <Link
-                              href={`/admin/platforms/${account.platform_id}/accounts/${account.platform_account_id}`}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
-                            >
-                              进入账户
-                              <ExternalLink className="h-3 w-3" />
-                            </Link>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="align-top text-xs text-muted-foreground">
-                    {formatUtc(identity.created_at)}
-                  </TableCell>
-                  <TableCell className="align-top text-xs text-muted-foreground">
-                    {formatUtc(identity.last_sign_in_at)}
-                  </TableCell>
+        <AdminWorkspaceSection
+          title="统一身份目录"
+          titleId="central-accounts-results"
+          description="Identity 是全局主对象；关联 Platform Account 保留各自平台状态与治理边界。"
+          meta={
+            <>
+              <span>Identity {identities.length} 条</span>
+              <span>关联账户 {linkedAccountCount} 个</span>
+              {suspendedAccountCount > 0 ? (
+                <span>已暂停 {suspendedAccountCount} 个</span>
+              ) : null}
+            </>
+          }
+        >
+          <div
+            className="data-table"
+            tabIndex={0}
+            role="region"
+            aria-label="统一身份目录，可横向滚动"
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>全局 Identity</TableHead>
+                  <TableHead>身份状态</TableHead>
+                  <TableHead>平台账户关联</TableHead>
+                  <TableHead>创建时间</TableHead>
+                  <TableHead>最近登录</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
+              </TableHeader>
+              <TableBody>
+                {identities.map((identity) => (
+                  <TableRow key={identity.user_id}>
+                    <TableCell className="align-top">
+                      <div className="flex items-start gap-2">
+                        <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <Link
+                            href={`/admin/accounts/${encodeURIComponent(identity.user_id)}`}
+                            className="font-medium text-primary underline-offset-4 hover:underline"
+                            data-test={`identity-detail-link-${identity.user_id}`}
+                          >
+                            {identity.email ?? '未设置邮箱'}
+                          </Link>
+                          <div className="mt-1">
+                            <ResourceId value={identity.user_id} />
+                          </div>
+                          <Link
+                            href={`/admin/accounts/${encodeURIComponent(identity.user_id)}`}
+                            className="mt-2 inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
+                          >
+                            查看身份生命周期
+                          </Link>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <StatusBadge
+                        tone={identityTone(identity.identity_state)}
+                        label={identityStateLabel(identity.identity_state)}
+                      />
+                    </TableCell>
+                    <TableCell className="min-w-[22rem] align-top">
+                      {identity.accounts.length === 0 ? (
+                        <span className="text-sm text-muted-foreground">
+                          尚无平台账户
+                        </span>
+                      ) : (
+                        <div className="grid divide-y divide-border/70">
+                          {identity.accounts.map((account) => (
+                            <div
+                              key={`${account.platform_id}-${account.platform_account_id}`}
+                              className="flex flex-wrap items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Link
+                                    href={`/admin/platforms/${account.platform_id}`}
+                                    className="font-medium text-primary underline-offset-4 hover:underline"
+                                  >
+                                    {account.platform_name}
+                                  </Link>
+                                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.68rem] text-muted-foreground">
+                                    {account.platform_code}
+                                  </span>
+                                  <StatusBadge
+                                    tone={accountTone(account.status)}
+                                    label={accountStatusLabel(account.status)}
+                                  />
+                                </div>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                  Account{' '}
+                                  <ResourceId
+                                    value={account.platform_account_id}
+                                  />
+                                </div>
+                              </div>
+                              <Link
+                                href={`/admin/platforms/${account.platform_id}/accounts/${account.platform_account_id}`}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                              >
+                                进入账户
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="align-top text-xs text-muted-foreground">
+                      {formatUtc(identity.created_at)}
+                    </TableCell>
+                    <TableCell className="align-top text-xs text-muted-foreground">
+                      {formatUtc(identity.last_sign_in_at)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </AdminWorkspaceSection>
       ) : null}
     </main>
   );

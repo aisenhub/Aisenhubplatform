@@ -19,6 +19,7 @@ import {
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { platformStatus } from '../../components/platform-context/platform-types';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   readApiPayload,
   resourceError,
@@ -87,13 +88,16 @@ function MetricCard({
   return href ? (
     <Link
       href={href}
-      className="panel block gap-0 transition-colors hover:border-primary/40"
+      className="block border-b border-border/70 py-3 transition-colors last:border-b-0 hover:text-primary xl:border-b-0"
       data-test={test}
     >
       {body}
     </Link>
   ) : (
-    <div className="panel gap-0" data-test={test}>
+    <div
+      className="border-b border-border/70 py-3 last:border-b-0 xl:border-b-0"
+      data-test={test}
+    >
       {body}
     </div>
   );
@@ -247,7 +251,7 @@ export function PlatformOverviewPage() {
       ) : null}
 
       {state === 'loading' ? (
-        <div className="panel" data-test="platform-overview-loading">
+        <div className="py-8" data-test="platform-overview-loading">
           <AsyncState state="loading" />
         </div>
       ) : null}
@@ -274,111 +278,12 @@ export function PlatformOverviewPage() {
 
       {state === 'success' && metrics ? (
         <>
-          <section
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-            aria-label="关键指标"
+          <AdminWorkspaceSection
+            title="需要关注"
+            titleId="platform-attention-title"
+            description="只展示当前有权威事实的数据源；尚未建设的领域不会显示假 0。"
           >
-            <MetricCard
-              label="平台账户总量"
-              value={metricNumber(metrics.total_accounts)}
-              description="包含已关闭墓碑"
-              href={`${base}/accounts`}
-              test="platform-overview-total-accounts"
-            />
-            <MetricCard
-              label="活跃账户"
-              value={metricNumber(metrics.active_accounts)}
-              description={`${metricNumber(metrics.suspended_accounts)} 个已暂停`}
-              href={`${base}/accounts?q=active`}
-            />
-            <MetricCard
-              label="当前有效付费账户"
-              value={metricNumber(metrics.active_paid_accounts)}
-              description="active paid Plan 投影"
-              href={`${base}/subscriptions`}
-              test="platform-overview-paid-accounts"
-            />
-            <MetricCard
-              label={`${period} 天订单`}
-              value={metricNumber(metrics.orders)}
-              description={comparisonLabel(
-                metrics.orders,
-                metrics.previous_orders,
-              )}
-              tone={comparisonTone(metrics.orders, metrics.previous_orders)}
-              href={`${base}/billing`}
-              test="platform-overview-orders"
-            />
-          </section>
-
-          <section
-            className="grid gap-4"
-            aria-labelledby="platform-growth-title"
-          >
-            <div>
-              <h2 id="platform-growth-title">用户变化</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                当前 {period} 天与紧邻的上一 {period} 天比较；净变化 = 新增 −
-                关闭。
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <MetricCard
-                label="新增账户"
-                value={metricNumber(metrics.new_accounts)}
-                description={comparisonLabel(
-                  metrics.new_accounts,
-                  metrics.previous_new_accounts,
-                )}
-                tone={comparisonTone(
-                  metrics.new_accounts,
-                  metrics.previous_new_accounts,
-                )}
-                href={`${base}/accounts`}
-                test="platform-overview-new-accounts"
-              />
-              <MetricCard
-                label="关闭账户"
-                value={metricNumber(metrics.period_closed_accounts)}
-                description={comparisonLabel(
-                  metrics.period_closed_accounts,
-                  metrics.previous_closed_accounts,
-                )}
-                tone={comparisonTone(
-                  metrics.period_closed_accounts,
-                  metrics.previous_closed_accounts,
-                  true,
-                )}
-                href={`${base}/accounts?q=closed`}
-              />
-              <MetricCard
-                label="净变化"
-                value={metricNumber(metrics.net_accounts)}
-                description={comparisonLabel(
-                  metrics.net_accounts,
-                  metrics.previous_net_accounts,
-                )}
-                tone={comparisonTone(
-                  metrics.net_accounts,
-                  metrics.previous_net_accounts,
-                )}
-                href={`${base}/accounts`}
-                test="platform-overview-net-accounts"
-              />
-            </div>
-          </section>
-
-          <section
-            className="grid gap-4"
-            aria-labelledby="platform-attention-title"
-          >
-            <div>
-              <h2 id="platform-attention-title">需要关注</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                只展示当前有权威事实的数据源；尚未建设的领域不会显示假 0。
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="已暂停账户"
                 value={metricNumber(metrics.suspended_accounts)}
@@ -434,7 +339,101 @@ export function PlatformOverviewPage() {
                 test="platform-overview-pending-feedback"
               />
             </div>
-          </section>
+          </AdminWorkspaceSection>
+
+          <AdminWorkspaceSection
+            title="关键运行指标"
+            titleId="platform-key-metrics"
+            description="账户、付费与订单摘要用于定位工作区，不替代对应业务域的权威详情。"
+          >
+            <div
+              className="grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4"
+              aria-label="关键指标"
+            >
+              <MetricCard
+                label="平台账户总量"
+                value={metricNumber(metrics.total_accounts)}
+                description="包含已关闭墓碑"
+                href={`${base}/accounts`}
+                test="platform-overview-total-accounts"
+              />
+              <MetricCard
+                label="活跃账户"
+                value={metricNumber(metrics.active_accounts)}
+                description={`${metricNumber(metrics.suspended_accounts)} 个已暂停`}
+                href={`${base}/accounts?q=active`}
+              />
+              <MetricCard
+                label="当前有效付费账户"
+                value={metricNumber(metrics.active_paid_accounts)}
+                description="active paid Plan 投影"
+                href={`${base}/subscriptions`}
+                test="platform-overview-paid-accounts"
+              />
+              <MetricCard
+                label={`${period} 天订单`}
+                value={metricNumber(metrics.orders)}
+                description={comparisonLabel(
+                  metrics.orders,
+                  metrics.previous_orders,
+                )}
+                tone={comparisonTone(metrics.orders, metrics.previous_orders)}
+                href={`${base}/billing`}
+                test="platform-overview-orders"
+              />
+            </div>
+          </AdminWorkspaceSection>
+
+          <AdminWorkspaceSection
+            title="用户变化"
+            titleId="platform-growth-title"
+            description={`当前 ${period} 天与紧邻的上一 ${period} 天比较；净变化 = 新增 − 关闭。`}
+          >
+            <div className="grid gap-x-6 gap-y-2 sm:grid-cols-3">
+              <MetricCard
+                label="新增账户"
+                value={metricNumber(metrics.new_accounts)}
+                description={comparisonLabel(
+                  metrics.new_accounts,
+                  metrics.previous_new_accounts,
+                )}
+                tone={comparisonTone(
+                  metrics.new_accounts,
+                  metrics.previous_new_accounts,
+                )}
+                href={`${base}/accounts`}
+                test="platform-overview-new-accounts"
+              />
+              <MetricCard
+                label="关闭账户"
+                value={metricNumber(metrics.period_closed_accounts)}
+                description={comparisonLabel(
+                  metrics.period_closed_accounts,
+                  metrics.previous_closed_accounts,
+                )}
+                tone={comparisonTone(
+                  metrics.period_closed_accounts,
+                  metrics.previous_closed_accounts,
+                  true,
+                )}
+                href={`${base}/accounts?q=closed`}
+              />
+              <MetricCard
+                label="净变化"
+                value={metricNumber(metrics.net_accounts)}
+                description={comparisonLabel(
+                  metrics.net_accounts,
+                  metrics.previous_net_accounts,
+                )}
+                tone={comparisonTone(
+                  metrics.net_accounts,
+                  metrics.previous_net_accounts,
+                )}
+                href={`${base}/accounts`}
+                test="platform-overview-net-accounts"
+              />
+            </div>
+          </AdminWorkspaceSection>
         </>
       ) : null}
 
@@ -443,8 +442,11 @@ export function PlatformOverviewPage() {
         title="商业摘要"
       />
 
-      <section className="panel gap-4" aria-label="平台元数据">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <AdminWorkspaceSection
+        title="平台上下文"
+        titleId="platform-context-summary"
+        description="平台状态、激活策略与标识用于确认当前工作范围；配置变更继续进入平台设置。"
+        actions={
           <div className="flex flex-wrap items-center gap-2">
             <strong>{platform.name}</strong>
             <StatusBadge
@@ -456,14 +458,15 @@ export function PlatformOverviewPage() {
               label={platform.allow_activation ? '允许激活' : '禁止激活'}
               tone={platform.allow_activation ? 'success' : 'warning'}
             />
+            <Link
+              href={`${base}/settings`}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              平台设置
+            </Link>
           </div>
-          <Link
-            href={`${base}/settings`}
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
-            平台设置
-          </Link>
-        </div>
+        }
+      >
         <div className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <span className="text-xs text-muted-foreground">Platform Code</span>
@@ -476,16 +479,14 @@ export function PlatformOverviewPage() {
             </div>
           </div>
         </div>
-      </section>
+      </AdminWorkspaceSection>
 
-      <section className="grid gap-4" aria-labelledby="platform-quick-links">
-        <div>
-          <h2 id="platform-quick-links">快捷入口</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            以下操作均属于 {platform.name}。
-          </p>
-        </div>
-        <div className="panel admin-task-links">
+      <AdminWorkspaceSection
+        title="快捷入口"
+        titleId="platform-quick-links"
+        description={`以下操作均属于 ${platform.name}，切换入口不会改变当前 Platform scope。`}
+      >
+        <div className="admin-task-links">
           {quickLinks.map(([href, title, description]) => (
             <Link
               key={href}
@@ -506,7 +507,7 @@ export function PlatformOverviewPage() {
             </Link>
           ))}
         </div>
-      </section>
+      </AdminWorkspaceSection>
 
       <p className="flex items-start gap-2 text-xs text-muted-foreground">
         <AlertTriangle

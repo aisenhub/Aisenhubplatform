@@ -18,6 +18,7 @@ import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -278,82 +279,85 @@ export function IdentityDetailPage({ userId }: { userId: string }) {
 
       {state === 'success' && identity ? (
         <>
-          <section className="grid gap-4 md:grid-cols-3">
-            <div className="panel gap-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <UserRound className="h-4 w-4" />
-                Auth Identity
+          <AdminWorkspaceSection
+            title="Identity 摘要"
+            titleId="identity-detail-summary"
+            description="Global Identity 是全局主对象；平台账户状态和治理仍由各 Platform Account 权威数据决定。"
+            actions={
+              <StatusBadge
+                tone={identityTone(identity.identity_state)}
+                label={identityStateLabel(identity.identity_state)}
+              />
+            }
+          >
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(12rem,0.6fr)] md:items-start">
+              <div className="admin-detail-column">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <UserRound className="h-4 w-4" />
+                  Auth Identity
+                </div>
+                <p className="break-all text-lg font-semibold">
+                  {identity.email ?? '未设置邮箱'}
+                </p>
+                <ResourceId value={identity.user_id} />
+                <p className="text-xs text-muted-foreground">
+                  创建 {formatUtc(identity.created_at)} · 最近登录{' '}
+                  {formatUtc(identity.last_sign_in_at)}
+                </p>
               </div>
-              <p className="break-all font-medium">
-                {identity.email ?? '未设置邮箱'}
-              </p>
-              <ResourceId value={identity.user_id} />
-            </div>
-            <div className="panel gap-2">
-              <p className="text-xs text-muted-foreground">身份状态</p>
-              <div>
-                <StatusBadge
-                  tone={identityTone(identity.identity_state)}
-                  label={identityStateLabel(identity.identity_state)}
-                />
+              <div className="admin-detail-column admin-detail-column-divided">
+                <p className="text-xs text-muted-foreground">关联平台账户</p>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {identity.accounts.length}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  仅统计当前 live Identity 返回的账户关系。
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                创建 {formatUtc(identity.created_at)} · 最近登录{' '}
-                {formatUtc(identity.last_sign_in_at)}
-              </p>
             </div>
-            <div className="panel gap-2">
-              <p className="text-xs text-muted-foreground">平台账户关联</p>
-              <p className="text-2xl font-semibold">
-                {identity.accounts.length}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                仅展示此 live Identity 当前关联的平台账户。
-              </p>
-            </div>
-          </section>
+          </AdminWorkspaceSection>
 
-          <section className="panel gap-4" data-test="identity-detail-accounts">
-            <div>
-              <h2>平台账户</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Identity 是全局主对象；账户状态仍由各平台账户权威数据决定。
-              </p>
-            </div>
+          <AdminWorkspaceSection
+            title="平台账户"
+            titleId="identity-detail-accounts-title"
+            description="保持 Global Identity 上下文，同时进入具体 Platform Account 处理平台侧任务。"
+            meta={<span>{identity.accounts.length} 个关联账户</span>}
+            data-test="identity-detail-accounts"
+          >
             {identity.accounts.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border/80 p-6 text-sm text-muted-foreground">
+              <div className="py-8 text-sm text-muted-foreground">
                 当前没有关联平台账户。
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="admin-related-workspace-list">
                 {identity.accounts.map((account) => (
                   <article
                     key={`${account.platform_id}-${account.platform_account_id}`}
-                    className="rounded-xl border border-border/70 p-4"
+                    className="admin-related-workspace-row"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <Link
-                          href={`/admin/platforms/${account.platform_id}`}
-                          className="font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          {account.platform_name}
-                        </Link>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {account.platform_code}
-                        </p>
-                      </div>
+                    <div>
+                      <Link
+                        href={`/admin/platforms/${account.platform_id}`}
+                        className="font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {account.platform_name}
+                      </Link>
+                      <p className="mt-1 font-mono text-xs text-muted-foreground">
+                        {account.platform_code}
+                      </p>
+                    </div>
+                    <div className="min-w-0">
                       <StatusBadge
                         tone={accountTone(account.status)}
                         label={accountStatusLabel(account.status)}
                       />
-                    </div>
-                    <div className="mt-3">
-                      <ResourceId value={account.platform_account_id} />
+                      <div className="mt-2">
+                        <ResourceId value={account.platform_account_id} />
+                      </div>
                     </div>
                     <Link
                       href={`/admin/platforms/${account.platform_id}/accounts/${account.platform_account_id}`}
-                      className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
                       进入平台账户
                       <ExternalLink className="h-3 w-3" />
@@ -362,22 +366,17 @@ export function IdentityDetailPage({ userId }: { userId: string }) {
                 ))}
               </div>
             )}
-          </section>
+          </AdminWorkspaceSection>
 
-          <section className="panel gap-4" data-test="identity-detail-deletion">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2>身份删除生命周期</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  request 与 job 来自权威生命周期投影；执行租约、fence 与 Auth
-                  session 等内部字段不会暴露在这里。
-                </p>
-              </div>
-              <ShieldAlert className="h-5 w-5 text-muted-foreground" />
-            </div>
-
+          <AdminWorkspaceSection
+            title="身份删除生命周期"
+            titleId="identity-detail-deletion-title"
+            description="request 与 job 来自权威生命周期投影；页面不暴露执行租约、fence 与 Auth session 等内部字段，也不猜测任务完成。"
+            actions={<ShieldAlert className="h-5 w-5 text-muted-foreground" />}
+            data-test="identity-detail-deletion"
+          >
             {!identity.deletion.request ? (
-              <div className="rounded-lg border border-dashed border-border/80 p-6 text-sm text-muted-foreground">
+              <div className="py-8 text-sm text-muted-foreground">
                 当前没有删除请求。
               </div>
             ) : (
@@ -400,7 +399,7 @@ export function IdentityDetailPage({ userId }: { userId: string }) {
                 </AlertDescription>
               </Alert>
             ) : null}
-          </section>
+          </AdminWorkspaceSection>
         </>
       ) : null}
 
@@ -425,7 +424,7 @@ function DeletionRequestCard({
 }) {
   const status = requestStatus(request.state);
   return (
-    <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
+    <article className="admin-timeline-item">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -468,7 +467,7 @@ function DeletionJobCard({
   const status = jobStatus(job.state);
   const retryable = ['blocked', 'retry'].includes(job.state);
   return (
-    <article className="rounded-xl border border-border/70 p-4">
+    <article className="admin-timeline-item">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
