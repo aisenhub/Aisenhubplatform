@@ -52,7 +52,7 @@
 
 ### 03A — Theme / Solid Glass / Shell Pilot
 
-**当前状态**：实现完成并通过 targeted static/unit/build + synthetic production browser；完整 R2 Local Supabase gate 因当前 Docker Desktop Linux Engine 不可连接而环境阻塞，必须在 Docker 可用后补测，未据此宣称整个阶段或 R2 已完成。
+**当前状态**：实现 checkpoint `764193b094287ff7668588ed7068fc0e2367e86c` 已 push 到 `codex/admin-uiux-phase3`，并通过 targeted static/unit/build + synthetic production browser；完整 R2 Local Supabase gate 因当前 Docker Desktop Linux Engine 不可连接而环境阻塞，必须在 Docker 可用后补测，未据此宣称整个阶段或 R2 已完成。
 
 **范围**：Root layout、Theme/Appearance owner、Shell、Sidebar、Topbar、PlatformSwitcher、Command Palette、Appearance Settings、全局页面 geometry，以及这些入口依赖的 Button/Input/Dialog/Sheet 等高频标准组件状态。
 
