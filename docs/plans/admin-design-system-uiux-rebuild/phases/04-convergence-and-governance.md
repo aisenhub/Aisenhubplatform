@@ -1,6 +1,6 @@
 # 阶段 04：全站收敛与 UI 治理
 
-状态：进行中（checkpoint 1 已完成；最终 clean R2 待执行）
+状态：验收通过待推送（最终 clean R2 24/24 PASS）
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -27,10 +27,10 @@
 - [x] 审查 shared component 的旧视觉 utility/variant；`transition-all` 命中均属于 Admin 当前未消费的共享/上游能力，本阶段不越界重写其他产品组件；Admin 已消费的 Button/Badge/Switch 等在 03B 已完成收敛。
 - [x] 全面检查 `className` override，治理 gate 允许外部 layout utility，并拒绝标准控件静态内部 visual-skin override。
 - [x] 统一 design review checklist，新增页面/组件必须先判断“复用 → 扩展 → 自写”，并记录在 Design System component contract。
-- [ ] 对全路由执行 responsive、keyboard/focus、ARIA、reduced motion、loading/empty/error/refresh error、danger/unknown outcome review。
-- [ ] 对全路由执行 Appearance matrix 与 perceived performance review，覆盖 Light/Dark/System、代表 Accent/Surface、首屏/导航/refresh/mutation 的稳定性与即时反馈。
-- [ ] 更新 Architecture 为实际最终结构；更新 Spec Domain Verification 和 Review 结论，删除只描述旧 UI ownership 的过时事实。
-- [ ] 检查 Plan 是否还有未实现目标；未完成项不能通过改文档措辞伪装完成。
+- [x] 对全路由执行 responsive、keyboard/focus、ARIA、reduced motion、loading/empty/error/refresh error、danger/unknown outcome review。
+- [x] 对全路由执行 Appearance matrix 与 perceived performance review，覆盖 Light/Dark/System、代表 Accent/Surface、首屏/导航/refresh/mutation 的稳定性与即时反馈。
+- [x] 更新 Architecture 为实际最终结构；更新 Spec Domain Verification 和 Review 结论，删除只描述旧 UI ownership 的过时事实。
+- [x] 检查 Plan 是否还有未实现目标；未完成项不能通过改文档措辞伪装完成。
 
 ## 静态治理原则
 
@@ -48,16 +48,16 @@
 
 | 检查 | 命令或方法 | 环境 | 预期结果 | 实际结果 |
 | --- | --- | --- | --- | --- |
-| 文档 | `pnpm docs:check` | Local | PASS | 未运行 |
-| Contract | `pnpm contracts:check` | Local | PASS | 未运行 |
-| 格式 | `pnpm format:check` | Local | PASS | 未运行 |
-| Lint + 新 UI 治理规则 | `pnpm lint` / `pnpm admin-ui:check` | Local | PASS | checkpoint 1 PASS：0 warning/error；54 Feature / 130 Admin source；5 个显式 native/business-content 例外 |
-| Typecheck | `pnpm --filter admin typecheck` | Local | PASS | checkpoint 1 PASS |
-| Build | `pnpm --filter admin build` | Local | PASS | checkpoint 1 PASS：Next.js production build |
-| Unit | `pnpm test:tooling` + `pnpm --filter admin test:unit` | Local | PASS | checkpoint 1 PASS：tooling 12/12；Admin 17 files / 77 tests |
-| Admin E2E | `pnpm test:e2e:t12-r2` 或当前正式 Admin browser gate | Local + Local Supabase | PASS | 未运行 |
-| 全路由 UI review | route inventory × viewport × keyboard/state matrix | Local | 无遗漏路由和关键状态 | synthetic checkpoint PASS：60 route/viewport + 0 runtime exception；最终 T12/clean R2 待执行 |
-| Diff | `git diff --check` | Local | PASS | 未运行 |
+| 文档 | `pnpm docs:check` | Local | PASS | PASS：115 documents；首次同步因 `icons.md` 相对链接错误 FAIL，修复后 PASS；最终 clean R2 再次 PASS |
+| Contract | `pnpm contracts:check` | Local | PASS | PASS：Account 40 / Admin 78 operations；Platform integration / Consumer compatibility PASS |
+| 格式 | `pnpm format:check` | Local | PASS | PASS：426 files；首次 checkpoint 仅 3 个本批文件有格式差异，定向修复后 PASS |
+| Lint + 新 UI 治理规则 | `pnpm lint` / `pnpm admin-ui:check` | Local | PASS | PASS：0 warning/error；54 Feature / 130 Admin source；5 个显式 native/business-content 例外 |
+| Typecheck | `pnpm typecheck` / `pnpm --filter admin typecheck` | Local | PASS | PASS：checkpoint 与最终 clean R2 均通过 |
+| Build | `pnpm build` / `pnpm --filter admin build` | Local | PASS | PASS：Next.js production build 与仓库 build gate 通过 |
+| Unit | `pnpm test:tooling` + `pnpm --filter admin test:unit` | Local | PASS | PASS：tooling 12/12；Admin 17 files / 77 tests；最终 clean R2 unit gate 通过 |
+| Admin E2E | `pnpm test:e2e:t12-r2` via `pnpm run verify:task:0801` | Local + Local Supabase | PASS | PASS：第一次 clean R2 的 System media 断言因未等待异步 change event FAIL；改为等待真实 DOM theme 更新后第二次 clean R2 PASS |
+| 全路由 UI review | route inventory × viewport × keyboard/state matrix | Local | 无遗漏路由和关键状态 | PASS：synthetic 60 route/viewport + 0 runtime exception；正式 T12 responsiveA11y 95 route checks；Appearance Accent/Surface/System/reduced-motion matrix PASS |
+| Diff | `git diff --check` | Local | PASS | PASS |
 
 最终候选如果仓库已有更高层且覆盖上述检查的 Local release gate，可按当前 release workflow 使用，但必须确认它确实覆盖当前 SHA；不能引用旧候选 PASS。
 
@@ -67,9 +67,9 @@
 
 ## 文档与交付
 
-- [ ] `docs/development/design/**` 反映最终长期治理。
-- [ ] `apps/admin/DESIGN.md` 反映最终 Product Adaptation。
-- [ ] `docs/architecture/modules/frontends.md` 描述真实 Theme/Skin/Component/Feature ownership。
-- [ ] `docs/spec/admin-console.md` Domain Verification 指向当前有效来源。
-- [ ] `verification-record.md` 完整记录最终 Requirement 验收和 Git 交付。
-- [ ] Plan 满足完成条件后按文档治理规则决定过程文件清理，不把历史执行资料长期冒充架构。
+- [x] `docs/development/design/**` 反映最终长期治理。
+- [x] `apps/admin/DESIGN.md` 反映最终 Product Adaptation。
+- [x] `docs/architecture/modules/frontends.md` 描述真实 Theme/Skin/Component/Feature ownership。
+- [x] `docs/spec/admin-console.md` Domain Verification 指向当前有效来源。
+- [x] `verification-record.md` 完整记录最终 Requirement 验收；Git push/远端 SHA 在交付后补最后一笔记录。
+- [x] Plan 已核对实现目标；过程文件继续作为真实执行历史，不承担 Architecture 权威。

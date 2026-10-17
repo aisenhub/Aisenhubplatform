@@ -1,6 +1,6 @@
 # Aisenhub Admin Design System 迁移与 UI/UX 全面重构总计划
 
-状态：In Progress
+状态：Completed pending branch delivery
 
 关联：[优化设计](design.md) · [Agent Handoff](agent-handoff.md) · [验证记录](verification-record.md)
 
@@ -50,7 +50,7 @@
 | 01 | 迁移参考项目通用 Design System，冻结设计治理与 ownership | 当前 Plan | R0 | 已交付 | [阶段 01](phases/01-design-system-migration.md) |
 | 02 | 从零建立新的 Aisenhub Admin `DESIGN.md` / Product Adaptation | 01 | R0 | 已交付 | [阶段 02](phases/02-new-aisenhub-design-direction.md) |
 | 03 | 按真实页面批次并行执行 Foundation/Component 与 UI/UX 全面优化 | 01、02 | 至少 R2 | 已交付（03A–03E 已实现；最终 clean R2 通过；03E 分支已 push） | [阶段 03](phases/03-component-and-uiux-rebuild.md) |
-| 04 | 全站收敛、清旧实现、建立静态治理并完成全量回归 | 03 | 至少 R2 | 进行中（governance checkpoint 已通过；最终 clean R2 待执行） | [阶段 04](phases/04-convergence-and-governance.md) |
+| 04 | 全站收敛、清旧实现、建立静态治理并完成全量回归 | 03 | 至少 R2 | 验收通过待推送（最终 clean R2 24/24 PASS） | [阶段 04](phases/04-convergence-and-governance.md) |
 
 阶段 01 → 02 → 03 → 04 的主链必须串行。阶段 03 内部允许多个页面批次并行，但共享 Theme、Skin、primitive、semantic component 文件必须先分配唯一所有者，并由同一集成人冻结 API/variant，禁止并行 Agent 各自创造组件契约。
 
@@ -84,20 +84,20 @@
 
 ## 总体验收
 
-- [ ] `docs/development/design/` 已形成完整 Aisenhub Design System，通用原则来自参考项目但没有携带参考产品专属皮肤。
-- [ ] 新 `apps/admin/DESIGN.md` 已从零建立，旧设计没有被重新引用或隐式复制。
-- [ ] Theme/Skin/Standard Component/Semantic UI/Feature 的职责在文档和代码中一致。
-- [ ] 所有 Admin 路由都经过至少一个明确 UI/UX 优化批次，并有桌面/窄屏/键盘/焦点/加载/空/错/危险操作等适用状态验证。
-- [ ] `packages/ui` 提供稳定标准控件和 semantic UI；Feature 不再系统性重复绘制基础控件皮肤。
-- [ ] 普通 UI 图标已经统一到标准图标库和稳定语义映射，无无理由自绘 SVG/PNG 图标体系。
-- [ ] Appearance / Theme System 支持冻结的 Light/Dark/System、Accent、Surface 预设，并能从设置统一切换整个 Admin，而非只改变局部 primary 色。
-- [ ] 页面重构以新信息层级与任务组织为准，旧排版、旧色板、旧组件组合没有因“实现成本低”而被默认继承。
-- [ ] 关键导航、列表、Inspector、搜索、刷新和 mutation 对 perceived performance 做过真实浏览器验证，加载过程中结构稳定、反馈及时、可信数据不被无意义清空。
-- [ ] 可复用视觉从 Admin 全局 CSS 和 Feature CSS/utility 回收到单一 shared ownership，Admin CSS 保留真正的产品 adaptation 与页面 geometry。
-- [ ] 静态规则能够阻止普通 Feature 新增无理由 raw control / 大量基础 skin utility，并提供必要 allowlist/例外说明机制。
-- [ ] `REQ-ADM-002/003/004/005/007/008/009/011/012` 的适用 Acceptance 逐项留下真实证据。
-- [ ] `pnpm docs:check`、`pnpm contracts:check`、`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm build` 及适用 Admin unit/browser/E2E 检查在最终候选上实际执行并记录；阶段 03/04 按 R2 规则完成适用 Local Supabase/Admin UI 验证。
-- [ ] 完成后同步 `docs/architecture/modules/frontends.md`、`docs/spec/admin-console.md`、适用 development 指南和 review 结论；Plan 不把未落地目标提前写成 Architecture。
+- [x] `docs/development/design/` 已形成完整 Aisenhub Design System，通用原则来自参考项目但没有携带参考产品专属皮肤。
+- [x] 新 `apps/admin/DESIGN.md` 已从零建立，旧设计没有被重新引用或隐式复制。
+- [x] Theme/Skin/Standard Component/Semantic UI/Feature 的职责在文档和代码中一致。
+- [x] 所有 Admin 路由都经过至少一个明确 UI/UX 优化批次，并有桌面/窄屏/键盘/焦点/加载/空/错/危险操作等适用状态验证。
+- [x] `packages/ui` 提供稳定标准控件和 semantic UI；Feature 不再系统性重复绘制基础控件皮肤。
+- [x] 普通 UI 图标已经统一到标准图标库和稳定语义映射，无无理由自绘 SVG/PNG 图标体系。
+- [x] Appearance / Theme System 支持冻结的 Light/Dark/System、Accent、Surface 预设，并能从设置统一切换整个 Admin，而非只改变局部 primary 色。
+- [x] 页面重构以新信息层级与任务组织为准，旧排版、旧色板、旧组件组合没有因“实现成本低”而被默认继承。
+- [x] 关键导航、列表、Inspector、搜索、刷新和 mutation 对 perceived performance 做过真实浏览器验证，加载过程中结构稳定、反馈及时、可信数据不被无意义清空。
+- [x] 可复用视觉从 Admin 全局 CSS 和 Feature CSS/utility 回收到单一 shared ownership，Admin CSS 保留真正的产品 adaptation 与页面 geometry。
+- [x] 静态规则能够阻止普通 Feature 新增无理由 raw control / 大量基础 skin utility，并提供必要 allowlist/例外说明机制。
+- [x] `REQ-ADM-002/003/004/005/007/008/009/011/012` 的适用 Acceptance 逐项留下真实证据。
+- [x] `pnpm docs:check`、`pnpm contracts:check`、`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm build` 及适用 Admin unit/browser/E2E 检查在最终候选上实际执行并记录；阶段 03/04 均按 R2 规则完成 Local Supabase/Admin UI 验证。
+- [x] 已同步 `docs/architecture/modules/frontends.md`、`docs/spec/admin-console.md`、适用 development 指南和 review 结论；Plan 不把未落地目标提前写成 Architecture。
 
 ## 风险与阻塞
 

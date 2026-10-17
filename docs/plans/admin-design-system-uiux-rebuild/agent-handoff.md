@@ -8,7 +8,7 @@
 - 优化名称：Aisenhub Admin Design System 迁移与 UI/UX 全面重构
 - 总计划：[plan.md](plan.md)
 - 当前阶段：阶段 04 — Convergence + Governance。阶段 03 最终 SHA `1c6fb0a7f09e37e5cff29457728eb34a5b766cb3` 已 fast-forward 到 `main`，GitHub Workflow #193 success、Vercel Production success、`admin.aisenhub.com` 实测可用；03E 临时分支已删除。
-- 当前实施分支：`codex/admin-uiux-phase4`；checkpoint 1 `44cffb9` 已建立 `admin-ui:check` 静态 ownership gate、删除 legacy `.panel` / 无消费者 Sidebar CSS、收回 Feature `buttonVariants()` Link skin，并扩展正式 T12 Appearance/reduced-motion matrix。最终 clean `TASK-0801` 尚未执行，因此阶段 04 不能提前标已交付。
+- 当前实施分支：`codex/admin-uiux-phase4`；`44cffb9` 建立 `admin-ui:check` 静态 ownership gate、删除 legacy `.panel` / 无消费者 Sidebar CSS、收回 Feature `buttonVariants()` Link skin；`36d2c47` 同步 Architecture/Spec/Design System；`6735e77` 让 T12 正确等待 System media 异步 change event。第二次标准 clean `TASK-0801` 已 24/24 PASS，当前状态为验收通过待 push/远端核对。
 - 远程仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
 
 ## 必读顺序
@@ -61,12 +61,12 @@
 
 ## 阶段完成门槛
 
-- [ ] 当前阶段范围已实施。
-- [ ] 当前阶段 Requirement / contract 对照已完成。
-- [ ] 必要 Local 检查实际运行并记录。
-- [ ] `verification-record.md` 已更新。
-- [ ] 最终 diff 已审查，无无关修改和 secret。
+- [x] 当前阶段范围已实施。
+- [x] 当前阶段 Requirement / contract 对照已完成。
+- [x] 必要 Local 检查实际运行并记录。
+- [x] `verification-record.md` 已更新到本地验收结果。
+- [x] 最终 diff 已审查，无无关修改和 secret。
 - [ ] 阶段 commit 已创建并 push，远端 commit 已核对。
 - [ ] 只有满足上述条件才更新 phase / plan 状态。
 
-阶段 03 已完成 main/Production exact-SHA 发布闭环。阶段 04 checkpoint 1 已通过 `admin-ui:check`、tooling/Admin unit、typecheck、lint、production build 与 synthetic browser；下一步必须完成文档同步和固定候选的 standard clean `TASK-0801`，再决定阶段 04 完成状态与 GitHub/Production 交付。
+阶段 03 已完成 main/Production exact-SHA 发布闭环。阶段 04 实现与本地 R2 已完成：第一次 clean R2 在新增 System media 测试因断言未等待异步 change event 而失败，测试等待真实 DOM theme 更新后第二次 clean R2 24/24 PASS。下一步只做 closeout commit、branch push 与远端 SHA 核对；本阶段不自动 merge main 或触发 Production 部署。

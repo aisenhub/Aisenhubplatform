@@ -10,8 +10,8 @@
 - 当前实施分支：`codex/admin-uiux-phase4`（从生产已验证 `main@1c6fb0a7f09e37e5cff29457728eb34a5b766cb3` 建立）
 - 阶段 03 起始 commit：`8d30bfcf5c1d12890433a3196085fe4f759089f0`
 - 阶段 03 初始工作区状态：clean；从已交付阶段 02 收尾 commit 建立独立短期分支。
-- 运行环境：Local；阶段 03/04 至少 R2。03A–03E targeted/synthetic 验证和标准 clean Local Supabase `TASK-0801` 已完成；阶段 04 checkpoint 1 已完成 targeted/static/synthetic 验证，最终 clean R2 待执行。
-- R2 结论：03A Docker/旧 fixture 问题、03B format/旧 Checkbox test selector 问题及 03E 定向格式/本地 server 参数问题均保留真实失败记录。03C、03D、03E 最终正式入口 `pnpm run verify:task:0801` 均在 clean release candidate 上 24 executable gates 全部 PASS；未通过降低测试门槛或修改业务语义换取通过。
+- 运行环境：Local；阶段 03/04 至少 R2。03A–03E 与阶段 04 的 targeted/synthetic 验证和标准 clean Local Supabase `TASK-0801` 均已完成。
+- R2 结论：03A Docker/旧 fixture 问题、03B format/旧 Checkbox test selector 问题、03E 定向格式/本地 server 参数问题，以及阶段 04 第一次 clean R2 的 System media 异步断言问题均保留真实失败记录。03C、03D、03E 与阶段 04 最终正式入口 `pnpm run verify:task:0801` 都在 clean release candidate 上 24 executable gates PASS；未通过降低测试门槛或修改业务语义换取通过。
 - 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
 ## 阶段状态总表
@@ -21,7 +21,7 @@
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
 | 03 | Component + UI/UX Rebuild | 已交付 | 03A–03E 全部实现；Theme/Skin、标准控件、高频 Workspace、高状态密度 Workspace 与 remaining routes 均完成 hierarchy/ownership 重构；最终 clean R2 24/24 PASS | 已完成 main/Production release gate，进入 04 | `764193b`（03A）、`03060ed` + `67aa0b7`（03B）、`5fbb922` + `9426d18` + `7fff7f7`（03C）、`b8410b6` + `711a6b9`（03D）、`56e5e369` + `98eba97` + `8aa9e45` + `f4c136a`（03E），最终 `1c6fb0a` | PASS：PR #22 merged；`main == 1c6fb0a`；Workflow #193 success；Vercel Production success；03E 本地/远端分支已删除 |
-| 04 | Convergence + Governance | 进行中 | checkpoint 1：静态 governance gate、legacy CSS/Feature skin helper 收敛、T12 Appearance/reduced-motion matrix；targeted/static/synthetic 验证 PASS | 文档收敛 + final clean `TASK-0801` + Git/Production 交付 | `44cffb9` | 待最终候选 push |
+| 04 | Convergence + Governance | 验收通过待推送 | static governance、legacy CSS/Feature skin helper 收敛、Appearance/reduced-motion matrix、Architecture/Spec/Design System 同步；最终 clean R2 24/24 PASS | closeout commit + branch push + 远端 SHA 核对；不自动 merge/deploy | `44cffb9` + `36d2c47` + `6735e77` | 待最终候选 push |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
 
@@ -72,9 +72,9 @@
 - 静态治理规则：新增根 `pnpm admin-ui:check` 并串入 `pnpm lint`。当前扫描 54 个 Feature / 130 个 Admin source，拒绝无理由 raw 基础控件/图形、Feature `buttonVariants()` skin helper、局部 Theme owner、标准控件内部静态视觉 override、直接普通图形资产与无消费者 Product CSS；5 个 native/business-content 例外采用 exact path + tag + marker + reason，失去消费者会产生 stale-exception failure。
 - 删除的旧 CSS / raw control / duplicate skin：删除无消费者 legacy `.panel`（含 mobile override）、`admin-sidebar-back-link`、`admin-sidebar-platform-status`；5 处 Feature `buttonVariants()` Link 改为标准 `Button render={<Link />}`。全仓复核后保留 4 个业务集合行 native button 与 1 个 Feedback 用户图片例外，不强行把复合业务 item 伪装成基础 Button。
 - shared component / className review：`packages/ui` 的 `transition-all` 命中经消费面核对均不属于当前 Admin runtime；不借 Admin 治理越界重写其他产品/上游能力。Admin Feature 标准控件内部 visual `className` override 当前 0 命中，layout utility 继续合法。
-- 全路由回归：checkpoint synthetic production browser PASS，覆盖 60 route/viewport combinations、Appearance、PlatformSwitcher、Audit、Account danger、mobile/fail-closed，0 runtime exception。正式 T12 已扩展为四 Accent / 三 Surface token matrix、Accent 与 success semantic 隔离、System OS 跟随和 reduced-motion computed-style 断言；需由最终 clean R2 执行后才记最终 PASS。
-- 长期文档同步：Spec REQ-ADM-011/012 已改为 Implemented；Architecture、Product Adaptation 与 Design System component/icon contract 已同步当前 static governance owner。Phase 04/Plan/Handoff 已进入进行中，最终 R2 前不标 Completed。
-- 与计划偏差：无产品范围偏差。未把共享 UI 库中 Admin 未消费的旧 `transition-all` 作为本阶段强制清理对象，以避免扩大为跨产品 UI 重构；静态 gate 只覆盖当前 Admin ownership 契约。
+- 全路由回归：checkpoint synthetic production browser PASS，覆盖 60 route/viewport combinations、Appearance、PlatformSwitcher、Audit、Account danger、mobile/fail-closed，0 runtime exception。正式 T12 扩展四 Accent / 三 Surface token matrix、Accent 与 success semantic 隔离、System OS 跟随和 reduced-motion computed-style；第二次标准 clean R2 的 responsiveA11y 95 route checks 与全部新增断言 PASS。
+- 长期文档同步：Spec REQ-ADM-011/012 已改为 Implemented；Architecture、Product Adaptation 与 Design System component/icon contract 已同步当前 static governance owner。Phase 04/Plan/Handoff 已同步最终本地验收事实，branch delivery 完成后再改为已交付。
+- 与计划偏差：无产品范围偏差。未把共享 UI 库中 Admin 未消费的旧 `transition-all` 作为本阶段强制清理对象，以避免扩大为跨产品 UI 重构；静态 gate 只覆盖当前 Admin ownership 契约。第一次 clean R2 的 System OS 跟随失败来自测试在 `page.emulateMedia()` 后同步读取 DOM、未等待 `matchMedia` change → React 提交；未删减断言，只改为等待真实 `data-theme` 更新，第二次 clean R2 PASS。
 
 ## 验证记录
 
@@ -150,6 +150,11 @@
 | 2026-10-17 | 04 checkpoint 1 | worktree | `pnpm format:check` + `pnpm lint` + Admin typecheck/unit/build | Local | 0 | PASS：426 files format；lint 0 warning/error 且内含 governance gate；Admin 17 files / 77 tests；Next.js production build PASS |
 | 2026-10-17 | 04 checkpoint 1 | worktree | synthetic production `admin-ux-local.mjs` | Local browser | 0 | PASS：60 route/viewport combinations、Appearance、PlatformSwitcher、refresh error、Audit/Account/mobile/security；0 runtime exception |
 | 2026-10-17 | 04 checkpoint 1 | worktree | `git diff --check` | Local | 0 | PASS |
+| 2026-10-17 | 04 docs sync | worktree | `pnpm docs:check` first run | Local | 1 | FAIL：`docs/development/design/foundations/icons.md` 到 `apps/admin/DESIGN.md` 的相对链接少退一层；只修正链接后复测 |
+| 2026-10-17 | 04 docs sync | worktree | `pnpm docs:check` + `pnpm contracts:check` + `pnpm format:check` + `pnpm lint` + `git diff --check` | Local | 0 | PASS：115 docs；Account 40 / Admin 78 operations；Platform integration / Consumer compatibility；426 files format；lint 0 warning/error 且 governance gate PASS |
+| 2026-10-17 | 04 release gate | `36d2c47` + `6735e77` candidate | `pnpm run verify:task:0801` first clean run | Local + clean Local Supabase | 1 | FAIL：前序 DB/API/Consumer gates 已通过；Admin T12 在 System Appearance light OS 断言同步读取到旧 dark DOM。实现已监听 `matchMedia` change，测试缺少异步等待；改为 `waitForFunction` 等待真实 `data-theme` 更新 |
+| 2026-10-17 | 04 corrective | `6735e77` | targeted format + `pnpm lint` + `git diff --check` | Local | 0 | PASS：只修改 T12 等待语义；产品 runtime 未变；governance gate 继续 PASS |
+| 2026-10-17 | 04 release gate | `6735e77` | `pnpm run verify:task:0801` second standard clean run | Local + clean Local Supabase | 0 | PASS：24 executable gates；64 SQL files / 1398 DB tests、115 Edge/API tests、Consumer Harness、Admin T12 responsiveA11y 95 route checks、Appearance Accent/Surface/System/reduced-motion matrix、build/type/lint/format、115 docs/contracts 全部 PASS |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -157,15 +162,15 @@
 
 | Requirement | 关键 Acceptance | 证据 | 结果 |
 | --- | --- | --- | --- |
-| REQ-ADM-002 | Global / Platform scope 始终明确，切换不携带错误实体作用域 | 03C–03E collection/detail 重排保留 URL/scope；最终 clean R2 `accountsEquivalentScopeSwitch` / `entityScopeSwitchDropsOldId` / `platformScopeIsolation` PASS | Phase 03 PASS |
-| REQ-ADM-003 | 桌面高效密度、窄屏关键任务可用，表格/浮层键盘触控可用 | 最终 synthetic browser 覆盖 60 route/viewport；clean R2 responsiveA11y 95 route checks、320/375/390/768/1440、overflow/semanticControls/dialogFocus/tabNavigation PASS | Phase 03 PASS |
-| REQ-ADM-004 | 高风险操作保持 target/影响/reason/恢复语义，服务端授权不被 UI 替代 | Billing/System Admin/Subscription/Config Review/Feedback Delete/Plan/Offer/Redemption/Key/Delete Job 重排均保留 recent-MFA/reason/operation-id/no-auto-replay；clean R2 sensitiveWrite / commerceRecentMfaNoReplay / security concurrency PASS | Phase 03 PASS |
-| REQ-ADM-005 | loading/read error/empty/refresh error/unknown outcome 不混淆 | Commerce/Config/Feedback/Plans/Origins/Keys/Delete Jobs background refresh 保留可信事实；危险 mutation unknown outcome 均显式检查且不自动重放；synthetic + T12 PASS | Phase 03 PASS |
-| REQ-ADM-007 | Global/Platform 导航、PlatformSwitcher、Command Palette 快速定位可用 | 03A–03E synthetic production browser 持续验证 Global/Platform Sidebar、PlatformSwitcher search/keyboard/narrow、Command Palette/Appearance | Phase 03 PASS |
-| REQ-ADM-008 | 状态非颜色依赖；focus-visible/keyboard/reduced-motion 等可访问性有效 | icon-only Sidebar accessible name、listbox keyboard、focusable data-table/Inspector 与最终 responsiveA11y 95 route checks PASS | Phase 03 PASS |
-| REQ-ADM-009 | 安全状态和错误分类保持统一，不因视觉重构产生页面自判 403 | Security/Auth gate 只重排 hierarchy/skin；最终 clean R2 AAL1/AAL2/non-admin/fail-closed/status unavailable/upstream retry 全 PASS | Phase 03 PASS |
-| REQ-ADM-011 | Settings 统一控制 Light/Dark/System 与受控 Accent/Surface 预设；全局 Theme owner 和状态色语义一致 | 每个页面批次 synthetic browser 均持续验证 Appearance 全局切换/持久化；所有 remaining routes 消费同一 semantic theme/skin owner | Phase 03 PASS |
-| REQ-ADM-012 | 首屏/导航/查询/refresh/mutation 反馈及时、布局稳定、可信数据保留，实际与感知性能均验证 | PlatformSwitcher/Commerce Summary/Config/Feedback/Offers 等首次 load 与 background refresh 分离；refresh error 不清空可信数据；最终 synthetic + clean R2 PASS | Phase 03 PASS |
+| REQ-ADM-002 | Global / Platform scope 始终明确，切换不携带错误实体作用域 | 03C–03E collection/detail 重排保留 URL/scope；Phase 04 clean R2 `accountsEquivalentScopeSwitch` / `entityScopeSwitchDropsOldId` / `platformScopeIsolation` 再次 PASS | Phase 04 PASS |
+| REQ-ADM-003 | 桌面高效密度、窄屏关键任务可用，表格/浮层键盘触控可用 | Phase 04 synthetic browser 60 route/viewport；clean R2 responsiveA11y 95 route checks、320/375/390/768/1440、overflow/semanticControls/dialogFocus/tabNavigation PASS | Phase 04 PASS |
+| REQ-ADM-004 | 高风险操作保持 target/影响/reason/恢复语义，服务端授权不被 UI 替代 | Billing/System Admin/Subscription/Config Review/Feedback Delete/Plan/Offer/Redemption/Key/Delete Job 保留 recent-MFA/reason/operation-id/no-auto-replay；Phase 04 clean R2 sensitiveWrite / commerceRecentMfaNoReplay / security concurrency PASS | Phase 04 PASS |
+| REQ-ADM-005 | loading/read error/empty/refresh error/unknown outcome 不混淆 | background refresh 保留可信事实；危险 mutation unknown outcome 不自动重放；Phase 04 synthetic + T12/clean R2 PASS | Phase 04 PASS |
+| REQ-ADM-007 | Global/Platform 导航、PlatformSwitcher、Command Palette 快速定位可用 | Phase 04 synthetic production browser 再次验证 Global/Platform Sidebar、PlatformSwitcher search/keyboard/narrow、Command Palette/Appearance；clean T12 PASS | Phase 04 PASS |
+| REQ-ADM-008 | 状态非颜色依赖；focus-visible/keyboard/reduced-motion 等可访问性有效 | responsiveA11y 95 route checks；新增 reduced-motion computed-style、System OS follow 与 Accent/status semantic isolation 均在 clean R2 PASS | Phase 04 PASS |
+| REQ-ADM-009 | 安全状态和错误分类保持统一，不因视觉重构产生页面自判 403 | Phase 04 未改安全业务语义；clean R2 AAL1/AAL2/non-admin/fail-closed/status unavailable/upstream retry 再次 PASS | Phase 04 PASS |
+| REQ-ADM-011 | Settings 统一控制 Light/Dark/System 与受控 Accent/Surface 预设；全局 Theme owner 和状态色语义一致 | 静态 gate 阻止 Feature theme owner；正式 T12 覆盖 4 Accent / 3 Surface、System OS follow、refresh persistence、Accent 与 success semantic 隔离 | Phase 04 PASS |
+| REQ-ADM-012 | 首屏/导航/查询/refresh/mutation 反馈及时、布局稳定、可信数据保留，实际与感知性能均验证 | PlatformSwitcher/Commerce/Config/Feedback/Offers 等 background refresh 保留可信数据；synthetic browser 与 clean T12 验证 refresh/error/navigation 稳定性 | Phase 04 PASS |
 
 ## GitHub 交付记录
 
@@ -182,9 +187,9 @@
 
 ## 交接信息
 
-- 下一阶段从哪里开始：阶段 04 已在 `codex/admin-uiux-phase4` 进行；checkpoint 1 `44cffb9` 已完成 ownership convergence 与静态 gate。下一步固定文档候选后运行 standard clean `TASK-0801`，通过后完成阶段 04/总计划 closeout。
-- 必须先解决的问题：没有产品逻辑阻塞；只剩最终 clean R2、最终文档状态、branch push/main/Production exact-SHA release gate。
+- 下一阶段从哪里开始：阶段 04 本地实现与最终 clean R2 已完成；当前只剩 closeout commit、`codex/admin-uiux-phase4` push 和远端 SHA 核对。main/Production 属于后续独立 release gate，不在未授权情况下自动执行。
+- 必须先解决的问题：没有产品逻辑或验证阻塞；只剩 Git branch delivery 收口。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前交付边界：阶段 03 已全部生产交付；阶段 04 checkpoint 1 仅在本地分支，尚未 push/main/Production，因此不能标已交付。
+- 当前交付边界：阶段 03 已全部生产交付；阶段 04 本地验收 PASS，但尚未 push，因此当前状态为“验收通过待推送”，不能提前写“已交付”。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。
