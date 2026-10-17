@@ -72,7 +72,7 @@
 
 ### 03B — Standard Components + Semantic UI Skin
 
-**当前状态**：已交付并通过 clean R2。代码 checkpoint 为 `03060ed`（shared skin/state ownership）与 `67aa0b7`（Admin native control standardization），验证文档 checkpoint `1b84296` 已 push，远端 SHA 核对一致；阶段 03 进入 03C。03B 只代表标准控件与 semantic UI skin 收敛，不代表 03C–03E 页面信息架构/排版重构已完成。
+**当前状态**：已交付并通过 clean R2。代码 checkpoint 为 `03060ed`（shared skin/state ownership）与 `67aa0b7`（Admin native control standardization），最终收尾 `73f37f8` 已进入 main，并完成 Production READY + GitHub Workflow success；阶段 03 已继续进入 03C。03B 只代表标准控件与 semantic UI skin 收敛，不代表后续页面信息架构/排版重构已完成。
 
 **范围**：Button/Input/Select/Textarea/Checkbox/Switch/Table/Card/Alert/Badge/Dialog/Sheet/Popover/Tooltip/Tabs，以及 AsyncState、StatusBadge、ResourceId、SupportErrorId、ConfirmActionDialog、MutationState、ResourceInspector、OneTimeSecretPanel。
 
@@ -90,11 +90,22 @@
 
 ### 03C — High-frequency Platform / Account Workspaces
 
+**当前状态**：实现完成、clean R2 PASS，待分支 push/远端核对。基于生产已验证 main `73f37f8` 建立 `codex/admin-uiux-phase3c`；`5fbb922` 先删除 03B 审查中发现的 Admin 全局 control 第二 skin，`9426d18` 重建 Platform Directory / Platform Accounts / Account 360，`7fff7f7` 重建 Global Overview / Platform Overview / Global Accounts / Identity Detail。目标路由已全部从旧 `.panel` hierarchy 迁出；03D/03E 尚未开始。
+
 **范围**：Global Overview、Platform Directory、Platform Overview、Global Accounts、Platform Accounts、Identity Detail / Account 360。
 
-**实施目标**：按新 hierarchy 重建 Page Header / Toolbar / Collection / Inspector / Detail；不继承旧 Card 排版；集合型任务采用 List/Table + Inspector；Background refresh 保留可信数据；Account 360 把治理动作与事实信息分层。
+**已实现**：
 
-**验收**：scope/URL/selection continuity、搜索/筛选、loading/read-error/empty/filtered-empty/refresh-error、danger + recent MFA、desktop/narrow、perceived performance。
+- 新增轻量 `AdminTaskToolbar` / `AdminWorkspaceSection` product composition primitives，只表达稳定的 Toolbar / Section heading / body 结构，不建立 Page Builder 或业务 DSL。
+- Platform Directory / Platform Accounts / Global Accounts 使用 Toolbar + Collection/Table；搜索、筛选、URL、cursor、scope、横向滚动、empty/read-error/refresh-error 语义保持原合同。
+- Account 360 从 9 个同权 `.panel` 重排为“账户事实 + 集中治理 / 资料与权益 / 关联业务 / 支持与治理记录”，危险动作保持 reason + recent-MFA + unknown-outcome no-auto-replay。
+- Global Overview 改为 Attention-first：先展示真实待处理信号，再展示紧凑运行摘要与平台概况；不把读失败解释为 0 或健康。
+- Platform Overview 把暂停账户、异常订单、待审核配置、待处理反馈提升到首个业务章节；账户/付费/订单与用户变化作为后续事实组，不再为每个 Metric 建独立 Card。
+- Identity Detail 改为 compact Global Identity summary → Platform Account collection → Global Delete governance；request/job 使用时间线/事实行，不再各自形成 Card。
+- 03C 七个目标页面的 `className="panel`、raw `button/input/select/textarea` 静态扫描均为 0；旧 `admin-resource-toolbar/surface/primary/secondary` 无消费者后删除。
+- 03B corrective 删除 `globals.css` 对标准 Input/NativeSelect/Textarea 的 broad border/background/radius/hover/focus 第二 owner，并把全局 focus outline 收窄到非标准 raw button/link/summary。
+
+**验收**：Admin unit 17 files / 77 tests PASS；typecheck/lint/production build PASS；synthetic production browser 覆盖 60 route/viewport combinations、Platform Overview period/refresh、Global/Platform Account 搜索/筛选、Identity/Account 360 deep link + dangerous confirmation、mobile/security，0 runtime exception；最终 clean `pnpm run verify:task:0801` 24 executable gates PASS。
 
 ### 03D — Billing / Audit / Security
 

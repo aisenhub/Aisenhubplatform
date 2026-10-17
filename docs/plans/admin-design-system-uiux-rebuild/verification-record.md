@@ -7,11 +7,11 @@
 - 优化目标：迁移通用 Design System，从零建立 Aisenhub Design Direction，并完成 Admin 组件、视觉、交互与治理的全面重构。
 - 实施范围：`docs/development/design/**`、`apps/admin/**`、`packages/ui/**` 及适用 Admin tests/docs。
 - GitHub 仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
-- 当前实施分支：`codex/admin-uiux-phase3b`
+- 当前实施分支：`codex/admin-uiux-phase3c`
 - 阶段 03 起始 commit：`8d30bfcf5c1d12890433a3196085fe4f759089f0`
 - 阶段 03 初始工作区状态：clean；从已交付阶段 02 收尾 commit 建立独立短期分支。
-- 运行环境：Local；阶段 03 至少 R2。03A 与 03B targeted/synthetic 验证和标准 clean Local Supabase `TASK-0801` 均已完成。
-- R2 结论：03A Docker/旧 fixture 问题与 03B format/旧 Checkbox test selector 问题均保留真实失败记录。03B 最终按正式入口执行 `pnpm run verify:task:0801` 重置 Local 合成测试库后 24 个 executable gates 全部 PASS；未通过降低测试门槛或修改业务语义换取通过。
+- 运行环境：Local；阶段 03 至少 R2。03A、03B、03C targeted/synthetic 验证和标准 clean Local Supabase `TASK-0801` 均已完成。
+- R2 结论：03A Docker/旧 fixture 问题与 03B format/旧 Checkbox test selector 问题均保留真实失败记录。03C 最终正式入口 `pnpm run verify:task:0801` 首次 clean release candidate 即 24 executable gates 全部 PASS；未通过降低测试门槛或修改业务语义换取通过。
 - 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
 ## 阶段状态总表
@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
-| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 与 03B Standard Components/Semantic UI 已交付；两批 targeted、synthetic production browser 与完整 clean R2 Local Supabase 均通过 | 执行 03C–03E | `764193b`（03A）、`03060ed` + `67aa0b7`（03B code checkpoints） | PASS：03B verification checkpoint `1b84296` 已 push，远端 SHA 核对一致 |
+| 03 | Component + UI/UX Rebuild | 进行中 | 03A–03C 已实现；03C 七个高频 Platform/Account 工作区已完成 hierarchy 重构并通过 targeted、synthetic production browser 与完整 clean R2 | 执行 03D–03E | `764193b`（03A）、`03060ed` + `67aa0b7`（03B）、`5fbb922` + `9426d18` + `7fff7f7`（03C code checkpoints） | 03C：验收通过待推送 |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
@@ -54,7 +54,10 @@
 - 03B shared component / Semantic UI：Input/Textarea/Table/Card/Alert 等 shared skin 回收到 `@kit/ui`；Alert/StatusBadge/AsyncState/SupportErrorId/ResourceInspector 补稳定 data-state/slot/material identity；`NativeSelect` 建立标准 skin/API；Button 增加有限 selected/active 与 `destructive-ghost` semantic variant，Button/Badge/Switch 取消 `transition-all`。
 - 03B Admin 消费迁移：14 个文件 29 个 raw `<select>` 全迁至 `NativeSelect`；登录/MFA/Identity 搜索、Feedback Checkbox/Textarea、Storage Policy Checkbox、PlatformSwitcher 普通 action 回到标准组件。普通 raw `input/select/textarea` 为 0；Feature 对常用标准控件的 skin override 反向扫描 `HITS 0`。保留 4 个业务集合行 raw button 到对应页面批次做 Collection/Inspector 重构，不将业务 item 强行伪装成基础 Button。
 - 03B 浏览器/可访问性修复：synthetic browser 最初仍点击 Base UI Checkbox 的 `aria-hidden` 内部 input，导致导出等待超时；改为 `role=checkbox` 用户交互后 Feedback 路径通过。随后旧 a11y scanner 把 Base UI 的 `aria-hidden=true` form mirror 误判为未标注 input；仅排除显式 `aria-hidden` 节点后保留真实可访问控件检查，最终 60 route/viewport combinations 与 0 runtime exception PASS。Admin T12 同样迁移到 `role=checkbox` 后 clean R2 PASS。
-- 未完成路由/状态：03C Platform/Account 高频工作区、03D Billing/Audit/Security、03E remaining routes 尚未开始；03B 完成的是标准控件/semantic skin 层，不代表旧页面 hierarchy/card/list 排版已完成重构。
+- 03C ownership corrective：03C 开始审查发现 `globals.css` 仍通过 broad `input/textarea/select` 与 global focus selector 叠加标准控件第二 skin；`5fbb922` 删除这些 visual ownership，并保留 reset/font/tap 行为。format/lint/Admin production build + synthetic browser 均 PASS。
+- 03C 页面组合：新增轻量 `AdminTaskToolbar` / `AdminWorkspaceSection`；Platform Directory / Platform Accounts / Global Accounts 统一为 Toolbar + Collection/Table；Global/Platform Overview 改为 Attention-first；Identity Detail / Account 360 按事实、关联业务、支持与 Governance 分层。七个 03C 页面旧 `.panel` 与 raw ordinary controls 静态扫描均为 0。
+- 03C 行为边界：所有原有 scope/URL/search/filter/cursor/deep-link/background-refresh 保留；Account 360 suspend/restore/close 与 Identity Global Delete 继续依赖服务端 recent-MFA、reason、idempotency 和 unknown-outcome/no-auto-replay，未把安全语义下沉到视觉组件。
+- 未完成路由/状态：03D Billing/Audit/Security/Subscriptions/Entitlements 与 03E remaining routes 尚未开始；03C 只完成高频 Platform/Account 工作区，不代表阶段 03 全站完成。
 
 ### 阶段 04：Convergence + Governance
 
@@ -110,6 +113,11 @@
 | 2026-10-17 | 03B release gate | worktree | `pnpm run verify:task:0801` after format fix | Local + clean Local Supabase | 1 | FAIL：DB/API/Consumer 等已通过，Admin T12 仍使用旧 `[data-test=feedback-row] input[type=checkbox]` selector，命中 Base UI 隐藏 form input 并超时；随后改为 `role=checkbox` |
 | 2026-10-17 | 03B diagnostic | worktree | direct `pnpm test:e2e:t12-r2` | Local | 1 | NOT EXECUTED：直接入口缺少由 R2 wrapper 注入的 `SUPABASE_LOCAL_URL` / anon key / DB URL；未手工拼接本地凭据，改回正式 wrapper 验证 |
 | 2026-10-17 | 03B release gate | worktree | `pnpm run verify:task:0801` final | Local + clean Local Supabase | 0 | PASS：24 executable gates；64 SQL files / 1398 DB tests、115 Edge/API tests、Admin T12、Consumer Harness、并发、安全、build/type/lint/format、docs/contracts 全部 PASS |
+| 2026-10-17 | 03C corrective | `5fbb922` | `pnpm format:check`、`pnpm lint`、`pnpm --filter admin build`、synthetic production `admin-ux-local.mjs` | Local browser | 0 | PASS：删除 Admin global control 第二 skin 后标准 Input/Select/Textarea 独立成立；60 route/viewport combinations 与 0 runtime exception PASS |
+| 2026-10-17 | 03C checkpoint 1 | `9426d18` | Admin typecheck/lint/build + synthetic production browser | Local browser | 0 | PASS：Platform Directory / Platform Accounts / Account 360 新 Toolbar/Collection/Detail hierarchy；搜索/分页/深链/危险确认/窄屏无回归 |
+| 2026-10-17 | 03C checkpoint 2 | `7fff7f7` | `pnpm --filter admin typecheck`、`pnpm lint`、`pnpm --filter admin build`、synthetic production browser | Local browser | 0 | PASS：Global/Platform Overview Attention-first、Global Accounts/Identity Detail Collection/Governance；60 route/viewport combinations、Platform Overview period/refresh、Account danger confirmation、0 runtime exception |
+| 2026-10-17 | 03C | `7fff7f7` + worktree | `pnpm --filter admin test:unit` | Local | 0 | PASS：17 files / 77 tests |
+| 2026-10-17 | 03C release gate | `7fff7f7` + worktree | `pnpm run verify:task:0801` | Local + clean Local Supabase | 0 | PASS：24 executable gates；64 SQL files / 1398 DB tests、115 Edge/API tests、Admin T12、Consumer Harness、并发、安全、build/type/lint/format、docs/contracts 全部 PASS |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -117,15 +125,15 @@
 
 | Requirement | 关键 Acceptance | 证据 | 结果 |
 | --- | --- | --- | --- |
-| REQ-ADM-002 | Global / Platform scope 始终明确，切换不携带错误实体作用域 | 未验证 | 未验证 |
-| REQ-ADM-003 | 桌面高效密度、窄屏关键任务可用，表格/浮层键盘触控可用 | 未验证 | 未验证 |
-| REQ-ADM-004 | 高风险操作保持 target/影响/reason/恢复语义，服务端授权不被 UI 替代 | 未验证 | 未验证 |
-| REQ-ADM-005 | loading/read error/empty/refresh error/unknown outcome 不混淆 | 未验证 | 未验证 |
+| REQ-ADM-002 | Global / Platform scope 始终明确，切换不携带错误实体作用域 | 03C Platform/Global collection/detail 重排保留 URL/scope；clean R2 `accountsEquivalentScopeSwitch` / `entityScopeSwitchDropsOldId` / `platformScopeIsolation` PASS | 03C 局部 PASS；全阶段继续验证 |
+| REQ-ADM-003 | 桌面高效密度、窄屏关键任务可用，表格/浮层键盘触控可用 | 03C synthetic browser 60 route/viewport；clean R2 responsiveA11y 95 route checks、320/375/390/768/1440、overflow/semanticControls/tabNavigation PASS | 03C 局部 PASS；全阶段继续验证 |
+| REQ-ADM-004 | 高风险操作保持 target/影响/reason/恢复语义，服务端授权不被 UI 替代 | Account 360 Governance、Identity Global Delete UI 重排未改 mutation；clean R2 accountWorkbenchGovernance / identityDeletionStart / identityDeletionRetry / step-up PASS | 03C 局部 PASS；03D/03E 继续验证其他危险操作 |
+| REQ-ADM-005 | loading/read error/empty/refresh error/unknown outcome 不混淆 | Global/Platform Overview、Directory、Accounts 保留独立 initial/read/empty/refresh states；Account/Identity unknown outcome 无自动重放；synthetic + T12 PASS | 03C 局部 PASS；全阶段继续验证 |
 | REQ-ADM-007 | Global/Platform 导航、PlatformSwitcher、Command Palette 快速定位可用 | 03A synthetic production browser：Global/Platform Sidebar、PlatformSwitcher search/keyboard/narrow、Command Palette/Appearance 均 PASS | 03A 局部 PASS；全阶段继续验证 |
 | REQ-ADM-008 | 状态非颜色依赖；focus-visible/keyboard/reduced-motion 等可访问性有效 | 03A synthetic production browser：icon-only Sidebar 保留 accessible name；PlatformSwitcher listbox keyboard、focusable scroll、reduced-motion context 与 60 route/viewport combinations PASS | 03A 局部 PASS；全阶段继续验证 |
-| REQ-ADM-009 | 安全状态和错误分类保持统一，不因视觉重构产生页面自判 403 | 未验证 | 未验证 |
+| REQ-ADM-009 | 安全状态和错误分类保持统一，不因视觉重构产生页面自判 403 | 03C 未改 Admin BFF/security classification；clean R2 AAL1/AAL2/non-admin/fail-closed/status unavailable/upstream retry 全 PASS | 03C 局部 PASS；03D Security 继续验证 |
 | REQ-ADM-011 | Settings 统一控制 Light/Dark/System 与受控 Accent/Surface 预设；全局 Theme owner 和状态色语义一致 | 03A 单一 Appearance owner；默认 System+Blue+Neutral；Dark+Violet+Warm browser 切换与刷新持久化；Topbar/Command Palette 同一 Settings Sheet；status token 与 Accent 分离 | 03A 局部 PASS；03B–03E 仍需验证全部标准组件/页面 |
-| REQ-ADM-012 | 首屏/导航/查询/refresh/mutation 反馈及时、布局稳定、可信数据保留，实际与感知性能均验证 | 03A PlatformSwitcher 已知 scope 保留、background refresh failure 保留 rows、Shell/Toolbar 稳定；synthetic browser 真实验证 | 03A 局部 PASS；全站页面与 mutation 仍待后续批次 |
+| REQ-ADM-012 | 首屏/导航/查询/refresh/mutation 反馈及时、布局稳定、可信数据保留，实际与感知性能均验证 | 03C Overview/Accounts 继续采用 background refresh 保留可信内容；Toolbar/Collection geometry 稳定；synthetic browser refresh-error/search/period switching 与 clean R2 PASS | 03C 局部 PASS；03D/03E 继续验证 |
 
 ## GitHub 交付记录
 
@@ -134,14 +142,15 @@
 | 01 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | `codex/admin-design-system-phase1` | PASS | PASS：`origin/codex/admin-design-system-phase1` 指向同一 SHA | GitHub 分支 |
 | 02 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | `codex/admin-design-direction-phase2` | PASS | PASS：远端分支指向同一 SHA | GitHub 分支 |
 | 03A | `764193b094287ff7668588ed7068fc0e2367e86c` | `codex/admin-uiux-phase3` | PASS | PASS：03A push 后远端分支指向同一 SHA；后续 `e5f8a05` 已进入 main 并完成 Production READY + GitHub Workflow success | GitHub 分支 |
-| 03B | `03060ed` + `67aa0b7`（code checkpoints），`1b84296`（verification checkpoint） | `codex/admin-uiux-phase3b` | PASS | PASS：`origin/codex/admin-uiux-phase3b` 已核对到 `1b8429674f9f4feb028344e500e884211de6472d` | GitHub 分支 |
+| 03B | `03060ed` + `67aa0b7`（code checkpoints），`73f37f8`（final closeout） | `codex/admin-uiux-phase3b` | PASS | PASS：`73f37f8` 已进入 main；Production READY 与 GitHub Workflow #187 success 均绑定同一 SHA | GitHub/main |
+| 03C | `5fbb922` + `9426d18` + `7fff7f7` | `codex/admin-uiux-phase3c` | 待 push | 待核对 | GitHub 分支 |
 | 04 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：03A/03B 已实现、完成 clean R2 并 push 核对；下一代码批次为 03C High-frequency Platform / Account Workspaces。
-- 必须先解决的问题：03B 无残留代码/R2 阻塞；进入 03C 时从 Global Overview、Platform Directory/Overview、Global/Platform Accounts、Identity/Account 360 的任务 hierarchy / Collection / Inspector 重排开始，复用当前 shared component skin，不回退 Feature 控件皮肤。
+- 下一阶段从哪里开始：03A–03C 已实现并完成 clean R2；03C 待 push/远端 SHA 核对，之后下一代码批次为 03D Billing / Audit / Security。
+- 必须先解决的问题：03C 无代码/R2 阻塞；先完成分支交付核对，再进入 03D。03D 复用当前 Attention-first、Toolbar/Collection/Workspace Section/Governance 语言，不回退 `.panel`-per-section 或 Feature 控件皮肤。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前交付边界：03A 已生产交付；03B 代码、完整 clean R2 证据与分支 push 已收敛；03C–03E 尚未开始。
+- 当前交付边界：03A/03B 已生产交付；03C 代码与完整 clean R2 已收敛、待 branch push；03D–03E 尚未开始。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。
