@@ -16,8 +16,9 @@ import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
-import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   readApiPayload,
   resourceError,
@@ -160,24 +161,21 @@ export function PlatformFilesPage() {
 
       <ConfigResourceCenter />
 
-      <section className="panel gap-4" data-test="platform-file-policy">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2>Storage Policy</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              这里只治理 Config Version 共用的物理 Storage 边界；对象状态由
-              Config/Version 工作区展示。
-            </p>
-          </div>
-          {policy ? (
+      <AdminWorkspaceSection
+        title="Storage Policy"
+        titleId="platform-file-policy-title"
+        description="这里只治理 Config Version 共用的物理 Storage 边界；对象状态由 Config/Version 工作区展示。"
+        meta={
+          policy ? (
             <StatusBadge
               label={policy.enabled ? '已启用' : '已停用'}
               tone={policy.enabled ? 'success' : 'danger'}
               rawValue={policy.enabled ? 'enabled' : 'disabled'}
             />
-          ) : null}
-        </div>
-
+          ) : null
+        }
+        data-test="platform-file-policy"
+      >
         {policyState === 'loading' ? <AsyncState state="loading" /> : null}
         {policyError && policyState === 'error' ? (
           <AsyncState
@@ -256,7 +254,7 @@ export function PlatformFilesPage() {
             </div>
           </form>
         ) : null}
-      </section>
+      </AdminWorkspaceSection>
     </section>
   );
 }
