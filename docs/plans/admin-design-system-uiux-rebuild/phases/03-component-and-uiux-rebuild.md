@@ -1,6 +1,6 @@
 # 阶段 03：组件与 UI/UX 并行全面重构
 
-状态：进行中
+状态：验收通过待推送
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -109,7 +109,7 @@
 
 ### 03D — Billing / Audit / Security
 
-**当前状态**：已交付并通过 clean R2。基于生产已验证 main `1db1a5f` 建立 `codex/admin-uiux-phase3d`；`b8410b6` 重建 Billing / Audit 高状态密度工作区，`711a6b9` 重建 Security / Subscriptions / Entitlements，verification checkpoint `ccec8ef` 已 push 且远端 SHA 核对到 `ccec8ef91690987e4f57109bfe4f58d1990d7913`。阶段 03 进入 03E；03E 尚未开始。
+**当前状态**：已交付并通过 clean R2。基于生产已验证 main `1db1a5f` 建立 `codex/admin-uiux-phase3d`；`b8410b6` 重建 Billing / Audit 高状态密度工作区，`711a6b9` 重建 Security / Subscriptions / Entitlements，verification checkpoint `ccec8ef` 已 push 且远端 SHA 核对到 `ccec8ef91690987e4f57109bfe4f58d1990d7913`。阶段 03 随后进入并已完成 03E 实现/R2。
 
 **范围**：Global/Platform Billing、Audit、Security、Subscriptions/Entitlements 等高状态密度工作区。
 
@@ -127,11 +127,23 @@
 
 ### 03E — Config / Feedback / Settings / Remaining Routes
 
+**当前状态**：实现与 clean R2 已通过，待最终 verification/docs commit 与 push。远端 outage 期间先在 `codex/admin-uiux-phase3e` 完成 Files/Auth/Settings/Integration/Campaign 的安全小步收敛，Vercel Preview 已对 `56e5e369` READY；本地 tunnel 恢复后 `98eba97` 完成 Config / Feedback，`8aa9e45` 完成 Plans / Offers / Redemption，`f4c136a` 完成 Origins / Keys / Deletion Jobs。最终源码候选已运行标准 clean `pnpm run verify:task:0801`，24 executable gates PASS。
+
 **范围**：Files/Config、Feedback、Plans、Redemption、Integration、Keys、Origins、Platform Settings、Deletion Jobs 及 inventory 中剩余 Admin route。
 
-**实施目标**：完成长尾页面全量覆盖；清理剩余 raw control / icon / duplicate skin；所有 Admin route 明确归属某批次并留下验证证据。
+**已实现**：
 
-**验收**：全路由 desktop/narrow、主题、键盘、异步状态、危险操作；最终运行完整 R2 本地门槛并为阶段 04 提供可治理基线。
+- Files 的 Storage Policy、Platform Settings、Commerce policy、Platform Integration、Login/MFA/Shell security gate 与 remaining-route placeholder 从旧 `.panel` layering 迁出；Commerce policy 的布尔控件改用标准 `Checkbox`，不再用 `Input type=checkbox` 模拟。
+- Config Resource Center 重排为 Task Toolbar → Config Collection → Gallery Review Governance → Inspector；手动 refresh 使用 preserve 模式，refresh 失败保留上一份可信 Config/Review 数据并局部显示错误，不再整块清空。
+- Feedback Center 重排为 Task Toolbar → Queue Table → Inspector；服务端筛选、批量选择、CSV、附件、recent-MFA 删除不变，表格横向滚动容器具备可聚焦/命名 region。
+- Plans 使用 Task Toolbar + Plan Directory Workspace；Offer/Price 从 card grid 收敛为事实行/动作区，create/price/command 后 background refresh 保留已知目录；`operation_id`、recent-MFA、`replay: never` 与 unknown outcome 安全重放合同不变。
+- Redemption 把筛选/刷新、创建批次、批次目录拆成 Toolbar / Workspace Section；一次性明文、delivery receipt、`creation_operation_id` 与 no-auto-replay 边界保持原样。Campaign 单码明细只展示 prefix/suffix 和归因事实。
+- Origins / Platform Keys 的 standalone/embedded 状态统一使用 Workspace composition；Key 明文仍只进入 OneTimeSecretPanel，一次性创建、部署确认、撤销、creation_operation_id 和 unknown-outcome metadata 检查不变。
+- Deletion Jobs 收敛为 Toolbar → 运行状态事实 → Job Collection → Inspector；checkpoint/lease/retry 仍由服务端决定，UI 只允许对明确 `blocked/retry` 状态发起受控重试。
+- Admin TSX 的旧 `className="panel` / `panel gap` 页面消费扫描为 0；raw `<input>/<select>/<textarea>/<svg>/<img>` 扫描为 0。普通 UI icon imports 统一来自 `lucide-react`；唯一 `next/image` 是 MFA TOTP QR，属于真实安全业务内容例外。
+- 03E 所有批次 synthetic production browser 均继续验证 Appearance、scope、keyboard、responsive、危险确认和 fail-closed security；最终页面候选 0 runtime exception。
+
+**验收**：Admin unit 17 files / 77 tests PASS；typecheck/lint/full format/production build PASS；synthetic production browser 覆盖 60 route/viewport combinations，最终 clean R2 的 Admin T12 覆盖 95 responsive route checks；标准 clean `pnpm run verify:task:0801` 24 executable gates PASS，包含 64 SQL files / 1398 DB tests、115 Edge/API tests、Consumer Harness、并发、安全、docs/contracts。阶段 04 可基于“页面层 `.panel`/普通 raw control 已归零”的真实基线继续做 CSS owner 与静态 gate 治理。
 
 ## 批次提交与停止条件
 
@@ -177,7 +189,7 @@
 
 ## 文档与交付
 
-- [ ] 每批次记录涉及路由、shared component、visual/UX 改动和验证。
-- [ ] 当新结构成为真实运行路径后同步 `docs/architecture/modules/frontends.md`。
+- [x] 每批次记录涉及路由、shared component、visual/UX 改动和验证。
+- [x] 当新结构成为真实运行路径后同步 `docs/architecture/modules/frontends.md`。
 - [ ] `apps/admin/DESIGN.md` 只在设计决定真的改变时更新，不记录实现流水。
 - [ ] `verification-record.md` 记录真实命令、失败、复测、commit/push。
