@@ -26,6 +26,10 @@ import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import { CampaignCodesPanel } from './campaign-codes-panel';
 import {
@@ -538,18 +542,33 @@ export function PlatformRedemptionBatchesPage() {
       <AdminPageHeader
         title="兑换码"
         description="创建兑换码批次，保存一次性明文并确认交付后激活。已生成的明文无法再次导出。"
-        actions={
+      />
+      <AdminTaskToolbar aria-label="兑换批次筛选与刷新">
+        <div className="grid w-full gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <label className="grid gap-2" htmlFor="batch-filter">
+            <span className="text-sm font-medium">筛选批次</span>
+            <Input
+              id="batch-filter"
+              type="search"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="名称、Plan 或状态"
+              data-test="batch-filter"
+            />
+            <span className="text-xs text-muted-foreground">
+              使用服务端 q/filter/cursor；统计由 Campaign read model 计算。
+            </span>
+          </label>
           <Button
             variant="outline"
-            size="sm"
             onClick={() => void load(true)}
             disabled={refreshing}
             data-test="batches-refresh"
           >
             {refreshing ? '刷新中…' : '刷新'}
           </Button>
-        }
-      />
+        </div>
+      </AdminTaskToolbar>
       {refreshError ? (
         <Alert variant="destructive" data-test="batches-refresh-error">
           <AlertTitle>刷新失败，仍保留已知批次</AlertTitle>
@@ -599,13 +618,12 @@ export function PlatformRedemptionBatchesPage() {
       ) : null}
       {state === 'success' ? (
         <>
-          <section className="panel gap-4" data-test="batch-create-section">
-            <div>
-              <h2>创建一次性批次</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                先填写元数据，再在确认窗口复核；创建响应丢失时不会自动新建第二批。
-              </p>
-            </div>
+          <AdminWorkspaceSection
+            title="创建一次性批次"
+            titleId="batch-create-title"
+            description="先填写元数据，再在确认窗口复核；创建响应丢失时不会自动新建第二批。"
+            data-test="batch-create-section"
+          >
             <form
               className="grid gap-3 md:grid-cols-2"
               onSubmit={openCreateReview}
@@ -683,28 +701,13 @@ export function PlatformRedemptionBatchesPage() {
                 </Button>
               </div>
             </form>
-          </section>
-          <section className="panel gap-4" data-test="batches-table-section">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2>批次目录</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  使用服务端 q/filter/cursor；统计由 Campaign read model
-                  计算，不在浏览器重算。
-                </p>
-              </div>
-              <label className="grid gap-2 sm:w-72" htmlFor="batch-filter">
-                <span className="text-sm font-medium">筛选批次</span>
-                <Input
-                  id="batch-filter"
-                  type="search"
-                  value={filter}
-                  onChange={(event) => setFilter(event.target.value)}
-                  placeholder="名称、Plan 或状态"
-                  data-test="batch-filter"
-                />
-              </label>
-            </div>
+          </AdminWorkspaceSection>
+          <AdminWorkspaceSection
+            title="批次目录"
+            titleId="batches-table-title"
+            description="服务端负责筛选、分页与统计；浏览器只展示 Campaign read model 返回的权威事实。"
+            data-test="batches-table-section"
+          >
             {visibleBatches.length === 0 ? (
               <div
                 className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground"
@@ -820,7 +823,7 @@ export function PlatformRedemptionBatchesPage() {
                 {refreshing ? '加载中…' : '加载更多 Campaign'}
               </Button>
             ) : null}
-          </section>
+          </AdminWorkspaceSection>
           <CampaignCodesPanel
             platformId={platform.platform_id}
             campaigns={visibleBatches.map((batch) => ({

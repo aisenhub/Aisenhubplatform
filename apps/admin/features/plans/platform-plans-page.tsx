@@ -35,6 +35,10 @@ import { NativeSelect } from '@kit/ui/native-select';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
@@ -389,22 +393,6 @@ export function PlatformPlansPage() {
       <AdminPageHeader
         title="套餐"
         description="管理免费与付费套餐、默认免费套餐和归档状态。"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void load(true)}
-              disabled={refreshing}
-              data-test="plans-refresh"
-            >
-              {refreshing ? '刷新中…' : '刷新'}
-            </Button>
-            <Button size="sm" onClick={openCreate} data-test="plan-create-open">
-              创建 Plan
-            </Button>
-          </div>
-        }
       />
       {refreshError ? (
         <Alert variant="destructive" data-test="plans-refresh-error">
@@ -418,22 +406,35 @@ export function PlatformPlansPage() {
           </AlertDescription>
         </Alert>
       ) : null}
-      <section className="panel gap-3">
-        <label className="grid gap-2" htmlFor="plans-filter">
-          <span className="text-sm font-medium">筛选 Plan</span>
-          <Input
-            id="plans-filter"
-            type="search"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder="code、名称、kind 或 status"
-            data-test="plans-filter"
-          />
-        </label>
-        <p className="text-xs text-muted-foreground">
-          筛选当前已加载的套餐；未返回的套餐不包含在搜索结果中。
-        </p>
-      </section>
+      <AdminTaskToolbar aria-label="Plan 筛选与操作">
+        <div className="grid w-full gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+          <label className="grid gap-2" htmlFor="plans-filter">
+            <span className="text-sm font-medium">筛选 Plan</span>
+            <Input
+              id="plans-filter"
+              type="search"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="code、名称、kind 或 status"
+              data-test="plans-filter"
+            />
+            <span className="text-xs text-muted-foreground">
+              筛选当前已加载的套餐；未返回的套餐不包含在搜索结果中。
+            </span>
+          </label>
+          <Button
+            variant="outline"
+            onClick={() => void load(true)}
+            disabled={refreshing}
+            data-test="plans-refresh"
+          >
+            {refreshing ? '刷新中…' : '刷新'}
+          </Button>
+          <Button onClick={openCreate} data-test="plan-create-open">
+            创建 Plan
+          </Button>
+        </div>
+      </AdminTaskToolbar>
       {state === 'loading' ? <AsyncState state="loading" /> : null}
       {state === 'error' && error ? (
         <AsyncState
@@ -446,31 +447,35 @@ export function PlatformPlansPage() {
         />
       ) : null}
       {state === 'success' && plans.length === 0 ? (
-        <section className="panel gap-2" data-test="plans-empty">
-          <h2>还没有 Plan</h2>
+        <AdminWorkspaceSection
+          title="还没有 Plan"
+          titleId="plans-empty-title"
+          data-test="plans-empty"
+        >
           <p className="text-sm text-muted-foreground">
             当前平台没有返回 Plan；可以创建一个 active Plan，服务端会校验
             kind、状态和默认约束。
           </p>
-        </section>
+        </AdminWorkspaceSection>
       ) : null}
       {state === 'success' && plans.length > 0 && visiblePlans.length === 0 ? (
-        <section className="panel gap-2" data-test="plans-filter-empty">
-          <h2>没有匹配的 Plan</h2>
+        <AdminWorkspaceSection
+          title="没有匹配的 Plan"
+          titleId="plans-filter-empty-title"
+          data-test="plans-filter-empty"
+        >
           <p className="text-sm text-muted-foreground">
             清除筛选后查看当前平台已返回的全部 Plan。
           </p>
-        </section>
+        </AdminWorkspaceSection>
       ) : null}
       {state === 'success' && visiblePlans.length > 0 ? (
-        <section className="panel gap-4" data-test="plans-table-section">
-          <div>
-            <h2>Plan 目录</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              共显示 {visiblePlans.length} 条真实记录；默认 Free
-              由服务端平台配置决定。
-            </p>
-          </div>
+        <AdminWorkspaceSection
+          title="Plan 目录"
+          titleId="plans-table-title"
+          description={`共显示 ${visiblePlans.length} 条真实记录；默认 Free 由服务端平台配置决定。`}
+          data-test="plans-table-section"
+        >
           <div
             className="data-table"
             tabIndex={0}
@@ -578,7 +583,7 @@ export function PlatformPlansPage() {
               </TableBody>
             </Table>
           </div>
-        </section>
+        </AdminWorkspaceSection>
       ) : null}
 
       {state === 'success' ? (

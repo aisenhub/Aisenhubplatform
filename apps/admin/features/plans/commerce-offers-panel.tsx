@@ -14,6 +14,7 @@ import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   isRecentMfaRequired,
@@ -101,48 +102,51 @@ export function CommerceOffersPanel({
   const scopeRef = useRef(platformId);
   scopeRef.current = platformId;
 
-  const load = useCallback(async () => {
-    const token = beginScopedLoad(loadGeneration, platformId);
-    const epoch = adminAuthSession.getEpoch();
-    setLoading(true);
-    setError(null);
-    setOffers([]);
-    try {
-      const response = await adminAuthSession.request(
-        `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}/commerce/offers`,
-        { cache: 'no-store' },
-      );
-      const payload = await readApiPayload<Offer[]>(response);
-      if (
-        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      if (!response.ok || !Array.isArray(payload?.data)) {
-        setError(resourceError(response, payload, 'Offer / Price 目录'));
-        return;
+  const load = useCallback(
+    async (preserve = false) => {
+      const token = beginScopedLoad(loadGeneration, platformId);
+      const epoch = adminAuthSession.getEpoch();
+      setLoading(true);
+      setError(null);
+      if (!preserve) setOffers([]);
+      try {
+        const response = await adminAuthSession.request(
+          `/api/v1/admin/api/v1/platforms/${encodeURIComponent(platformId)}/commerce/offers`,
+          { cache: 'no-store' },
+        );
+        const payload = await readApiPayload<Offer[]>(response);
+        if (
+          !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        if (!response.ok || !Array.isArray(payload?.data)) {
+          setError(resourceError(response, payload, 'Offer / Price 目录'));
+          return;
+        }
+        setOffers(payload.data);
+      } catch (caught) {
+        if (
+          !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        setError({
+          title: 'Offer / Price 读取失败',
+          description: sessionErrorMessage(caught),
+          requestId: null,
+          technicalDetail: null,
+        });
+      } finally {
+        if (
+          isScopedLoadCurrent(loadGeneration, scopeRef, token) &&
+          adminAuthSession.isCurrentEpoch(epoch)
+        )
+          setLoading(false);
       }
-      setOffers(payload.data);
-    } catch (caught) {
-      if (
-        !isScopedLoadCurrent(loadGeneration, scopeRef, token) ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      setError({
-        title: 'Offer / Price 读取失败',
-        description: sessionErrorMessage(caught),
-        requestId: null,
-        technicalDetail: null,
-      });
-    } finally {
-      if (
-        isScopedLoadCurrent(loadGeneration, scopeRef, token) &&
-        adminAuthSession.isCurrentEpoch(epoch)
-      )
-        setLoading(false);
-    }
-  }, [platformId]);
+    },
+    [platformId],
+  );
 
   useEffect(() => {
     void load();
@@ -182,7 +186,7 @@ export function CommerceOffersPanel({
     setCode('');
     setName('');
     setStepUpRequired(false);
-    await load();
+    await load(true);
   }
 
   async function createPrice(offer: Offer) {
@@ -208,7 +212,7 @@ export function CommerceOffersPanel({
     }
     setPriceAmount((known) => ({ ...known, [offer.offer_id]: '' }));
     setStepUpRequired(false);
-    await load();
+    await load(true);
   }
 
   async function executeIntent(reason: string) {
@@ -251,7 +255,7 @@ export function CommerceOffersPanel({
         return;
       }
       setMutationState('success');
-      await load();
+      await load(true);
       setIntent(null);
     } catch (caught) {
       setMutationState('unknown_outcome');
@@ -265,14 +269,12 @@ export function CommerceOffersPanel({
   }
 
   return (
-    <section className="panel gap-4" data-test="commerce-offers-panel">
-      <div>
-        <h2>商业 Offer / Price</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Plan 定义权益；Offer 定义销售期限；Price
-          是不可变版本。一个平台可为多个 paid Plan 建立不同 Offer。
-        </p>
-      </div>
+    <AdminWorkspaceSection
+      title="商业 Offer / Price"
+      titleId="commerce-offers-title"
+      description="Plan 定义权益；Offer 定义销售期限；Price 是不可变版本。一个平台可为多个 paid Plan 建立不同 Offer。"
+      data-test="commerce-offers-panel"
+    >
       {error ? (
         <Alert variant="destructive">
           <AlertTitle>{error.title}</AlertTitle>
@@ -337,33 +339,35 @@ export function CommerceOffersPanel({
       {loading ? (
         <p className="text-sm text-muted-foreground">正在读取商业目录…</p>
       ) : null}
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="divide-y divide-border/70">
         {offers.map((offer) => (
           <article
-            className="rounded-lg border border-border p-4"
+            className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
             key={offer.offer_id}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <strong>{offer.offer_name}</strong>
-                <p className="text-sm text-muted-foreground">
-                  {offer.offer_code} · {offer.plan_code} / {offer.plan_name}
-                </p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <strong>{offer.offer_name}</strong>
+                  <p className="text-sm text-muted-foreground">
+                    {offer.offer_code} · {offer.plan_code} / {offer.plan_name}
+                  </p>
+                </div>
+                <StatusBadge
+                  label={statusLabel(offer.status)}
+                  tone={statusTone(offer.status)}
+                  rawValue={offer.status}
+                />
               </div>
-              <StatusBadge
-                label={statusLabel(offer.status)}
-                tone={statusTone(offer.status)}
-                rawValue={offer.status}
-              />
+              <p className="mt-3 text-sm">
+                期限 {offer.duration_value} {offer.duration_unit} · Price{' '}
+                {offer.price_amount == null
+                  ? '未发布'
+                  : `${offer.price_amount} ${offer.currency ?? 'CNY'} v${offer.price_version}`}{' '}
+                · Mapping {offer.mapping_status}
+              </p>
             </div>
-            <p className="mt-3 text-sm">
-              期限 {offer.duration_value} {offer.duration_unit} · Price{' '}
-              {offer.price_amount == null
-                ? '未发布'
-                : `${offer.price_amount} ${offer.currency ?? 'CNY'} v${offer.price_version}`}{' '}
-              · Mapping {offer.mapping_status}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 lg:max-w-md lg:justify-end">
               <Input
                 className="max-w-36"
                 inputMode="decimal"
@@ -486,7 +490,7 @@ export function CommerceOffersPanel({
           onCheckUnknown={
             mutationState === 'unknown_outcome'
               ? async () => {
-                  await load();
+                  await load(true);
                   setMutationError({
                     title: '商业目录已重新读取',
                     description:
@@ -500,6 +504,6 @@ export function CommerceOffersPanel({
           onConfirm={executeIntent}
         />
       ) : null}
-    </section>
+    </AdminWorkspaceSection>
   );
 }
