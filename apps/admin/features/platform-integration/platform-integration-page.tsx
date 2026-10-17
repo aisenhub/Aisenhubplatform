@@ -9,8 +9,9 @@ import { Button } from '@kit/ui/button';
 import { StatusBadge } from '@kit/ui/status-badge';
 
 import { adminAuthSession } from '../../app/_lib/auth-session';
-import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import { readApiPayload } from '../resources/admin-resource-utils';
 import {
   beginScopedLoad,
@@ -20,8 +21,8 @@ import {
   derivePlatformIntegrationState,
   integrationFactsForScope,
   integrationStatusLabel,
-  type IntegrationKeyFact,
   type IntegrationCommerceOfferFact,
+  type IntegrationKeyFact,
   type IntegrationOriginFact,
   type IntegrationStep,
   type ScopedIntegrationFacts,
@@ -174,26 +175,15 @@ export function PlatformIntegrationPage() {
         </Alert>
       ) : null}
 
-      <section
-        className="panel gap-5"
-        data-test="platform-integration-progress"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              Central readiness
-            </p>
-            <h2 className="mt-2">
-              {state.centralReady ? '中央准备已就绪' : '中央准备仍有待办'}
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              已满足 {state.completedCentralSteps}/{state.totalCentralSteps}{' '}
-              项中央事实。
-              {state.centralReady
-                ? '这不等于目标平台已经通过联调或可运营。'
-                : '完成下面的权威配置后，再到目标平台执行独立验收。'}
-            </p>
-          </div>
+      <AdminWorkspaceSection
+        title={state.centralReady ? '中央准备已就绪' : '中央准备仍有待办'}
+        titleId="platform-integration-progress-title"
+        description={`已满足 ${state.completedCentralSteps}/${state.totalCentralSteps} 项中央事实。${
+          state.centralReady
+            ? '这不等于目标平台已经通过联调或可运营。'
+            : '完成下面的权威配置后，再到目标平台执行独立验收。'
+        }`}
+        meta={
           <div className="min-w-32 text-right">
             <strong className="font-mono text-2xl">{state.percentage}%</strong>
             <div
@@ -210,8 +200,9 @@ export function PlatformIntegrationPage() {
               />
             </div>
           </div>
-        </div>
-
+        }
+        data-test="platform-integration-progress"
+      >
         {state.nextStep ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/20 p-4">
             <div>
@@ -234,7 +225,7 @@ export function PlatformIntegrationPage() {
             <StepCard key={step.key} step={step} />
           ))}
         </div>
-      </section>
+      </AdminWorkspaceSection>
 
       <PlatformOriginsSection
         key={`origins-${platform.platform_id}-${refreshVersion}`}
@@ -248,34 +239,23 @@ export function PlatformIntegrationPage() {
         onFactsChange={handleKeysChange}
       />
 
-      <section className="panel gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Target platform verification
-          </p>
-          <h2 className="mt-2">目标平台仍需独立验证</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-            下面两项不提供手工“完成”按钮。请按
-            `docs/development/platform-onboarding.md`
-            在目标平台仓库验证，再把真实测试记录留在目标项目中。
-          </p>
-        </div>
+      <AdminWorkspaceSection
+        title="目标平台仍需独立验证"
+        titleId="platform-integration-external-title"
+        description="下面两项不提供手工“完成”按钮。请按 docs/development/platform-onboarding.md 在目标平台仓库验证，再把真实测试记录留在目标项目中。"
+      >
         <div className="grid gap-3 md:grid-cols-2">
           {state.externalSteps.map((step) => (
             <StepCard key={step.key} step={step} />
           ))}
         </div>
-      </section>
+      </AdminWorkspaceSection>
 
-      <section className="panel gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2>商业能力（按需）</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              免费平台不需要为了完成基础接入配置付费商品。需要售卖订阅时，再配置
-              paid Plan、Offer/Price 与 Provider Mapping。
-            </p>
-          </div>
+      <AdminWorkspaceSection
+        title="商业能力（按需）"
+        titleId="platform-integration-commerce-title"
+        description="免费平台不需要为了完成基础接入配置付费商品。需要售卖订阅时，再配置 paid Plan、Offer/Price 与 Provider Mapping。"
+        actions={
           <Button
             variant="outline"
             nativeButton={false}
@@ -283,8 +263,12 @@ export function PlatformIntegrationPage() {
           >
             打开商业目录
           </Button>
-        </div>
-      </section>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          商业目录是可选能力，不会被计入基础接入 readiness。
+        </p>
+      </AdminWorkspaceSection>
     </section>
   );
 }
