@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
         </p>
       </div>
       <form
-        className="panel stack-form admin-auth-card"
+        className="stack-form admin-auth-card"
         onSubmit={submit}
         data-test="admin-login-form"
         data-hydrated={hydrated ? 'true' : 'false'}
