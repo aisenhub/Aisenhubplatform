@@ -4,7 +4,7 @@
 
 Admin 使用深色导航与浅色数据工作区，平台目录提供紧凑的名称/标识搜索，概览提供常用管理入口。全局统一用户、计费与审计导航使用中文任务名称。Shell 提供键盘跳到内容入口；窄屏导航在路由切换后收起。账户列表显示当前详情选择，强调查看入口；关闭动作仍需原有确认、理由及服务端近期 MFA。
 
-平台与账户表的横向滚动由有名称、可聚焦的单一容器承担，窄屏显示滚动提示；Admin 样式让该容器内的上游 Table 包装层不再独立滚动。详情字段按内容高度从顶部排列。设计与产品约束见 [Admin 设计规则](../../../apps/admin/DESIGN.md) 和 [产品背景](../../../apps/admin/PRODUCT.md)。
+平台与账户表的横向滚动由有名称、可聚焦的单一容器承担，窄屏显示滚动提示；Admin 样式让该容器内的上游 Table 包装层不再独立滚动。详情字段按内容高度从顶部排列。产品约束见 [产品背景](../../../apps/admin/PRODUCT.md)。
 
 [apps/admin](../../../apps/admin)使用 Next.js App Router。Admin Shell 按 URL 区分 Global 与 Platform 两种 Sidebar 上下文。Global Sidebar 不显示分组标题，固定为“仪表盘 → 平台中心 → 用户中心 → 业务中心 → 审计中心 → 安全中心”；桌面折叠态保留“图标 + 精简文字”，对应“仪表盘 / 平台 / 用户 / 业务 / 审计 / 安全”，而不是纯图标。进入 `/admin/platforms/:platformId/**` 后，Sidebar 只展示当前平台的概览、账户、商业化、配置资源、用户反馈与平台设置，不再常驻注入平台目录或任何 Global 治理入口。平台设置把 Origin 与 Platform Key 收敛到 `/admin/platforms/:platformId/settings/integration` 接入配置主入口；接入进度只投影现有中央权威事实，目标平台 Auth/BFF 与 E2E 仍明确要求目标仓库独立验证。PlatformSwitcher 是 Global / Platform scope 的常驻主入口：使用同等资源映射在 Global/Platform Accounts 与 Billing 之间切换，其他无法对等映射的平台资源切回 Global 时回到平台目录；其 Sidebar 浮层不宽于当前切换器/侧边栏内容宽度，平台一级选项只突出名称与选中态，但搜索仍同时匹配名称和 code。对象详情仍可按业务需要显式深链到全局页面，但不重新形成 Platform Sidebar 的全局导航组。平台工作区不再维护第二套横向一级导航，Topbar 显示当前平台与资源上下文；单平台配置入口以配置资源中心承载 Config、Gallery、审核与 usage，generic legacy file 产品面已退出，Storage policy 只作为 Config Version 的物理边界。`/admin/platforms/:platformId/feedback` 是平台 Feedback 处理中心，服务端筛选、详情附件、时间线、治理、CSV 与删除都经 Admin API 权威边界完成。Ctrl/Cmd+K 继续提供真实路由跳转。
 
