@@ -69,4 +69,4 @@
 - [ ] 阶段 commit 已创建并 push，远端 commit 已核对。
 - [ ] 只有满足上述条件才更新 phase / plan 状态。
 
-03C 已满足实现与 clean R2 门槛，当前待分支 push/远端 SHA 核对；下一批从 03D Billing / Audit / Security 开始。阶段 03 整体仍未完成，03D–03E 和阶段最终全路由收敛不得提前打勾。
+03C 已满足实现、clean R2、分支 push 与远端 SHA 核对门槛；下一批从 03D Billing / Audit / Security 开始。阶段 03 整体仍未完成，03D–03E 和阶段最终全路由收敛不得提前打勾。

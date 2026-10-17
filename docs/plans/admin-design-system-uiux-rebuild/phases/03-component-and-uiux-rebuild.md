@@ -90,7 +90,7 @@
 
 ### 03C — High-frequency Platform / Account Workspaces
 
-**当前状态**：实现完成、clean R2 PASS，待分支 push/远端核对。基于生产已验证 main `73f37f8` 建立 `codex/admin-uiux-phase3c`；`5fbb922` 先删除 03B 审查中发现的 Admin 全局 control 第二 skin，`9426d18` 重建 Platform Directory / Platform Accounts / Account 360，`7fff7f7` 重建 Global Overview / Platform Overview / Global Accounts / Identity Detail。目标路由已全部从旧 `.panel` hierarchy 迁出；03D/03E 尚未开始。
+**当前状态**：已交付并通过 clean R2。基于生产已验证 main `73f37f8` 建立 `codex/admin-uiux-phase3c`；`5fbb922` 先删除 03B 审查中发现的 Admin 全局 control 第二 skin，`9426d18` 重建 Platform Directory / Platform Accounts / Account 360，`7fff7f7` 重建 Global Overview / Platform Overview / Global Accounts / Identity Detail，verification checkpoint `e90dbb8` 已 push 且远端 SHA 核对一致。目标路由已全部从旧 `.panel` hierarchy 迁出；阶段 03 进入 03D，03D/03E 尚未完成。
 
 **范围**：Global Overview、Platform Directory、Platform Overview、Global Accounts、Platform Accounts、Identity Detail / Account 360。
 
