@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
-| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 与 03B Standard Components/Semantic UI 已实现；两批 targeted、synthetic production browser 与完整 clean R2 Local Supabase 均通过 | 执行 03C–03E；03B 当前待文档收尾/push 核对 | `764193b`（03A）、`03060ed` + `67aa0b7`（03B code checkpoints） | 03A PASS；03B push/远端核对待本轮收尾 |
+| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 与 03B Standard Components/Semantic UI 已交付；两批 targeted、synthetic production browser 与完整 clean R2 Local Supabase 均通过 | 执行 03C–03E | `764193b`（03A）、`03060ed` + `67aa0b7`（03B code checkpoints） | PASS：03B verification checkpoint `1b84296` 已 push，远端 SHA 核对一致 |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
@@ -134,14 +134,14 @@
 | 01 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | `codex/admin-design-system-phase1` | PASS | PASS：`origin/codex/admin-design-system-phase1` 指向同一 SHA | GitHub 分支 |
 | 02 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | `codex/admin-design-direction-phase2` | PASS | PASS：远端分支指向同一 SHA | GitHub 分支 |
 | 03A | `764193b094287ff7668588ed7068fc0e2367e86c` | `codex/admin-uiux-phase3` | PASS | PASS：03A push 后远端分支指向同一 SHA；后续 `e5f8a05` 已进入 main 并完成 Production READY + GitHub Workflow success | GitHub 分支 |
-| 03B | `03060ed` + `67aa0b7`（code checkpoints） | `codex/admin-uiux-phase3b` | 待本轮收尾 | 待 push 后核对 | GitHub 分支 |
+| 03B | `03060ed` + `67aa0b7`（code checkpoints），`1b84296`（verification checkpoint） | `codex/admin-uiux-phase3b` | PASS | PASS：`origin/codex/admin-uiux-phase3b` 已核对到 `1b8429674f9f4feb028344e500e884211de6472d` | GitHub 分支 |
 | 04 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：03A/03B 已实现并完成 clean R2；03B 分支完成文档/push 核对后，下一代码批次为 03C High-frequency Platform / Account Workspaces。
+- 下一阶段从哪里开始：03A/03B 已实现、完成 clean R2 并 push 核对；下一代码批次为 03C High-frequency Platform / Account Workspaces。
 - 必须先解决的问题：03B 无残留代码/R2 阻塞；进入 03C 时从 Global Overview、Platform Directory/Overview、Global/Platform Accounts、Identity/Account 360 的任务 hierarchy / Collection / Inspector 重排开始，复用当前 shared component skin，不回退 Feature 控件皮肤。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前交付边界：03A 已生产交付；03B 代码实现与完整 clean R2 证据已收敛，当前待文档/push 核对；03C–03E 尚未开始。
+- 当前交付边界：03A 已生产交付；03B 代码、完整 clean R2 证据与分支 push 已收敛；03C–03E 尚未开始。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。

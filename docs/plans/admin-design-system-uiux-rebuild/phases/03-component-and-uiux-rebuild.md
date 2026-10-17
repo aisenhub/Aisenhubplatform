@@ -72,7 +72,7 @@
 
 ### 03B — Standard Components + Semantic UI Skin
 
-**当前状态**：实现完成并通过 clean R2，代码 checkpoint 为 `03060ed`（shared skin/state ownership）与 `67aa0b7`（Admin native control standardization）；当前待完成文档收尾、push/远端核对后进入 03C。03B 只代表标准控件与 semantic UI skin 收敛，不代表 03C–03E 页面信息架构/排版重构已完成。
+**当前状态**：已交付并通过 clean R2。代码 checkpoint 为 `03060ed`（shared skin/state ownership）与 `67aa0b7`（Admin native control standardization），验证文档 checkpoint `1b84296` 已 push，远端 SHA 核对一致；阶段 03 进入 03C。03B 只代表标准控件与 semantic UI skin 收敛，不代表 03C–03E 页面信息架构/排版重构已完成。
 
 **范围**：Button/Input/Select/Textarea/Checkbox/Switch/Table/Card/Alert/Badge/Dialog/Sheet/Popover/Tooltip/Tabs，以及 AsyncState、StatusBadge、ResourceId、SupportErrorId、ConfirmActionDialog、MutationState、ResourceInspector、OneTimeSecretPanel。
 
