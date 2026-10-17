@@ -1,6 +1,6 @@
 # 阶段 03：组件与 UI/UX 并行全面重构
 
-状态：验收通过待推送
+状态：已交付
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -127,7 +127,7 @@
 
 ### 03E — Config / Feedback / Settings / Remaining Routes
 
-**当前状态**：实现与 clean R2 已通过，待最终 verification/docs commit 与 push。远端 outage 期间先在 `codex/admin-uiux-phase3e` 完成 Files/Auth/Settings/Integration/Campaign 的安全小步收敛，Vercel Preview 已对 `56e5e369` READY；本地 tunnel 恢复后 `98eba97` 完成 Config / Feedback，`8aa9e45` 完成 Plans / Offers / Redemption，`f4c136a` 完成 Origins / Keys / Deletion Jobs。最终源码候选已运行标准 clean `pnpm run verify:task:0801`，24 executable gates PASS。
+**当前状态**：已实现、通过 clean R2 并交付到 `codex/admin-uiux-phase3e`。远端 outage 期间先完成 Files/Auth/Settings/Integration/Campaign 的安全小步收敛，Vercel Preview 已对 `56e5e369` READY；本地 tunnel 恢复后 `98eba97` 完成 Config / Feedback，`8aa9e45` 完成 Plans / Offers / Redemption，`f4c136a` 完成 Origins / Keys / Deletion Jobs，verification/docs checkpoint `8c79a5f` 已 push 且远端 SHA 核对一致。最终源码候选已运行标准 clean `pnpm run verify:task:0801`，24 executable gates PASS。main/Production release gate 在本分支 final closeout 后执行。
 
 **范围**：Files/Config、Feedback、Plans、Redemption、Integration、Keys、Origins、Platform Settings、Deletion Jobs 及 inventory 中剩余 Admin route。
 
