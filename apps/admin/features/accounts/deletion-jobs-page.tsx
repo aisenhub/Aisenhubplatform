@@ -17,6 +17,10 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
@@ -272,26 +276,45 @@ export function DeletionJobsPage() {
       <AdminPageHeader
         title="统一用户 · 删除任务"
         description="跨用户查看 Global Delete 任务、检查阻塞原因并对明确可重试任务执行受控重试。"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/accounts"
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              返回统一用户
-            </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void load(true)}
-              disabled={refreshing}
-              data-test="deletion-jobs-refresh"
-            >
-              {refreshing ? '刷新中…' : '刷新'}
-            </Button>
-          </div>
-        }
       />
+
+      <AdminTaskToolbar aria-label="删除任务筛选与刷新">
+        <form
+          className="grid w-full gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:items-end"
+          onSubmit={applyQuery}
+          data-test="deletion-jobs-filter-form"
+        >
+          <div className="grid gap-2">
+            <Label htmlFor="deletion-jobs-filter">筛选删除任务</Label>
+            <Input
+              id="deletion-jobs-filter"
+              type="search"
+              value={draftQuery}
+              onChange={(event) => setDraftQuery(event.target.value)}
+              placeholder="state、checkpoint、User ID、Job ID 或 request ID"
+              data-test="deletion-jobs-filter"
+            />
+          </div>
+          <Button type="submit" variant="outline">
+            查询
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void load(true)}
+            disabled={refreshing}
+            data-test="deletion-jobs-refresh"
+          >
+            {refreshing ? '刷新中…' : '刷新'}
+          </Button>
+          <Link
+            href="/admin/accounts"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            返回统一用户
+          </Link>
+        </form>
+      </AdminTaskToolbar>
 
       <Alert>
         <AlertTitle>批准删除请求请从 Identity 详情进入</AlertTitle>
@@ -326,63 +349,33 @@ export function DeletionJobsPage() {
         />
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard
-          label="需要关注"
-          value={state === 'success' ? `${summary.attention}` : '—'}
-          description="blocked / retry"
-          tone="warning"
-        />
-        <SummaryCard
-          label="处理中"
-          value={state === 'success' ? `${summary.running}` : '—'}
-          description="pending / running"
-          tone="info"
-        />
-        <SummaryCard
-          label="最近完成"
-          value={state === 'success' ? `${summary.completed}` : '—'}
-          description="当前返回窗口内"
-          tone="success"
-        />
-      </div>
-
-      <section className="panel gap-4" data-test="deletion-jobs-list">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2>删除任务</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              当前读取服务端最新 100 条；筛选只作用于这组有界结果。历史 detached
-              job 即使 Auth user 已删除，也仍可从这里按 Job ID / request ID
-              追踪。
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {refreshing ? '后台刷新中…' : '最多 100 条'}
-          </span>
-        </div>
-
-        <form
-          className="flex gap-2"
-          onSubmit={applyQuery}
-          data-test="deletion-jobs-filter-form"
-        >
-          <Label htmlFor="deletion-jobs-filter" className="sr-only">
-            筛选删除任务
-          </Label>
-          <Input
-            id="deletion-jobs-filter"
-            type="search"
-            className="min-w-0 flex-1"
-            value={draftQuery}
-            onChange={(event) => setDraftQuery(event.target.value)}
-            placeholder="state、checkpoint、User ID、Job ID 或 request ID"
-            data-test="deletion-jobs-filter"
+      <AdminWorkspaceSection
+        title="删除任务"
+        titleId="deletion-jobs-list-title"
+        description="当前读取服务端最新 100 条；筛选只作用于这组有界结果。历史 detached job 即使 Auth user 已删除，也仍可按 Job ID / request ID 追踪。"
+        meta={refreshing ? '后台刷新中…' : '最多 100 条'}
+        data-test="deletion-jobs-list"
+      >
+        <div className="grid gap-4 border-y border-border/70 py-4 sm:grid-cols-3">
+          <SummaryCard
+            label="需要关注"
+            value={state === 'success' ? `${summary.attention}` : '—'}
+            description="blocked / retry"
+            tone="warning"
           />
-          <Button type="submit" variant="outline">
-            查询
-          </Button>
-        </form>
+          <SummaryCard
+            label="处理中"
+            value={state === 'success' ? `${summary.running}` : '—'}
+            description="pending / running"
+            tone="info"
+          />
+          <SummaryCard
+            label="最近完成"
+            value={state === 'success' ? `${summary.completed}` : '—'}
+            description="当前返回窗口内"
+            tone="success"
+          />
+        </div>
 
         {state === 'loading' ? <AsyncState state="loading" /> : null}
         {state === 'success' && visibleJobs.length === 0 ? (
@@ -391,14 +384,17 @@ export function DeletionJobsPage() {
           </div>
         ) : null}
         {state === 'success' && visibleJobs.length > 0 ? (
-          <div className="grid gap-2" data-test="deletion-jobs-rows">
+          <div
+            className="divide-y divide-border/70"
+            data-test="deletion-jobs-rows"
+          >
             {visibleJobs.map((job) => {
               const status = operationStatus(job.state);
               const retryable = ['blocked', 'retry'].includes(job.state);
               return (
                 <article
                   key={job.job_id}
-                  className="grid gap-3 rounded-xl border border-border/70 bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+                  className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
                   data-test={`deletion-job-row-${job.job_id}`}
                 >
                   <button
@@ -457,7 +453,7 @@ export function DeletionJobsPage() {
             })}
           </div>
         ) : null}
-      </section>
+      </AdminWorkspaceSection>
 
       <DeletionMutationDialog
         intent={intent}
@@ -596,7 +592,7 @@ function SummaryCard({
   tone: 'warning' | 'info' | 'success';
 }) {
   return (
-    <section className="panel gap-2">
+    <div className="grid gap-1 border-l border-border/70 pl-3 first:border-l-0 first:pl-0">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p
         className={`text-2xl font-semibold ${tone === 'warning' ? 'text-warning-foreground' : tone === 'success' ? 'text-success-foreground' : 'text-info-foreground'}`}
@@ -604,7 +600,7 @@ function SummaryCard({
         {value}
       </p>
       <p className="text-xs text-muted-foreground">{description}</p>
-    </section>
+    </div>
   );
 }
 

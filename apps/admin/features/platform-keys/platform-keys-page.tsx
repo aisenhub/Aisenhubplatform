@@ -20,6 +20,10 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   adminAuthSession,
@@ -344,20 +348,15 @@ export function PlatformKeysSection({
   if (state === 'loading') {
     if (embedded) {
       return (
-        <section
+        <AdminWorkspaceSection
           id="keys"
-          className="panel gap-4"
+          title="服务端密钥"
+          titleId="platform-keys-title"
+          description="Platform Key 明文仅在创建响应中显示一次；部署确认后才能安全轮换旧 Key。"
           data-test="platform-keys-section"
         >
-          <div>
-            <h2>服务端密钥</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Platform Key 明文仅在创建响应中显示一次；部署确认后才能安全轮换旧
-              Key。
-            </p>
-          </div>
           <AsyncState state="loading" />
-        </section>
+        </AdminWorkspaceSection>
       );
     }
     return (
@@ -374,7 +373,7 @@ export function PlatformKeysSection({
   return (
     <section
       id={embedded ? 'keys' : undefined}
-      className={embedded ? 'panel gap-4' : 'grid gap-5'}
+      className="grid gap-5"
       data-test={embedded ? 'platform-keys-section' : 'platform-keys-page'}
     >
       {embedded ? (
@@ -461,8 +460,8 @@ export function PlatformKeysSection({
           </AlertDescription>
         </Alert>
       ) : null}
-      <section className={embedded ? 'grid gap-4' : 'panel gap-4'}>
-        {!embedded ? (
+      {!embedded ? (
+        <AdminTaskToolbar aria-label="Platform Key 搜索">
           <form className="flex gap-2" onSubmit={applyQuery}>
             <Label htmlFor="platform-key-query" className="sr-only">
               搜索 Platform Key
@@ -483,7 +482,18 @@ export function PlatformKeysSection({
               查询
             </Button>
           </form>
-        ) : null}
+        </AdminTaskToolbar>
+      ) : null}
+      <AdminWorkspaceSection
+        title="Key metadata"
+        titleId={
+          embedded
+            ? 'platform-keys-list-title'
+            : 'platform-keys-page-list-title'
+        }
+        description="列表只展示受控 metadata、部署确认与撤销状态；Key 明文不会从该视图恢复。"
+        meta={<ResourceId value={platform.platform_id} />}
+      >
         {state === 'success' && keys.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
             {!embedded && query
@@ -492,11 +502,14 @@ export function PlatformKeysSection({
           </div>
         ) : null}
         {keys.length ? (
-          <div className="grid gap-3" data-test="platform-key-rows">
+          <div
+            className="divide-y divide-border/70"
+            data-test="platform-key-rows"
+          >
             {keys.map((key) => (
               <article
                 key={key.key_id}
-                className="grid gap-3 rounded-xl border border-border/70 bg-card p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
+                className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
               >
                 <button
                   type="button"
@@ -546,7 +559,7 @@ export function PlatformKeysSection({
             ))}
           </div>
         ) : null}
-      </section>
+      </AdminWorkspaceSection>
 
       {intent ? (
         <ConfirmActionDialog

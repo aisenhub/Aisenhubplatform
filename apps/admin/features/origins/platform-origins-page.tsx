@@ -24,6 +24,10 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
@@ -245,19 +249,15 @@ export function PlatformOriginsSection({
   if (state === 'loading') {
     if (embedded) {
       return (
-        <section
+        <AdminWorkspaceSection
           id="origins"
-          className="panel gap-4"
+          title="域名与回调"
+          titleId="platform-origins-title"
+          description="登记允许接入的站点 Origin 与登录、密码重置、邮箱确认回调。"
           data-test="platform-origins-section"
         >
-          <div>
-            <h2>域名与回调</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              登记允许接入的站点 Origin 与登录、密码重置、邮箱确认回调。
-            </p>
-          </div>
           <AsyncState state="loading" />
-        </section>
+        </AdminWorkspaceSection>
       );
     }
     return (
@@ -274,7 +274,7 @@ export function PlatformOriginsSection({
   return (
     <section
       id={embedded ? 'origins' : undefined}
-      className={embedded ? 'panel gap-4' : 'grid gap-5'}
+      className="grid gap-5"
       data-test={
         embedded ? 'platform-origins-section' : 'platform-origins-page'
       }
@@ -368,17 +368,8 @@ export function PlatformOriginsSection({
         </Alert>
       ) : null}
 
-      <section className={embedded ? 'grid gap-4' : 'panel gap-4'}>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2>已登记地址</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              当前平台：<span className="font-mono">{platform.code}</span>
-            </p>
-          </div>
-          <ResourceId value={platform.platform_id} />
-        </div>
-        {!embedded ? (
+      {!embedded ? (
+        <AdminTaskToolbar aria-label="Origin 搜索">
           <form className="flex gap-2" onSubmit={applyQuery}>
             <Label htmlFor="platform-origin-query" className="sr-only">
               搜索 Origin
@@ -399,7 +390,18 @@ export function PlatformOriginsSection({
               查询
             </Button>
           </form>
-        ) : null}
+        </AdminTaskToolbar>
+      ) : null}
+      <AdminWorkspaceSection
+        title="已登记地址"
+        titleId={
+          embedded
+            ? 'platform-origins-list-title'
+            : 'platform-origins-page-list-title'
+        }
+        description={`当前平台：${platform.code}`}
+        meta={<ResourceId value={platform.platform_id} />}
+      >
         {state === 'success' && origins.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
             {!embedded && query
@@ -457,7 +459,7 @@ export function PlatformOriginsSection({
             ))}
           </div>
         ) : null}
-      </section>
+      </AdminWorkspaceSection>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent
