@@ -532,42 +532,6 @@ select:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
-[data-slot='table-head'] {
-  height: 2.75rem;
-  background: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-[data-slot='table-row'] {
-  background: var(--card);
-}
-[data-slot='table-row']:hover {
-  background: var(--muted);
-}
-[data-slot='table-row'][data-state='selected'] {
-  background: var(--primary-soft);
-}
-[data-slot='table-cell'] {
-  padding-block: 0.875rem;
-  font-variant-numeric: tabular-nums;
-}
-[data-slot='card'] {
-  border: 1px solid var(--border);
-  box-shadow: none;
-}
-[data-slot='input'] {
-  background: var(--card);
-}
-[data-slot='alert'] {
-  border-radius: 0.625rem;
-  border-color: var(--border);
-  background: var(--card);
-}
-[data-slot='alert'][data-variant='destructive'] {
-  border-color: color-mix(in oklch, var(--danger) 40%, var(--border));
-  background: color-mix(in oklch, var(--danger) 5%, var(--card));
-}
 .one-time-secret {
   display: grid;
   gap: 0.6rem;
@@ -685,6 +649,7 @@ select:focus-visible {
   max-width: 10rem;
 }
 .admin-appearance-sheet,
+[data-resource-inspector='true'],
 [data-slot='dialog-content'] {
   border-color: var(--border);
   background: var(--glass-raised);
@@ -1044,6 +1009,7 @@ select:focus-visible {
   .admin-topbar,
   :is(.admin-sidebar, [data-slot='sidebar'][data-mobile='true']),
   .admin-appearance-sheet,
+  [data-resource-inspector='true'],
   [data-slot='dialog-content'],
   .platform-switcher-panel {
     -webkit-backdrop-filter: none;
@@ -1054,6 +1020,7 @@ select:focus-visible {
     background: var(--card);
   }
   .admin-appearance-sheet,
+  [data-resource-inspector='true'],
   [data-slot='dialog-content'],
   .platform-switcher-panel {
     background: var(--popover);
@@ -1064,6 +1031,7 @@ select:focus-visible {
   .admin-topbar,
   :is(.admin-sidebar, [data-slot='sidebar'][data-mobile='true']),
   .admin-appearance-sheet,
+  [data-resource-inspector='true'],
   [data-slot='dialog-content'],
   .platform-switcher-panel {
     -webkit-backdrop-filter: none;
@@ -1074,6 +1042,7 @@ select:focus-visible {
     background: var(--card);
   }
   .admin-appearance-sheet,
+  [data-resource-inspector='true'],
   [data-slot='dialog-content'],
   .platform-switcher-panel {
     background: var(--popover);

@@ -526,6 +526,13 @@ try {
   failPlatformOverview = true;
   await page.locator('[data-test="platform-overview-refresh"]').click();
   await page.locator('[data-test="platform-overview-refresh-error"]').waitFor();
+  assert.equal(
+    await page
+      .locator('[data-test="platform-overview-refresh-error"]')
+      .getAttribute('data-variant'),
+    'destructive',
+    'Destructive Alert exposes a stable variant contract for shared skin',
+  );
   assert.match(
     await page
       .locator('[data-test="platform-overview-total-accounts"]')
@@ -599,6 +606,13 @@ try {
   );
   await page.locator('[data-test="feedback-open-detail"]').click();
   await page.locator('[data-test="feedback-detail"]').waitFor();
+  const feedbackInspector = page.locator('[data-resource-inspector="true"]');
+  await feedbackInspector.waitFor();
+  assert.equal(
+    await feedbackInspector.getAttribute('data-slot'),
+    'sheet-content',
+    'ResourceInspector exposes a stable product-material identity on SheetContent',
+  );
   assert.match(
     await page.locator('[data-test="feedback-detail"]').innerText(),
     /harness@example.invalid/u,

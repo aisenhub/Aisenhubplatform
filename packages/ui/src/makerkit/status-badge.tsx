@@ -35,6 +35,7 @@ export function StatusBadge({
     <Badge
       variant="outline"
       data-test="status-badge"
+      data-tone={tone}
       data-status={rawValue ?? tone}
       className={cn('gap-1.5', toneClasses[tone], className)}
     >

@@ -11,7 +11,7 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
       role="region"
       tabIndex={0}
       aria-label="数据表格（支持方向键横向滚动）"
-      className="data-table relative w-full overflow-x-auto focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/30"
+      className="data-table relative w-full overflow-x-auto focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       <table
         data-slot="table"
@@ -60,7 +60,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
     <tr
       data-slot="table-row"
       className={cn(
-        'hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors',
+        'bg-card hover:bg-muted/70 has-aria-expanded:bg-muted/70 data-[state=selected]:bg-primary/10 border-b transition-colors',
         className,
       )}
       {...props}
@@ -73,7 +73,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       data-slot="table-head"
       className={cn(
-        'text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+        'bg-muted text-muted-foreground h-11 px-2 text-left align-middle text-xs font-semibold whitespace-nowrap [&:has([role=checkbox])]:pr-0',
         className,
       )}
       {...props}
@@ -86,7 +86,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
     <td
       data-slot="table-cell"
       className={cn(
-        'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+        'px-2 py-3.5 align-middle whitespace-nowrap tabular-nums [&:has([role=checkbox])]:pr-0',
         className,
       )}
       {...props}

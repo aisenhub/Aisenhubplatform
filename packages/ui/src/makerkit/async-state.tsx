@@ -29,6 +29,7 @@ export function AsyncState({
         aria-busy="true"
         aria-label="正在加载"
         className="grid gap-3"
+        data-state="loading"
         data-test="async-loading"
       >
         <Skeleton className="h-10 w-full" />
@@ -41,7 +42,7 @@ export function AsyncState({
 
   if (state === 'access') {
     return (
-      <Alert data-test="access-error">
+      <Alert data-state="access" data-test="access-error">
         <AlertTitle>{title ?? '无法访问此页面'}</AlertTitle>
         <AlertDescription>
           {description ?? '请重新登录或联系管理员确认访问权限。'}
@@ -55,7 +56,11 @@ export function AsyncState({
   }
 
   return (
-    <Alert variant="destructive" data-test="recoverable-error">
+    <Alert
+      variant="destructive"
+      data-state="error"
+      data-test="recoverable-error"
+    >
       <AlertTitle>{title ?? '暂时无法读取数据'}</AlertTitle>
       <AlertDescription>
         {description ??

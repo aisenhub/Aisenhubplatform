@@ -12,14 +12,18 @@ export function SupportErrorId({
   if (!requestId && !technicalDetail) return null;
 
   return (
-    <details className="mt-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+    <details
+      data-slot="support-error-id"
+      className="mt-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+    >
       <summary
+        data-slot="support-error-id-summary"
         data-test="technical-details"
         className="cursor-pointer font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         技术详情
       </summary>
-      <dl className="mt-2 grid gap-2">
+      <dl data-slot="support-error-id-body" className="mt-2 grid gap-2">
         {requestId ? (
           <div className="grid gap-1 sm:grid-cols-[6rem_1fr] sm:items-start">
             <dt>请求 ID</dt>

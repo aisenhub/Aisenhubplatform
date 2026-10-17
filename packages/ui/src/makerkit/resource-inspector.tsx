@@ -37,6 +37,7 @@ export function ResourceInspector({
         side="right"
         showCloseButton={false}
         className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md lg:max-w-[28rem]"
+        data-resource-inspector="true"
         data-test="resource-inspector"
       >
         <SheetHeader className="border-b border-border/70 p-5 pr-14">
