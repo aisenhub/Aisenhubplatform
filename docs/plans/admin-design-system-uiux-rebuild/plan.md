@@ -6,7 +6,7 @@
 
 ## Requirements
 
-本计划主要重新验证并优化 `REQ-ADM-002`、`REQ-ADM-003`、`REQ-ADM-004`、`REQ-ADM-005`、`REQ-ADM-007`、`REQ-ADM-008`、`REQ-ADM-009`。Requirement 权威来源为 [`docs/spec/admin-console.md`](../../spec/admin-console.md)。本计划默认不改变这些 Requirement 的业务含义。
+本计划主要重新验证并优化 `REQ-ADM-002`、`REQ-ADM-003`、`REQ-ADM-004`、`REQ-ADM-005`、`REQ-ADM-007`、`REQ-ADM-008`、`REQ-ADM-009`，并实施本轮新增的 `REQ-ADM-011`（统一主题/外观切换）与 `REQ-ADM-012`（实际与感知加载性能）。Requirement 权威来源为 [`docs/spec/admin-console.md`](../../spec/admin-console.md)。
 
 ## 总体目标
 
@@ -37,6 +37,10 @@
 6. 业务组件不强行通用化；基础控件必须标准化，稳定跨页面语义能力才进入 shared semantic UI。
 7. 不改变现有后端、权限、MFA、幂等、unknown outcome、Global/Platform scope、Admin BFF 和 canonical contract，除非后续发现真实 Requirement 缺口并另行批准。
 8. 第三阶段不是“组件先做完、页面后美化”，而是每个页面批次同时完成共享组件能力和视觉/交互优化。
+9. 普通 UI 图标统一从项目选定的标准图标库导入；不允许 Feature 随意自绘 SVG/PNG 图标形成第二套视觉语言。品牌标识、真实业务图片和标准库确实无法表达的专业图形必须单独说明例外。
+10. 当前页面只提供业务事实和任务信息，不拥有视觉继承权。阶段 02/03 可重新设计页面结构、信息层级、组件排布、颜色、surface、spacing 和交互反馈，禁止把“旧页面换颜色/圆角”当作完成重构。
+11. Admin 建立统一 Appearance / Theme System，由设置集中控制 Light/Dark/System、Accent 和 Surface/Background 预设，并通过 Semantic Theme → Skin → Component → Page 全链路生效。
+12. 实际性能与 perceived performance 同时优化：稳定 Shell/布局、保留可信数据、避免短 loading 闪烁、长等待给予真实反馈，并处理请求取消、stale response 和关键资源加载。
 
 ## 阶段与依赖
 
@@ -53,7 +57,7 @@
 
 阶段 03 在开始时先根据当前实际路由重新生成页面/Feature 清单，再按任务关系分批；初始建议顺序如下，最终以阶段 03 实际 inventory 为准：
 
-1. Shell、Navigation、Topbar、PlatformSwitcher、Command Palette 与全局页面骨架，作为 Design System 落地 pilot。
+1. Shell、Navigation、Topbar、PlatformSwitcher、Command Palette、Appearance Settings 与全局页面骨架，作为 Design System 落地 pilot。
 2. Button/Input/Select/Textarea/Checkbox/Table/Card/Alert/Dialog/Sheet/Popover/Tooltip 等高频 primitive 与 AsyncState/StatusBadge/ResourceId/ConfirmActionDialog/ResourceInspector 等 semantic UI。
 3. Platform directory / Platform overview / Accounts / Identity 等高频管理链路。
 4. Billing / Audit / Security 等对状态、危险操作和信息层级要求高的工作区。
@@ -84,9 +88,13 @@
 - [ ] Theme/Skin/Standard Component/Semantic UI/Feature 的职责在文档和代码中一致。
 - [ ] 所有 Admin 路由都经过至少一个明确 UI/UX 优化批次，并有桌面/窄屏/键盘/焦点/加载/空/错/危险操作等适用状态验证。
 - [ ] `packages/ui` 提供稳定标准控件和 semantic UI；Feature 不再系统性重复绘制基础控件皮肤。
+- [ ] 普通 UI 图标已经统一到标准图标库和稳定语义映射，无无理由自绘 SVG/PNG 图标体系。
+- [ ] Appearance / Theme System 支持冻结的 Light/Dark/System、Accent、Surface 预设，并能从设置统一切换整个 Admin，而非只改变局部 primary 色。
+- [ ] 页面重构以新信息层级与任务组织为准，旧排版、旧色板、旧组件组合没有因“实现成本低”而被默认继承。
+- [ ] 关键导航、列表、Inspector、搜索、刷新和 mutation 对 perceived performance 做过真实浏览器验证，加载过程中结构稳定、反馈及时、可信数据不被无意义清空。
 - [ ] 可复用视觉从 Admin 全局 CSS 和 Feature CSS/utility 回收到单一 shared ownership，Admin CSS 保留真正的产品 adaptation 与页面 geometry。
 - [ ] 静态规则能够阻止普通 Feature 新增无理由 raw control / 大量基础 skin utility，并提供必要 allowlist/例外说明机制。
-- [ ] `REQ-ADM-002/003/004/005/007/008/009` 的适用 Acceptance 逐项留下真实证据。
+- [ ] `REQ-ADM-002/003/004/005/007/008/009/011/012` 的适用 Acceptance 逐项留下真实证据。
 - [ ] `pnpm docs:check`、`pnpm contracts:check`、`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm build` 及适用 Admin unit/browser/E2E 检查在最终候选上实际执行并记录；阶段 03/04 按 R2 规则完成适用 Local Supabase/Admin UI 验证。
 - [ ] 完成后同步 `docs/architecture/modules/frontends.md`、`docs/spec/admin-console.md`、适用 development 指南和 review 结论；Plan 不把未落地目标提前写成 Architecture。
 

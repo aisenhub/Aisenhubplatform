@@ -15,6 +15,8 @@
 - `REQ-ADM-007`：管理导航必须支持快速定位。
 - `REQ-ADM-008`：可访问状态不得仅依赖颜色。
 - `REQ-ADM-009`：Admin 安全状态与错误语义必须统一。
+- `REQ-ADM-011`：Admin 必须提供统一的全局主题与外观切换。
+- `REQ-ADM-012`：Admin 必须优化实际与感知加载性能。
 
 若新视觉设计需要改变现有 Product Requirement、导航职责、危险操作语义、权限、安全状态或业务流程，必须先修改对应 Spec，再冻结该部分设计；本 Plan 不能自行创造新的产品 Requirement。
 
@@ -34,6 +36,9 @@
 2. **交互优化**：导航、检索、列表、详情、表单、浮层、异步状态、危险操作和响应式体验按统一模式优化。
 3. **UI 架构收敛**：基础控件标准化，业务 UI 组合化，结构/行为与视觉皮肤分层，Feature 不再重复发明基础控件皮肤。
 4. **长期治理**：Design System、Product Adaptation、代码静态规则、浏览器验证和文档职责形成闭环。
+5. **视觉重构而非换肤**：当前页面只提供功能、内容和业务状态依据；布局、信息层级、组件组合、颜色、表面和节奏可按新设计重新建立，不为兼容旧视觉降低新方向。
+6. **统一主题系统**：Settings 作为 Appearance 入口统一控制 Light/Dark/System、Accent 与 Surface/Background 预设，所有标准组件与页面只消费语义主题。
+7. **快速感知**：真实加载性能与 perceived performance 同时优化，让点击、导航、查询、刷新和 mutation 尽快产生可靠反馈，并尽量维持布局和上下文稳定。
 
 本计划覆盖 `docs/development/design/**`、`apps/admin`、`packages/ui` 及与 Admin UI 验证直接相关的测试和文档。默认不修改数据库、OpenAPI、领域 DTO、Account API、Maintenance、Storage、支付事实、权限规则或其他后端能力。
 
@@ -42,7 +47,7 @@
 - 不为了 UI/UX 重构替换 Next.js、React、Base UI、shadcn 或 Tailwind。
 - 不把所有业务组件强行抽象成通用组件；只要求基础控件标准化、稳定跨页面语义组件复用化。
 - 不把参考项目的产品皮肤原样复制到 Aisenhub。
-- 不以本计划为由新增 Dark Mode；完整 Dark Mode 当前不是 Active Requirement。
+- 不开放未经设计约束的任意颜色组合器；主题系统先提供经过完整状态、对比度和浏览器验证的受控预设。
 - 不因为工作区已经安装 React Query、React Hook Form、Zod 或 TanStack Table 就强制改造全部数据、表单或表格架构。若某项技术迁移确有必要，必须以真实复杂度和当前 Requirement 为依据。
 - 不在本阶段计划中改变 Admin 安全语义、MFA、幂等、unknown outcome、作用域或服务端授权边界。
 
@@ -100,8 +105,11 @@ Tailwind 继续保留。问题不是“是否使用 Tailwind”，而是“谁�
 
 - Product Character：Aisenhub Admin 应呈现的专业性、密度、克制程度、可扫描性和操作安全感。
 - Visual Direction：新的色彩关系、明暗层级、表面、边界、圆角、阴影、字体、密度、留白和强调方式。
+- Icon Language：普通 UI 图标统一来自标准图标库，建立稳定“语义 → 图标”映射；品牌 Logo、真实业务图片和确有专业缺口的图形才允许例外。
+- Appearance System：定义 Light/Dark/System，以及多套 Accent / Surface / Background 预设的组合边界、默认值、设置入口、持久化和状态色隔离规则。
 - Information Hierarchy：Page / Section / Surface / Table / Form / Inspector / Action 的优先级。
 - Interaction Character：hover、focus、selected、editing、loading、success、warning、danger、disabled、unknown outcome 的体验规则。
+- Perceived Performance：首屏、页面切换、查询、refresh、mutation 的稳定骨架、渐进填充、可信数据保留、即时反馈和长等待表达。
 - Component Adaptation：标准组件在 Aisenhub 中的默认 size、density、variant 选择，不重新发明基础组件。
 - Admin Patterns：列表/筛选/搜索、List + Inspector、表单、危险操作、异步/空/错状态、导航、Command Palette、PlatformSwitcher 等任务模式。
 - Responsive / Density：桌面密集工作区与窄屏降级规则。
@@ -120,7 +128,8 @@ Tailwind 继续保留。问题不是“是否使用 Tailwind”，而是“谁�
 3. 同步优化该页面的信息层级、密度、视觉、响应式和交互状态。
 4. 保留原业务、安全、URL、权限、MFA、unknown outcome 和恢复语义。
 5. 在桌面、窄屏、键盘、Loading/Empty/Error/Refresh Error、危险操作等真实状态下验证。
-6. 批次完成后清理被替代的 CSS/自绘实现，再进入下一个批次。
+6. 同时检查主题切换、标准图标、首屏/刷新/局部加载的 perceived performance，避免重构后视觉更统一但更“慢”。
+7. 批次完成后清理被替代的 CSS/自绘实现，再进入下一个批次。
 
 `PlatformSwitcher` 是典型 pilot：它的业务搜索、服务端游标、路由映射和 stale-request 防护继续属于 Feature；触发按钮、输入、Popover/Listbox、状态、Loading/Error 等基础外观与交互应尽量消费标准能力。
 
@@ -130,6 +139,9 @@ Tailwind 继续保留。问题不是“是否使用 Tailwind”，而是“谁�
 - **设计污染风险**：旧 `DESIGN.md` 和参考产品皮肤均不得作为默认方向；阶段 02 必须从 Product Requirement + 新 Design System 出发。
 - **双轨漂移风险**：Theme、Skin、Component、Feature 的职责若不先冻结，视觉优化会重新产生 CSS 多所有者。阶段 01/02 未完成前不得大规模执行阶段 03。
 - **行为回归风险**：UI 重构可能意外改变 focus、keyboard、submit、route、MFA、confirm、unknown outcome。标准组件替换必须验证真实行为而不仅是截图。
+- **旧布局惯性风险**：不得因为旧 DOM/CSS 已存在就只做换色和圆角调整；阶段 02 要先冻结新信息层级，阶段 03 再按真实任务重组页面。
+- **主题碎片化风险**：Appearance 只允许一个 Theme owner，Accent/Surface 切换不能演化成 Feature 局部色板，状态色也不能跟随强调色失去语义。
+- **感知性能回归风险**：新视觉若增加大面积 skeleton、blur、动画或反复卸载内容，会让界面比旧版更慢；每批必须同时观察真实请求与用户感知。
 - **抽象过度风险**：不建立万能 Page Builder、万能 Form 配置框架或业务组件生成器。只抽取已经出现稳定复用价值的能力。
 - **发布风险**：阶段 03/04 涉及共享 UI、全局样式、响应式和交互，默认至少按 R2 处理；若触及资金、权限、身份或高风险 mutation 语义则必须升级分级或拆出独立任务。
 
@@ -140,7 +152,7 @@ Tailwind 继续保留。问题不是“是否使用 Tailwind”，而是“谁�
 - Theme → Skin → Standard Component → Semantic UI → Feature/Page 的职责在代码与文档中一致，视觉定义不再由多层随意重复拥有。
 - 基础控件优先由 `@kit/ui` 标准能力提供，业务页面优先组合；Feature 自绘基础控件皮肤显著收敛并受静态规则约束。
 - 所有 Admin 路由按批次完成 UI/UX 优化，并在最终阶段完成全路由、多个 viewport、键盘/焦点、状态语义和本地质量门槛验证。
-- `REQ-ADM-002/003/004/005/007/008/009` 的适用 Acceptance 均有真实验证证据，且没有因为视觉改造降低服务端安全与失败恢复语义。
+- `REQ-ADM-002/003/004/005/007/008/009/011/012` 的适用 Acceptance 均有真实验证证据，且没有因为视觉改造降低服务端安全与失败恢复语义。
 
 ## 待确认项
 

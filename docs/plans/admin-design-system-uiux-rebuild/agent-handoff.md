@@ -29,6 +29,8 @@
 
 核心冻结原则：基础控件标准化、业务界面组合化、结构行为与视觉皮肤分层、视觉定义单一所有者。迁移参考项目通用 Design System，但不复制其产品专属视觉；新的 apps/admin/DESIGN.md 必须从零建立，旧 DESIGN.md 不具有继承权。
 
+新增硬约束：普通 UI 图标统一使用标准图标库（当前为 lucide-react）和稳定语义映射；现有页面只提供业务事实而没有视觉继承权，允许重新设计布局/颜色/组件排布；Admin 必须设计并实现由 Settings 统一控制的 Light/Dark/System + Accent + Surface/Background 主题系统；每个页面批次同时优化真实性能和 perceived performance，避免整页清空、短 loading 闪烁和无反馈等待。
+
 保持现有 Next.js/React/Base UI/shadcn/Tailwind 技术底座。Standard Component 负责 DOM/ARIA/keyboard/focus/value/open-close/positioning/API，Component Skin 负责可复用视觉，Feature 负责业务和外部 layout。不要让 Feature 用无界 className override 建第二皮肤。
 
 阶段 03 的组件优化与视觉/交互优化必须在同一真实页面批次中汇合。任何 shared component 替换都要保留并验证原有安全、MFA、scope、route、submit、focus、keyboard、unknown outcome 和恢复语义。
@@ -52,6 +54,9 @@
 - 不因为“标准化”把业务查询、路由、分页、写入或安全规则塞进 shared UI。
 - 不为了统一视觉创建万能 Page Builder、Form DSL 或业务组件生成框架。
 - 不复制旧 `DESIGN.md` 或参考产品的具体色值/品牌皮肤。
+- 不把现有 DOM/CSS 排布当新设计约束，也不以“换颜色、换圆角”代替页面信息层级重构。
+- 不在 Feature 自绘普通 UI icon 或建立第二套主题状态/局部色板；品牌/专业图形例外必须有明确 owner。
+- 不以大面积 skeleton、blur 或装饰动画掩盖加载问题；保留可信数据和稳定布局时优先局部反馈。
 
 ## 阶段完成门槛
 

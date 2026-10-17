@@ -24,8 +24,8 @@
 
 检查：去掉颜色后，管理员仍能判断影响任务的状态吗？
 
-## UX-VISUAL-THEME-CONSISTENCY — MUST（仅产品支持主题切换时）
+## UX-VISUAL-THEME-CONSISTENCY — MUST（产品支持主题切换时）
 
 **主题切换保持组件语义与用户选择。** 同一组件和状态在不同主题保持含义；只有一个 Theme owner。刷新、首屏、系统变化、Overlay 和原生控件按产品契约一致。
 
-本规则不会因为当前 CSS 存在 `.dark` 就要求 Aisenhub 必须提供完整 Dark Mode；是否支持由 Product Requirement/Design Direction 决定。
+Aisenhub Admin 已由 `REQ-ADM-011` 明确启用本规则：阶段 02/03 必须覆盖 Light/Dark/System 与冻结的 Accent/Surface 预设。Accent 只改变强调体系，success/warning/danger/info/unknown 等状态色保持语义独立；Feature 不得维护第二套主题状态或局部色板。

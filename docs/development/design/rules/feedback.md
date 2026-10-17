@@ -2,7 +2,7 @@
 
 ## UX-FEEDBACK-ASYNC-LOADING — MUST
 
-等待反馈适应真实等待并保持界面稳定。近乎即时操作避免闪烁；长等待选择 skeleton/busy/progress。只有可靠分母才显示百分比，不假造 ETA/进度；保留无冲突操作与现有可信数据。
+等待反馈适应真实等待并保持界面稳定。近乎即时操作避免闪烁；长等待选择 skeleton/busy/progress。只有可靠分母才显示百分比，不假造 ETA/进度；保留无冲突操作与现有可信数据。优先让 Shell、Toolbar、已加载列表和当前选择保持稳定，再局部呈现 refreshing/loading，避免每次请求都让整页看起来重新启动。
 
 ## UX-FEEDBACK-EMPTY-STATES — MUST
 
@@ -22,4 +22,4 @@ queued/running/cancelling/cancelled/failure/partial success/completed 等只消�
 
 ## UX-FEEDBACK-NECESSARY-COMPLETION — MUST
 
-重要保存、导出、管理动作有可理解完成依据；可直接观察到的普通更新不重复 Toast。短消息不承载唯一恢复动作，也不抢焦点。
+重要保存、导出、管理动作有可理解完成依据；用户触发 mutation 后应尽快得到适用的“已接收/处理中”反馈，但不能把 accepted 冒充 success。可直接观察到的普通更新不重复 Toast。短消息不承载唯一恢复动作，也不抢焦点。

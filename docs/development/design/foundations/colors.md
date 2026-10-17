@@ -25,4 +25,6 @@
 
 只有 Product Requirement 明确支持主题切换时才要求多主题。支持多个主题时，同一语义在不同主题保持含义，不通过整页 filter/opacity 改变数据、图片或业务内容。
 
-当前 Admin 是否最终支持完整 Dark Mode 仍由阶段 02 决定；本规则不把现有 `.dark` token 预留升级为产品需求。
+Aisenhub Admin 的 `REQ-ADM-011` 已明确启用统一主题系统：阶段 02 必须设计 Light/Dark/System，并提供多套经过验证的 Accent 与 Surface/Background 预设。Accent 是交互强调，不得重定义 success/warning/danger/info/unknown 等业务状态；Theme 切换必须经同一语义 token 链路覆盖标准组件、Overlay 和页面，而不是页面级换色。
+
+通用层仍不规定具体色值、默认 Accent 或主题数量，也不要求开放任意自由取色器；这些属于 Product Adaptation。

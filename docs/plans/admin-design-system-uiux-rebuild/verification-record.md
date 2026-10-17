@@ -12,7 +12,7 @@
 - 初始工作区状态：clean；从已推送的总计划 commit 建立阶段分支。
 - 运行环境：Local；阶段 01 为 R0 文档迁移，不修改运行产物。
 - 已知基线失败：无已知；阶段检查尚待本轮收尾实际运行。
-- 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009`
+- 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
 ## 阶段状态总表
 
@@ -40,6 +40,7 @@
 - 实际修改文件及职责：未验证
 - 新 Product Design Direction：未验证
 - 旧设计非继承检查：未验证
+- 已确认设计输入：普通 UI 图标统一标准库；旧页面布局/颜色/组件排布无视觉继承权；Settings 统一 Theme/Appearance（Light/Dark/System + Accent + Surface/Background）；实际与感知加载性能同时优化。以上已经写入 Spec、Design System 原则和阶段计划，但尚未创建新 `apps/admin/DESIGN.md`。
 - 与计划偏差：未验证
 - 未完成或未验证内容：未验证
 
@@ -71,6 +72,9 @@
 | 2026-10-17 | 01 | worktree based on `50bfa96` | Node 统计 `docs/development/design/rules/*.md` 的 `## UX-` | Local | 0 | PASS：`rule_count=62` |
 | 2026-10-17 | 01 | worktree based on `50bfa96` | Node 扫描通用 Design System 正文中的参考产品特定字体/色值/时长/视觉词 | Local | 0 | PASS：`product_specific_hits=0`；`reference-migration-inventory.md` 历史说明明确排除 |
 | 2026-10-17 | 01 | reference `3434619` | `git ls-files development/design` 分类计数 | Local / reference read-only | 0 | PASS：56 files = foundations 11 + components 6 + patterns 8 + rules 16 + products 14 + root 1；inventory 全覆盖 |
+| 2026-10-17 | pre-02 requirements | worktree based on `e48ec15` | `pnpm docs:check` | Local | 0 | PASS：新增主题/感知性能 Requirement 与设计原则/计划链接一致 |
+| 2026-10-17 | pre-02 requirements | worktree based on `e48ec15` | `pnpm contracts:check` | Local | 0 | PASS：文档需求调整未改变 Account/Admin wire contracts |
+| 2026-10-17 | pre-02 requirements | worktree based on `e48ec15` | `git diff --check` | Local | 0 | PASS |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -85,6 +89,8 @@
 | REQ-ADM-007 | Global/Platform 导航、PlatformSwitcher、Command Palette 快速定位可用 | 未验证 | 未验证 |
 | REQ-ADM-008 | 状态非颜色依赖；focus-visible/keyboard/reduced-motion 等可访问性有效 | 未验证 | 未验证 |
 | REQ-ADM-009 | 安全状态和错误分类保持统一，不因视觉重构产生页面自判 403 | 未验证 | 未验证 |
+| REQ-ADM-011 | Settings 统一控制 Light/Dark/System 与受控 Accent/Surface 预设；全局 Theme owner 和状态色语义一致 | 未验证 | 未验证 |
+| REQ-ADM-012 | 首屏/导航/查询/refresh/mutation 反馈及时、布局稳定、可信数据保留，实际与感知性能均验证 | 未验证 | 未验证 |
 
 ## GitHub 交付记录
 
@@ -97,7 +103,7 @@
 
 ## 交接信息
 
-- 下一阶段从哪里开始：阶段 01 完成验证/交付后，阶段 02 从 `docs/development/design/README.md` 与 Product Requirement 开始创建全新 Aisenhub Admin Design Direction。
+- 下一阶段从哪里开始：阶段 02 从 `docs/development/design/README.md` 与 Product Requirement 开始创建全新 Aisenhub Admin Design Direction，并优先冻结标准图标、全新页面 hierarchy、Appearance Theme System 与 Perceived Performance 四项新增硬约束。
 - 必须先解决的问题：阶段 01 当前无内容阻塞，仍需完成本地检查与 GitHub 交付门槛。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。

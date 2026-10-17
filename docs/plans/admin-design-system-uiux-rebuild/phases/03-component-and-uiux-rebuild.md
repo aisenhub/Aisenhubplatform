@@ -6,7 +6,7 @@
 
 ## Requirements
 
-本阶段实际实施并验证 `REQ-ADM-002`、`REQ-ADM-003`、`REQ-ADM-004`、`REQ-ADM-005`、`REQ-ADM-007`、`REQ-ADM-008`、`REQ-ADM-009`。若某 Feature 涉及其他 Domain Requirement，执行批次时必须补读并加入该批次验收。
+本阶段实际实施并验证 `REQ-ADM-002`、`REQ-ADM-003`、`REQ-ADM-004`、`REQ-ADM-005`、`REQ-ADM-007`、`REQ-ADM-008`、`REQ-ADM-009`、`REQ-ADM-011`、`REQ-ADM-012`。若某 Feature 涉及其他 Domain Requirement，执行批次时必须补读并加入该批次验收。
 
 ## 阶段目标
 
@@ -36,13 +36,15 @@
 3. 判断缺口应属于已有 component prop、共享有限 variant、product adaptation 还是局部实现。
 4. 先修改/补齐共享能力，再让 Feature 消费；禁止先用 Feature override 赶页面效果。
 5. 同步优化信息 hierarchy、spacing/density、responsive、visual states、copy hierarchy 和交互反馈。
-6. 验证 keyboard/focus、screen width、loading/empty/error/refresh error、selected、disabled、danger、unknown outcome 等适用状态。
-7. 删除该批次被替代的旧 CSS/自绘实现，确认没有两套同时生效。
-8. 小提交、记录验证，再进入下一批。
+6. 清理该批次普通 UI 的自绘/零散 icon，改为标准图标库与阶段 02 冻结的语义映射。
+7. 验证 Light/Dark/System 和适用 Accent/Surface 预设，确保不是只替换 primary 色，而是完整 Theme → Skin → Component 组合。
+8. 验证 keyboard/focus、screen width、loading/empty/error/refresh error、selected、disabled、danger、unknown outcome，以及首屏/刷新/mutation 的 perceived performance。
+9. 删除该批次被替代的旧 CSS/自绘实现，确认没有两套同时生效。
+10. 小提交、记录验证，再进入下一批。
 
 ## 首批 Pilot
 
-建议先以 Shell / Navigation / PlatformSwitcher / Topbar 为 pilot，因为它们覆盖 Global/Platform scope、responsive、浮层、搜索、键盘、状态和高频 shared primitives。PlatformSwitcher 的服务端搜索、游标分页、Abort/stale-request 防护、route mapping 等业务行为保持 Feature 所有；触发 Button、Input、Popover/Listbox、状态和 Loading/Error 外观应优先复用标准能力。
+建议先以 Shell / Navigation / PlatformSwitcher / Topbar / Appearance Settings 为 pilot，因为它们覆盖 Global/Platform scope、responsive、浮层、搜索、键盘、主题、状态和高频 shared primitives。PlatformSwitcher 的服务端搜索、游标分页、Abort/stale-request 防护、route mapping 等业务行为保持 Feature 所有；触发 Button、Input、Popover/Listbox、状态和 Loading/Error 外观应优先复用标准能力。Appearance Settings 同时验证 Theme owner、Portal/Overlay、刷新恢复和多套 Accent/Surface 的全局一致性。
 
 ## Shared Component 优先清单
 
@@ -68,6 +70,8 @@
 | Admin browser/E2E | `pnpm test:e2e:t12-r2` 或执行时确认的当前 Admin E2E 入口 | Local + Local Supabase | 受影响页面真实路径 PASS | 未运行 |
 | 文档 | `pnpm docs:check`、`pnpm contracts:check` | Local | PASS | 未运行 |
 | 浏览器人工矩阵 | 当前支持 desktop/narrow viewport + keyboard | Local | 页面可完成任务，无遮挡/焦点丢失/状态混淆 | 未运行 |
+| Appearance matrix | Light/Dark/System × 冻结 Accent/Surface 代表组合 | Local browser | Shell、标准组件、Overlay、focus、状态语义一致 | 未运行 |
+| Perceived performance | 首屏/导航/查询/refresh/mutation 真实路径 | Local browser | 反馈及时、布局稳定、可信数据保留、无无意义 loading 闪烁 | 未运行 |
 
 任何组件替换都必须验证原有 submit、focus restoration、Escape、Arrow key、controlled state、route mapping 和 dangerous-action confirmation 等真实行为，不允许用“视觉一致”代替行为验收。
 

@@ -10,11 +10,11 @@
 
 ## UX-PERF-RESOURCE-LOADING — MUST
 
-关键资源及时加载，低频/大资源按真实任务边界拆分或预热。静态导入的模块不会因为另一处 dynamic import 自动拆包；图片尺寸、字体加载和首屏稳定都需真实验证。
+关键资源及时加载，低频/大资源按真实任务边界拆分或预热。静态导入的模块不会因为另一处 dynamic import 自动拆包；图片尺寸、字体加载、首屏稳定和页面切换都需真实验证。性能设计同时考虑用户感知：Shell/导航等稳定框架不因局部数据请求反复重建，关键内容可以渐进填充，但不能用大面积 skeleton 闪烁掩盖不必要的等待。
 
 ## UX-PERF-MEASURED-BUDGET — SHOULD
 
-性能结论基于冻结场景、浏览器/设备、数据规模和冷/热状态实测；build 成功、chunk warning 或小 fixture 通过不能外推生产大数据场景。
+性能结论基于冻结场景、浏览器/设备、数据规模和冷/热状态实测；同时记录实际耗时和 perceived performance（首次可操作反馈、布局稳定、已有内容是否被清空、等待反馈是否及时）。build 成功、chunk warning 或小 fixture 通过不能外推生产大数据场景。
 
 ## UX-PERF-CACHE-OWNERSHIP — MUST
 
