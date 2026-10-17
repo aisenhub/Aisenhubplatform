@@ -651,6 +651,65 @@ async function runBrowserFlow(secret, primaryFactorId, backupFactorId) {
   assertStatus(aal2Status.status, 200, 'AAL2 Admin security status');
   assert.equal(aal2Status.payload?.data?.current_aal, 'aal2');
 
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme-mode'),
+    'system',
+    'Admin Appearance starts in System mode when no preference is stored',
+  );
+  assert.equal(await page.locator('html').getAttribute('data-accent'), 'blue');
+  assert.equal(
+    await page.locator('html').getAttribute('data-surface'),
+    'neutral',
+  );
+  await page.locator('[data-test="admin-appearance-trigger"]').click();
+  await page.locator('[data-test="admin-appearance-settings"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="appearance-mode-dark"]').click();
+  await page.locator('[data-test="appearance-accent-violet"]').click();
+  await page.locator('[data-test="appearance-surface-warm"]').click();
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme-mode'),
+    'dark',
+  );
+  assert.equal(
+    await page.locator('html').getAttribute('data-accent'),
+    'violet',
+  );
+  assert.equal(await page.locator('html').getAttribute('data-surface'), 'warm');
+  await page.keyboard.press('Escape');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page
+    .getByRole('heading', { name: '概览' })
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme-mode'),
+    'dark',
+    'Admin Appearance persists across a full browser refresh',
+  );
+  assert.equal(
+    await page.locator('html').getAttribute('data-accent'),
+    'violet',
+  );
+  assert.equal(await page.locator('html').getAttribute('data-surface'), 'warm');
+  assert.equal(
+    await page
+      .locator('html')
+      .evaluate((element) => element.classList.contains('dark')),
+    true,
+    'Dark Appearance keeps the shared .dark compatibility class in sync',
+  );
+  await page.locator('[data-test="admin-command-trigger"]').click();
+  await page.locator('[data-test="command-appearance"]').click();
+  await page.locator('[data-test="admin-appearance-settings"]').waitFor({
+    state: 'visible',
+  });
+  await page.locator('[data-test="appearance-mode-system"]').click();
+  await page.locator('[data-test="appearance-accent-blue"]').click();
+  await page.locator('[data-test="appearance-surface-neutral"]').click();
+  await page.keyboard.press('Escape');
+
   await page.goto(`${appUrl}/admin/security`, {
     waitUntil: 'domcontentloaded',
   });

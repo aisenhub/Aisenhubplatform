@@ -1,6 +1,6 @@
 # 阶段 03：组件与 UI/UX 并行全面重构
 
-状态：未开始
+状态：进行中
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -46,6 +46,69 @@
 
 建议先以 Shell / Navigation / PlatformSwitcher / Topbar / Appearance Settings 为 pilot，因为它们覆盖 Global/Platform scope、responsive、浮层、搜索、键盘、主题、状态和高频 shared primitives。PlatformSwitcher 的服务端搜索、游标分页、Abort/stale-request 防护、route mapping 等业务行为保持 Feature 所有；触发 Button、Input、Popover/Listbox、状态和 Loading/Error 外观应优先复用标准能力。Appearance Settings 同时验证 Theme owner、Portal/Overlay、刷新恢复和多套 Accent/Surface 的全局一致性。
 
+## 详细实施批次
+
+阶段 03 不采用一次性全站重写。每个批次独立完成 shared capability、真实页面组合、旧视觉清理、浏览器验证和小提交；只有前一批 shared API / Theme owner 稳定后才进入下一批。
+
+### 03A — Theme / Solid Glass / Shell Pilot
+
+**当前状态**：实现完成并通过 targeted static/unit/build + synthetic production browser；完整 R2 Local Supabase gate 因当前 Docker Desktop Linux Engine 不可连接而环境阻塞，必须在 Docker 可用后补测，未据此宣称整个阶段或 R2 已完成。
+
+**范围**：Root layout、Theme/Appearance owner、Shell、Sidebar、Topbar、PlatformSwitcher、Command Palette、Appearance Settings、全局页面 geometry，以及这些入口依赖的 Button/Input/Dialog/Sheet 等高频标准组件状态。
+
+**实施目标**：
+
+- 建立单一 Appearance owner，支持 `System / Light / Dark × Blue / Indigo / Violet / Azure × Neutral / Cool / Warm`，默认 `System + Blue + Neutral`。
+- 在 hydration 前恢复主题并解析 System，避免首屏 Light→Dark 闪烁；本地持久化，不新增后端偏好接口。
+- Root 同步 `data-theme` / `data-theme-mode` / `data-accent` / `data-surface`，并维护 `.dark` 兼容现有 shared UI。
+- 建立 Solid Glass material token：Canvas / Data / Structural / Raised / Modal，blur 可降级且不作为信息语义。
+- Sidebar 收敛到约 248px / 56px icon collapse；去除旧装饰 footer card；active state 使用 Accent + 非颜色结构线索。
+- Topbar 增加 Appearance 入口并保持 scope / Command Palette / session actions；Appearance 不成为第七个业务导航分类。
+- PlatformSwitcher 保留搜索、分页、Abort、stale-response、键盘和 route mapping，只替换基础控件/材质皮肤并改善 loading continuity。
+- Command Palette 增加 Appearance action，Overlay/Popup 使用 Raised/Modal glass，并继续满足 Ctrl/Cmd+K 与键盘导航。
+- 删除本批次旧 Teal/Light-first Shell 视觉 ownership；遗留业务页面可以暂时消费新 semantic token，但不得继续决定 Theme。
+
+**验收**：Admin typecheck/unit；Shell/navigation/platform switcher 既有单测；Light/Dark/System 代表组合；刷新恢复；窄屏 Sidebar Sheet；keyboard/focus；reduced motion；无主题闪屏；无 PlatformSwitcher 行为回归。
+
+### 03B — Standard Components + Semantic UI Skin
+
+**范围**：Button/Input/Select/Textarea/Checkbox/Switch/Table/Card/Alert/Badge/Dialog/Sheet/Popover/Tooltip/Tabs，以及 AsyncState、StatusBadge、ResourceId、SupportErrorId、ConfirmActionDialog、MutationState、ResourceInspector、OneTimeSecretPanel。
+
+**实施目标**：把真实页面已经使用的基础控件统一到 semantic token + finite variant；明确 data-slot/state contract；移除 Admin globals 中重复的标准控件皮肤；保证 Danger/Success/Warning/Info 不随 Accent 漂移。
+
+**验收**：shared UI typecheck/unit；所有适用 component state 的 Light/Dark、focus、disabled、error、portal/overlay；无 Feature 为普通控件新建第二皮肤。
+
+### 03C — High-frequency Platform / Account Workspaces
+
+**范围**：Global Overview、Platform Directory、Platform Overview、Global Accounts、Platform Accounts、Identity Detail / Account 360。
+
+**实施目标**：按新 hierarchy 重建 Page Header / Toolbar / Collection / Inspector / Detail；不继承旧 Card 排版；集合型任务采用 List/Table + Inspector；Background refresh 保留可信数据；Account 360 把治理动作与事实信息分层。
+
+**验收**：scope/URL/selection continuity、搜索/筛选、loading/read-error/empty/filtered-empty/refresh-error、danger + recent MFA、desktop/narrow、perceived performance。
+
+### 03D — Billing / Audit / Security
+
+**范围**：Global/Platform Billing、Audit、Security、Subscriptions/Entitlements 等高状态密度工作区。
+
+**实施目标**：强化异常/状态层级，统一 technical metadata 与 support ID；accepted/success/failure/unknown outcome 不混淆；高风险动作保持 reason、recent MFA、no-auto-replay。
+
+**验收**：服务端错误分类、危险确认、unknown outcome、表格/Inspector、键盘与主题矩阵。
+
+### 03E — Config / Feedback / Settings / Remaining Routes
+
+**范围**：Files/Config、Feedback、Plans、Redemption、Integration、Keys、Origins、Platform Settings、Deletion Jobs 及 inventory 中剩余 Admin route。
+
+**实施目标**：完成长尾页面全量覆盖；清理剩余 raw control / icon / duplicate skin；所有 Admin route 明确归属某批次并留下验证证据。
+
+**验收**：全路由 desktop/narrow、主题、键盘、异步状态、危险操作；最终运行完整 R2 本地门槛并为阶段 04 提供可治理基线。
+
+## 批次提交与停止条件
+
+- 03A–03E 每批至少一个独立 commit；共享 Theme/Skin/API 在批次中由唯一 owner 修改。
+- 若 shared component 改动导致行为回归，先在 shared 层修复，不允许用多个 Feature override 掩盖。
+- 若某页面需要改变 API/数据库/权限业务合同，停止该子项并拆新计划，不把后端改动混进 UI 批次。
+- 阶段 03 可以在单次会话中完成一个或多个完整批次；不得把未验证的后续批次标成已完成。
+
 ## Shared Component 优先清单
 
 按实际引用量和页面批次推进，优先审查 Button、Input、Textarea、Label、Select、Checkbox、Switch、Table、Card、Alert、Badge、Dialog、Sheet、Popover、Dropdown、Tooltip、Tabs，以及 AsyncState、StatusBadge、ResourceId、SupportErrorId、ConfirmActionDialog、MutationState、ResourceInspector、OneTimeSecretPanel 等 semantic UI。
@@ -62,16 +125,16 @@
 
 | 检查 | 命令或方法 | 环境 | 预期结果 | 实际结果 |
 | --- | --- | --- | --- | --- |
-| 格式 | `pnpm format:check` | Local | PASS | 未运行 |
-| Lint | `pnpm lint` | Local | PASS | 未运行 |
-| TypeScript | `pnpm typecheck` | Local | PASS | 未运行 |
-| Production build | `pnpm build` | Local | PASS | 未运行 |
-| Unit | `pnpm test:unit` | Local | 受影响 shared/Admin tests PASS | 未运行 |
-| Admin browser/E2E | `pnpm test:e2e:t12-r2` 或执行时确认的当前 Admin E2E 入口 | Local + Local Supabase | 受影响页面真实路径 PASS | 未运行 |
-| 文档 | `pnpm docs:check`、`pnpm contracts:check` | Local | PASS | 未运行 |
-| 浏览器人工矩阵 | 当前支持 desktop/narrow viewport + keyboard | Local | 页面可完成任务，无遮挡/焦点丢失/状态混淆 | 未运行 |
-| Appearance matrix | Light/Dark/System × 冻结 Accent/Surface 代表组合 | Local browser | Shell、标准组件、Overlay、focus、状态语义一致 | 未运行 |
-| Perceived performance | 首屏/导航/查询/refresh/mutation 真实路径 | Local browser | 反馈及时、布局稳定、可信数据保留、无无意义 loading 闪烁 | 未运行 |
+| 格式 | `pnpm format:check` | Local | PASS | 03A final candidate PASS；首次发现 3 个新增文件格式差异，定向格式化后复测通过 |
+| Lint | `pnpm lint` | Local | PASS | 03A PASS：358 files，0 warnings / 0 errors |
+| TypeScript | `pnpm typecheck` | Local | PASS | 03A targeted：`pnpm --filter admin typecheck` 与 `pnpm --filter @kit/ui typecheck` PASS；全仓最终候选仍在阶段末复跑 |
+| Production build | `pnpm build` | Local | PASS | 03A targeted：`pnpm --filter admin build` PASS；Next.js 16.3.8 完整 Admin route tree 构建成功 |
+| Unit | `pnpm test:unit` | Local | 受影响 shared/Admin tests PASS | 03A Admin PASS：17 files / 77 tests，含 Appearance model 与既有 navigation/platform switcher tests |
+| Admin browser/E2E | `pnpm test:e2e:t12-r2` 或执行时确认的当前 Admin E2E 入口 | Local + Local Supabase | 受影响页面真实路径 PASS | 03A 完整 R2 BLOCKED：TASK-0801 在 `db:start` 因 Docker Desktop Linux Engine 不可连接失败；未执行后续 Supabase/API/T12 gates。Synthetic production browser 独立 PASS |
+| 文档 | `pnpm docs:check`、`pnpm contracts:check` | Local | PASS | 03A PASS：115 documents；Account/Admin OpenAPI、Platform integration、consumer compatibility 均通过 |
+| 浏览器人工矩阵 | 当前支持 desktop/narrow viewport + keyboard | Local | 页面可完成任务，无遮挡/焦点丢失/状态混淆 | 03A synthetic production browser PASS：60 route/viewport combinations + mobile nav + keyboard/listbox/Inspector/危险确认，0 runtime exception |
+| Appearance matrix | Light/Dark/System × 冻结 Accent/Surface 代表组合 | Local browser | Shell、标准组件、Overlay、focus、状态语义一致 | 03A PASS：默认 System+Blue+Neutral、Dark+Violet+Warm、刷新持久化、`.dark` 同步、Command Palette/Topbar 双入口；其余组合由同一 token model 驱动，阶段后续继续抽查 |
+| Perceived performance | 首屏/导航/查询/refresh/mutation 真实路径 | Local browser | 反馈及时、布局稳定、可信数据保留、无无意义 loading 闪烁 | 03A PASS：PlatformSwitcher 已知 scope 不再因首轮列表读取清空；background refresh error 保留现有 rows；Shell/Toolbar 稳定 |
 
 任何组件替换都必须验证原有 submit、focus restoration、Escape、Arrow key、controlled state、route mapping 和 dangerous-action confirmation 等真实行为，不允许用“视觉一致”代替行为验收。
 

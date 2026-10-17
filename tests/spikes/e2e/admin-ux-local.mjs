@@ -829,19 +829,36 @@ try {
   }
   await page.locator('[data-test="admin-sidebar-toggle"]').click();
   await page.locator('[data-slot="sidebar"][data-state="collapsed"]').waitFor();
-  assert.deepEqual(await globalNavigationButtons.allInnerTexts(), [
-    '仪表盘',
-    '平台',
-    '用户',
-    '业务',
-    '审计',
-    '安全',
-  ]);
   assert.equal(
     await globalNavigationButtons.locator('svg').count(),
     6,
-    'Collapsed Global Sidebar keeps an icon for every compact label',
+    'Collapsed Global Sidebar keeps an icon for every destination',
   );
+  const collapsedNavigation = await globalNavigationButtons.evaluateAll(
+    (nodes) =>
+      nodes.map((node) => ({
+        tagName: node.tagName,
+      })),
+  );
+  assert.deepEqual(
+    collapsedNavigation.map((item) => item.tagName),
+    ['A', 'A', 'A', 'A', 'A', 'A'],
+    'Collapsed Global Sidebar destinations remain semantic links',
+  );
+  for (const label of [
+    '仪表盘',
+    '平台中心',
+    '用户中心',
+    '业务中心',
+    '审计中心',
+    '安全中心',
+  ]) {
+    assert.equal(
+      await globalSidebar.getByRole('link', { name: label }).count(),
+      1,
+      `Collapsed Global Sidebar keeps an accessible name for ${label}`,
+    );
+  }
   await page.locator('[data-test="admin-sidebar-toggle"]').click();
   await page.locator('[data-slot="sidebar"][data-state="expanded"]').waitFor();
   assert.deepEqual(await globalNavigationButtons.allInnerTexts(), [
@@ -853,7 +870,60 @@ try {
     '安全中心',
   ]);
   console.log(
-    'PASS: Global Sidebar uses flat business navigation and readable compact labels',
+    'PASS: Global Sidebar uses flat business navigation and accessible icon-only collapse',
+  );
+
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme-mode'),
+    'system',
+    'Admin Appearance defaults to System mode',
+  );
+  assert.equal(await page.locator('html').getAttribute('data-accent'), 'blue');
+  assert.equal(
+    await page.locator('html').getAttribute('data-surface'),
+    'neutral',
+  );
+  await page.locator('[data-test="admin-appearance-trigger"]').click();
+  await page.locator('[data-test="admin-appearance-settings"]').waitFor();
+  await page.locator('[data-test="appearance-mode-dark"]').click();
+  await page.locator('[data-test="appearance-accent-violet"]').click();
+  await page.locator('[data-test="appearance-surface-warm"]').click();
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme-mode'),
+    'dark',
+  );
+  assert.equal(
+    await page.locator('html').getAttribute('data-accent'),
+    'violet',
+  );
+  assert.equal(await page.locator('html').getAttribute('data-surface'), 'warm');
+  await page.keyboard.press('Escape');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.locator('[data-test="platform-directory-table"]').waitFor();
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme-mode'),
+    'dark',
+    'Appearance mode survives a full browser refresh',
+  );
+  assert.equal(
+    await page.locator('html').getAttribute('data-accent'),
+    'violet',
+  );
+  assert.equal(await page.locator('html').getAttribute('data-surface'), 'warm');
+  assert.equal(
+    await page
+      .locator('html')
+      .evaluate((element) => element.classList.contains('dark')),
+    true,
+  );
+  await page.locator('[data-test="admin-appearance-trigger"]').click();
+  await page.locator('[data-test="appearance-mode-system"]').click();
+  await page.locator('[data-test="appearance-accent-blue"]').click();
+  await page.locator('[data-test="appearance-surface-neutral"]').click();
+  await page.keyboard.press('Escape');
+  console.log(
+    'PASS: Appearance switches Mode/Accent/Surface globally and persists across refresh',
   );
 
   const switcherTrigger = page.locator(
@@ -1098,7 +1168,10 @@ try {
   );
   await page.keyboard.press('Control+k');
   await page.getByRole('dialog').waitFor();
+  await page.locator('[data-test="command-appearance"]').click();
+  await page.locator('[data-test="admin-appearance-settings"]').waitFor();
   await page.keyboard.press('Escape');
+  console.log('PASS: Command Palette opens the global Appearance settings');
   await page.locator('[data-test="admin-skip-link"]').focus();
   await page.keyboard.press('Enter');
   assert.equal(

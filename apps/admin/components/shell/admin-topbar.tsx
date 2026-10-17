@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { LogOut, Palette } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Separator } from '@kit/ui/separator';
@@ -12,6 +13,8 @@ import {
   adminNavigationLabel,
   parseAdminPlatformPath,
 } from '../navigation/admin-navigation';
+import { AdminAppearanceSettings } from '../appearance/admin-appearance-settings';
+import { useAdminAppearance } from '../appearance/admin-appearance';
 import { AdminCommandMenu } from '../navigation/admin-command-menu';
 import { useAdminShellContext } from './admin-shell-context';
 
@@ -19,6 +22,7 @@ export function AdminTopbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { platform } = useAdminShellContext();
+  const { openSettings } = useAdminAppearance();
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
   const pageLabel = adminNavigationLabel(pathname);
@@ -81,12 +85,24 @@ export function AdminTopbar() {
         </div>
         <AdminCommandMenu compact />
         <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={openSettings}
+          aria-label="打开外观设置"
+          title="外观设置"
+          data-test="admin-appearance-trigger"
+        >
+          <Palette aria-hidden="true" />
+        </Button>
+        <Button
           variant="ghost"
           size="sm"
           onClick={() => void logout()}
           disabled={loggingOut}
           data-test="admin-logout"
         >
+          <LogOut aria-hidden="true" />
           {loggingOut ? '退出中…' : '退出登录'}
         </Button>
         {logoutError ? (
@@ -98,6 +114,7 @@ export function AdminTopbar() {
           </span>
         ) : null}
       </div>
+      <AdminAppearanceSettings />
     </header>
   );
 }

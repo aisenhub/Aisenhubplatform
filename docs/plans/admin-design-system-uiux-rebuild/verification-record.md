@@ -7,11 +7,11 @@
 - 优化目标：迁移通用 Design System，从零建立 Aisenhub Design Direction，并完成 Admin 组件、视觉、交互与治理的全面重构。
 - 实施范围：`docs/development/design/**`、`apps/admin/**`、`packages/ui/**` 及适用 Admin tests/docs。
 - GitHub 仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
-- 当前实施分支：`codex/admin-design-direction-phase2`
-- 阶段 02 起始 commit：`0ee71cf8d319f1c86e56216f45055c31e4791775`
-- 阶段 02 初始工作区状态：clean；从已推送的新增 Admin 设计 Requirement 基线建立短期分支。
-- 运行环境：Local；阶段 02 为 R0 设计/文档冻结，不修改 Admin 运行 UI。
-- 已知基线失败：无已知；阶段 02 检查待本轮收尾实际运行。
+- 当前实施分支：`codex/admin-uiux-phase3`
+- 阶段 03 起始 commit：`8d30bfcf5c1d12890433a3196085fe4f759089f0`
+- 阶段 03 初始工作区状态：clean；从已交付阶段 02 收尾 commit 建立独立短期分支。
+- 运行环境：Local；阶段 03 至少 R2。03A targeted/synthetic 验证可运行，但完整 R2 当前被本机 Docker Desktop Linux Engine 未运行阻塞。
+- 已知环境阻塞：`pnpm run verify:task:0801 --reuse-local` 能进入工具链检查，但在 `db:start` 无法连接 `dockerDesktopLinuxEngine`；这不是产品 PASS，也不修改代码。
 - 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
 ## 阶段状态总表
@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
-| 03 | Component + UI/UX Rebuild | 未开始 | 未验证 | 依赖 01、02 | 未验证 | 未验证 |
+| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 已实现；targeted static/unit/build 与 synthetic production browser 已通过 | 03A 仍需 Docker 可用后补完整 R2；随后执行 03B–03E | 未创建 | 未 push |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
@@ -46,12 +46,12 @@
 
 ### 阶段 03：Component + UI/UX Rebuild
 
-- 实际页面/路由批次：未验证
-- shared component / Theme / Skin 变更：未验证
-- 已优化 UI/UX 行为：未验证
-- Local browser / Supabase 验证：未验证
-- 与计划偏差：未验证
-- 未完成路由/状态：未验证
+- 实际页面/路由批次：03A 覆盖 Root layout、Shell、Sidebar、Topbar、PlatformSwitcher、Command Palette、Appearance Settings 与全局 Theme/material；业务页面只被动消费新 semantic theme，尚未进入 03C–03E 页面重排。
+- shared component / Theme / Skin 变更：新增 Admin Appearance model/provider/pre-hydration init/settings/toaster；`globals.css` 建立 Mode × Accent × Surface semantic theme 与 Solid Glass structural/raised material/fallback；Button 增加稳定 `data-variant` / `data-size`；Sidebar 约 248/56 icon-only；PlatformSwitcher Trigger/Search/Load-more/Retry 回到标准 Button/Input。
+- 已优化 UI/UX 行为：Appearance 可由 Topbar 或 Command Palette 打开；System/Light/Dark、四 Accent、三 Surface 统一切换并本地持久化；PlatformSwitcher 已知 current scope 在首轮 list load 时保持可见；background refresh 保留可信数据；Sidebar 折叠为纯 icon 视觉并保留 accessible name。
+- Local browser / Supabase 验证：synthetic production browser PASS，覆盖 60 route/viewport combinations、Appearance 切换/刷新持久化、PlatformSwitcher 搜索/键盘/窄屏、Command Palette、refresh error、Audit Inspector、Account 360 危险确认、mobile nav、fail-closed security，0 runtime exception。完整 TASK-0801 R2 在启动 Local Supabase 时因 Docker Desktop Linux Engine 不可连接而 BLOCKED，后续 gates 未执行。
+- 与计划偏差：无产品范围偏差。浏览器调试期间最初两次 Sidebar accessible-name 复测使用了旧 production build，随后重新 build 当前源码再验证；最终候选 PASS。TASK-0801 另有两次错误调用形式在进入 gate 前被脚本/runner 拒绝，无副作用，真实 R2 运行结果以上述 Docker 阻塞为准。
+- 未完成路由/状态：03B Standard Components + Semantic UI、03C Platform/Account 高频工作区、03D Billing/Audit/Security、03E remaining routes 均未开始；03A 还需 Docker 恢复后补跑完整 R2/T12。
 
 ### 阶段 04：Convergence + Governance
 
@@ -82,6 +82,21 @@
 | 2026-10-17 | 02 | worktree based on `0ee71cf` | Node current normative-doc legacy visual term scan | Local | 0 | PASS：旧 North Star/旧色板词在当前权威 docs / PRODUCT / DESIGN 中 0 命中 |
 | 2026-10-17 | 02 | worktree based on `0ee71cf` | Node `.impeccable` + `DESIGN.md` coverage check | Local | 0 | PASS：旧生成设计元数据已删除；基础设计 coverage 15/15 |
 | 2026-10-17 | 02 | worktree based on `0ee71cf` | Node Requirement/material design review | Local | 0 | PASS：10 个 Requirement/material groups 完整，包含 recent MFA/step-up/security classification |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm --filter admin typecheck` | Local | 0 | PASS |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm --filter @kit/ui typecheck` | Local | 0 | PASS |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm format:check` first run | Local | 1 | FAIL：3 个本批新增/修改文件格式差异；只定向运行 Oxfmt 修复本批文件，未格式化无关文件 |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm format:check` final | Local | 0 | PASS：423 files |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm lint` final | Local | 0 | PASS：358 files，0 warnings / 0 errors |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm --filter admin test:unit` final | Local | 0 | PASS：17 files / 77 tests |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm --filter admin build` final | Local | 0 | PASS：Next.js 16.3.8 production build、完整 Admin route tree |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | Node legacy Teal scan on 03A Theme/Shell paths | Local | 0 | PASS：旧 Teal runtime values 0 命中 |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | synthetic production `admin-ux-local.mjs` first current-source candidate | Local browser | 1 | FAIL：icon-only Sidebar accessible-name 断言暴露文本隐藏问题；调整为折叠态 `sr-only` 并重新 production build |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | synthetic production `admin-ux-local.mjs` final rebuilt candidate | Local browser | 0 | PASS：60 route/viewport combinations + Appearance persistence + PlatformSwitcher keyboard/search + Command Palette + refresh-error + Audit/Account/mobile/security；0 runtime exception |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm run verify:task:0801 --reuse-local` | Local + Local Supabase | 1 | BLOCKED：toolchain check PASS 后 `db:start` 无法连接 Docker Desktop Linux Engine；后续 R2/API/DB/T12 未执行，不记 PASS |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm docs:check` final | Local | 0 | PASS：115 documents，required entries / local links / navigation consistent |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm contracts:check` final | Local | 0 | PASS：Account/Admin OpenAPI、Platform integration、consumer compatibility 均通过 |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm format:check` after architecture/verification sync | Local | 0 | PASS：423 files |
+| 2026-10-17 | 03A | worktree based on `8d30bfc` | `git diff --check` final | Local | 0 | PASS |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -93,11 +108,11 @@
 | REQ-ADM-003 | 桌面高效密度、窄屏关键任务可用，表格/浮层键盘触控可用 | 未验证 | 未验证 |
 | REQ-ADM-004 | 高风险操作保持 target/影响/reason/恢复语义，服务端授权不被 UI 替代 | 未验证 | 未验证 |
 | REQ-ADM-005 | loading/read error/empty/refresh error/unknown outcome 不混淆 | 未验证 | 未验证 |
-| REQ-ADM-007 | Global/Platform 导航、PlatformSwitcher、Command Palette 快速定位可用 | 未验证 | 未验证 |
-| REQ-ADM-008 | 状态非颜色依赖；focus-visible/keyboard/reduced-motion 等可访问性有效 | 未验证 | 未验证 |
+| REQ-ADM-007 | Global/Platform 导航、PlatformSwitcher、Command Palette 快速定位可用 | 03A synthetic production browser：Global/Platform Sidebar、PlatformSwitcher search/keyboard/narrow、Command Palette/Appearance 均 PASS | 03A 局部 PASS；全阶段继续验证 |
+| REQ-ADM-008 | 状态非颜色依赖；focus-visible/keyboard/reduced-motion 等可访问性有效 | 03A synthetic production browser：icon-only Sidebar 保留 accessible name；PlatformSwitcher listbox keyboard、focusable scroll、reduced-motion context 与 60 route/viewport combinations PASS | 03A 局部 PASS；全阶段继续验证 |
 | REQ-ADM-009 | 安全状态和错误分类保持统一，不因视觉重构产生页面自判 403 | 未验证 | 未验证 |
-| REQ-ADM-011 | Settings 统一控制 Light/Dark/System 与受控 Accent/Surface 预设；全局 Theme owner 和状态色语义一致 | 未验证 | 未验证 |
-| REQ-ADM-012 | 首屏/导航/查询/refresh/mutation 反馈及时、布局稳定、可信数据保留，实际与感知性能均验证 | 未验证 | 未验证 |
+| REQ-ADM-011 | Settings 统一控制 Light/Dark/System 与受控 Accent/Surface 预设；全局 Theme owner 和状态色语义一致 | 03A 单一 Appearance owner；默认 System+Blue+Neutral；Dark+Violet+Warm browser 切换与刷新持久化；Topbar/Command Palette 同一 Settings Sheet；status token 与 Accent 分离 | 03A 局部 PASS；03B–03E 仍需验证全部标准组件/页面 |
+| REQ-ADM-012 | 首屏/导航/查询/refresh/mutation 反馈及时、布局稳定、可信数据保留，实际与感知性能均验证 | 03A PlatformSwitcher 已知 scope 保留、background refresh failure 保留 rows、Shell/Toolbar 稳定；synthetic browser 真实验证 | 03A 局部 PASS；全站页面与 mutation 仍待后续批次 |
 
 ## GitHub 交付记录
 
@@ -110,9 +125,9 @@
 
 ## 交接信息
 
-- 下一阶段从哪里开始：阶段 03 从 `apps/admin/DESIGN.md`、`docs/development/design/README.md` 与 Phase 03 页面批次计划开始，首批处理 Shell / Navigation / Topbar / PlatformSwitcher / Command Palette / Appearance Settings。
-- 必须先解决的问题：阶段 01/02 当前无内容阻塞；阶段 03 开始前重新 inventory 当前 route/component/CSS ownership，并按 R2 规则建立新短期分支。
+- 下一阶段从哪里开始：阶段 03A 已实现；下一代码批次为 03B Standard Components + Semantic UI Skin。继续前先复用当前 Appearance/Solid Glass Theme owner，不得由 Feature 新建主题或基础 skin。
+- 必须先解决的问题：Docker Desktop Linux Engine 恢复后补跑 03A 完整 TASK-0801/T12 R2；该环境阻塞不应被写成 PASS。03B 可做不依赖数据库的 shared inventory/实现，但阶段 03 最终退出前必须完成 R2。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前未提交修改及归属：本条记录更新只做阶段 02 交付状态收尾，不包含阶段 03 运行代码。
+- 当前未提交修改及归属：03A Theme/Appearance/Shell/PlatformSwitcher、相关 shared Button contract、browser tests 与 Architecture/Plan 同步，待本批 commit/push。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。

@@ -219,7 +219,12 @@ export function AdminShell({ children }: AdminShellProps) {
         defaultOpen
         data-test="admin-shell"
         className="admin-shell-root min-h-svh"
-        style={{ '--sidebar-width-icon': '5.75rem' } as CSSProperties}
+        style={
+          {
+            '--sidebar-width': '15.5rem',
+            '--sidebar-width-icon': '3.5rem',
+          } as CSSProperties
+        }
       >
         <a
           href="#admin-content"

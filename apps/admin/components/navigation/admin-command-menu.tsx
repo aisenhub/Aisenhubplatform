@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { KeyboardIcon } from 'lucide-react';
+import { KeyboardIcon, Palette } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -24,11 +24,13 @@ import {
   parseAdminPlatformPath,
   platformNavigationGroups,
 } from './admin-navigation';
+import { useAdminAppearance } from '../appearance/admin-appearance';
 
 export function AdminCommandMenu({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { openSettings: openAppearanceSettings } = useAdminAppearance();
   const platformRoute = parseAdminPlatformPath(pathname);
   const platformItems = platformRoute
     ? platformNavigationGroups(platformRoute.platformId).flatMap(
@@ -138,6 +140,21 @@ export function AdminCommandMenu({ compact = false }: { compact?: boolean }) {
                   </CommandItem>
                 );
               })}
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup heading="偏好">
+              <CommandItem
+                value="外观设置 主题 明暗 强调色 背景"
+                data-test="command-appearance"
+                onSelect={() => {
+                  setOpen(false);
+                  openAppearanceSettings();
+                }}
+              >
+                <Palette />
+                <span>外观设置</span>
+                <CommandShortcut>Theme</CommandShortcut>
+              </CommandItem>
             </CommandGroup>
           </CommandList>
         </Command>

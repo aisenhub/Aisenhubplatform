@@ -7,8 +7,8 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：Aisenhub Admin Design System 迁移与 UI/UX 全面重构
 - 总计划：[plan.md](plan.md)
-- 当前阶段：阶段 03 — Component + UI/UX Rebuild（未开始；阶段 01/02 已交付，等待用户派发）
-- 最近已交付分支：`codex/admin-design-direction-phase2`；阶段 03 应从包含 `30ff8f14167abeb19566ce84f3e5e85dfde18b20` 的已确认基线建立新的短期分支。
+- 当前阶段：阶段 03 — Component + UI/UX Rebuild（进行中；03A Theme / Solid Glass / Shell Pilot 已实现并通过 synthetic production browser，完整 R2 Local Supabase 因 Docker Desktop 未运行待补测）
+- 当前实施分支：`codex/admin-uiux-phase3`，基线为阶段 02 收尾 commit `8d30bfcf5c1d12890433a3196085fe4f759089f0`；不得绕过当前 03A shared Theme/Shell owner 在后续 Feature 自建主题。
 - 远程仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
 
 ## 必读顺序

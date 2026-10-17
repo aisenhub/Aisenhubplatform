@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -16,7 +15,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
   useSidebar,
 } from '@kit/ui/sidebar';
 
@@ -51,7 +49,7 @@ export function AdminSidebar() {
       className="admin-sidebar"
       data-test="admin-sidebar"
     >
-      <SidebarHeader className="gap-3 border-b border-sidebar-border/70 p-3">
+      <SidebarHeader className="gap-3 p-3">
         <Link
           href="/admin"
           data-test="admin-brand"
@@ -82,16 +80,6 @@ export function AdminSidebar() {
       <SidebarContent>
         <NavigationGroups groups={groups} pathname={pathname} />
       </SidebarContent>
-
-      <SidebarSeparator />
-      <SidebarFooter className="p-3">
-        <div className="admin-sidebar-footer-card rounded-lg p-2.5 text-xs group-data-[collapsible=icon]:hidden">
-          <div className="font-semibold text-sidebar-foreground">操作保护</div>
-          <div className="mt-0.5 text-sidebar-foreground/70 leading-normal">
-            敏感操作前可能需要再次验证身份。
-          </div>
-        </div>
-      </SidebarFooter>
       <SidebarRail data-test="admin-sidebar-rail" />
     </Sidebar>
   );
@@ -129,11 +117,8 @@ function NavigationGroups({
                   }
                 >
                   <Icon />
-                  <span className="group-data-[collapsible=icon]:hidden">
+                  <span className="group-data-[collapsible=icon]:sr-only">
                     {item.label}
-                  </span>
-                  <span className="hidden group-data-[collapsible=icon]:inline">
-                    {item.compactLabel ?? item.label}
                   </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -188,23 +188,23 @@ Table/List -> right-side Sheet，用于 Audit、Feedback、Config 等详情流�
 
 通用 Design System 权威入口为 [`docs/development/design`](../../development/design/README.md)，Admin Product Adaptation / Design Direction 为 [`apps/admin/DESIGN.md`](../../../apps/admin/DESIGN.md)。旧 Admin 视觉 North Star、旧色板和旧 `.impeccable` 生成元数据已退出设计来源。
 
-当前运行代码仍保留一部分阶段 03 待替换的 legacy visual token、`globals.css` 组件覆盖和 Light-first 行为；这些是**当前实现债务**，不是新设计输入。新 `DESIGN.md` 已冻结 Light/Dark/System、Accent/Surface、Solid Glass material、Balanced density、List/Table + Inspector、标准 Lucide icon 与 perceived performance 方向，但在阶段 03 代码落地前不能把这些目标描述成已实现能力。
+阶段 03A 已把 Theme/Shell 首批方向落为当前运行事实：Root 由单一 Appearance owner 管理 `System / Light / Dark × Blue / Indigo / Violet / Azure × Neutral / Cool / Warm`，浏览器本地持久化并在 hydration 前恢复；Sidebar/Topbar/Appearance Sheet/Dialog/PlatformSwitcher 消费 Solid Glass semantic material，blur 不可用或用户偏好降低透明度时退化到不透明 semantic surface。旧 Teal/Light-first Theme ownership 已从本批 Shell/Theme 路径移除。其余 `globals.css` 共享控件覆盖、业务页面旧排版和 semantic component skin 仍是阶段 03B–03E 的实现债务，不能反向成为设计来源。
 
 当前字体实现仍以 system UI / 中文系统字体为主，技术 ID 使用 monospace；新方向继续保留这一性能优先策略。
 
 ## 15. Layout 与 Responsive
 
-Desktop：Sidebar + Sticky Topbar + full-width content。
+Desktop：约 248px Sidebar + Sticky Topbar + full-width content；Sidebar 折叠约 56px。
 
-- expanded sidebar 16rem；
-- Admin compact collapse 约 5.75rem，保留文字；
+- expanded sidebar 约 15.5rem；
+- Admin collapse 约 3.5rem，视觉上只显示 icon，文字保留为可访问名称；
 - mobile sidebar Sheet 约 18rem；
 - 主要 breakpoints 64rem / 40rem；
 - 窄屏缩小 panel/page padding、summary 单列、action 可整行、button 最小高度 2.75rem。
 
-共享 Sidebar 的 expanded/mobile/base-icon 宽度分别为 16rem / 18rem / 3rem；Admin 为了保留折叠文字将 compact 宽度覆盖到约 5.75rem。Sidebar 展开状态写入 `sidebar_state` cookie，最长 7 天；Cmd/Ctrl+B 切换 Sidebar。
+共享 Sidebar 仍提供自身默认宽度；Admin 通过 Shell provider 把 desktop expanded/icon 宽度适配为约 15.5rem / 3.5rem，mobile Sheet 仍约 18rem。Sidebar 展开状态写入 `sidebar_state` cookie，最长 7 天；Cmd/Ctrl+B 切换 Sidebar。
 
-Topbar 使用 `Aisenhub / platform / page` 上下文层级，并在窄屏压缩展示。Cmd/Ctrl+K 打开 Command Palette：处于 Platform workspace 时先显示“当前平台”路由组，再显示“全局导航”；Global scope 只显示全局入口。
+Topbar 使用 `Aisenhub / platform / page` 上下文层级，并在窄屏压缩展示；同时提供全局 Appearance 入口。Cmd/Ctrl+K 打开 Command Palette：处于 Platform workspace 时先显示“当前平台”路由组，再显示“全局导航”，并可从“偏好”组打开同一个 Appearance Sheet；Global scope 仍只提供 Global 业务导航，不新增第七个 Appearance 业务分类。
 
 ## 16. Accessibility
 
@@ -229,7 +229,7 @@ Admin Web 在 `next.config.mjs` 统一返回 `X-Frame-Options: DENY`、`X-Conten
 
 Admin Unit Test 使用 Vitest，重点覆盖 Auth/BFF/navigation/model/security/scoped load 等。
 
-浏览器集成测试：`tests/spikes/e2e/t12-r2-admin.mjs`、`tests/spikes/e2e/admin-ux-local.mjs`，覆盖 Auth/MFA、导航、Platform Switch、responsive、a11y、workbench 和关键 UX geometry，并连接 Local Supabase/API/Admin。
+浏览器集成测试：`tests/spikes/e2e/t12-r2-admin.mjs`、`tests/spikes/e2e/admin-ux-local.mjs`。`admin-ux-local.mjs` 可使用 synthetic API fixture 对 production Admin 验证导航、Platform Switch、Appearance、refresh-error、responsive、a11y、workbench 和关键 UX geometry；`t12-r2-admin.mjs` 连接 Local Supabase/API/Admin 验证 Auth/MFA/BFF/数据库边界及完整 R2 浏览器链路。阶段 03A 的 synthetic production browser 已通过；同批完整 R2 在 Docker Desktop 不可用时会明确记录为环境阻塞而不是 PASS。
 
 Lint/Format：Oxlint + Oxfmt，不是 ESLint + Prettier。
 

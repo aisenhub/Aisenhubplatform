@@ -6,6 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Check, ChevronsUpDown, Globe, RefreshCw, Search } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@kit/ui/alert';
+import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
 import { Skeleton } from '@kit/ui/skeleton';
 
 import {
@@ -31,7 +33,7 @@ const PLATFORM_PAGE_SIZE = 20;
 const PLATFORM_SEARCH_DEBOUNCE_MS = 250;
 
 function statusDotClass(status: string): string {
-  return status === 'active' ? 'bg-emerald-500' : 'bg-slate-400';
+  return status === 'active' ? 'bg-success' : 'bg-muted-foreground';
 }
 
 export function PlatformSwitcher({
@@ -268,7 +270,7 @@ export function PlatformSwitcher({
     if (destination !== pathname) router.push(destination);
   }
 
-  if (state === 'loading') {
+  if (state === 'loading' && !current) {
     return (
       <Skeleton
         className={
@@ -290,9 +292,9 @@ export function PlatformSwitcher({
       }
       data-test="platform-switcher"
     >
-      {/* 触发卡片按钮 */}
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => {
           if (open) setQuery('');
           setOpen((prev) => !prev);
@@ -301,11 +303,7 @@ export function PlatformSwitcher({
         aria-label="切换平台工作区"
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={
-          variant === 'sidebar'
-            ? 'flex w-full items-center justify-between gap-2.5 rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-2 text-left shadow-xs transition-colors hover:border-sidebar-border hover:bg-sidebar-accent focus:outline-hidden focus:ring-2 focus:ring-sidebar-ring'
-            : 'flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent focus:outline-hidden focus:ring-2 focus:ring-ring/30'
-        }
+        className={`platform-switcher-trigger ${variant === 'sidebar' ? 'platform-switcher-trigger-sidebar' : ''}`}
         data-test="platform-switcher-trigger"
       >
         {current ? (
@@ -337,12 +335,11 @@ export function PlatformSwitcher({
           </div>
         )}
         <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/60" />
-      </button>
+      </Button>
 
-      {/* 下拉浮层卡片（自主受控，零外部黑盒崩溃风险） */}
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1.5 max-h-96 w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-lg"
+          className="platform-switcher-panel absolute left-0 top-full z-50 mt-1.5 max-h-96 w-full max-w-[calc(100vw-2rem)] overflow-y-auto p-1.5"
           role="dialog"
           aria-label="切换平台工作区"
           data-test="platform-switcher-dropdown"
@@ -376,10 +373,10 @@ export function PlatformSwitcher({
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 data-test="platform-switcher-search-icon"
               />
-              <input
+              <Input
                 aria-label="搜索平台"
                 autoComplete="off"
-                className="h-9 w-full rounded-md border border-input bg-background pl-10! pr-3 text-xs text-foreground placeholder:text-muted-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+                className="platform-switcher-search h-9 pl-10! pr-3 text-xs"
                 data-test="platform-switcher-search"
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -426,11 +423,8 @@ export function PlatformSwitcher({
                   data-active={activeOptionId === platform.platform_id}
                   onMouseMove={() => setActiveOptionId(platform.platform_id)}
                   onClick={() => changePlatform(platform.platform_id)}
-                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
-                    isSelected
-                      ? 'bg-primary/10 font-medium text-primary'
-                      : 'text-foreground'
-                  }`}
+                  className="platform-switcher-option flex w-full items-center justify-between px-2 py-1.5 text-left text-xs"
+                  data-selected={isSelected ? 'true' : 'false'}
                 >
                   <span className="min-w-0 flex-1 truncate font-medium">
                     {platform.name}
@@ -442,15 +436,17 @@ export function PlatformSwitcher({
               );
             })}
             {nextCursor ? (
-              <button
+              <Button
                 type="button"
-                className="mt-1 flex w-full items-center justify-center rounded-md border border-border px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                variant="outline"
+                size="sm"
+                className="mt-1 w-full text-xs text-muted-foreground"
                 data-test="platform-switcher-load-more"
                 disabled={loadingMore || searching}
                 onClick={() => void loadPlatforms(debouncedQuery, nextCursor)}
               >
                 {loadingMore ? '正在加载…' : '加载更多'}
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
@@ -460,14 +456,15 @@ export function PlatformSwitcher({
         <Alert className="mt-1 px-2 py-1.5 text-xs" variant="destructive">
           <AlertDescription className="flex items-center justify-between">
             <span>{errorMessage}</span>
-            <button
+            <Button
               type="button"
               onClick={() => void loadPlatforms(debouncedQuery)}
-              className="text-xs underline hover:opacity-80"
+              variant="ghost"
+              size="icon-xs"
               aria-label="重试加载平台列表"
             >
               <RefreshCw className="h-3 w-3" />
-            </button>
+            </Button>
           </AlertDescription>
         </Alert>
       )}
