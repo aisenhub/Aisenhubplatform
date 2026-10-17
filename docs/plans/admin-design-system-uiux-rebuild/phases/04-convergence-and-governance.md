@@ -1,6 +1,6 @@
 # 阶段 04：全站收敛与 UI 治理
 
-状态：验收通过待推送（最终 clean R2 24/24 PASS）
+状态：已交付（最终 clean R2 24/24 PASS；branch 已 push/远端核对；未 merge main / 未部署 Production）
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 

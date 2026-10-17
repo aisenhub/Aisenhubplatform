@@ -7,8 +7,8 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：Aisenhub Admin Design System 迁移与 UI/UX 全面重构
 - 总计划：[plan.md](plan.md)
-- 当前阶段：阶段 04 — Convergence + Governance。阶段 03 最终 SHA `1c6fb0a7f09e37e5cff29457728eb34a5b766cb3` 已 fast-forward 到 `main`，GitHub Workflow #193 success、Vercel Production success、`admin.aisenhub.com` 实测可用；03E 临时分支已删除。
-- 当前实施分支：`codex/admin-uiux-phase4`；`44cffb9` 建立 `admin-ui:check` 静态 ownership gate、删除 legacy `.panel` / 无消费者 Sidebar CSS、收回 Feature `buttonVariants()` Link skin；`36d2c47` 同步 Architecture/Spec/Design System；`6735e77` 让 T12 正确等待 System media 异步 change event。第二次标准 clean `TASK-0801` 已 24/24 PASS，当前状态为验收通过待 push/远端核对。
+- 当前阶段：阶段 04 — Convergence + Governance 已交付，Aisenhub Admin Design System / UIUX 重构总计划已完成。阶段 03 最终 SHA `1c6fb0a7f09e37e5cff29457728eb34a5b766cb3` 已进入 `main` 并完成 GitHub Workflow #193 / Vercel Production；阶段 04 仅完成独立 branch delivery，未自动 merge main 或部署 Production。
+- 当前实施分支：`codex/admin-uiux-phase4`；`44cffb9` 建立 `admin-ui:check` 静态 ownership gate、删除 legacy `.panel` / 无消费者 Sidebar CSS、收回 Feature `buttonVariants()` Link skin；`36d2c47` 同步 Architecture/Spec/Design System；`6735e77` 让 T12 正确等待 System media 异步 change event；`69bcb735e8a8e7b07e1b49db2367221b290842ea` 记录最终本地验收并已 push、远端 SHA 核对一致。
 - 远程仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
 
 ## 必读顺序
@@ -66,7 +66,7 @@
 - [x] 必要 Local 检查实际运行并记录。
 - [x] `verification-record.md` 已更新到本地验收结果。
 - [x] 最终 diff 已审查，无无关修改和 secret。
-- [ ] 阶段 commit 已创建并 push，远端 commit 已核对。
-- [ ] 只有满足上述条件才更新 phase / plan 状态。
+- [x] 阶段 commit 已创建并 push，远端 commit 已核对。
+- [x] 满足上述条件后 phase / plan 已更新为完成状态。
 
-阶段 03 已完成 main/Production exact-SHA 发布闭环。阶段 04 实现与本地 R2 已完成：第一次 clean R2 在新增 System media 测试因断言未等待异步 change event 而失败，测试等待真实 DOM theme 更新后第二次 clean R2 24/24 PASS。下一步只做 closeout commit、branch push 与远端 SHA 核对；本阶段不自动 merge main 或触发 Production 部署。
+阶段 03 已完成 main/Production exact-SHA 发布闭环。阶段 04 实现、本地 R2、branch push 与远端 SHA 核对也已完成：第一次 clean R2 在新增 System media 测试因断言未等待异步 change event 而失败，测试等待真实 DOM theme 更新后第二次 clean R2 24/24 PASS。若后续需要把阶段 04 合入 `main`，应作为独立 release gate 明确执行并重新核对 GitHub CI / Vercel exact-SHA；本次交付未执行该步骤。

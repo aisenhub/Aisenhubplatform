@@ -21,7 +21,7 @@
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
 | 03 | Component + UI/UX Rebuild | 已交付 | 03A–03E 全部实现；Theme/Skin、标准控件、高频 Workspace、高状态密度 Workspace 与 remaining routes 均完成 hierarchy/ownership 重构；最终 clean R2 24/24 PASS | 已完成 main/Production release gate，进入 04 | `764193b`（03A）、`03060ed` + `67aa0b7`（03B）、`5fbb922` + `9426d18` + `7fff7f7`（03C）、`b8410b6` + `711a6b9`（03D）、`56e5e369` + `98eba97` + `8aa9e45` + `f4c136a`（03E），最终 `1c6fb0a` | PASS：PR #22 merged；`main == 1c6fb0a`；Workflow #193 success；Vercel Production success；03E 本地/远端分支已删除 |
-| 04 | Convergence + Governance | 验收通过待推送 | static governance、legacy CSS/Feature skin helper 收敛、Appearance/reduced-motion matrix、Architecture/Spec/Design System 同步；最终 clean R2 24/24 PASS | closeout commit + branch push + 远端 SHA 核对；不自动 merge/deploy | `44cffb9` + `36d2c47` + `6735e77` | 待最终候选 push |
+| 04 | Convergence + Governance | 已交付 | static governance、legacy CSS/Feature skin helper 收敛、Appearance/reduced-motion matrix、Architecture/Spec/Design System 同步；最终 clean R2 24/24 PASS；branch push/远端核对完成 | 若明确要求发布，再单独执行 main/Production exact-SHA release gate | `44cffb9` + `36d2c47` + `6735e77` + `69bcb73` | PASS：`69bcb735e8a8e7b07e1b49db2367221b290842ea` 已 push，远端分支指向同一 SHA |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
 
@@ -155,6 +155,7 @@
 | 2026-10-17 | 04 release gate | `36d2c47` + `6735e77` candidate | `pnpm run verify:task:0801` first clean run | Local + clean Local Supabase | 1 | FAIL：前序 DB/API/Consumer gates 已通过；Admin T12 在 System Appearance light OS 断言同步读取到旧 dark DOM。实现已监听 `matchMedia` change，测试缺少异步等待；改为 `waitForFunction` 等待真实 `data-theme` 更新 |
 | 2026-10-17 | 04 corrective | `6735e77` | targeted format + `pnpm lint` + `git diff --check` | Local | 0 | PASS：只修改 T12 等待语义；产品 runtime 未变；governance gate 继续 PASS |
 | 2026-10-17 | 04 release gate | `6735e77` | `pnpm run verify:task:0801` second standard clean run | Local + clean Local Supabase | 0 | PASS：24 executable gates；64 SQL files / 1398 DB tests、115 Edge/API tests、Consumer Harness、Admin T12 responsiveA11y 95 route checks、Appearance Accent/Surface/System/reduced-motion matrix、build/type/lint/format、115 docs/contracts 全部 PASS |
+| 2026-10-17 | 04 branch delivery | `69bcb735e8a8e7b07e1b49db2367221b290842ea` | `git push -u origin codex/admin-uiux-phase4` + `git ls-remote` | GitHub | 0 | PASS：branch 首次 push 成功；本地 HEAD 与 `refs/heads/codex/admin-uiux-phase4` 均为同一 SHA；未 merge main / 未触发 Production |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -183,13 +184,13 @@
 | 03C | `5fbb922` + `9426d18` + `7fff7f7`，`e90dbb8`（verification checkpoint） | `codex/admin-uiux-phase3c` | PASS | PASS：`origin/codex/admin-uiux-phase3c` 已核对到 `e90dbb81a88d943386ff4665d55ac5f7a6e864c` | GitHub 分支 |
 | 03D | `b8410b6` + `711a6b9`，`ccec8ef`（verification checkpoint） | `codex/admin-uiux-phase3d` | PASS | PASS：`origin/codex/admin-uiux-phase3d` 已核对到 `ccec8ef91690987e4f57109bfe4f58d1990d7913` | GitHub 分支 |
 | 03E | `56e5e369`（remote safe checkpoint）+ `98eba97` + `8aa9e45` + `f4c136a` + `8c79a5f`（verification/docs checkpoint）+ `1c6fb0a`（final closeout） | `codex/admin-uiux-phase3e` → `main` | PASS | PASS：PR #22 merged；最终 SHA `1c6fb0a` 已进入 main，Workflow #193 / Vercel Production 同 SHA success；已删除已合并分支 | GitHub/main/Production |
-| 04 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
+| 04 | `44cffb9` + `36d2c47` + `6735e77` + `69bcb73`（local acceptance closeout） | `codex/admin-uiux-phase4` | PASS | PASS：`69bcb735e8a8e7b07e1b49db2367221b290842ea` 首次 branch delivery 已远端核对；后续纯文档 delivery-state commit 不改变 runtime/R2 候选 | GitHub branch；main/Production NOT RUN |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：阶段 04 本地实现与最终 clean R2 已完成；当前只剩 closeout commit、`codex/admin-uiux-phase4` push 和远端 SHA 核对。main/Production 属于后续独立 release gate，不在未授权情况下自动执行。
-- 必须先解决的问题：没有产品逻辑或验证阻塞；只剩 Git branch delivery 收口。
+- 下一阶段从哪里开始：Aisenhub Admin Design System / UIUX 重构计划 01–04 已全部完成并完成 Phase 04 branch delivery。若用户明确要求发布阶段 04，则从 `codex/admin-uiux-phase4` 的最新远端 HEAD 开始 main/Production exact-SHA release gate。
+- 必须先解决的问题：当前无产品逻辑、验证或 branch delivery 阻塞；main merge / Production deployment 尚未执行且需要独立发布授权/流程。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前交付边界：阶段 03 已全部生产交付；阶段 04 本地验收 PASS，但尚未 push，因此当前状态为“验收通过待推送”，不能提前写“已交付”。
+- 当前交付边界：阶段 03 已生产交付；阶段 04 已完成独立 branch delivery 与远端 SHA 核对，但未 merge `main`、未触发 Production，因此不能把阶段 04 写成“已生产发布”。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。
