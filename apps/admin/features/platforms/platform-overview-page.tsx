@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
-import { Button, buttonVariants } from '@kit/ui/button';
+import { Button } from '@kit/ui/button';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
@@ -458,12 +458,14 @@ export function PlatformOverviewPage() {
               label={platform.allow_activation ? '允许激活' : '禁止激活'}
               tone={platform.allow_activation ? 'success' : 'warning'}
             />
-            <Link
-              href={`${base}/settings`}
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            <Button
+              nativeButton={false}
+              render={<Link href={`${base}/settings`} />}
+              variant="outline"
+              size="sm"
             >
               平台设置
-            </Link>
+            </Button>
           </div>
         }
       >

@@ -12,7 +12,7 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
-import { Button, buttonVariants } from '@kit/ui/button';
+import { Button } from '@kit/ui/button';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
@@ -222,12 +222,14 @@ export function IdentityDetailPage({ userId }: { userId: string }) {
         description="查看 live Auth Identity、跨平台账户关系与权威 Global Delete 生命周期。"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/accounts/deletion-jobs"
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            <Button
+              nativeButton={false}
+              render={<Link href="/admin/accounts/deletion-jobs" />}
+              variant="outline"
+              size="sm"
             >
               删除任务
-            </Link>
+            </Button>
             <Button
               variant="outline"
               size="sm"

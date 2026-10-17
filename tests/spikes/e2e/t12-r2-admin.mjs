@@ -665,6 +665,65 @@ async function runBrowserFlow(secret, primaryFactorId, backupFactorId) {
   await page.locator('[data-test="admin-appearance-settings"]').waitFor({
     state: 'visible',
   });
+  await page.locator('[data-test="appearance-mode-light"]').click();
+  const lightSuccessToken = await page
+    .locator('html')
+    .evaluate((element) =>
+      getComputedStyle(element).getPropertyValue('--success').trim(),
+    );
+  const accentTokens = new Map();
+  for (const accent of ['blue', 'indigo', 'violet', 'azure']) {
+    await page.locator(`[data-test="appearance-accent-${accent}"]`).click();
+    assert.equal(
+      await page.locator('html').getAttribute('data-accent'),
+      accent,
+    );
+    accentTokens.set(
+      accent,
+      await page
+        .locator('html')
+        .evaluate((element) =>
+          getComputedStyle(element).getPropertyValue('--primary').trim(),
+        ),
+    );
+    assert.equal(
+      await page
+        .locator('html')
+        .evaluate((element) =>
+          getComputedStyle(element).getPropertyValue('--success').trim(),
+        ),
+      lightSuccessToken,
+      `Success semantic must remain independent from ${accent} Accent`,
+    );
+  }
+  assert.equal(
+    new Set(accentTokens.values()).size,
+    4,
+    'Each supported Accent must resolve to a distinct primary token',
+  );
+
+  const surfaceTokens = new Map();
+  for (const surface of ['neutral', 'cool', 'warm']) {
+    await page.locator(`[data-test="appearance-surface-${surface}"]`).click();
+    assert.equal(
+      await page.locator('html').getAttribute('data-surface'),
+      surface,
+    );
+    surfaceTokens.set(
+      surface,
+      await page
+        .locator('html')
+        .evaluate((element) =>
+          getComputedStyle(element).getPropertyValue('--background').trim(),
+        ),
+    );
+  }
+  assert.equal(
+    new Set(surfaceTokens.values()).size,
+    3,
+    'Each supported Surface must resolve to a distinct canvas token',
+  );
+
   await page.locator('[data-test="appearance-mode-dark"]').click();
   await page.locator('[data-test="appearance-accent-violet"]').click();
   await page.locator('[data-test="appearance-surface-warm"]').click();
@@ -709,6 +768,28 @@ async function runBrowserFlow(secret, primaryFactorId, backupFactorId) {
   await page.locator('[data-test="appearance-accent-blue"]').click();
   await page.locator('[data-test="appearance-surface-neutral"]').click();
   await page.keyboard.press('Escape');
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme'),
+    'dark',
+    'System Appearance follows a dark operating-system preference',
+  );
+  assert.equal(
+    await page
+      .locator('[data-test="admin-appearance-trigger"]')
+      .evaluate((element) => getComputedStyle(element).transitionDuration),
+    '0s',
+    'Reduced-motion preference disables control transition duration',
+  );
+  await page.emulateMedia({
+    colorScheme: 'light',
+    reducedMotion: 'no-preference',
+  });
+  assert.equal(
+    await page.locator('html').getAttribute('data-theme'),
+    'light',
+    'System Appearance follows a light operating-system preference',
+  );
 
   await page.goto(`${appUrl}/admin/security`, {
     waitUntil: 'domcontentloaded',

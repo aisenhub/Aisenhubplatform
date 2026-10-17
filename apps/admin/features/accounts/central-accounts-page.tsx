@@ -15,7 +15,7 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
-import { Button, buttonVariants } from '@kit/ui/button';
+import { Button } from '@kit/ui/button';
 import {
   EmptyState,
   EmptyStateHeading,
@@ -268,12 +268,14 @@ export function CentralAccountsPage() {
         description="以全局 Auth Identity 为主对象检索用户，并在同一身份下查看跨平台账户关联与状态。"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/accounts/deletion-jobs"
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            <Button
+              nativeButton={false}
+              render={<Link href="/admin/accounts/deletion-jobs" />}
+              variant="outline"
+              size="sm"
             >
               删除任务
-            </Link>
+            </Button>
             <Button
               variant="outline"
               size="sm"

@@ -7,7 +7,7 @@ import type { FormEvent } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
-import { Button, buttonVariants } from '@kit/ui/button';
+import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { ResourceId } from '@kit/ui/resource-id';
@@ -307,12 +307,13 @@ export function DeletionJobsPage() {
           >
             {refreshing ? '刷新中…' : '刷新'}
           </Button>
-          <Link
-            href="/admin/accounts"
-            className={buttonVariants({ variant: 'outline' })}
+          <Button
+            nativeButton={false}
+            render={<Link href="/admin/accounts" />}
+            variant="outline"
           >
             返回统一用户
-          </Link>
+          </Button>
         </form>
       </AdminTaskToolbar>
 
@@ -426,15 +427,18 @@ export function DeletionJobsPage() {
                   </button>
                   <div className="flex flex-wrap gap-2 sm:justify-end">
                     {job.user_id ? (
-                      <Link
-                        href={`/admin/accounts/${encodeURIComponent(job.user_id)}`}
-                        className={buttonVariants({
-                          variant: 'ghost',
-                          size: 'sm',
-                        })}
+                      <Button
+                        nativeButton={false}
+                        render={
+                          <Link
+                            href={`/admin/accounts/${encodeURIComponent(job.user_id)}`}
+                          />
+                        }
+                        variant="ghost"
+                        size="sm"
                       >
                         查看 Identity
-                      </Link>
+                      </Button>
                     ) : null}
                     {retryable ? (
                       <Button
