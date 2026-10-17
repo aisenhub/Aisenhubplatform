@@ -12,4 +12,4 @@
 - 不用 emoji 或随机自定义 SVG 代替已有稳定图标；品牌 Logo、真实业务图片和标准库确实无法表达的专业图形属于例外，必须记录用途、来源/许可和 owner，并且不能扩展成平行通用 icon set。
 - 加载/警告/删除等图标必须与真实状态和动作一致，不能用“魔法/机器人”泛指所有 AI 或自动化能力。
 
-Aisenhub Admin 当前已经依赖 `lucide-react`，并已确认普通 UI 统一从标准库导入。阶段 02 负责冻结具体“语义 → Lucide icon”映射、默认尺寸/stroke 和例外清单；通用层不复制 AisenLens 的动作表。
+Aisenhub Admin 当前使用 `lucide-react` 作为普通 UI 标准图标库，具体语义、尺寸/stroke 与业务图片/专业图形例外由 [`apps/admin/DESIGN.md`](../../../../apps/admin/DESIGN.md) 的 Product Adaptation 冻结。阶段 04 的 Admin UI 静态治理会拒绝普通 Feature 重新引入自绘/直接图形资产而没有显式产品例外；通用层不复制 AisenLens 的动作表。

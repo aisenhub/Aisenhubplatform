@@ -7,8 +7,8 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：Aisenhub Admin Design System 迁移与 UI/UX 全面重构
 - 总计划：[plan.md](plan.md)
-- 当前阶段：阶段 03 — Component + UI/UX Rebuild（已交付到 03E 分支；03A–03E 已实现，最终 standard clean `TASK-0801` 24/24 executable gates PASS；完成 main/Production exact-SHA 收口后进入阶段 04）
-- 当前实施分支：`codex/admin-uiux-phase3e`；03E 本地 checkpoints 为 `98eba97`（Config / Feedback）、`8aa9e45`（Plans / Offers / Redemption）与 `f4c136a`（Origins / Keys / Deletion Jobs），此前远端 safe checkpoint 为 `56e5e369`。页面层旧 `.panel` 与普通 raw control 已归零；阶段 04 必须继续复用 `AdminTaskToolbar` / `AdminWorkspaceSection`、`admin-selectable-row` 与当前 shared component owner，不得恢复 `.panel`-per-section 或 Feature 基础 skin。
+- 当前阶段：阶段 04 — Convergence + Governance。阶段 03 最终 SHA `1c6fb0a7f09e37e5cff29457728eb34a5b766cb3` 已 fast-forward 到 `main`，GitHub Workflow #193 success、Vercel Production success、`admin.aisenhub.com` 实测可用；03E 临时分支已删除。
+- 当前实施分支：`codex/admin-uiux-phase4`；checkpoint 1 `44cffb9` 已建立 `admin-ui:check` 静态 ownership gate、删除 legacy `.panel` / 无消费者 Sidebar CSS、收回 Feature `buttonVariants()` Link skin，并扩展正式 T12 Appearance/reduced-motion matrix。最终 clean `TASK-0801` 尚未执行，因此阶段 04 不能提前标已交付。
 - 远程仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
 
 ## 必读顺序
@@ -33,7 +33,7 @@
 
 保持现有 Next.js/React/Base UI/shadcn/Tailwind 技术底座。Standard Component 负责 DOM/ARIA/keyboard/focus/value/open-close/positioning/API，Component Skin 负责可复用视觉，Feature 负责业务和外部 layout。不要让 Feature 用无界 className override 建第二皮肤。
 
-阶段 03 的组件优化与视觉/交互优化必须在同一真实页面批次中汇合。任何 shared component 替换都要保留并验证原有安全、MFA、scope、route、submit、focus、keyboard、unknown outcome 和恢复语义。
+阶段 04 不再进行大规模视觉探索。优先删除双轨 owner、把高置信度 ownership 约束固化为静态 gate，并用正式 browser/release gate 验证当前 Product Adaptation。合理 native/business-content 例外必须精确记录理由，不能为了让静态检查通过而强行通用化业务组件。
 
 完成当前阶段后运行 phase 中列出的真实检查，把命令、退出码、失败、复测、commit、push 和远端核对写入 verification-record.md。未运行不得记 PASS，未 push 不得记已交付。
 ```
@@ -69,4 +69,4 @@
 - [ ] 阶段 commit 已创建并 push，远端 commit 已核对。
 - [ ] 只有满足上述条件才更新 phase / plan 状态。
 
-03E 已满足实现、clean R2、branch push 与远端 SHA 门槛；当前只剩 final closeout commit/push、main fast-forward 与 Production/GitHub CI exact-SHA release gate。阶段 04 不得在 03E main release gate 完成前修改治理基线。
+阶段 03 已完成 main/Production exact-SHA 发布闭环。阶段 04 checkpoint 1 已通过 `admin-ui:check`、tooling/Admin unit、typecheck、lint、production build 与 synthetic browser；下一步必须完成文档同步和固定候选的 standard clean `TASK-0801`，再决定阶段 04 完成状态与 GitHub/Production 交付。

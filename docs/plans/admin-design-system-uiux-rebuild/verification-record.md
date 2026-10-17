@@ -7,10 +7,10 @@
 - 优化目标：迁移通用 Design System，从零建立 Aisenhub Design Direction，并完成 Admin 组件、视觉、交互与治理的全面重构。
 - 实施范围：`docs/development/design/**`、`apps/admin/**`、`packages/ui/**` 及适用 Admin tests/docs。
 - GitHub 仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
-- 当前实施分支：`codex/admin-uiux-phase3e`
+- 当前实施分支：`codex/admin-uiux-phase4`（从生产已验证 `main@1c6fb0a7f09e37e5cff29457728eb34a5b766cb3` 建立）
 - 阶段 03 起始 commit：`8d30bfcf5c1d12890433a3196085fe4f759089f0`
 - 阶段 03 初始工作区状态：clean；从已交付阶段 02 收尾 commit 建立独立短期分支。
-- 运行环境：Local；阶段 03 至少 R2。03A–03E targeted/synthetic 验证和标准 clean Local Supabase `TASK-0801` 均已完成。
+- 运行环境：Local；阶段 03/04 至少 R2。03A–03E targeted/synthetic 验证和标准 clean Local Supabase `TASK-0801` 已完成；阶段 04 checkpoint 1 已完成 targeted/static/synthetic 验证，最终 clean R2 待执行。
 - R2 结论：03A Docker/旧 fixture 问题、03B format/旧 Checkbox test selector 问题及 03E 定向格式/本地 server 参数问题均保留真实失败记录。03C、03D、03E 最终正式入口 `pnpm run verify:task:0801` 均在 clean release candidate 上 24 executable gates 全部 PASS；未通过降低测试门槛或修改业务语义换取通过。
 - 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
@@ -20,8 +20,8 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
-| 03 | Component + UI/UX Rebuild | 已交付 | 03A–03E 全部实现；Theme/Skin、标准控件、高频 Workspace、高状态密度 Workspace 与 remaining routes 均完成 hierarchy/ownership 重构；最终 clean R2 24/24 PASS | 03E main/Production release gate 后进入 04 | `764193b`（03A）、`03060ed` + `67aa0b7`（03B）、`5fbb922` + `9426d18` + `7fff7f7`（03C）、`b8410b6` + `711a6b9`（03D）、`56e5e369` + `98eba97` + `8aa9e45` + `f4c136a`（03E） | PASS：verification/docs checkpoint `8c79a5f425a1bb34903a8b7deee43a5d476e9ae7` 已 push 并远端核对；Draft PR #22 保持 draft，main 尚未合并 |
-| 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
+| 03 | Component + UI/UX Rebuild | 已交付 | 03A–03E 全部实现；Theme/Skin、标准控件、高频 Workspace、高状态密度 Workspace 与 remaining routes 均完成 hierarchy/ownership 重构；最终 clean R2 24/24 PASS | 已完成 main/Production release gate，进入 04 | `764193b`（03A）、`03060ed` + `67aa0b7`（03B）、`5fbb922` + `9426d18` + `7fff7f7`（03C）、`b8410b6` + `711a6b9`（03D）、`56e5e369` + `98eba97` + `8aa9e45` + `f4c136a`（03E），最终 `1c6fb0a` | PASS：PR #22 merged；`main == 1c6fb0a`；Workflow #193 success；Vercel Production success；03E 本地/远端分支已删除 |
+| 04 | Convergence + Governance | 进行中 | checkpoint 1：静态 governance gate、legacy CSS/Feature skin helper 收敛、T12 Appearance/reduced-motion matrix；targeted/static/synthetic 验证 PASS | 文档收敛 + final clean `TASK-0801` + Git/Production 交付 | `44cffb9` | 待最终候选 push |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
 
@@ -69,11 +69,12 @@
 
 ### 阶段 04：Convergence + Governance
 
-- 静态治理规则：未验证
-- 删除的旧 CSS / raw control / duplicate skin：未验证
-- 全路由回归：未验证
-- 长期文档同步：未验证
-- 与计划偏差：未验证
+- 静态治理规则：新增根 `pnpm admin-ui:check` 并串入 `pnpm lint`。当前扫描 54 个 Feature / 130 个 Admin source，拒绝无理由 raw 基础控件/图形、Feature `buttonVariants()` skin helper、局部 Theme owner、标准控件内部静态视觉 override、直接普通图形资产与无消费者 Product CSS；5 个 native/business-content 例外采用 exact path + tag + marker + reason，失去消费者会产生 stale-exception failure。
+- 删除的旧 CSS / raw control / duplicate skin：删除无消费者 legacy `.panel`（含 mobile override）、`admin-sidebar-back-link`、`admin-sidebar-platform-status`；5 处 Feature `buttonVariants()` Link 改为标准 `Button render={<Link />}`。全仓复核后保留 4 个业务集合行 native button 与 1 个 Feedback 用户图片例外，不强行把复合业务 item 伪装成基础 Button。
+- shared component / className review：`packages/ui` 的 `transition-all` 命中经消费面核对均不属于当前 Admin runtime；不借 Admin 治理越界重写其他产品/上游能力。Admin Feature 标准控件内部 visual `className` override 当前 0 命中，layout utility 继续合法。
+- 全路由回归：checkpoint synthetic production browser PASS，覆盖 60 route/viewport combinations、Appearance、PlatformSwitcher、Audit、Account danger、mobile/fail-closed，0 runtime exception。正式 T12 已扩展为四 Accent / 三 Surface token matrix、Accent 与 success semantic 隔离、System OS 跟随和 reduced-motion computed-style 断言；需由最终 clean R2 执行后才记最终 PASS。
+- 长期文档同步：Spec REQ-ADM-011/012 已改为 Implemented；Architecture、Product Adaptation 与 Design System component/icon contract 已同步当前 static governance owner。Phase 04/Plan/Handoff 已进入进行中，最终 R2 前不标 Completed。
+- 与计划偏差：无产品范围偏差。未把共享 UI 库中 Admin 未消费的旧 `transition-all` 作为本阶段强制清理对象，以避免扩大为跨产品 UI 重构；静态 gate 只覆盖当前 Admin ownership 契约。
 
 ## 验证记录
 
@@ -142,6 +143,13 @@
 | 2026-10-17 | 03E checkpoint 3 | `f4c136a` candidate | targeted `oxfmt --check` first run | Local | 1 | FAIL：Deletion Jobs / Origins / Platform Keys 3 个本批文件有格式差异；只定向格式化后复测 |
 | 2026-10-17 | 03E checkpoint 3 | `f4c136a` | Admin typecheck/unit/lint/build、synthetic production browser、ownership/icon/raw-control scans、full format、`git diff --check` | Local browser | 0 | PASS：页面层 `.panel` 0、普通 raw control/SVG/img 0、Lucide icon owner 一致；17 files / 77 tests；60 route/viewport combinations；0 runtime exception |
 | 2026-10-17 | 03E release gate | `f4c136a` | `pnpm run verify:task:0801` | Local + clean Local Supabase | 0 | PASS：24 executable gates；64 SQL files / 1398 DB tests、115 Edge/API tests、Admin T12 responsiveA11y 95 route checks、Consumer Harness、并发、安全、build/type/lint/format、115 docs/contracts 全部 PASS |
+| 2026-10-17 | 03E production release | `1c6fb0a7f09e37e5cff29457728eb34a5b766cb3` | fast-forward `main` + GitHub Workflow #193 + Vercel Production + `admin.aisenhub.com` probe | GitHub/Vercel Production | 0 | PASS：PR #22 merged；Workflow #193 completed/success；Vercel commit status `Deployment has completed`；根路径 307 到 `/admin/login`，登录页 200；03E 分支已删除 |
+| 2026-10-17 | 04 checkpoint 1 | worktree on `44cffb9` | `pnpm admin-ui:check` | Local | 0 | PASS：54 Feature / 130 Admin source；5 个精确 native/business-content 例外均被消费，0 ownership issue |
+| 2026-10-17 | 04 checkpoint 1 | worktree | `pnpm test:tooling` | Local | 0 | PASS：12/12，包含 raw control/theme/skin helper、标准控件视觉 override、orphan Product CSS negative tests |
+| 2026-10-17 | 04 checkpoint 1 | worktree | `pnpm format:check` first run | Local | 1 | FAIL：仅新 governance script/test 与扩展 T12 有 Oxfmt 差异；定向格式化 3 个文件后复测 |
+| 2026-10-17 | 04 checkpoint 1 | worktree | `pnpm format:check` + `pnpm lint` + Admin typecheck/unit/build | Local | 0 | PASS：426 files format；lint 0 warning/error 且内含 governance gate；Admin 17 files / 77 tests；Next.js production build PASS |
+| 2026-10-17 | 04 checkpoint 1 | worktree | synthetic production `admin-ux-local.mjs` | Local browser | 0 | PASS：60 route/viewport combinations、Appearance、PlatformSwitcher、refresh error、Audit/Account/mobile/security；0 runtime exception |
+| 2026-10-17 | 04 checkpoint 1 | worktree | `git diff --check` | Local | 0 | PASS |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -169,14 +177,14 @@
 | 03B | `03060ed` + `67aa0b7`（code checkpoints），`73f37f8`（final closeout） | `codex/admin-uiux-phase3b` | PASS | PASS：`73f37f8` 已进入 main；Production READY 与 GitHub Workflow #187 success 均绑定同一 SHA | GitHub/main |
 | 03C | `5fbb922` + `9426d18` + `7fff7f7`，`e90dbb8`（verification checkpoint） | `codex/admin-uiux-phase3c` | PASS | PASS：`origin/codex/admin-uiux-phase3c` 已核对到 `e90dbb81a88d943386ff4665d55ac5f7a6e864c` | GitHub 分支 |
 | 03D | `b8410b6` + `711a6b9`，`ccec8ef`（verification checkpoint） | `codex/admin-uiux-phase3d` | PASS | PASS：`origin/codex/admin-uiux-phase3d` 已核对到 `ccec8ef91690987e4f57109bfe4f58d1990d7913` | GitHub 分支 |
-| 03E | `56e5e369`（remote safe checkpoint）+ `98eba97` + `8aa9e45` + `f4c136a` + `8c79a5f`（verification/docs checkpoint） | `codex/admin-uiux-phase3e` | PASS | PASS：`8c79a5f425a1bb34903a8b7deee43a5d476e9ae7` 已 push 并远端核对；Draft PR #22 未合并 | GitHub Draft PR |
+| 03E | `56e5e369`（remote safe checkpoint）+ `98eba97` + `8aa9e45` + `f4c136a` + `8c79a5f`（verification/docs checkpoint）+ `1c6fb0a`（final closeout） | `codex/admin-uiux-phase3e` → `main` | PASS | PASS：PR #22 merged；最终 SHA `1c6fb0a` 已进入 main，Workflow #193 / Vercel Production 同 SHA success；已删除已合并分支 | GitHub/main/Production |
 | 04 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：03A–03E 已实现、完成最终 clean R2，并已交付 03E 分支；完成 main/Production exact-SHA release gate 后进入阶段 04 Convergence + Governance。
-- 必须先解决的问题：03E 无代码/R2 阻塞；只剩交付收口。阶段 04 基于页面层 `.panel`/普通 raw control 已归零的事实，删除无消费者旧 CSS owner、建立静态 governance gate 并完成最终全路由回归。
+- 下一阶段从哪里开始：阶段 04 已在 `codex/admin-uiux-phase4` 进行；checkpoint 1 `44cffb9` 已完成 ownership convergence 与静态 gate。下一步固定文档候选后运行 standard clean `TASK-0801`，通过后完成阶段 04/总计划 closeout。
+- 必须先解决的问题：没有产品逻辑阻塞；只剩最终 clean R2、最终文档状态、branch push/main/Production exact-SHA release gate。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前交付边界：03A–03D 已生产交付；03E 实现、clean R2 与 branch push/远端核对已完成，main/Production 尚未收口，因此阶段 04 仍未开始。
+- 当前交付边界：阶段 03 已全部生产交付；阶段 04 checkpoint 1 仅在本地分支，尚未 push/main/Production，因此不能标已交付。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。

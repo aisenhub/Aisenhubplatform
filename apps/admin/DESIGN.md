@@ -1,10 +1,10 @@
 # Aisenhub Admin Design Direction
 
-状态：Frozen for Phase 03 implementation
+状态：Stable Product Adaptation · implemented in Phase 03 · governed in Phase 04
 
 本文件是 Aisenhub Admin 的 **Product Adaptation / Design Direction**。通用设计规则、组件职责和 UI/UX 工程合同由 [`docs/development/design/`](../../docs/development/design/README.md) 维护；本文件只决定 Aisenhub Admin 应该呈现什么产品气质、主题、材质、密度、信息层级和交互表达。
 
-旧 Admin 视觉描述、旧色板、旧 North Star、历史 `.impeccable` 生成元数据和当前遗留 CSS **没有设计继承权**。阶段 03 可以读取当前页面来理解业务、scope、状态和任务，但不能因为旧 DOM/CSS 已存在就保留旧排版或旧视觉。
+旧 Admin 视觉描述、旧色板、旧 North Star、历史 `.impeccable` 生成元数据和遗留 CSS **没有设计继承权**。运行页面可以作为业务、scope、状态和任务事实来源，但不能因为某段 DOM/CSS 已存在就获得视觉继承权；后续修改继续由本 Product Adaptation、通用 Design System 与静态 governance 共同约束。
 
 ## 1. Product Character
 

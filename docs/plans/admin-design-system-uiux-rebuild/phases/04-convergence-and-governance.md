@@ -1,6 +1,6 @@
 # 阶段 04：全站收敛与 UI 治理
 
-状态：未开始
+状态：进行中（checkpoint 1 已完成；最终 clean R2 待执行）
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -20,13 +20,13 @@
 
 ## 任务清单
 
-- [ ] 全仓搜索 Admin Feature 中 raw `<button>/<input>/<select>/<textarea>`、重复 base skin utility、旧 CSS selector 和已废弃 variant。
-- [ ] 全仓搜索普通 UI 的自绘/零散 SVG、PNG、emoji icon 与直接 icon path，迁移到标准图标库；只保留有记录的品牌/专业图形例外。
-- [ ] 建立静态治理规则：普通 Feature 新增 raw 基础控件或大量 background/text/border/radius/shadow/hover/focus skin 时给出警告/失败；对 file/color/range 等合理 native control 和特殊可视化提供显式 allowlist。
-- [ ] 清理 `globals.css` 中已迁移到 shared skin 的 component slot 规则和无效 token，避免 Theme/Skin 两套来源。
-- [ ] 清理 shared component 中与新 skin 重复的旧视觉 utility、无用 variant 和死 CSS；保留结构、语义和真实 state hook。
-- [ ] 全面检查 `className` override，要求内部视觉差异优先使用有限 variant 或 product adaptation。
-- [ ] 统一 design review checklist，新增页面/组件必须先判断“复用 → 扩展 → 自写”。
+- [x] 全仓搜索 Admin Feature 中 raw `<button>/<input>/<select>/<textarea>`、重复 base skin utility、旧 CSS selector 和已废弃 variant。
+- [x] 全仓搜索普通 UI 的自绘/零散 SVG、PNG、emoji icon 与直接 icon path，迁移到标准图标库；只保留有记录的品牌/专业图形例外。
+- [x] 建立静态治理规则：普通 Feature 新增 raw 基础控件或大量 background/text/border/radius/shadow/hover/focus skin 时给出警告/失败；对合理 native/business-content 场景提供精确显式 allowlist。
+- [x] 清理 `globals.css` 中无消费者 legacy `.panel` 与旧 Sidebar visual owner，避免 Theme/Skin 两套来源。
+- [x] 审查 shared component 的旧视觉 utility/variant；`transition-all` 命中均属于 Admin 当前未消费的共享/上游能力，本阶段不越界重写其他产品组件；Admin 已消费的 Button/Badge/Switch 等在 03B 已完成收敛。
+- [x] 全面检查 `className` override，治理 gate 允许外部 layout utility，并拒绝标准控件静态内部 visual-skin override。
+- [x] 统一 design review checklist，新增页面/组件必须先判断“复用 → 扩展 → 自写”，并记录在 Design System component contract。
 - [ ] 对全路由执行 responsive、keyboard/focus、ARIA、reduced motion、loading/empty/error/refresh error、danger/unknown outcome review。
 - [ ] 对全路由执行 Appearance matrix 与 perceived performance review，覆盖 Light/Dark/System、代表 Accent/Surface、首屏/导航/refresh/mutation 的稳定性与即时反馈。
 - [ ] 更新 Architecture 为实际最终结构；更新 Spec Domain Verification 和 Review 结论，删除只描述旧 UI ownership 的过时事实。
@@ -51,12 +51,12 @@
 | 文档 | `pnpm docs:check` | Local | PASS | 未运行 |
 | Contract | `pnpm contracts:check` | Local | PASS | 未运行 |
 | 格式 | `pnpm format:check` | Local | PASS | 未运行 |
-| Lint + 新 UI 治理规则 | `pnpm lint` 及实际新增检查入口 | Local | PASS | 未运行 |
-| Typecheck | `pnpm typecheck` | Local | PASS | 未运行 |
-| Build | `pnpm build` | Local | PASS | 未运行 |
-| Unit | `pnpm test:unit` | Local | PASS | 未运行 |
+| Lint + 新 UI 治理规则 | `pnpm lint` / `pnpm admin-ui:check` | Local | PASS | checkpoint 1 PASS：0 warning/error；54 Feature / 130 Admin source；5 个显式 native/business-content 例外 |
+| Typecheck | `pnpm --filter admin typecheck` | Local | PASS | checkpoint 1 PASS |
+| Build | `pnpm --filter admin build` | Local | PASS | checkpoint 1 PASS：Next.js production build |
+| Unit | `pnpm test:tooling` + `pnpm --filter admin test:unit` | Local | PASS | checkpoint 1 PASS：tooling 12/12；Admin 17 files / 77 tests |
 | Admin E2E | `pnpm test:e2e:t12-r2` 或当前正式 Admin browser gate | Local + Local Supabase | PASS | 未运行 |
-| 全路由 UI review | route inventory × viewport × keyboard/state matrix | Local | 无遗漏路由和关键状态 | 未运行 |
+| 全路由 UI review | route inventory × viewport × keyboard/state matrix | Local | 无遗漏路由和关键状态 | synthetic checkpoint PASS：60 route/viewport + 0 runtime exception；最终 T12/clean R2 待执行 |
 | Diff | `git diff --check` | Local | PASS | 未运行 |
 
 最终候选如果仓库已有更高层且覆盖上述检查的 Local release gate，可按当前 release workflow 使用，但必须确认它确实覆盖当前 SHA；不能引用旧候选 PASS。

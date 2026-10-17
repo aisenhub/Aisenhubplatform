@@ -49,6 +49,18 @@
 
 原生元素按语义使用是合法实现。文件、颜色、range 等特殊输入，或简单 `<table>`/`<button>` 在确有需要时可以保留；关键是是否已有更合适的标准能力、是否接入共同外观和可达性规则，而不是静态扫描到标签就判错。
 
-## 6. 跨产品/跨项目复用
+## 6. 静态治理与例外
+
+产品可以用静态检查保护已经完成的 ownership 收敛，但检查必须遵守同一组件合同：
+
+1. 先判断 **复用 → 扩展 → 自写**，不能因为 gate 存在就把业务组件强行塞进基础控件 API。
+2. Feature raw 基础控件、第二 Theme owner、直接 component-skin helper、标准控件内部视觉 override 等高置信度漂移可以直接失败。
+3. 业务集合行 trigger、业务图片、特殊 native input 或专业图形等合理例外必须按精确文件/语义记录理由；不能用目录级或通配 allowlist 掩盖新违规。
+4. 例外失去真实消费者后应使 gate 或审查暴露 stale allowlist，并删除例外，而不是永久保留。
+5. Tailwind layout utility 仍然合法；静态治理不能把外部 grid/flex/gap/width/responsive geometry 误判为第二 component skin。
+
+Aisenhub Admin 当前通过根 `pnpm admin-ui:check` 实施以上规则，并将它串入 `pnpm lint` / Local release gate。
+
+## 7. 跨产品/跨项目复用
 
 若未来出现第二个真实消费者，完整复用包应同时包含：Theme/Skin、组件源码与状态行为、必要依赖/资源/许可、接入说明、匹配规范和验证。只复制 Markdown、只复制 CSS 或只复制 TSX 都不能保证完整效果。

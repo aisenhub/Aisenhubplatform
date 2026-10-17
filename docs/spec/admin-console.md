@@ -178,7 +178,7 @@ Admin Web 响应必须在不破坏 Supabase Auth/MFA/必要资源加载的前提
 ## REQ-ADM-011 — Admin 必须提供统一的全局主题与外观切换
 
 - **Status**: Active
-- **Delivery**: Planned
+- **Delivery**: Implemented
 - **Priority**: P1
 - **Type**: UX
 - **Source**: 2026-10-17 用户确认的 Admin UI/UX 重构要求
@@ -198,7 +198,7 @@ Admin 必须通过统一 Appearance / Theme 设置控制整个产品的视觉主
 ## REQ-ADM-012 — Admin 必须优化实际与感知加载性能
 
 - **Status**: Active
-- **Delivery**: Planned
+- **Delivery**: Implemented
 - **Priority**: P1
 - **Type**: UX
 - **Source**: 2026-10-17 用户确认的 Admin UI/UX 重构要求
@@ -217,7 +217,7 @@ Admin 的页面切换、查询、刷新和 mutation 必须让用户尽快获得�
 
 ## Domain Verification
 
-当前 Implemented 基线来自 `apps/admin` App Router/BFF/Auth/feature source、`packages/ui` primitives/semantic components、Admin Vitest、Local browser/E2E 与 `apps/admin/PRODUCT.md`。新的 [`apps/admin/DESIGN.md`](../../apps/admin/DESIGN.md) 已冻结 Admin Product Adaptation / Design Direction，但其 Theme/Solid Glass/layout 等仍属于后续阶段 03 实施目标，不能提前写成当前运行事实。历史前端视觉描述和已删除的 `.impeccable` 生成视觉元数据不再是设计来源；历史 Review 只作为审查证据。
+当前 Implemented 基线来自 `apps/admin` App Router/BFF/Auth/feature source、`packages/ui` primitives/semantic components、[`apps/admin/DESIGN.md`](../../apps/admin/DESIGN.md)、Admin Vitest、正式 T12 browser gate 与 Local release gate。统一 Appearance、Solid Glass Product Adaptation、Toolbar/Workspace/Collection/Inspector 页面组合和 perceived-performance refresh continuity 已在阶段 03 进入运行实现；阶段 04 通过 `pnpm admin-ui:check` / `pnpm lint` 静态治理限制 Theme owner 漂移、Feature raw 基础控件、Feature 直接 component-skin helper、标准控件内部视觉 override、普通 UI 直接图形资产与无消费者 Product CSS。历史前端视觉描述和已删除的 `.impeccable` 生成视觉元数据不再是设计来源；历史 Review 只作为审查证据。
 
 ## 非目标 / 未接受项
 
