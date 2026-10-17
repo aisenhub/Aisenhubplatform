@@ -15,6 +15,7 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import { adminAuthSession } from '../../app/_lib/auth-session';
 import { SubscriptionConfigPanel } from './subscription-config-panel';
 import {
@@ -165,20 +166,17 @@ export function PlatformSettingsPage() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <section className="panel gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                General
-              </p>
-              <h2 className="mt-2">平台信息</h2>
-            </div>
+        <AdminWorkspaceSection
+          title="平台信息"
+          titleId="platform-settings-general-title"
+          meta={
             <StatusBadge
               label={platform.status === 'active' ? '运行中' : '已停用'}
               tone={platform.status === 'active' ? 'success' : 'danger'}
               rawValue={platform.status}
             />
-          </div>
+          }
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyField
               id="platform-setting-name"
@@ -196,18 +194,13 @@ export function PlatformSettingsPage() {
               <ResourceId value={platform.platform_id} className="mt-2" />
             </div>
           </div>
-        </section>
+        </AdminWorkspaceSection>
 
-        <section className="panel gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              Activation policy
-            </p>
-            <h2 className="mt-2">平台访问开关</h2>
-          </div>
-          <p className="text-sm leading-6 text-muted-foreground">
-            平台停用不影响管理员诊断，但会由服务端阻止新的普通用户授权流程。激活能力是独立策略字段，页面不会替代服务端判定。
-          </p>
+        <AdminWorkspaceSection
+          title="平台访问开关"
+          titleId="platform-settings-activation-title"
+          description="平台停用不影响管理员诊断，但会由服务端阻止新的普通用户授权流程。激活能力是独立策略字段，页面不会替代服务端判定。"
+        >
           <dl className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-muted/20 p-3 text-sm">
             <div>
               <dt className="text-xs text-muted-foreground">平台状态</dt>
@@ -220,23 +213,23 @@ export function PlatformSettingsPage() {
               </dd>
             </div>
           </dl>
-          <Button
-            variant={platform.status === 'active' ? 'destructive' : 'default'}
-            className="w-fit"
-            onClick={openToggle}
-            data-test="platform-settings-toggle"
-          >
-            {platform.status === 'active' ? '停用平台' : '启用平台'}
-          </Button>
-          <Button
-            variant="outline"
-            className="w-fit"
-            onClick={openActivationToggle}
-            data-test="platform-settings-activation-toggle"
-          >
-            {platform.allow_activation ? '关闭新的激活' : '允许新的激活'}
-          </Button>
-        </section>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={platform.status === 'active' ? 'destructive' : 'default'}
+              onClick={openToggle}
+              data-test="platform-settings-toggle"
+            >
+              {platform.status === 'active' ? '停用平台' : '启用平台'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={openActivationToggle}
+              data-test="platform-settings-activation-toggle"
+            >
+              {platform.allow_activation ? '关闭新的激活' : '允许新的激活'}
+            </Button>
+          </div>
+        </AdminWorkspaceSection>
       </div>
 
       <SubscriptionConfigPanel
