@@ -130,7 +130,7 @@ flowchart LR
 | [architecture/reference/configuration.md](reference/configuration.md) | runtime-deployment、billing、security | 已迁入 Architecture Reference；Billing Cron 与其他 schedule metadata 证据边界已核对 |
 | [architecture/reference/maintenance-callers.md](reference/maintenance-callers.md) | runtime-deployment、operations | 已迁入 Architecture Reference，继续保存精确 Local/Hosted 调用证据 |
 | [architecture/reference/toolchain.md](reference/toolchain.md) | engineering-stack | 已迁入 Architecture Reference；System Admin terminology 已修正 |
-| `apps/admin/DESIGN.md` / `PRODUCT.md` | admin-console | 已吸收（第一轮），原文继续作为设计系统源 |
+| 旧 `apps/admin/DESIGN.md` / 当前 `PRODUCT.md` | admin-console | 旧 DESIGN 已退出当前设计来源；PRODUCT 继续提供产品背景，新 Design Direction 由 `plans/admin-design-system-uiux-rebuild/` 从零重建 |
 | Admin 前端架构审查 + 历史 UI/UX Review | admin-console、engineering-stack；建议项留在 review | 第二轮 parity 与后续整改已完成；PlatformSwitcher 键盘语义、统一安全错误分类和强制 CSP 已进入当前架构，`REQ-ADM-008/009/010` 均为 Implemented；历史静态缺陷不回灌为当前事实 |
 | 已完成/被后续主干吸收的 Billing / MFA 实施计划 | commerce、billing、entitlements、identity、admin、operations | 稳定事实已进入 Architecture/Spec；过程资料按 Git 历史追溯；仍需真实 Hosted / Provider / Production 条件的事项只保留在 `docs/plans/TODO.md` 与对应 Runbook |
 | 已完成历史 Plan/Proposal / Review | 对应模块 | P1–P6 parity 后当前事实已进入长期层；原过程资料按 Git 历史追溯 |

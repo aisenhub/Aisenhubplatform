@@ -243,6 +243,6 @@ Lint/Format：Oxlint + Oxfmt，不是 ESLint + Prettier。
 
 ## 19. 文档边界
 
-`apps/admin/DESIGN.md` 是视觉/交互设计源；`PRODUCT.md` 是产品背景；本文描述架构实现。Admin 前端架构审查中的技术债、评分和改进顺序保留在 `review`，不能反过来写成已经实施的架构事实。
+旧 `apps/admin/DESIGN.md` 已退出当前视觉/交互设计来源；`PRODUCT.md` 继续提供产品背景，新的 Admin Design Direction 由 [`admin-design-system-uiux-rebuild`](../../plans/admin-design-system-uiux-rebuild/plan.md) 规划但尚未实现。本文只描述当前架构实现。Admin 前端架构审查中的技术债、评分和改进顺序保留在 `review`，不能反过来写成已经实施的架构事实。
 
 历史 2026-10-13 UI/UX 审查自身已经标注为静态快照，其中不少问题后来被修复或未复现；它只作为历史 Review 输入。当前实现事实以源码、当前测试、2026-10-15 架构审查和本文 parity 为准。

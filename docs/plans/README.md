@@ -6,6 +6,7 @@
 
 ## 当前工作
 
+- [Admin Design System 迁移与 UI/UX 全面重构](admin-design-system-uiux-rebuild/plan.md)：先迁移通用设计系统并从零建立新的 Aisenhub Admin 设计方向，再以设计系统驱动组件、视觉、交互和治理的全量收敛。
 - [当前剩余工作 TODO](TODO.md)：只保留仍需要真实 Hosted / Provider / 恢复 / Retention / Consumer / Production 条件才能执行或验收的事项；已经完成并进入 Architecture/Spec 的仓库实现不继续作为任务保留。
 
 ## 计划基础设施
