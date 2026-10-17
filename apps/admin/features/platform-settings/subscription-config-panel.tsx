@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
-import { Input } from '@kit/ui/input';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 
 import { adminAuthSession } from '../../app/_lib/auth-session';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   caughtResourceError,
   readApiPayload,
@@ -122,35 +123,33 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
 
   if (loading) {
     return (
-      <section className="panel" data-test="subscription-config-loading">
+      <AdminWorkspaceSection
+        title="商业购买策略"
+        titleId="subscription-config-title"
+        description="正在读取 Commerce policy…"
+        data-test="subscription-config-loading"
+      >
         <p className="text-sm text-muted-foreground">
-          正在读取 Commerce policy…
+          Offer / Price / Provider Mapping 决定真实销售目录。
         </p>
-      </section>
+      </AdminWorkspaceSection>
     );
   }
 
   return (
-    <section className="panel gap-4" data-test="subscription-config-panel">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Commerce policy
-          </p>
-          <h2 className="mt-2">商业购买策略</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Offer / Price / Provider Mapping
-            决定真实销售目录；这里仅控制是否暂停新购买，
-            以及订阅页展示文案，不再维护第二套 fixed-product 开关。
-          </p>
-        </div>
-        {config ? (
+    <AdminWorkspaceSection
+      title="商业购买策略"
+      titleId="subscription-config-title"
+      description="Offer / Price / Provider Mapping 决定真实销售目录；这里仅控制是否暂停新购买，以及订阅页展示文案，不再维护第二套 fixed-product 开关。"
+      meta={
+        config ? (
           <span className="rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground">
             row_version {config.row_version}
           </span>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+      data-test="subscription-config-panel"
+    >
       {message ? (
         <Alert
           variant={message.title.includes('已保存') ? undefined : 'destructive'}
@@ -237,7 +236,7 @@ export function SubscriptionConfigPanel({ platformId, platformStatus }: Props) {
           重新读取商业策略
         </Button>
       )}
-    </section>
+    </AdminWorkspaceSection>
   );
 }
 
@@ -252,11 +251,10 @@ function Toggle({
 }) {
   return (
     <label className="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/20 p-3 text-sm">
-      <Input
-        type="checkbox"
+      <Checkbox
         checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="h-4 w-4"
+        onCheckedChange={onChange}
+        aria-label={label}
       />
       <span>{label}</span>
       <span className="ml-auto text-xs text-muted-foreground">
