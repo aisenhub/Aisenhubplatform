@@ -11,6 +11,10 @@ import { StatusBadge } from '@kit/ui/status-badge';
 import { NativeSelect } from '@kit/ui/native-select';
 
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
@@ -322,10 +326,7 @@ export function BillingOrderWorkspace({
         </Alert>
       ) : null}
 
-      <section
-        className="rounded-xl border border-border bg-card p-4"
-        aria-label="Billing 订单筛选"
-      >
+      <AdminTaskToolbar aria-label="Billing 订单筛选">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-semibold">筛选订单</h2>
@@ -454,7 +455,7 @@ export function BillingOrderWorkspace({
             />
           </label>
         </div>
-      </section>
+      </AdminTaskToolbar>
 
       {state === 'loading' ? (
         <div
@@ -471,17 +472,17 @@ export function BillingOrderWorkspace({
           </AlertDescription>
         </Alert>
       ) : (
-        <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <AdminWorkspaceSection
+          title={platformId ? '当前平台订单队列' : '全网订单队列'}
+          titleId="billing-order-queue-title"
+          description="Provider 事实仅作为观察依据，最终权益状态以中央结算结果为准。"
+          bodyClassName="admin-workspace-split lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]"
+        >
+          <div className="admin-support-surface overflow-hidden p-0">
             <div className="border-b border-border p-4">
-              <h2 className="font-semibold">
-                {platformId ? '当前平台订单队列' : '全网订单队列'}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Provider 事实仅作为观察依据，最终权益状态以中央结算结果为准。
-              </p>
+              <p className="text-sm font-medium">选择订单查看证据与受控操作</p>
             </div>
-            <div className="divide-y divide-border">
+            <div className="admin-selectable-collection">
               {orders.length === 0 ? (
                 <p className="p-6 text-sm text-muted-foreground">
                   {Object.values(effectiveFilters).some(Boolean)
@@ -495,15 +496,14 @@ export function BillingOrderWorkspace({
                   : undefined;
                 return (
                   <button
-                    className={`grid w-full gap-2 p-4 text-left transition ${
-                      selected?.order_id === order.order_id
-                        ? 'bg-primary-soft/40 border-l-3 border-l-primary font-medium'
-                        : 'hover:bg-muted/40 border-l-3 border-l-transparent'
-                    }`}
+                    className="admin-selectable-row"
                     key={order.order_id}
                     onClick={() => chooseOrder(order.order_id)}
                     type="button"
                     aria-pressed={selected?.order_id === order.order_id}
+                    data-selected={
+                      selected?.order_id === order.order_id ? 'true' : 'false'
+                    }
                   >
                     <span className="flex flex-wrap items-center gap-2">
                       <code className="text-xs">{order.provider_order_no}</code>
@@ -554,10 +554,7 @@ export function BillingOrderWorkspace({
             ) : null}
           </div>
 
-          <aside
-            className="rounded-xl border border-border bg-card p-5"
-            aria-label="订单详情与操作"
-          >
+          <aside className="admin-support-surface" aria-label="订单详情与操作">
             {selected ? (
               <>
                 <p className="text-sm text-muted-foreground">订单详情</p>
@@ -738,7 +735,7 @@ export function BillingOrderWorkspace({
               </p>
             )}
           </aside>
-        </section>
+        </AdminWorkspaceSection>
       )}
     </section>
   );

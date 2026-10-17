@@ -8,6 +8,7 @@ import { Button } from '@kit/ui/button';
 import { StatusBadge, type StatusTone } from '@kit/ui/status-badge';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -177,135 +178,149 @@ export function CentralBillingPage() {
         </Alert>
       ) : null}
 
-      <section
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        aria-label="支付运行指标"
+      <AdminWorkspaceSection
+        title="运行状态"
+        titleId="billing-runtime-status"
+        description="这些计数用于定位处理队列和异常，不把读取失败或未知事实显示成 0。"
       >
-        {metricsLoading ? (
-          <div className="col-span-full rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            正在读取 Payment Operations 运行观测…
-          </div>
-        ) : metrics ? (
-          [
-            ['待处理', metrics.pending_count],
-            ['处理中', metrics.processing_count],
-            ['可重试', metrics.retryable_count],
-            ['人工审核', metrics.manual_review_count],
-            ['重复支付', metrics.duplicate_payment_count],
-            ['租约过期', metrics.expired_lease_count],
-            ['退款待补偿', metrics.refund_mismatch_count],
-            ['告警未送达', metrics.pending_alert_delivery_count],
-          ].map(([label, value]) => (
-            <div
-              className="rounded-xl border border-border bg-card p-4"
-              key={String(label)}
+        <div
+          className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-4"
+          aria-label="支付运行指标"
+        >
+          {metricsLoading ? (
+            <p
+              className="col-span-full py-3 text-sm text-muted-foreground"
+              aria-busy="true"
             >
-              <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="mt-2 text-2xl font-semibold">{value}</p>
-            </div>
-          ))
-        ) : (
-          <div className="col-span-full rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            运行观测当前不可确认；订单工作台不会用 0 伪装健康状态。
-          </div>
-        )}
-      </section>
+              正在读取 Payment Operations 运行观测…
+            </p>
+          ) : metrics ? (
+            [
+              ['待处理', metrics.pending_count],
+              ['处理中', metrics.processing_count],
+              ['可重试', metrics.retryable_count],
+              ['人工审核', metrics.manual_review_count],
+              ['重复支付', metrics.duplicate_payment_count],
+              ['租约过期', metrics.expired_lease_count],
+              ['退款待补偿', metrics.refund_mismatch_count],
+              ['告警未送达', metrics.pending_alert_delivery_count],
+            ].map(([label, value]) => (
+              <div className="border-b border-border py-3" key={String(label)}>
+                <p className="text-sm text-muted-foreground">{label}</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">
+                  {value}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="col-span-full py-3 text-sm text-muted-foreground">
+              运行观测当前不可确认；订单工作台不会用 0 伪装健康状态。
+            </p>
+          )}
+        </div>
+      </AdminWorkspaceSection>
 
       {metrics ? (
         <>
-          <section
-            className="grid gap-6 lg:grid-cols-[1fr_1fr]"
-            aria-label="Billing 运行观测"
+          <AdminWorkspaceSection
+            title="运行观测"
+            titleId="billing-runtime-observability"
+            description="展示队列延迟、重试与调度器事实；自动补偿策略仍以服务端治理为准。"
           >
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">
-                    Payment Operations · 运行观测
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    最近观测：{formatDate(metrics.observed_at)} · 阈值来源：
-                    {metrics.alert_threshold_source === 'configured'
-                      ? '已配置'
-                      : '本地默认值'}
-                  </p>
+            <div
+              className="grid gap-6 lg:grid-cols-[1fr_1fr]"
+              aria-label="Billing 运行观测"
+            >
+              <div className="admin-detail-column">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold">
+                      Payment Operations · 运行观测
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      最近观测：{formatDate(metrics.observed_at)} · 阈值来源：
+                      {metrics.alert_threshold_source === 'configured'
+                        ? '已配置'
+                        : '本地默认值'}
+                    </p>
+                  </div>
+                  <StatusBadge
+                    label={`${metrics.active_alert_count} 个活跃告警`}
+                    tone={
+                      metrics.active_alert_count > 0 ? 'warning' : 'success'
+                    }
+                  />
                 </div>
-                <StatusBadge
-                  label={`${metrics.active_alert_count} 个活跃告警`}
-                  tone={metrics.active_alert_count > 0 ? 'warning' : 'success'}
-                />
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-muted-foreground">处理中最久</dt>
+                    <dd className="mt-1 font-medium">
+                      {Math.round(metrics.oldest_processing_age_seconds ?? 0)}{' '}
+                      秒
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">重试总次数</dt>
+                    <dd className="mt-1 font-medium">
+                      {metrics.retry_attempts_total}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Discovery 延迟</dt>
+                    <dd className="mt-1 font-medium">
+                      {Math.round(metrics.discovery_lag_seconds ?? 0)} 秒
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Processing 延迟</dt>
+                    <dd className="mt-1 font-medium">
+                      {Math.round(metrics.processing_lag_seconds ?? 0)} 秒
+                    </dd>
+                  </div>
+                </dl>
               </div>
-              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted-foreground">处理中最久</dt>
-                  <dd className="mt-1 font-medium">
-                    {Math.round(metrics.oldest_processing_age_seconds ?? 0)} 秒
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">重试总次数</dt>
-                  <dd className="mt-1 font-medium">
-                    {metrics.retry_attempts_total}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Discovery 延迟</dt>
-                  <dd className="mt-1 font-medium">
-                    {Math.round(metrics.discovery_lag_seconds ?? 0)} 秒
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Processing 延迟</dt>
-                  <dd className="mt-1 font-medium">
-                    {Math.round(metrics.processing_lag_seconds ?? 0)} 秒
-                  </dd>
-                </div>
-              </dl>
+              <div className="admin-detail-column admin-detail-column-divided">
+                <h2 className="font-semibold">调度器健康</h2>
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-muted-foreground">最近接受</dt>
+                    <dd className="mt-1 font-medium">
+                      {formatDate(metrics.scheduler_last_accepted_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">最近完成</dt>
+                    <dd className="mt-1 font-medium">
+                      {formatDate(metrics.scheduler_last_completed_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">调度失败次数</dt>
+                    <dd className="mt-1 font-medium">
+                      {metrics.scheduler_failure_count}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">自动补偿</dt>
+                    <dd className="mt-1 font-medium">不自动退款或撤销权益</dd>
+                  </div>
+                </dl>
+              </div>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h2 className="font-semibold">调度器健康</h2>
-              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted-foreground">最近接受</dt>
-                  <dd className="mt-1 font-medium">
-                    {formatDate(metrics.scheduler_last_accepted_at)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">最近完成</dt>
-                  <dd className="mt-1 font-medium">
-                    {formatDate(metrics.scheduler_last_completed_at)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">调度失败次数</dt>
-                  <dd className="mt-1 font-medium">
-                    {metrics.scheduler_failure_count}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">自动补偿</dt>
-                  <dd className="mt-1 font-medium">不自动退款或撤销权益</dd>
-                </div>
-              </dl>
-            </div>
-          </section>
+          </AdminWorkspaceSection>
 
-          <section
-            className="rounded-xl border border-border bg-card"
+          <AdminWorkspaceSection
+            title="告警与送达"
+            titleId="billing-alerts"
+            description="告警会去重并记录恢复；“待送达”表示接收器未配置或最近投递失败。"
+            meta={`${metrics.active_alert_count} 个活跃告警`}
             aria-label="Billing 告警"
           >
-            <div className="border-b border-border p-4">
-              <h2 className="font-semibold">告警与送达</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                告警会去重并记录恢复；“待送达”表示接收器未配置或最近投递失败。
-              </p>
-            </div>
             {metrics.alerts.length ? (
-              <div className="divide-y divide-border">
+              <div className="admin-related-workspace-list">
                 {metrics.alerts.map((alert) => (
                   <div
-                    className="flex flex-wrap items-start justify-between gap-3 p-4"
+                    className="admin-related-workspace-row"
                     key={alert.alert_id}
                   >
                     <div className="min-w-0">
@@ -340,11 +355,11 @@ export function CentralBillingPage() {
                 ))}
               </div>
             ) : (
-              <p className="p-4 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 当前没有活跃告警。
               </p>
             )}
-          </section>
+          </AdminWorkspaceSection>
         </>
       ) : null}
 

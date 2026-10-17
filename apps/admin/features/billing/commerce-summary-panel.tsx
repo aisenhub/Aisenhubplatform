@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
 
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -73,7 +74,6 @@ export function CommerceSummaryPanel({
     const epoch = adminAuthSession.getEpoch();
     setLoading(true);
     setError(null);
-    setSummary(null);
     try {
       const params = new URLSearchParams();
       if (platformId) params.set('platform_id', platformId);
@@ -118,15 +118,11 @@ export function CommerceSummaryPanel({
   }, [load]);
 
   return (
-    <section className="grid gap-4" data-test="commerce-summary-panel">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2>{title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            仅统计已验证并最终授予权益的结算事实，以及已完成补偿的退款；这些数字不是
-            Revenue、MRR 或 ARR。
-          </p>
-        </div>
+    <AdminWorkspaceSection
+      title={title}
+      titleId="commerce-summary-title"
+      description="仅统计已验证并最终授予权益的结算事实，以及已完成补偿的退款；这些数字不是 Revenue、MRR 或 ARR。"
+      actions={
         <Button
           variant="outline"
           size="sm"
@@ -135,8 +131,9 @@ export function CommerceSummaryPanel({
         >
           {loading ? '读取中…' : '刷新摘要'}
         </Button>
-      </div>
-
+      }
+      data-test="commerce-summary-panel"
+    >
       {error ? (
         <Alert variant="destructive">
           <AlertTitle>{error.title}</AlertTitle>
@@ -145,12 +142,12 @@ export function CommerceSummaryPanel({
       ) : null}
 
       {loading && !summary ? (
-        <div className="panel text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground" aria-busy="true">
           正在读取可核实商业事实…
-        </div>
+        </p>
       ) : summary ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
             {[
               [
                 '当前有效付费权益账户',
@@ -168,7 +165,7 @@ export function CommerceSummaryPanel({
               ],
             ].map(([label, value], index) => (
               <article
-                className="panel gap-1"
+                className="grid gap-1 border-b border-border py-3"
                 key={label}
                 data-test={
                   index === 0 ? 'commerce-summary-paid-accounts' : undefined
@@ -193,6 +190,6 @@ export function CommerceSummaryPanel({
           ) : null}
         </>
       ) : null}
-    </section>
+    </AdminWorkspaceSection>
   );
 }

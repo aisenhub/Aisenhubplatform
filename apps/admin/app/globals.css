@@ -753,6 +753,39 @@ label {
   padding: 1rem 0;
   border-bottom: 1px solid var(--border);
 }
+.admin-selectable-collection {
+  display: grid;
+  min-width: 0;
+}
+.admin-selectable-row {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+.admin-selectable-row:hover {
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
+}
+.admin-selectable-row[data-selected='true'] {
+  border-left-color: var(--primary);
+  background: var(--primary-soft);
+}
+.admin-selectable-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
 .admin-related-workspace-value {
   font-size: 1.25rem;
   font-weight: 650;

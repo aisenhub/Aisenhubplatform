@@ -44,6 +44,10 @@ import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   adminAuthSession,
   sessionErrorMessage,
   useAdminSessionSnapshot,
@@ -561,7 +565,7 @@ function AdminAuditPageContent() {
         }
       />
 
-      <section className="panel gap-5" aria-labelledby="audit-query-heading">
+      <AdminTaskToolbar aria-labelledby="audit-query-heading">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             <h2 id="audit-query-heading">筛选审计事件</h2>
@@ -746,7 +750,7 @@ function AdminAuditPageContent() {
             </Button>
           </div>
         </form>
-      </section>
+      </AdminTaskToolbar>
 
       {refreshError ? (
         <Alert variant="destructive" data-test="audit-background-error">
@@ -772,24 +776,15 @@ function AdminAuditPageContent() {
         </Alert>
       ) : null}
 
-      <section className="panel gap-4" aria-labelledby="audit-table-heading">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 id="audit-table-heading">事件列表</h2>
-            <p
-              className="text-sm text-muted-foreground"
-              role="status"
-              aria-live="polite"
-            >
-              {visibleSummary ||
-                (remoteState === 'loading' ? '正在加载审计记录…' : '')}
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            每页 {PAGE_SIZE} 条 · 时间显示为 Asia/Shanghai
-          </span>
-        </div>
-
+      <AdminWorkspaceSection
+        title="事件列表"
+        titleId="audit-table-heading"
+        description={
+          visibleSummary ||
+          (remoteState === 'loading' ? '正在加载审计记录…' : undefined)
+        }
+        meta={`每页 ${PAGE_SIZE} 条 · 时间显示为 Asia/Shanghai`}
+      >
         {remoteState === 'loading' && entries.length === 0 ? (
           <AsyncState state="loading" />
         ) : null}
@@ -931,7 +926,7 @@ function AdminAuditPageContent() {
             </div>
           </>
         ) : null}
-      </section>
+      </AdminWorkspaceSection>
 
       <AuditInspector entry={selectedEntry} onClose={closeInspector} />
     </main>
