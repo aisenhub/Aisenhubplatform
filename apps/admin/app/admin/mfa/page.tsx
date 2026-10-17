@@ -249,7 +249,7 @@ export default function AdminMfaPage() {
       </div>
 
       {!enrollment ? (
-        <section className="panel admin-auth-card">
+        <section className="admin-auth-card">
           <h2>{factors.length ? '添加备用认证器' : '绑定认证器'}</h2>
           <p className="muted">
             System Admin 生产就绪要求至少两个 verified TOTP
@@ -271,7 +271,7 @@ export default function AdminMfaPage() {
       ) : null}
 
       {enrollment ? (
-        <section className="panel admin-auth-card">
+        <section className="admin-auth-card">
           <h2>绑定 Aisenhub Admin 认证器</h2>
           <p className="muted">
             用认证器扫描二维码。无法扫码时，可复制下方密钥手动添加。
@@ -337,7 +337,7 @@ export default function AdminMfaPage() {
 
       {factors.length ? (
         <form
-          className="panel stack-form admin-auth-card"
+          className="stack-form admin-auth-card"
           onSubmit={verifyExistingFactor}
         >
           <Label htmlFor="factor">认证器</Label>
