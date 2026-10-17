@@ -7,8 +7,8 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：Aisenhub Admin Design System 迁移与 UI/UX 全面重构
 - 总计划：[plan.md](plan.md)
-- 当前阶段：阶段 02 — New Aisenhub Design Direction（验收通过待推送；新 `apps/admin/DESIGN.md` 已冻结且本地验证通过）
-- 当前阶段分支：`codex/admin-design-direction-phase2`；基线包含已交付阶段 01 与用户确认的新增设计 Requirement。
+- 当前阶段：阶段 03 — Component + UI/UX Rebuild（未开始；阶段 01/02 已交付，等待用户派发）
+- 最近已交付分支：`codex/admin-design-direction-phase2`；阶段 03 应从包含 `30ff8f14167abeb19566ce84f3e5e85dfde18b20` 的已确认基线建立新的短期分支。
 - 远程仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
 
 ## 必读顺序

@@ -19,7 +19,7 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
-| 02 | New Aisenhub Design Direction | 验收通过待推送 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | commit/push/远端核对 | 未验证 | 未验证 |
+| 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
 | 03 | Component + UI/UX Rebuild | 未开始 | 未验证 | 依赖 01、02 | 未验证 | 未验证 |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
 
@@ -42,7 +42,7 @@
 - 旧设计非继承检查：当前权威 Architecture/Plan 中旧 North Star/旧色板描述已删除；`apps/admin/.impeccable/design.json` 已删除；当前 `globals.css` 中旧视觉值仅作为阶段 03 待替换实现债务，不具有设计权威。
 - 开源材质参考：研究 `deeplethe/solid-glass` 的 edge finish、heavy-not-airy、depth-as-thickness、one-material-state 与 shadcn `data-slot` skin 方法；只迁移方法，不直接安装其 stylesheet 或复制产品 skin。
 - 与计划偏差：用户在阶段执行中新增“实体感玻璃”材质要求并明确允许删除旧前端风格描述；已纳入 Phase 02，未改变后端或阶段 03 代码边界。
-- 未完成或未验证内容：本地 docs/contracts/diff 与人工设计审查已通过；仅剩 commit/push/远端核对。
+- 未完成或未验证内容：无阶段 02 内容阻塞；阶段 03 尚未开始。
 
 ### 阶段 03：Component + UI/UX Rebuild
 
@@ -104,15 +104,15 @@
 | 阶段 | commit SHA | 分支 | push | 远端核对 | 链接 |
 | --- | --- | --- | --- | --- | --- |
 | 01 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | `codex/admin-design-system-phase1` | PASS | PASS：`origin/codex/admin-design-system-phase1` 指向同一 SHA | GitHub 分支 |
-| 02 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
+| 02 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | `codex/admin-design-direction-phase2` | PASS | PASS：远端分支指向同一 SHA | GitHub 分支 |
 | 03 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 | 04 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：阶段 02 从 `docs/development/design/README.md` 与 Product Requirement 开始创建全新 Aisenhub Admin Design Direction，并优先冻结标准图标、全新页面 hierarchy、Appearance Theme System 与 Perceived Performance 四项新增硬约束。
-- 必须先解决的问题：阶段 01 当前无内容阻塞，仍需完成本地检查与 GitHub 交付门槛。
+- 下一阶段从哪里开始：阶段 03 从 `apps/admin/DESIGN.md`、`docs/development/design/README.md` 与 Phase 03 页面批次计划开始，首批处理 Shell / Navigation / Topbar / PlatformSwitcher / Command Palette / Appearance Settings。
+- 必须先解决的问题：阶段 01/02 当前无内容阻塞；阶段 03 开始前重新 inventory 当前 route/component/CSS ownership，并按 R2 规则建立新短期分支。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前未提交修改及归属：本条记录更新时仅剩阶段 01 交付记录收尾；不包含运行代码或阶段 02 实施。
-- 需要用户决定的事项：阶段 02 的具体视觉方向由新 Design System + Product Requirement 驱动；若出现多个同等方案且无法由约束判断，再请求产品决定。
+- 当前未提交修改及归属：本条记录更新只做阶段 02 交付状态收尾，不包含阶段 03 运行代码。
+- 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。
