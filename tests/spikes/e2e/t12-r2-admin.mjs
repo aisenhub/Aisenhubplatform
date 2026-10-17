@@ -769,6 +769,9 @@ async function runBrowserFlow(secret, primaryFactorId, backupFactorId) {
   await page.locator('[data-test="appearance-surface-neutral"]').click();
   await page.keyboard.press('Escape');
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === 'dark',
+  );
   assert.equal(
     await page.locator('html').getAttribute('data-theme'),
     'dark',
@@ -785,6 +788,9 @@ async function runBrowserFlow(secret, primaryFactorId, backupFactorId) {
     colorScheme: 'light',
     reducedMotion: 'no-preference',
   });
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === 'light',
+  );
   assert.equal(
     await page.locator('html').getAttribute('data-theme'),
     'light',
