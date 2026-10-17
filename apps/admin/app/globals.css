@@ -331,11 +331,8 @@ button:disabled {
 a {
   color: inherit;
 }
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
+button:not([data-slot='button']):focus-visible,
+a:not([data-slot='button']):focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
@@ -427,50 +424,6 @@ h3 {
 label {
   color: var(--foreground);
   font-weight: 550;
-}
-input,
-textarea,
-select {
-  min-width: 0;
-  max-width: 100%;
-  min-height: 2.5rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--input);
-  border-radius: 0.5rem;
-  background: var(--card);
-  color: var(--foreground);
-  caret-color: var(--primary);
-  transition: border-color 160ms ease;
-}
-input:hover,
-textarea:hover,
-select:hover {
-  border-color: var(--primary);
-}
-input::placeholder,
-textarea::placeholder {
-  color: var(--muted-foreground);
-}
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  border-color: var(--ring);
-}
-.admin-auth-card button:not([data-slot='button']) {
-  min-height: 2.75rem;
-  padding: 0.65rem 1rem;
-  border: 1px solid transparent;
-  border-radius: 0.5rem;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-.admin-auth-card button:not([data-slot='button']):hover:not(:disabled) {
-  background: var(--primary-dark);
-}
-.admin-auth-card button:not([data-slot='button']):disabled {
-  opacity: 0.55;
 }
 .stack-form {
   display: grid;
