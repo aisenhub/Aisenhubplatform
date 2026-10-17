@@ -39,6 +39,10 @@ import {
 } from '../../app/_lib/auth-session';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   formatUtc,
@@ -475,14 +479,8 @@ export function FeedbackCenterPage() {
         description="处理平台用户提交的文字、图片与联系意愿；筛选、导出与删除都以服务端权威范围为准。"
       />
 
-      <section className="panel gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2>反馈队列</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              新反馈与处理中属于平台概览待办；已删除内容不会继续出现在处理中心。
-            </p>
-          </div>
+      <AdminTaskToolbar aria-label="反馈筛选与批量操作">
+        <div className="grid w-full gap-4">
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -511,106 +509,124 @@ export function FeedbackCenterPage() {
               批量删除
             </Button>
           </div>
-        </div>
 
-        <form className="grid gap-3 md:grid-cols-4" onSubmit={submitFilters}>
-          <div className="grid gap-1 md:col-span-2">
-            <Label htmlFor="feedback-q">关键词</Label>
+          <form className="grid gap-3 md:grid-cols-4" onSubmit={submitFilters}>
+            <div className="grid gap-1 md:col-span-2">
+              <Label htmlFor="feedback-q">关键词</Label>
+              <Input
+                id="feedback-q"
+                value={draft.q}
+                onChange={(event) => setDraftField('q', event.target.value)}
+                maxLength={256}
+                placeholder="标题、正文、用户或邮箱"
+                data-test="feedback-filter-q"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="feedback-status">状态</Label>
+              <NativeSelect
+                id="feedback-status"
+                value={draft.status}
+                onChange={(event) =>
+                  setDraftField('status', event.target.value)
+                }
+              >
+                <option value="">全部</option>
+                {FEEDBACK_STATUSES.map((value) => (
+                  <option key={value} value={value}>
+                    {feedbackStatusView(value).label}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="feedback-category">分类</Label>
+              <NativeSelect
+                id="feedback-category"
+                value={draft.category}
+                onChange={(event) =>
+                  setDraftField('category', event.target.value)
+                }
+              >
+                <option value="">全部</option>
+                {FEEDBACK_CATEGORIES.map((value) => (
+                  <option key={value} value={value}>
+                    {feedbackCategoryLabel(value)}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
             <Input
-              id="feedback-q"
-              value={draft.q}
-              onChange={(event) => setDraftField('q', event.target.value)}
-              maxLength={256}
-              placeholder="标题、正文、用户或邮箱"
-              data-test="feedback-filter-q"
+              aria-label="标签"
+              value={draft.label}
+              onChange={(event) => setDraftField('label', event.target.value)}
+              placeholder="标签"
+              maxLength={32}
             />
-          </div>
-          <div className="grid gap-1">
-            <Label htmlFor="feedback-status">状态</Label>
+            <Input
+              aria-label="用户"
+              value={draft.user}
+              onChange={(event) => setDraftField('user', event.target.value)}
+              placeholder="用户名称 / UUID"
+            />
+            <Input
+              aria-label="邮箱"
+              value={draft.email}
+              onChange={(event) => setDraftField('email', event.target.value)}
+              placeholder="邮箱"
+            />
             <NativeSelect
-              id="feedback-status"
-              value={draft.status}
-              onChange={(event) => setDraftField('status', event.target.value)}
-            >
-              <option value="">全部</option>
-              {FEEDBACK_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {feedbackStatusView(value).label}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-          <div className="grid gap-1">
-            <Label htmlFor="feedback-category">分类</Label>
-            <NativeSelect
-              id="feedback-category"
-              value={draft.category}
+              aria-label="是否含图片"
+              value={draft.hasAttachments}
               onChange={(event) =>
-                setDraftField('category', event.target.value)
+                setDraftField('hasAttachments', event.target.value)
               }
             >
-              <option value="">全部</option>
-              {FEEDBACK_CATEGORIES.map((value) => (
-                <option key={value} value={value}>
-                  {feedbackCategoryLabel(value)}
-                </option>
-              ))}
+              <option value="">图片不限</option>
+              <option value="true">含图片</option>
+              <option value="false">无图片</option>
             </NativeSelect>
-          </div>
-          <Input
-            aria-label="标签"
-            value={draft.label}
-            onChange={(event) => setDraftField('label', event.target.value)}
-            placeholder="标签"
-            maxLength={32}
-          />
-          <Input
-            aria-label="用户"
-            value={draft.user}
-            onChange={(event) => setDraftField('user', event.target.value)}
-            placeholder="用户名称 / UUID"
-          />
-          <Input
-            aria-label="邮箱"
-            value={draft.email}
-            onChange={(event) => setDraftField('email', event.target.value)}
-            placeholder="邮箱"
-          />
-          <NativeSelect
-            aria-label="是否含图片"
-            value={draft.hasAttachments}
-            onChange={(event) =>
-              setDraftField('hasAttachments', event.target.value)
-            }
-          >
-            <option value="">图片不限</option>
-            <option value="true">含图片</option>
-            <option value="false">无图片</option>
-          </NativeSelect>
-          <Input
-            aria-label="开始日期"
-            type="date"
-            value={draft.from}
-            onChange={(event) => setDraftField('from', event.target.value)}
-          />
-          <Input
-            aria-label="结束日期"
-            type="date"
-            value={draft.to}
-            onChange={(event) => setDraftField('to', event.target.value)}
-          />
-          <Button type="submit" data-test="feedback-filter-submit">
-            应用筛选
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.replace(pathname)}
-          >
-            清除
-          </Button>
-        </form>
+            <Input
+              aria-label="开始日期"
+              type="date"
+              value={draft.from}
+              onChange={(event) => setDraftField('from', event.target.value)}
+            />
+            <Input
+              aria-label="结束日期"
+              type="date"
+              value={draft.to}
+              onChange={(event) => setDraftField('to', event.target.value)}
+            />
+            <Button type="submit" data-test="feedback-filter-submit">
+              应用筛选
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.replace(pathname)}
+            >
+              清除
+            </Button>
+          </form>
+        </div>
+      </AdminTaskToolbar>
 
+      <AdminWorkspaceSection
+        title="反馈队列"
+        titleId="feedback-queue-title"
+        description="新反馈与处理中属于平台概览待办；已删除内容不会继续出现在处理中心。"
+        meta={
+          <StatusBadge
+            label={
+              selected.size
+                ? `${selected.size} 条已选`
+                : `${items.length} 条当前页`
+            }
+            tone={selected.size ? 'info' : 'neutral'}
+          />
+        }
+      >
         {listError ? (
           <Alert variant="destructive">
             <AlertTitle>{listError.title}</AlertTitle>
@@ -649,93 +665,104 @@ export function FeedbackCenterPage() {
           </EmptyState>
         ) : null}
         {state === 'success' && items.length ? (
-          <Table data-test="feedback-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox
-                    aria-label="全选或取消全选当前页反馈"
-                    checked={
-                      items.length > 0 &&
-                      items.every((i) => selected.has(i.feedback_id))
-                    }
-                    indeterminate={
-                      items.some((i) => selected.has(i.feedback_id)) &&
-                      !items.every((i) => selected.has(i.feedback_id))
-                    }
-                    onCheckedChange={toggleAll}
-                  />
-                </TableHead>
-                <TableHead>提交时间</TableHead>
-                <TableHead>用户 / 摘要</TableHead>
-                <TableHead>分类</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>标签 / 图片</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => {
-                const status = feedbackStatusView(item.status);
-                return (
-                  <TableRow key={item.feedback_id} data-test="feedback-row">
-                    <TableCell>
-                      <Checkbox
-                        aria-label={`选择 ${feedbackSummary(item)}`}
-                        checked={selected.has(item.feedback_id)}
-                        onCheckedChange={() => toggleSelected(item.feedback_id)}
-                      />
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-xs">
-                      {formatUtc(item.submitted_at ?? item.created_at)}
-                    </TableCell>
-                    <TableCell className="min-w-64 whitespace-normal">
-                      <strong className="block text-sm">
-                        {item.author_display_name}
-                      </strong>
-                      <span className="mt-1 block text-sm">
-                        {feedbackSummary(item)}
-                      </span>
-                      {item.body_summary && item.title ? (
-                        <span className="mt-1 block line-clamp-2 text-xs text-muted-foreground">
-                          {item.body_summary}
+          <div
+            className="data-table"
+            tabIndex={0}
+            role="region"
+            aria-label="反馈队列，可横向滚动"
+          >
+            <Table data-test="feedback-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      aria-label="全选或取消全选当前页反馈"
+                      checked={
+                        items.length > 0 &&
+                        items.every((i) => selected.has(i.feedback_id))
+                      }
+                      indeterminate={
+                        items.some((i) => selected.has(i.feedback_id)) &&
+                        !items.every((i) => selected.has(i.feedback_id))
+                      }
+                      onCheckedChange={toggleAll}
+                    />
+                  </TableHead>
+                  <TableHead>提交时间</TableHead>
+                  <TableHead>用户 / 摘要</TableHead>
+                  <TableHead>分类</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>标签 / 图片</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => {
+                  const status = feedbackStatusView(item.status);
+                  return (
+                    <TableRow key={item.feedback_id} data-test="feedback-row">
+                      <TableCell>
+                        <Checkbox
+                          aria-label={`选择 ${feedbackSummary(item)}`}
+                          checked={selected.has(item.feedback_id)}
+                          onCheckedChange={() =>
+                            toggleSelected(item.feedback_id)
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">
+                        {formatUtc(item.submitted_at ?? item.created_at)}
+                      </TableCell>
+                      <TableCell className="min-w-64 whitespace-normal">
+                        <strong className="block text-sm">
+                          {item.author_display_name}
+                        </strong>
+                        <span className="mt-1 block text-sm">
+                          {feedbackSummary(item)}
                         </span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      {feedbackCategoryLabel(item.category)}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        label={status.label}
-                        tone={status.tone}
-                        rawValue={item.status}
-                      />
-                      {item.flagged ? (
-                        <span className="ml-2 text-xs font-medium text-destructive">
-                          重点
-                        </span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="min-w-44 whitespace-normal text-xs text-muted-foreground">
-                      {item.labels.length ? item.labels.join(' · ') : '无标签'}{' '}
-                      · {item.attachment_count} 张图片
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void loadDetail(item.feedback_id)}
-                        data-test="feedback-open-detail"
-                      >
-                        详情
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                        {item.body_summary && item.title ? (
+                          <span className="mt-1 block line-clamp-2 text-xs text-muted-foreground">
+                            {item.body_summary}
+                          </span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        {feedbackCategoryLabel(item.category)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          label={status.label}
+                          tone={status.tone}
+                          rawValue={item.status}
+                        />
+                        {item.flagged ? (
+                          <span className="ml-2 text-xs font-medium text-destructive">
+                            重点
+                          </span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="min-w-44 whitespace-normal text-xs text-muted-foreground">
+                        {item.labels.length
+                          ? item.labels.join(' · ')
+                          : '无标签'}{' '}
+                        · {item.attachment_count} 张图片
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void loadDetail(item.feedback_id)}
+                          data-test="feedback-open-detail"
+                        >
+                          详情
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         ) : null}
         {state === 'success' && items.length ? (
           <div className="flex justify-end gap-2">
@@ -759,7 +786,7 @@ export function FeedbackCenterPage() {
             ) : null}
           </div>
         ) : null}
-      </section>
+      </AdminWorkspaceSection>
 
       <ResourceInspector
         open={Boolean(detailId)}

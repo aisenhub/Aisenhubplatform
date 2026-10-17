@@ -29,6 +29,10 @@ import {
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
+import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   formatUtc,
@@ -178,88 +182,94 @@ export function ConfigResourceCenter() {
   const reviewGeneration = useRef(0);
   const detailGeneration = useRef(0);
 
-  const loadResources = useCallback(async () => {
-    const generation = ++resourceGeneration.current;
-    const epoch = adminAuthSession.getEpoch();
-    setResourceState('loading');
-    setResourceErrorState(null);
-    try {
-      const params = new URLSearchParams({ limit: '20' });
-      if (query.trim()) params.set('q', query.trim());
-      if (galleryStatus) params.set('gallery_status', galleryStatus);
-      if (cursor) params.set('cursor', cursor);
-      const response = await adminAuthSession.request(
-        `${resourcePath(platform.platform_id, '/config-resources')}?${params.toString()}`,
-        { cache: 'no-store' },
-      );
-      const payload = await readApiPayload<ConfigResource[]>(response);
-      if (
-        generation !== resourceGeneration.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      if (!response.ok || !Array.isArray(payload?.data)) {
-        setResourceErrorState(resourceError(response, payload, '配置资源'));
-        setResourceState('error');
-        return;
+  const loadResources = useCallback(
+    async (preserve = false) => {
+      const generation = ++resourceGeneration.current;
+      const epoch = adminAuthSession.getEpoch();
+      if (!preserve) setResourceState('loading');
+      setResourceErrorState(null);
+      try {
+        const params = new URLSearchParams({ limit: '20' });
+        if (query.trim()) params.set('q', query.trim());
+        if (galleryStatus) params.set('gallery_status', galleryStatus);
+        if (cursor) params.set('cursor', cursor);
+        const response = await adminAuthSession.request(
+          `${resourcePath(platform.platform_id, '/config-resources')}?${params.toString()}`,
+          { cache: 'no-store' },
+        );
+        const payload = await readApiPayload<ConfigResource[]>(response);
+        if (
+          generation !== resourceGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        if (!response.ok || !Array.isArray(payload?.data)) {
+          setResourceErrorState(resourceError(response, payload, '配置资源'));
+          if (!preserve) setResourceState('error');
+          return;
+        }
+        setResources(payload.data);
+        setNextCursor(payload.next_cursor ?? null);
+        setResourceState('success');
+      } catch (caught) {
+        if (
+          generation !== resourceGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        setResourceErrorState({
+          title: '配置资源读取失败',
+          description: sessionErrorMessage(caught),
+          requestId: null,
+          technicalDetail: null,
+        });
+        if (!preserve) setResourceState('error');
       }
-      setResources(payload.data);
-      setNextCursor(payload.next_cursor ?? null);
-      setResourceState('success');
-    } catch (caught) {
-      if (
-        generation !== resourceGeneration.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      setResourceErrorState({
-        title: '配置资源读取失败',
-        description: sessionErrorMessage(caught),
-        requestId: null,
-        technicalDetail: null,
-      });
-      setResourceState('error');
-    }
-  }, [cursor, galleryStatus, platform.platform_id, query]);
+    },
+    [cursor, galleryStatus, platform.platform_id, query],
+  );
 
-  const loadReviews = useCallback(async () => {
-    const generation = ++reviewGeneration.current;
-    const epoch = adminAuthSession.getEpoch();
-    setReviewState('loading');
-    setReviewError(null);
-    try {
-      const response = await adminAuthSession.request(
-        `${resourcePath(platform.platform_id, '/config-reviews')}?limit=20`,
-        { cache: 'no-store' },
-      );
-      const payload = await readApiPayload<ConfigReview[]>(response);
-      if (
-        generation !== reviewGeneration.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      if (!response.ok || !Array.isArray(payload?.data)) {
-        setReviewError(resourceError(response, payload, '配置审核队列'));
-        setReviewState('error');
-        return;
+  const loadReviews = useCallback(
+    async (preserve = false) => {
+      const generation = ++reviewGeneration.current;
+      const epoch = adminAuthSession.getEpoch();
+      if (!preserve) setReviewState('loading');
+      setReviewError(null);
+      try {
+        const response = await adminAuthSession.request(
+          `${resourcePath(platform.platform_id, '/config-reviews')}?limit=20`,
+          { cache: 'no-store' },
+        );
+        const payload = await readApiPayload<ConfigReview[]>(response);
+        if (
+          generation !== reviewGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        if (!response.ok || !Array.isArray(payload?.data)) {
+          setReviewError(resourceError(response, payload, '配置审核队列'));
+          if (!preserve) setReviewState('error');
+          return;
+        }
+        setReviews(payload.data);
+        setReviewState('success');
+      } catch (caught) {
+        if (
+          generation !== reviewGeneration.current ||
+          !adminAuthSession.isCurrentEpoch(epoch)
+        )
+          return;
+        setReviewError({
+          title: '配置审核队列读取失败',
+          description: sessionErrorMessage(caught),
+          requestId: null,
+          technicalDetail: null,
+        });
+        if (!preserve) setReviewState('error');
       }
-      setReviews(payload.data);
-      setReviewState('success');
-    } catch (caught) {
-      if (
-        generation !== reviewGeneration.current ||
-        !adminAuthSession.isCurrentEpoch(epoch)
-      )
-        return;
-      setReviewError({
-        title: '配置审核队列读取失败',
-        description: sessionErrorMessage(caught),
-        requestId: null,
-        technicalDetail: null,
-      });
-      setReviewState('error');
-    }
-  }, [platform.platform_id]);
+    },
+    [platform.platform_id],
+  );
 
   useEffect(() => {
     void loadResources();
@@ -448,26 +458,9 @@ export function ConfigResourceCenter() {
 
   return (
     <section className="grid gap-4" data-test="config-resource-center">
-      <div className="panel gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2>配置资源</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              以 Config / Version / Gallery
-              业务对象为主视图；搜索与状态筛选在服务端分页前执行。
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void Promise.all([loadResources(), loadReviews()])}
-            data-test="config-resource-refresh"
-          >
-            刷新业务状态
-          </Button>
-        </div>
+      <AdminTaskToolbar aria-label="配置资源筛选与刷新">
         <form
-          className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_auto]"
+          className="grid w-full gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_auto_auto]"
           onSubmit={submitSearch}
         >
           <div className="grid gap-2">
@@ -508,7 +501,25 @@ export function ConfigResourceCenter() {
           >
             查询
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="self-end"
+            onClick={() =>
+              void Promise.all([loadResources(true), loadReviews(true)])
+            }
+            data-test="config-resource-refresh"
+          >
+            刷新业务状态
+          </Button>
         </form>
+      </AdminTaskToolbar>
+
+      <AdminWorkspaceSection
+        title="配置资源"
+        titleId="config-resource-list-title"
+        description="以 Config / Version / Gallery 业务对象为主视图；搜索与状态筛选在服务端分页前执行。"
+      >
         {resourceState === 'loading' ? <AsyncState state="loading" /> : null}
         {resourceState === 'error' && resourceErrorState ? (
           <AsyncState
@@ -519,6 +530,21 @@ export function ConfigResourceCenter() {
             technicalDetail={resourceErrorState.technicalDetail}
             onRetry={() => void loadResources()}
           />
+        ) : null}
+        {resourceState === 'success' && resourceErrorState ? (
+          <Alert
+            variant="destructive"
+            data-test="config-resource-refresh-error"
+          >
+            <AlertTitle>配置资源刷新未完成</AlertTitle>
+            <AlertDescription>
+              {resourceErrorState.description}
+              <SupportErrorId
+                requestId={resourceErrorState.requestId}
+                technicalDetail={resourceErrorState.technicalDetail}
+              />
+            </AlertDescription>
+          </Alert>
         ) : null}
         {resourceState === 'success' && resources.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
@@ -633,26 +659,21 @@ export function ConfigResourceCenter() {
             ) : null}
           </div>
         ) : null}
-      </div>
+      </AdminWorkspaceSection>
 
-      <div
+      <AdminWorkspaceSection
         id="config-reviews"
-        className="panel gap-4"
-        data-test="config-review-queue"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2>配置广场审核队列</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Pending Version 在批准前不会进入
-              Gallery；拒绝不会替换最后一个已批准版本。
-            </p>
-          </div>
+        title="配置广场审核队列"
+        titleId="config-review-queue-title"
+        description="Pending Version 在批准前不会进入 Gallery；拒绝不会替换最后一个已批准版本。"
+        meta={
           <StatusBadge
             label={`${reviews.length} 条待审核`}
             tone={reviews.length ? 'warning' : 'neutral'}
           />
-        </div>
+        }
+        data-test="config-review-queue"
+      >
         <div className="grid gap-2">
           <Label htmlFor="config-review-reason">本次审核原因</Label>
           <Input
@@ -667,6 +688,18 @@ export function ConfigResourceCenter() {
         {reviewError ? (
           <Alert variant="destructive">
             <AlertTitle>{reviewError.title}</AlertTitle>
+            <AlertDescription>
+              {reviewError.description}
+              <SupportErrorId
+                requestId={reviewError.requestId}
+                technicalDetail={reviewError.technicalDetail}
+              />
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {reviewState === 'success' && reviewError ? (
+          <Alert variant="destructive" data-test="config-review-refresh-error">
+            <AlertTitle>审核队列刷新未完成</AlertTitle>
             <AlertDescription>
               {reviewError.description}
               <SupportErrorId
@@ -730,7 +763,7 @@ export function ConfigResourceCenter() {
             ))}
           </div>
         ) : null}
-      </div>
+      </AdminWorkspaceSection>
 
       <ResourceInspector
         open={Boolean(detailId)}
