@@ -7,11 +7,11 @@
 - 优化目标：迁移通用 Design System，从零建立 Aisenhub Design Direction，并完成 Admin 组件、视觉、交互与治理的全面重构。
 - 实施范围：`docs/development/design/**`、`apps/admin/**`、`packages/ui/**` 及适用 Admin tests/docs。
 - GitHub 仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
-- 当前实施分支：`codex/admin-uiux-phase3`
+- 当前实施分支：`codex/admin-uiux-phase3b`
 - 阶段 03 起始 commit：`8d30bfcf5c1d12890433a3196085fe4f759089f0`
 - 阶段 03 初始工作区状态：clean；从已交付阶段 02 收尾 commit 建立独立短期分支。
-- 运行环境：Local；阶段 03 至少 R2。03A targeted/synthetic 验证与标准 clean Local Supabase `TASK-0801` 已完成。
-- R2 结论：Docker Desktop 恢复后，`--reuse-local` 曾因旧 fixture 污染使 Audit 计数测试失败；按正式入口执行 `pnpm run verify:task:0801` 重置 Local 合成测试库后 24 个 executable gates 全部 PASS。历史阻塞/失败保留在下方记录，不覆盖为从未发生。
+- 运行环境：Local；阶段 03 至少 R2。03A 与 03B targeted/synthetic 验证和标准 clean Local Supabase `TASK-0801` 均已完成。
+- R2 结论：03A Docker/旧 fixture 问题与 03B format/旧 Checkbox test selector 问题均保留真实失败记录。03B 最终按正式入口执行 `pnpm run verify:task:0801` 重置 Local 合成测试库后 24 个 executable gates 全部 PASS；未通过降低测试门槛或修改业务语义换取通过。
 - 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
 ## 阶段状态总表
@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
-| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 已实现并推送；targeted、synthetic production browser 与完整 clean R2 Local Supabase 均已通过 | 执行 03B–03E | `764193b094287ff7668588ed7068fc0e2367e86c`（03A implementation checkpoint） | PASS：`codex/admin-uiux-phase3` 已 push，03A implementation 远端 SHA 核对一致 |
+| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 与 03B Standard Components/Semantic UI 已实现；两批 targeted、synthetic production browser 与完整 clean R2 Local Supabase 均通过 | 执行 03C–03E；03B 当前待文档收尾/push 核对 | `764193b`（03A）、`03060ed` + `67aa0b7`（03B code checkpoints） | 03A PASS；03B push/远端核对待本轮收尾 |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
@@ -51,7 +51,10 @@
 - 已优化 UI/UX 行为：Appearance 可由 Topbar 或 Command Palette 打开；System/Light/Dark、四 Accent、三 Surface 统一切换并本地持久化；PlatformSwitcher 已知 current scope 在首轮 list load 时保持可见；background refresh 保留可信数据；Sidebar 折叠为纯 icon 视觉并保留 accessible name。
 - Local browser / Supabase 验证：synthetic production browser PASS，覆盖 60 route/viewport combinations、Appearance 切换/刷新持久化、PlatformSwitcher 搜索/键盘/窄屏、Command Palette、refresh error、Audit Inspector、Account 360 危险确认、mobile nav、fail-closed security，0 runtime exception。Docker 恢复后正式 clean `pnpm run verify:task:0801` PASS：24 executable gates，64 个 SQL 文件 / 1398 个数据库测试、115 个 Edge/API tests、Admin T12、Consumer Harness、并发、安全、build/type/lint/format、docs/contracts 全部通过。
 - 与计划偏差：无产品范围偏差。浏览器调试期间最初两次 Sidebar accessible-name 复测使用了旧 production build，随后重新 build 当前源码再验证；最终候选 PASS。Docker 恢复后一次 `--reuse-local` 因复用旧本地 fixture 导致 `t20_admin_audit_list_v2.sql` 的 unrecorded outcome 计数为 2（预期 1）；正式标准入口按设计 reset Local 合成测试库后同一测试及完整 R2 全部 PASS，未为脏 fixture 修改业务代码。
-- 未完成路由/状态：03B Standard Components + Semantic UI、03C Platform/Account 高频工作区、03D Billing/Audit/Security、03E remaining routes 均未开始；03A R2 已闭环。
+- 03B shared component / Semantic UI：Input/Textarea/Table/Card/Alert 等 shared skin 回收到 `@kit/ui`；Alert/StatusBadge/AsyncState/SupportErrorId/ResourceInspector 补稳定 data-state/slot/material identity；`NativeSelect` 建立标准 skin/API；Button 增加有限 selected/active 与 `destructive-ghost` semantic variant，Button/Badge/Switch 取消 `transition-all`。
+- 03B Admin 消费迁移：14 个文件 29 个 raw `<select>` 全迁至 `NativeSelect`；登录/MFA/Identity 搜索、Feedback Checkbox/Textarea、Storage Policy Checkbox、PlatformSwitcher 普通 action 回到标准组件。普通 raw `input/select/textarea` 为 0；Feature 对常用标准控件的 skin override 反向扫描 `HITS 0`。保留 4 个业务集合行 raw button 到对应页面批次做 Collection/Inspector 重构，不将业务 item 强行伪装成基础 Button。
+- 03B 浏览器/可访问性修复：synthetic browser 最初仍点击 Base UI Checkbox 的 `aria-hidden` 内部 input，导致导出等待超时；改为 `role=checkbox` 用户交互后 Feedback 路径通过。随后旧 a11y scanner 把 Base UI 的 `aria-hidden=true` form mirror 误判为未标注 input；仅排除显式 `aria-hidden` 节点后保留真实可访问控件检查，最终 60 route/viewport combinations 与 0 runtime exception PASS。Admin T12 同样迁移到 `role=checkbox` 后 clean R2 PASS。
+- 未完成路由/状态：03C Platform/Account 高频工作区、03D Billing/Audit/Security、03E remaining routes 尚未开始；03B 完成的是标准控件/semantic skin 层，不代表旧页面 hierarchy/card/list 排版已完成重构。
 
 ### 阶段 04：Convergence + Governance
 
@@ -99,6 +102,14 @@
 | 2026-10-17 | 03A | worktree based on `8d30bfc` | `git diff --check` final | Local | 0 | PASS |
 | 2026-10-17 | 03A release gate | `97f2565` | `pnpm run verify:task:0801 --reuse-local` after Docker recovery | Local + reused Local Supabase | 1 | FAIL：Local DB 已恢复可用，但复用旧 fixture 使 `t20_admin_audit_list_v2.sql` test 14 得到 unrecorded count 2 / expected 1；未修改产品代码，随后使用标准 clean gate 复测 |
 | 2026-10-17 | 03A release gate | `97f2565` | `pnpm run verify:task:0801` | Local + clean Local Supabase | 0 | PASS：reset Local 合成测试库后 24 executable gates 全部通过；64 SQL files / 1398 DB tests、115 Edge/API tests、Admin T12、Consumer Harness、并发、安全、build/type/lint/format、docs/contracts 全部 PASS |
+| 2026-10-17 | 03B | `03060ed` + worktree | shared/Admin typecheck + unit | Local | 0 | PASS：`@kit/ui` 36 tests；Admin 77 tests；两侧 TypeScript PASS |
+| 2026-10-17 | 03B | worktree | standard-control ownership scans | Local | 0 | PASS：29 raw selects 已迁移；普通 raw `input/select/textarea` 0；常用标准控件 Feature skin override scan `HITS 0`；4 个业务集合行 button 明确留给页面批次 |
+| 2026-10-17 | 03B | worktree | synthetic production `admin-ux-local.mjs` after Checkbox migration | Local browser | timeout / 1 | FAIL：旧测试先直接操作 Base UI `aria-hidden` checkbox input 导致导出等待超时；改为 `role=checkbox` 后又由旧 unlabeled-input scanner 误报同一内部 form mirror；均为测试对标准组件结构的过时假设，未降低真实控件可访问性要求 |
+| 2026-10-17 | 03B | worktree | synthetic production `admin-ux-local.mjs` final | Local browser | 0 | PASS：Feedback NativeSelect/Checkbox、60 route/viewport combinations、PlatformSwitcher、Appearance、Audit Inspector、Account danger confirmation、mobile/security 全通过；0 runtime exception |
+| 2026-10-17 | 03B release gate | worktree | `pnpm run verify:task:0801` first final attempt | Local + clean Local Supabase | 1 | FAIL：repository format gate 发现 `admin-ux-local.mjs` 一处 Oxfmt 差异；定向格式化测试文件后 `pnpm format:check` PASS |
+| 2026-10-17 | 03B release gate | worktree | `pnpm run verify:task:0801` after format fix | Local + clean Local Supabase | 1 | FAIL：DB/API/Consumer 等已通过，Admin T12 仍使用旧 `[data-test=feedback-row] input[type=checkbox]` selector，命中 Base UI 隐藏 form input 并超时；随后改为 `role=checkbox` |
+| 2026-10-17 | 03B diagnostic | worktree | direct `pnpm test:e2e:t12-r2` | Local | 1 | NOT EXECUTED：直接入口缺少由 R2 wrapper 注入的 `SUPABASE_LOCAL_URL` / anon key / DB URL；未手工拼接本地凭据，改回正式 wrapper 验证 |
+| 2026-10-17 | 03B release gate | worktree | `pnpm run verify:task:0801` final | Local + clean Local Supabase | 0 | PASS：24 executable gates；64 SQL files / 1398 DB tests、115 Edge/API tests、Admin T12、Consumer Harness、并发、安全、build/type/lint/format、docs/contracts 全部 PASS |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -122,14 +133,15 @@
 | --- | --- | --- | --- | --- | --- |
 | 01 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | `codex/admin-design-system-phase1` | PASS | PASS：`origin/codex/admin-design-system-phase1` 指向同一 SHA | GitHub 分支 |
 | 02 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | `codex/admin-design-direction-phase2` | PASS | PASS：远端分支指向同一 SHA | GitHub 分支 |
-| 03 | `764193b094287ff7668588ed7068fc0e2367e86c`（03A checkpoint） | `codex/admin-uiux-phase3` | PASS | PASS：03A push 后远端分支指向同一 SHA；阶段 03 仍进行中 | GitHub 分支 |
+| 03A | `764193b094287ff7668588ed7068fc0e2367e86c` | `codex/admin-uiux-phase3` | PASS | PASS：03A push 后远端分支指向同一 SHA；后续 `e5f8a05` 已进入 main 并完成 Production READY + GitHub Workflow success | GitHub 分支 |
+| 03B | `03060ed` + `67aa0b7`（code checkpoints） | `codex/admin-uiux-phase3b` | 待本轮收尾 | 待 push 后核对 | GitHub 分支 |
 | 04 | 未验证 | 未验证 | 未验证 | 未验证 | 未验证 |
 
 ## 交接信息
 
-- 下一阶段从哪里开始：阶段 03A 已实现；下一代码批次为 03B Standard Components + Semantic UI Skin。继续前先复用当前 Appearance/Solid Glass Theme owner，不得由 Feature 新建主题或基础 skin。
-- 必须先解决的问题：03A 完整 clean TASK-0801/T12 R2 已 PASS，无残留发布验证阻塞。03B 从 shared component / Admin duplicate skin inventory 开始，并继续复用当前 Appearance/Solid Glass owner。
+- 下一阶段从哪里开始：03A/03B 已实现并完成 clean R2；03B 分支完成文档/push 核对后，下一代码批次为 03C High-frequency Platform / Account Workspaces。
+- 必须先解决的问题：03B 无残留代码/R2 阻塞；进入 03C 时从 Global Overview、Platform Directory/Overview、Global/Platform Accounts、Identity/Account 360 的任务 hierarchy / Collection / Inspector 重排开始，复用当前 shared component skin，不回退 Feature 控件皮肤。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前交付边界：03A 实施与完整 clean R2 证据已收敛；03B–03E 尚未开始。
+- 当前交付边界：03A 已生产交付；03B 代码实现与完整 clean R2 证据已收敛，当前待文档/push 核对；03C–03E 尚未开始。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。

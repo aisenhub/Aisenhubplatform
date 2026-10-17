@@ -72,11 +72,21 @@
 
 ### 03B — Standard Components + Semantic UI Skin
 
+**当前状态**：实现完成并通过 clean R2，代码 checkpoint 为 `03060ed`（shared skin/state ownership）与 `67aa0b7`（Admin native control standardization）；当前待完成文档收尾、push/远端核对后进入 03C。03B 只代表标准控件与 semantic UI skin 收敛，不代表 03C–03E 页面信息架构/排版重构已完成。
+
 **范围**：Button/Input/Select/Textarea/Checkbox/Switch/Table/Card/Alert/Badge/Dialog/Sheet/Popover/Tooltip/Tabs，以及 AsyncState、StatusBadge、ResourceId、SupportErrorId、ConfirmActionDialog、MutationState、ResourceInspector、OneTimeSecretPanel。
 
-**实施目标**：把真实页面已经使用的基础控件统一到 semantic token + finite variant；明确 data-slot/state contract；移除 Admin globals 中重复的标准控件皮肤；保证 Danger/Success/Warning/Info 不随 Accent 漂移。
+**已实现**：
 
-**验收**：shared UI typecheck/unit；所有适用 component state 的 Light/Dark、focus、disabled、error、portal/overlay；无 Feature 为普通控件新建第二皮肤。
+- 把 Admin 已真实消费的 Input/Textarea/Table/Card/Alert 等通用 skin 收回 `@kit/ui`，补齐 Alert `data-variant`、StatusBadge `data-tone`、AsyncState `data-state`、SupportErrorId slots、ResourceInspector material identity 等稳定状态/part contract。
+- `NativeSelect` 成为普通枚举选择的标准能力；14 个 Admin 文件中的 29 个 raw `<select>` 全部迁移，并删除 Feature 自绘 border/background/radius/focus skin。
+- 登录/MFA/Identity 搜索、Feedback Checkbox/Textarea、Storage Policy Checkbox、PlatformSwitcher 普通 action 等回到标准 Input/Label/Button/Checkbox/Textarea；普通 raw `input/select/textarea` 已为 0。
+- Button 增加有限 `destructive-ghost` 与稳定 selected/active data-state skin；Button/Badge/Switch 删除 `transition-all`，只动画实际视觉属性。
+- `apps/admin/app/globals.css` 删除 Table/Card/Input/Alert 与 PlatformSwitcher option 的重复基础 skin，只保留 Admin geometry、Sidebar、Solid Glass/Dialog/Inspector 等 Product Adaptation。
+- Feature 对 Button/Input/NativeSelect/Textarea/Checkbox/Alert/Table/Dialog/Sheet 的 skin override 反向扫描为 `HITS 0`。仍存在 4 个 raw `<button>` 是 Deletion Jobs、Billing Order、Platform Key、Entitlement 的业务集合行交互面，保留到对应 03C/03D/03E Collection/Inspector 页面批次重构，不作为普通控件第二皮肤继续扩散。
+- 未被 Admin 真实消费的组件不为“清单完整”强行改写；后续页面首次消费时继续按同一 owner/variant/state 规则审查。
+
+**验收**：shared/Admin typecheck 与 unit PASS；production build PASS；synthetic production browser 覆盖 60 route/viewport combinations、NativeSelect/Checkbox/PlatformSwitcher/Alert/Inspector/危险确认等真实路径并 0 runtime exception；最终 clean `pnpm run verify:task:0801` 24 executable gates PASS。中间 format gate、旧 hidden checkbox selector 与旧 a11y scanner 失败均保留在 `verification-record.md`。
 
 ### 03C — High-frequency Platform / Account Workspaces
 
