@@ -4,10 +4,11 @@ import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
-import { StatusBadge } from '@kit/ui/status-badge';
 import { NativeSelect } from '@kit/ui/native-select';
+import { StatusBadge } from '@kit/ui/status-badge';
 
 import { adminAuthSession } from '../../app/_lib/auth-session';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   formatUtc,
   resourceError,
@@ -76,14 +77,12 @@ export function CampaignCodesPanel({
   }
 
   return (
-    <section className="panel gap-4" data-test="campaign-code-detail">
-      <div>
-        <h2>Campaign 单码明细</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          只读取 prefix/suffix、状态和兑换账户归因；明文与 HMAC 永不进入该管理
-          DTO。
-        </p>
-      </div>
+    <AdminWorkspaceSection
+      title="Campaign 单码明细"
+      titleId="campaign-code-detail-title"
+      description="只读取 prefix/suffix、状态和兑换账户归因；明文与 HMAC 永不进入该管理 DTO。"
+      data-test="campaign-code-detail"
+    >
       <div className="flex flex-col gap-2 sm:flex-row">
         <NativeSelect
           wrapperClassName="flex-1"
@@ -153,6 +152,6 @@ export function CampaignCodesPanel({
           加载更多单码
         </Button>
       ) : null}
-    </section>
+    </AdminWorkspaceSection>
   );
 }
