@@ -52,7 +52,7 @@
 
 ### 03A — Theme / Solid Glass / Shell Pilot
 
-**当前状态**：实现 checkpoint `764193b094287ff7668588ed7068fc0e2367e86c` 已 push 到 `codex/admin-uiux-phase3`，并通过 targeted static/unit/build + synthetic production browser；完整 R2 Local Supabase gate 因当前 Docker Desktop Linux Engine 不可连接而环境阻塞，必须在 Docker 可用后补测，未据此宣称整个阶段或 R2 已完成。
+**当前状态**：实现 checkpoint `764193b094287ff7668588ed7068fc0e2367e86c` 已 push 到 `codex/admin-uiux-phase3`，并通过 targeted static/unit/build、synthetic production browser 与正式 clean Local Supabase R2。标准 `pnpm run verify:task:0801` 共 24 executable gates PASS；阶段 03 继续进入 03B，不能据此提前宣称 03C–03E 或整个阶段完成。
 
 **范围**：Root layout、Theme/Appearance owner、Shell、Sidebar、Topbar、PlatformSwitcher、Command Palette、Appearance Settings、全局页面 geometry，以及这些入口依赖的 Button/Input/Dialog/Sheet 等高频标准组件状态。
 
@@ -130,7 +130,7 @@
 | TypeScript | `pnpm typecheck` | Local | PASS | 03A targeted：`pnpm --filter admin typecheck` 与 `pnpm --filter @kit/ui typecheck` PASS；全仓最终候选仍在阶段末复跑 |
 | Production build | `pnpm build` | Local | PASS | 03A targeted：`pnpm --filter admin build` PASS；Next.js 16.3.8 完整 Admin route tree 构建成功 |
 | Unit | `pnpm test:unit` | Local | 受影响 shared/Admin tests PASS | 03A Admin PASS：17 files / 77 tests，含 Appearance model 与既有 navigation/platform switcher tests |
-| Admin browser/E2E | `pnpm test:e2e:t12-r2` 或执行时确认的当前 Admin E2E 入口 | Local + Local Supabase | 受影响页面真实路径 PASS | 03A 完整 R2 BLOCKED：TASK-0801 在 `db:start` 因 Docker Desktop Linux Engine 不可连接失败；未执行后续 Supabase/API/T12 gates。Synthetic production browser 独立 PASS |
+| Admin browser/E2E | `pnpm test:e2e:t12-r2` 或执行时确认的当前 Admin E2E 入口 | Local + Local Supabase | 受影响页面真实路径 PASS | 03A PASS：标准 clean `pnpm run verify:task:0801` 24 gates 全部通过，包含 Admin T12、Consumer Harness、64 SQL files / 1398 DB tests；一次 `--reuse-local` 复测因旧 fixture 污染失败，reset Local 合成测试库后同一测试及完整 gate PASS |
 | 文档 | `pnpm docs:check`、`pnpm contracts:check` | Local | PASS | 03A PASS：115 documents；Account/Admin OpenAPI、Platform integration、consumer compatibility 均通过 |
 | 浏览器人工矩阵 | 当前支持 desktop/narrow viewport + keyboard | Local | 页面可完成任务，无遮挡/焦点丢失/状态混淆 | 03A synthetic production browser PASS：60 route/viewport combinations + mobile nav + keyboard/listbox/Inspector/危险确认，0 runtime exception |
 | Appearance matrix | Light/Dark/System × 冻结 Accent/Surface 代表组合 | Local browser | Shell、标准组件、Overlay、focus、状态语义一致 | 03A PASS：默认 System+Blue+Neutral、Dark+Violet+Warm、刷新持久化、`.dark` 同步、Command Palette/Topbar 双入口；其余组合由同一 token model 驱动，阶段后续继续抽查 |

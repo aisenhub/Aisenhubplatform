@@ -10,8 +10,8 @@
 - 当前实施分支：`codex/admin-uiux-phase3`
 - 阶段 03 起始 commit：`8d30bfcf5c1d12890433a3196085fe4f759089f0`
 - 阶段 03 初始工作区状态：clean；从已交付阶段 02 收尾 commit 建立独立短期分支。
-- 运行环境：Local；阶段 03 至少 R2。03A targeted/synthetic 验证可运行，但完整 R2 当前被本机 Docker Desktop Linux Engine 未运行阻塞。
-- 已知环境阻塞：`pnpm run verify:task:0801 --reuse-local` 能进入工具链检查，但在 `db:start` 无法连接 `dockerDesktopLinuxEngine`；这不是产品 PASS，也不修改代码。
+- 运行环境：Local；阶段 03 至少 R2。03A targeted/synthetic 验证与标准 clean Local Supabase `TASK-0801` 已完成。
+- R2 结论：Docker Desktop 恢复后，`--reuse-local` 曾因旧 fixture 污染使 Audit 计数测试失败；按正式入口执行 `pnpm run verify:task:0801` 重置 Local 合成测试库后 24 个 executable gates 全部 PASS。历史阻塞/失败保留在下方记录，不覆盖为从未发生。
 - 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
 ## 阶段状态总表
@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
 | 02 | New Aisenhub Design Direction | 已交付 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | 阶段 03 可在明确派发后开始 | `30ff8f14167abeb19566ce84f3e5e85dfde18b20` | PASS：已 push，远端 SHA 核对一致 |
-| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 已实现并推送；targeted static/unit/build 与 synthetic production browser 已通过 | 03A 仍需 Docker 可用后补完整 R2；随后执行 03B–03E | `764193b094287ff7668588ed7068fc0e2367e86c`（03A） | PASS：`codex/admin-uiux-phase3` 已 push，03A 远端 SHA 核对一致 |
+| 03 | Component + UI/UX Rebuild | 进行中 | 03A Theme/Appearance/Solid Glass/Shell pilot 已实现并推送；targeted、synthetic production browser 与完整 clean R2 Local Supabase 均已通过 | 执行 03B–03E | `764193b094287ff7668588ed7068fc0e2367e86c`（03A implementation checkpoint） | PASS：`codex/admin-uiux-phase3` 已 push，03A implementation 远端 SHA 核对一致 |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
 
 状态只能使用：未开始、进行中、已阻塞、验证失败、验收通过待推送、已交付。
@@ -49,9 +49,9 @@
 - 实际页面/路由批次：03A 覆盖 Root layout、Shell、Sidebar、Topbar、PlatformSwitcher、Command Palette、Appearance Settings 与全局 Theme/material；业务页面只被动消费新 semantic theme，尚未进入 03C–03E 页面重排。
 - shared component / Theme / Skin 变更：新增 Admin Appearance model/provider/pre-hydration init/settings/toaster；`globals.css` 建立 Mode × Accent × Surface semantic theme 与 Solid Glass structural/raised material/fallback；Button 增加稳定 `data-variant` / `data-size`；Sidebar 约 248/56 icon-only；PlatformSwitcher Trigger/Search/Load-more/Retry 回到标准 Button/Input。
 - 已优化 UI/UX 行为：Appearance 可由 Topbar 或 Command Palette 打开；System/Light/Dark、四 Accent、三 Surface 统一切换并本地持久化；PlatformSwitcher 已知 current scope 在首轮 list load 时保持可见；background refresh 保留可信数据；Sidebar 折叠为纯 icon 视觉并保留 accessible name。
-- Local browser / Supabase 验证：synthetic production browser PASS，覆盖 60 route/viewport combinations、Appearance 切换/刷新持久化、PlatformSwitcher 搜索/键盘/窄屏、Command Palette、refresh error、Audit Inspector、Account 360 危险确认、mobile nav、fail-closed security，0 runtime exception。完整 TASK-0801 R2 在启动 Local Supabase 时因 Docker Desktop Linux Engine 不可连接而 BLOCKED，后续 gates 未执行。
-- 与计划偏差：无产品范围偏差。浏览器调试期间最初两次 Sidebar accessible-name 复测使用了旧 production build，随后重新 build 当前源码再验证；最终候选 PASS。TASK-0801 另有两次错误调用形式在进入 gate 前被脚本/runner 拒绝，无副作用，真实 R2 运行结果以上述 Docker 阻塞为准。
-- 未完成路由/状态：03B Standard Components + Semantic UI、03C Platform/Account 高频工作区、03D Billing/Audit/Security、03E remaining routes 均未开始；03A 还需 Docker 恢复后补跑完整 R2/T12。
+- Local browser / Supabase 验证：synthetic production browser PASS，覆盖 60 route/viewport combinations、Appearance 切换/刷新持久化、PlatformSwitcher 搜索/键盘/窄屏、Command Palette、refresh error、Audit Inspector、Account 360 危险确认、mobile nav、fail-closed security，0 runtime exception。Docker 恢复后正式 clean `pnpm run verify:task:0801` PASS：24 executable gates，64 个 SQL 文件 / 1398 个数据库测试、115 个 Edge/API tests、Admin T12、Consumer Harness、并发、安全、build/type/lint/format、docs/contracts 全部通过。
+- 与计划偏差：无产品范围偏差。浏览器调试期间最初两次 Sidebar accessible-name 复测使用了旧 production build，随后重新 build 当前源码再验证；最终候选 PASS。Docker 恢复后一次 `--reuse-local` 因复用旧本地 fixture 导致 `t20_admin_audit_list_v2.sql` 的 unrecorded outcome 计数为 2（预期 1）；正式标准入口按设计 reset Local 合成测试库后同一测试及完整 R2 全部 PASS，未为脏 fixture 修改业务代码。
+- 未完成路由/状态：03B Standard Components + Semantic UI、03C Platform/Account 高频工作区、03D Billing/Audit/Security、03E remaining routes 均未开始；03A R2 已闭环。
 
 ### 阶段 04：Convergence + Governance
 
@@ -97,6 +97,8 @@
 | 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm contracts:check` final | Local | 0 | PASS：Account/Admin OpenAPI、Platform integration、consumer compatibility 均通过 |
 | 2026-10-17 | 03A | worktree based on `8d30bfc` | `pnpm format:check` after architecture/verification sync | Local | 0 | PASS：423 files |
 | 2026-10-17 | 03A | worktree based on `8d30bfc` | `git diff --check` final | Local | 0 | PASS |
+| 2026-10-17 | 03A release gate | `97f2565` | `pnpm run verify:task:0801 --reuse-local` after Docker recovery | Local + reused Local Supabase | 1 | FAIL：Local DB 已恢复可用，但复用旧 fixture 使 `t20_admin_audit_list_v2.sql` test 14 得到 unrecorded count 2 / expected 1；未修改产品代码，随后使用标准 clean gate 复测 |
+| 2026-10-17 | 03A release gate | `97f2565` | `pnpm run verify:task:0801` | Local + clean Local Supabase | 0 | PASS：reset Local 合成测试库后 24 executable gates 全部通过；64 SQL files / 1398 DB tests、115 Edge/API tests、Admin T12、Consumer Harness、并发、安全、build/type/lint/format、docs/contracts 全部 PASS |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 
@@ -126,8 +128,8 @@
 ## 交接信息
 
 - 下一阶段从哪里开始：阶段 03A 已实现；下一代码批次为 03B Standard Components + Semantic UI Skin。继续前先复用当前 Appearance/Solid Glass Theme owner，不得由 Feature 新建主题或基础 skin。
-- 必须先解决的问题：Docker Desktop Linux Engine 恢复后补跑 03A 完整 TASK-0801/T12 R2；该环境阻塞不应被写成 PASS。03B 可做不依赖数据库的 shared inventory/实现，但阶段 03 最终退出前必须完成 R2。
+- 必须先解决的问题：03A 完整 clean TASK-0801/T12 R2 已 PASS，无残留发布验证阻塞。03B 从 shared component / Admin duplicate skin inventory 开始，并继续复用当前 Appearance/Solid Glass owner。
 - 可直接复用的现有能力：Base UI、shadcn-style primitives、`@kit/ui` semantic components、现有 Admin security/session/error/scope 行为。
 - 不应重复实施的工作：旧 `DESIGN.md` 不恢复；不替换现有前端框架；不重做后端业务合同。
-- 当前未提交修改及归属：03A 实施已提交并推送；本条记录是 commit/push 后的文档收尾，待独立 closeout commit。03B–03E 尚未开始。
+- 当前交付边界：03A 实施与完整 clean R2 证据已收敛；03B–03E 尚未开始。
 - 需要用户决定的事项：阶段 03 已具备冻结设计输入，无额外视觉方向阻塞；出现需要改变 Product Requirement 的新需求时再请求确认。
