@@ -7,8 +7,8 @@
 - 项目目录：`E:\Projects\Aisenhubplatform`
 - 优化名称：Aisenhub Admin Design System 迁移与 UI/UX 全面重构
 - 总计划：[plan.md](plan.md)
-- 当前阶段：阶段 03 — Component + UI/UX Rebuild（进行中；03A–03C 已实现并通过 synthetic production browser + 标准 clean TASK-0801 完整 R2，下一批为 03D Billing / Audit / Security）
-- 当前实施分支：`codex/admin-uiux-phase3c`；03C checkpoints 为 `5fbb922`（duplicate control skin corrective）、`9426d18`（Platform/Account workspace chain）、`7fff7f7`（Global Overview/Accounts/Identity/Platform Overview），基于已生产交付的 main `73f37f8`。后续 Feature 必须复用 `AdminTaskToolbar` / `AdminWorkspaceSection` 与当前 shared component owner，不得恢复 `.panel`-per-section 或 Feature 基础 skin。
+- 当前阶段：阶段 03 — Component + UI/UX Rebuild（进行中；03A–03D 已实现并通过 synthetic production browser + 标准 clean TASK-0801 完整 R2，下一批为 03E Config / Feedback / Settings / Remaining Routes）
+- 当前实施分支：`codex/admin-uiux-phase3d`；03D checkpoints 为 `b8410b6`（Billing / Audit）与 `711a6b9`（Security / Subscriptions / Entitlements），基于已生产验证的 main `1db1a5f8f6797b2b1f734718155914312c72a394`。后续 Feature 必须继续复用 `AdminTaskToolbar` / `AdminWorkspaceSection`、`admin-selectable-row` 与当前 shared component owner，不得恢复 `.panel`-per-section 或 Feature 基础 skin。
 - 远程仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
 
 ## 必读顺序
@@ -69,4 +69,4 @@
 - [ ] 阶段 commit 已创建并 push，远端 commit 已核对。
 - [ ] 只有满足上述条件才更新 phase / plan 状态。
 
-03C 已满足实现、clean R2、分支 push 与远端 SHA 核对门槛；下一批从 03D Billing / Audit / Security 开始。阶段 03 整体仍未完成，03D–03E 和阶段最终全路由收敛不得提前打勾。
+03D 已满足实现与 clean R2 门槛，当前等待分支 push / 远端 SHA 核对；下一批从 03E Config / Feedback / Settings / Remaining Routes 开始。阶段 03 整体仍未完成，03E 和阶段最终全路由收敛不得提前打勾。

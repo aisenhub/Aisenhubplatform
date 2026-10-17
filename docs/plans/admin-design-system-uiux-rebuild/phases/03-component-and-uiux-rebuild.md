@@ -109,11 +109,21 @@
 
 ### 03D — Billing / Audit / Security
 
+**当前状态**：验收通过待推送。基于生产已验证 main `1db1a5f` 建立 `codex/admin-uiux-phase3d`；`b8410b6` 重建 Billing / Audit 高状态密度工作区，`711a6b9` 重建 Security / Subscriptions / Entitlements。targeted static/unit/build、synthetic production browser 与标准 clean Local Supabase `TASK-0801` 均已通过；03E 尚未开始。
+
 **范围**：Global/Platform Billing、Audit、Security、Subscriptions/Entitlements 等高状态密度工作区。
 
-**实施目标**：强化异常/状态层级，统一 technical metadata 与 support ID；accepted/success/failure/unknown outcome 不混淆；高风险动作保持 reason、recent MFA、no-auto-replay。
+**已实现**：
 
-**验收**：服务端错误分类、危险确认、unknown outcome、表格/Inspector、键盘与主题矩阵。
+- Billing Order 筛选迁到 `AdminTaskToolbar`，订单队列/详情迁到 `AdminWorkspaceSection` + split Inspector；业务集合项继续使用语义正确的原生 `button`，但 selected/hover/focus visual ownership 统一收敛到 Admin Product Adaptation 的 `admin-selectable-row`，不再由 Feature 自绘第二皮肤。
+- Commerce Summary 刷新不再清空已知可信数据；只有首次无数据时显示 loading，refresh error 可与上一份可信事实同时存在。Global Billing 的运行计数、运行观测与告警由 card soup 收敛为事实章节与列表层级。
+- Audit 保留服务端 URL filter、cursor reset、Table、Inspector technical metadata 与 focus restoration，只把筛选区/结果区迁到统一 Toolbar / Workspace Section，不改变审计事实或错误分类。
+- Security 把会话与已验证 MFA 因子组合为同一安全状态章节；System Admin pending onboarding / readiness / membership governance 使用独立 Workspace Section，add/activate/remove 继续由服务端 recent-MFA、reason、并发最少 active 数量与 unknown-outcome 保护。
+- Entitlement Collection 复用同一 selectable-row visual owner；Platform Subscription 把账户选择、权威 Projection 与受控命令拆成清晰章节，继续保留 `operation_id`、`replay: never`、recent-MFA、409 conflict refresh 和 unknown-outcome 显式检查。
+- `/admin/subscriptions` 与 `/admin/entitlements` 当前仅为到 Platform Directory 的 redirect，无独立旧 UI；本批未人为增加重复 Global 页面。
+- 03D 目标页面旧 `.panel` hierarchy 已清零；保留的 raw business row button 仅承担可选择集合项语义，其 visual skin 不再归 Feature 所有。
+
+**验收**：Admin unit 17 files / 77 tests PASS；typecheck/lint/format/production build PASS；两轮 synthetic production browser 均覆盖 60 route/viewport combinations，Audit Inspector/focus、Billing URL、Appearance、PlatformSwitcher、Security fail-closed、mobile 等路径 0 runtime exception；最终 clean `pnpm run verify:task:0801` 24 executable gates PASS，包含 64 SQL files / 1398 DB tests、115 Edge/API tests、Admin T12、Consumer Harness、并发、安全、contracts/docs。
 
 ### 03E — Config / Feedback / Settings / Remaining Routes
 

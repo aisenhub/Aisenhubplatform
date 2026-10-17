@@ -49,7 +49,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 01 | 迁移参考项目通用 Design System，冻结设计治理与 ownership | 当前 Plan | R0 | 已交付 | [阶段 01](phases/01-design-system-migration.md) |
 | 02 | 从零建立新的 Aisenhub Admin `DESIGN.md` / Product Adaptation | 01 | R0 | 已交付 | [阶段 02](phases/02-new-aisenhub-design-direction.md) |
-| 03 | 按真实页面批次并行执行 Foundation/Component 与 UI/UX 全面优化 | 01、02 | 至少 R2 | 进行中（03A–03C 已实现并完成 clean R2；进入 03D Billing / Audit / Security） | [阶段 03](phases/03-component-and-uiux-rebuild.md) |
+| 03 | 按真实页面批次并行执行 Foundation/Component 与 UI/UX 全面优化 | 01、02 | 至少 R2 | 进行中（03A–03D 已实现并完成 clean R2；进入 03E remaining routes） | [阶段 03](phases/03-component-and-uiux-rebuild.md) |
 | 04 | 全站收敛、清旧实现、建立静态治理并完成全量回归 | 03 | 至少 R2 | 未开始 | [阶段 04](phases/04-convergence-and-governance.md) |
 
 阶段 01 → 02 → 03 → 04 的主链必须串行。阶段 03 内部允许多个页面批次并行，但共享 Theme、Skin、primitive、semantic component 文件必须先分配唯一所有者，并由同一集成人冻结 API/variant，禁止并行 Agent 各自创造组件契约。
