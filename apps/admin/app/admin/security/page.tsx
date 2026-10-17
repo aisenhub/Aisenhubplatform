@@ -12,6 +12,7 @@ import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 
 import { AdminPageHeader } from '../../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../../components/workspace/admin-workspace';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -179,8 +180,14 @@ export default function AdminSecurityPage() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2" aria-label="安全状态">
-        <div className="panel gap-3">
+      <AdminWorkspaceSection
+        title="当前安全状态"
+        titleId="admin-security-status"
+        description="会话与已验证认证器共同决定当前可执行的管理动作；敏感写入仍由服务端 recent-MFA 与权限检查控制。"
+        bodyClassName="admin-workspace-split md:grid-cols-2"
+        aria-label="安全状态"
+      >
+        <div className="admin-detail-column">
           <div className="flex items-center justify-between gap-3">
             <h2>当前会话</h2>
             <StatusBadge
@@ -209,7 +216,7 @@ export default function AdminSecurityPage() {
           </dl>
         </div>
 
-        <div className="panel gap-3">
+        <div className="admin-detail-column admin-detail-column-divided">
           <div className="flex items-center justify-between gap-3">
             <h2>已验证认证器</h2>
             <span className="text-sm text-muted-foreground">
@@ -281,7 +288,7 @@ export default function AdminSecurityPage() {
             管理 MFA 因子
           </Button>
         </div>
-      </section>
+      </AdminWorkspaceSection>
 
       {deleteFactor ? (
         <ConfirmActionDialog

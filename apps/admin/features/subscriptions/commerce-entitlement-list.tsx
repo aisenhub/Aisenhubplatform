@@ -9,6 +9,10 @@ import { StatusBadge } from '@kit/ui/status-badge';
 import { NativeSelect } from '@kit/ui/native-select';
 
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   adminAuthSession,
   sessionErrorMessage,
 } from '../../app/_lib/auth-session';
@@ -138,60 +142,60 @@ export function CommerceEntitlementList({
   }, [load]);
 
   return (
-    <section className="panel gap-4" data-test="commerce-entitlement-list">
-      <div>
-        <h2>当前权益账户</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          服务端 stable cursor + filter；来源严格区分 Billing
-          购买、兑换码和管理员手工/补偿权益。
-        </p>
-      </div>
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="账户 / 用户 / Profile / Plan"
-          aria-label="权益账户搜索"
-        />
-        <NativeSelect
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          aria-label="订阅状态"
-        >
-          <option value="">全部状态</option>
-          <option value="active">active</option>
-          <option value="suspended">suspended</option>
-        </NativeSelect>
-        <NativeSelect
-          value={source}
-          onChange={(event) => setSource(event.target.value)}
-          aria-label="权益来源"
-        >
-          <option value="">全部来源</option>
-          <option value="billing_order">Billing 购买</option>
-          <option value="redemption_code">兑换码</option>
-          <option value="admin">手工/补偿权益</option>
-        </NativeSelect>
-        <NativeSelect
-          value={planId}
-          onChange={(event) => setPlanId(event.target.value)}
-          aria-label="权益 Plan"
-        >
-          <option value="">全部 Plan</option>
-          {plans.map((plan) => (
-            <option value={plan.plan_id} key={plan.plan_id}>
-              {plan.code} · {plan.name}
-            </option>
-          ))}
-        </NativeSelect>
-        <Button
-          variant="outline"
-          onClick={() => void load()}
-          disabled={loading}
-        >
-          {loading ? '筛选中…' : '应用筛选'}
-        </Button>
-      </div>
+    <AdminWorkspaceSection
+      title="当前权益账户"
+      titleId="commerce-entitlement-list-title"
+      description="服务端 stable cursor + filter；来源严格区分 Billing 购买、兑换码和管理员手工/补偿权益。"
+      data-test="commerce-entitlement-list"
+    >
+      <AdminTaskToolbar aria-label="权益账户筛选">
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="账户 / 用户 / Profile / Plan"
+            aria-label="权益账户搜索"
+          />
+          <NativeSelect
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            aria-label="订阅状态"
+          >
+            <option value="">全部状态</option>
+            <option value="active">active</option>
+            <option value="suspended">suspended</option>
+          </NativeSelect>
+          <NativeSelect
+            value={source}
+            onChange={(event) => setSource(event.target.value)}
+            aria-label="权益来源"
+          >
+            <option value="">全部来源</option>
+            <option value="billing_order">Billing 购买</option>
+            <option value="redemption_code">兑换码</option>
+            <option value="admin">手工/补偿权益</option>
+          </NativeSelect>
+          <NativeSelect
+            value={planId}
+            onChange={(event) => setPlanId(event.target.value)}
+            aria-label="权益 Plan"
+          >
+            <option value="">全部 Plan</option>
+            {plans.map((plan) => (
+              <option value={plan.plan_id} key={plan.plan_id}>
+                {plan.code} · {plan.name}
+              </option>
+            ))}
+          </NativeSelect>
+          <Button
+            variant="outline"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            {loading ? '筛选中…' : '应用筛选'}
+          </Button>
+        </div>
+      </AdminTaskToolbar>
 
       {error ? (
         <Alert variant="destructive">
@@ -201,13 +205,13 @@ export function CommerceEntitlementList({
       ) : null}
 
       {rows.length ? (
-        <div className="grid gap-2">
+        <div className="admin-selectable-collection">
           {rows.map((row) => (
             <button
               type="button"
               key={`${row.platform_account_id}-${row.updated_at}`}
               onClick={() => onSelectAccount(row.platform_account_id)}
-              className="grid gap-2 rounded-lg border border-border p-3 text-left transition-colors hover:border-primary/40 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-center"
+              className="admin-selectable-row md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-center"
               data-test={`entitlement-row-${row.platform_account_id}`}
             >
               <span className="min-w-0">
@@ -260,6 +264,6 @@ export function CommerceEntitlementList({
           加载更多
         </Button>
       ) : null}
-    </section>
+    </AdminWorkspaceSection>
   );
 }

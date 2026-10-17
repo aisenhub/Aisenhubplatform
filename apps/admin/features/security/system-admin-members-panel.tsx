@@ -12,6 +12,7 @@ import type { MutationState } from '@kit/ui/mutation-state';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import {
   adminAuthSession,
   sessionErrorMessage,
@@ -181,19 +182,13 @@ export function SystemAdminMembersPanel() {
 
   if (status.membership_state === 'pending') {
     return (
-      <div
-        className="panel w-full max-w-full min-w-0 gap-4 [&_*]:min-w-0"
+      <AdminWorkspaceSection
+        title="管理员 onboarding"
+        titleId="system-admin-onboarding"
+        description="当前 membership 仍为 pending，不具备普通 Admin 业务权限。"
+        meta={<StatusBadge label="待激活" tone="warning" rawValue="pending" />}
         data-test="system-admin-pending-onboarding"
       >
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h2>管理员 onboarding</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              当前 membership 仍为 pending，不具备普通 Admin 业务权限。
-            </p>
-          </div>
-          <StatusBadge label="待激活" tone="warning" rawValue="pending" />
-        </div>
         <Alert>
           <AlertTitle>先完成双 TOTP，再由另一名 active 管理员激活</AlertTitle>
           <AlertDescription>
@@ -210,28 +205,24 @@ export function SystemAdminMembersPanel() {
         >
           管理 MFA 因子
         </Button>
-      </div>
+      </AdminWorkspaceSection>
     );
   }
 
   return (
-    <div
-      className="panel w-full max-w-full min-w-0 gap-5 [&_*]:min-w-0"
-      data-test="system-admin-members-panel"
-    >
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2>System Admin 灾备</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            membership、双 TOTP readiness 与最少 active 数量均由服务端权威判断。
-          </p>
-        </div>
+    <AdminWorkspaceSection
+      title="System Admin 灾备"
+      titleId="system-admin-governance"
+      description="membership、双 TOTP readiness 与最少 active 数量均由服务端权威判断。"
+      meta={
         <StatusBadge
           label={status.readiness_healthy ? 'Ready' : '需要补强'}
           tone={status.readiness_healthy ? 'success' : 'warning'}
           rawValue={status.readiness_healthy ? 'ready' : 'not_ready'}
         />
-      </div>
+      }
+      data-test="system-admin-members-panel"
+    >
       <dl className="detail-list min-w-0 text-sm">
         <div>
           <dt>Active Admin</dt>
@@ -342,6 +333,6 @@ export function SystemAdminMembersPanel() {
           onConfirm={submitIntent}
         />
       ) : null}
-    </div>
+    </AdminWorkspaceSection>
   );
 }

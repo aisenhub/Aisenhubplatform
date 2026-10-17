@@ -16,6 +16,10 @@ import { SupportErrorId } from '@kit/ui/support-error-id';
 import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
@@ -398,7 +402,7 @@ export function PlatformSubscriptionPage() {
 
       <CommerceEntitlementList onSelectAccount={selectAccount} />
 
-      <section className="panel gap-4" data-test="subscription-account-picker">
+      <AdminTaskToolbar data-test="subscription-account-picker">
         <div>
           <h2>选择平台账户</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -460,7 +464,7 @@ export function PlatformSubscriptionPage() {
             <ResourceId value={accountId} />
           </div>
         ) : null}
-      </section>
+      </AdminTaskToolbar>
 
       {refreshError ? (
         <Alert variant="destructive" data-test="subscription-refresh-error">
@@ -475,12 +479,12 @@ export function PlatformSubscriptionPage() {
         </Alert>
       ) : null}
       {!accountId ? (
-        <section className="panel gap-2" data-test="subscription-no-account">
-          <h2>先选择账户</h2>
-          <p className="text-sm text-muted-foreground">
-            搜索并选择一个平台账户后，这里会显示该账户的真实订阅投影。
-          </p>
-        </section>
+        <AdminWorkspaceSection
+          title="先选择账户"
+          titleId="subscription-no-account-title"
+          description="搜索并选择一个平台账户后，这里会显示该账户的真实订阅投影。"
+          data-test="subscription-no-account"
+        />
       ) : null}
       {state === 'loading' ? <AsyncState state="loading" /> : null}
       {state === 'error' && error ? (
@@ -494,29 +498,27 @@ export function PlatformSubscriptionPage() {
         />
       ) : null}
       {state === 'success' && accountId && !subscription ? (
-        <section className="panel gap-2" data-test="subscription-empty">
-          <h2>没有订阅投影</h2>
-          <p className="text-sm text-muted-foreground">
-            服务端没有返回该账户的订阅投影，页面不会用默认 Plan 填充。
-          </p>
-        </section>
+        <AdminWorkspaceSection
+          title="没有订阅投影"
+          titleId="subscription-empty-title"
+          description="服务端没有返回该账户的订阅投影，页面不会用默认 Plan 填充。"
+          data-test="subscription-empty"
+        />
       ) : null}
       {subscription ? (
         <section className="grid gap-4" data-test="subscription-detail">
-          <div className="panel gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2>当前投影</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  最终权益和时间边界以服务端 projection 与领域事件为准。
-                </p>
-              </div>
+          <AdminWorkspaceSection
+            title="当前投影"
+            titleId="subscription-projection-title"
+            description="最终权益和时间边界以服务端 projection 与领域事件为准。"
+            meta={
               <StatusBadge
                 label={statusLabel(subscription.status)}
                 tone={statusTone(subscription.status)}
                 rawValue={subscription.status}
               />
-            </div>
+            }
+          >
             <dl className="detail-list text-sm">
               <div>
                 <dt>Subscription ID</dt>
@@ -555,15 +557,12 @@ export function PlatformSubscriptionPage() {
                 <dd>{subscription.last_event_sequence}</dd>
               </div>
             </dl>
-          </div>
-          <div className="panel gap-4">
-            <div>
-              <h2>受控命令</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                每次打开命令都会创建一个逻辑 operation_id；网络歧义时保留该
-                ID，不自动新建。
-              </p>
-            </div>
+          </AdminWorkspaceSection>
+          <AdminWorkspaceSection
+            title="受控命令"
+            titleId="subscription-command-title"
+            description="每次打开命令都会创建一个逻辑 operation_id；网络歧义时保留该 ID，不自动新建。"
+          >
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-2" htmlFor="subscription-command">
                 <span className="text-sm font-medium">命令</span>
@@ -666,7 +665,7 @@ export function PlatformSubscriptionPage() {
             >
               打开确认窗口
             </Button>
-          </div>
+          </AdminWorkspaceSection>
         </section>
       ) : null}
 
