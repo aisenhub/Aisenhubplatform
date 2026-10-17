@@ -6,6 +6,9 @@ import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import {
   adminAuthSession,
@@ -252,7 +255,7 @@ export default function AdminMfaPage() {
             System Admin 生产就绪要求至少两个 verified TOTP
             因子。已验证因子不会因添加备用认证器而被替换。
           </p>
-          <button
+          <Button
             type="button"
             data-test="mfa-enroll-start"
             onClick={startEnrollment}
@@ -263,7 +266,7 @@ export default function AdminMfaPage() {
               : factors.length
                 ? '添加另一个认证器'
                 : '生成绑定二维码'}
-          </button>
+          </Button>
         </section>
       ) : null}
 
@@ -285,20 +288,22 @@ export default function AdminMfaPage() {
           <div className="one-time-secret">
             <strong>手动密钥</strong>
             <code>{enrollment.secret}</code>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               data-test="mfa-secret-copy"
               onClick={() => void copySecret()}
             >
               复制密钥
-            </button>
+            </Button>
             <small>
               该密钥只在本次绑定流程显示，请勿分享，也不会写入 URL。
             </small>
           </div>
           <form className="stack-form" onSubmit={verifyEnrollment}>
-            <label htmlFor="enrollment-code">认证器 6 位验证码</label>
-            <input
+            <Label htmlFor="enrollment-code">认证器 6 位验证码</Label>
+            <Input
               id="enrollment-code"
               inputMode="numeric"
               pattern="[0-9]{6}"
@@ -335,8 +340,8 @@ export default function AdminMfaPage() {
           className="panel stack-form admin-auth-card"
           onSubmit={verifyExistingFactor}
         >
-          <label htmlFor="factor">认证器</label>
-          <select
+          <Label htmlFor="factor">认证器</Label>
+          <NativeSelect
             id="factor"
             value={factorId}
             onChange={(event) => setFactorId(event.target.value)}
@@ -348,9 +353,9 @@ export default function AdminMfaPage() {
                 {factor.friendly_name ?? factor.factor_type}
               </option>
             ))}
-          </select>
-          <label htmlFor="code">验证码</label>
-          <input
+          </NativeSelect>
+          <Label htmlFor="code">验证码</Label>
+          <Input
             id="code"
             inputMode="numeric"
             pattern="[0-9]{6}"

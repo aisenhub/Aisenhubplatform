@@ -40,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from '@kit/ui/table';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import {
@@ -70,9 +71,6 @@ import {
 } from './admin-audit-model';
 
 const PAGE_SIZE = 50;
-
-const selectClassName =
-  'h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 type AuditPayload = {
   data?: AdminAuditEntry[];
@@ -617,9 +615,8 @@ function AdminAuditPageContent() {
             </label>
             <label className="grid gap-1 text-sm" htmlFor="audit-platform">
               <span>平台范围</span>
-              <select
+              <NativeSelect
                 id="audit-platform"
-                className={selectClassName}
                 value={draftFilters.platformId}
                 onChange={(event) =>
                   setDraftFilters((current) => ({
@@ -644,13 +641,12 @@ function AdminAuditPageContent() {
                     {platform.name} ({platform.code})
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             <label className="grid gap-1 text-sm" htmlFor="audit-action">
               <span>操作 / 动作</span>
-              <select
+              <NativeSelect
                 id="audit-action"
-                className={selectClassName}
                 value={draftFilters.action}
                 onChange={(event) =>
                   setDraftFilters((current) => ({
@@ -674,13 +670,12 @@ function AdminAuditPageContent() {
                     {option.label} · {option.value}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             <label className="grid gap-1 text-sm" htmlFor="audit-target-type">
               <span>对象类型</span>
-              <select
+              <NativeSelect
                 id="audit-target-type"
-                className={selectClassName}
                 value={draftFilters.targetType}
                 onChange={(event) =>
                   setDraftFilters((current) => ({
@@ -704,13 +699,12 @@ function AdminAuditPageContent() {
                     {option.label} · {option.value}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             <label className="grid gap-1 text-sm" htmlFor="audit-outcome">
               <span>结果</span>
-              <select
+              <NativeSelect
                 id="audit-outcome"
-                className={selectClassName}
                 value={draftFilters.outcome}
                 onChange={(event) =>
                   setDraftFilters((current) => ({
@@ -734,7 +728,7 @@ function AdminAuditPageContent() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
           </div>
           <div className="flex flex-wrap gap-2">

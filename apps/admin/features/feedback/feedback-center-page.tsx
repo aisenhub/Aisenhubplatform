@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { ConfirmActionDialog } from '@kit/ui/confirm-action-dialog';
 import {
   EmptyState,
@@ -28,6 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from '@kit/ui/table';
+import { NativeSelect } from '@kit/ui/native-select';
+import { Textarea } from '@kit/ui/textarea';
 
 import { SessionRetryRequiredError } from '../../app/_lib/auth/browser';
 import {
@@ -74,9 +77,6 @@ type FeedbackExport = {
   row_count: number;
   csv: string;
 };
-
-const selectClassName =
-  'h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 function initialDraft(params: URLSearchParams): FilterDraft {
   return {
@@ -527,9 +527,8 @@ export function FeedbackCenterPage() {
           </div>
           <div className="grid gap-1">
             <Label htmlFor="feedback-status">状态</Label>
-            <select
+            <NativeSelect
               id="feedback-status"
-              className={selectClassName}
               value={draft.status}
               onChange={(event) => setDraftField('status', event.target.value)}
             >
@@ -539,13 +538,12 @@ export function FeedbackCenterPage() {
                   {feedbackStatusView(value).label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
           <div className="grid gap-1">
             <Label htmlFor="feedback-category">分类</Label>
-            <select
+            <NativeSelect
               id="feedback-category"
-              className={selectClassName}
               value={draft.category}
               onChange={(event) =>
                 setDraftField('category', event.target.value)
@@ -557,7 +555,7 @@ export function FeedbackCenterPage() {
                   {feedbackCategoryLabel(value)}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
           <Input
             aria-label="标签"
@@ -578,9 +576,8 @@ export function FeedbackCenterPage() {
             onChange={(event) => setDraftField('email', event.target.value)}
             placeholder="邮箱"
           />
-          <select
+          <NativeSelect
             aria-label="是否含图片"
-            className={selectClassName}
             value={draft.hasAttachments}
             onChange={(event) =>
               setDraftField('hasAttachments', event.target.value)
@@ -589,7 +586,7 @@ export function FeedbackCenterPage() {
             <option value="">图片不限</option>
             <option value="true">含图片</option>
             <option value="false">无图片</option>
-          </select>
+          </NativeSelect>
           <Input
             aria-label="开始日期"
             type="date"
@@ -656,24 +653,17 @@ export function FeedbackCenterPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     aria-label="全选或取消全选当前页反馈"
                     checked={
                       items.length > 0 &&
                       items.every((i) => selected.has(i.feedback_id))
                     }
-                    ref={(el) => {
-                      if (el) {
-                        const all =
-                          items.length > 0 &&
-                          items.every((i) => selected.has(i.feedback_id));
-                        el.indeterminate =
-                          !all &&
-                          items.some((i) => selected.has(i.feedback_id));
-                      }
-                    }}
-                    onChange={toggleAll}
+                    indeterminate={
+                      items.some((i) => selected.has(i.feedback_id)) &&
+                      !items.every((i) => selected.has(i.feedback_id))
+                    }
+                    onCheckedChange={toggleAll}
                   />
                 </TableHead>
                 <TableHead>提交时间</TableHead>
@@ -690,11 +680,10 @@ export function FeedbackCenterPage() {
                 return (
                   <TableRow key={item.feedback_id} data-test="feedback-row">
                     <TableCell>
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         aria-label={`选择 ${feedbackSummary(item)}`}
                         checked={selected.has(item.feedback_id)}
-                        onChange={() => toggleSelected(item.feedback_id)}
+                        onCheckedChange={() => toggleSelected(item.feedback_id)}
                       />
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-xs">
@@ -897,9 +886,8 @@ export function FeedbackCenterPage() {
             <div className="grid gap-3 border-t pt-4">
               <strong className="text-sm">处理动作</strong>
               <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                <select
+                <NativeSelect
                   aria-label="反馈状态"
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                   value={nextStatus}
                   onChange={(event) => setNextStatus(event.target.value)}
                 >
@@ -910,7 +898,7 @@ export function FeedbackCenterPage() {
                       {feedbackStatusView(value).label}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 <Input
                   value={statusReason}
                   onChange={(event) => setStatusReason(event.target.value)}
@@ -989,8 +977,8 @@ export function FeedbackCenterPage() {
                 </Button>
               </div>
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <textarea
-                  className="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                <Textarea
+                  className="min-h-24"
                   value={noteDraft}
                   onChange={(event) => setNoteDraft(event.target.value)}
                   placeholder="内部处理备注（用户不可见）"

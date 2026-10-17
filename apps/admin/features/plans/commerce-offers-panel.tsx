@@ -8,6 +8,7 @@ import { ConfirmActionDialog } from '@kit/ui/confirm-action-dialog';
 import { Input } from '@kit/ui/input';
 import type { MutationState } from '@kit/ui/mutation-state';
 import { StatusBadge } from '@kit/ui/status-badge';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import {
   adminAuthSession,
@@ -282,8 +283,7 @@ export function CommerceOffersPanel({
         <AdminRecentMfaPanel onVerified={() => setStepUpRequired(false)} />
       ) : null}
       <div className="grid gap-2 md:grid-cols-5">
-        <select
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+        <NativeSelect
           value={planId}
           onChange={(event) => setPlanId(event.target.value)}
           aria-label="Offer Plan"
@@ -294,7 +294,7 @@ export function CommerceOffersPanel({
               {plan.code} · {plan.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <Input
           value={code}
           onChange={(event) => setCode(event.target.value)}
@@ -315,8 +315,7 @@ export function CommerceOffersPanel({
             onChange={(event) => setDurationValue(event.target.value)}
             aria-label="期限数值"
           />
-          <select
-            className="h-10 rounded-md border border-input bg-background px-2 text-sm"
+          <NativeSelect
             value={durationUnit}
             onChange={(event) =>
               setDurationUnit(event.target.value as typeof durationUnit)
@@ -326,7 +325,7 @@ export function CommerceOffersPanel({
             <option value="day">day</option>
             <option value="month">month</option>
             <option value="year">year</option>
-          </select>
+          </NativeSelect>
         </span>
         <Button
           onClick={() => void createOffer()}

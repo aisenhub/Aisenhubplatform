@@ -21,6 +21,7 @@ import {
   EmptyStateHeading,
   EmptyStateText,
 } from '@kit/ui/empty-state';
+import { Input } from '@kit/ui/input';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
@@ -32,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@kit/ui/table';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import {
@@ -325,10 +327,10 @@ export function CentralAccountsPage() {
               <Filter className="h-4 w-4" />
               <span>平台范围：</span>
             </div>
-            <select
+            <NativeSelect
               value={selectedPlatform}
               onChange={(event) => handlePlatformChange(event.target.value)}
-              className="h-9 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring sm:w-72 md:w-80"
+              wrapperClassName="w-full min-w-0 max-w-full sm:w-72 md:w-80"
               data-test="accounts-platform-selector"
               aria-label="统一身份平台范围"
             >
@@ -346,19 +348,19 @@ export function CentralAccountsPage() {
                   {platform.name} ({platform.code})
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
 
           <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
             <div className="relative min-w-0 flex-1 sm:flex-none">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
+              <Input
                 type="search"
                 aria-label="搜索统一身份"
                 value={draftQuery}
                 onChange={(event) => setDraftQuery(event.target.value)}
                 placeholder="搜索邮箱 / Auth UID"
-                className="h-9 w-full min-w-0 rounded-md border border-input bg-background pl-8 pr-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring sm:w-80"
+                className="h-9 pl-8 sm:w-80"
                 data-test="accounts-search-input"
               />
             </div>

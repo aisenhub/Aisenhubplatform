@@ -1205,8 +1205,9 @@ async function runBrowserFlow(secret, primaryFactorId, backupFactorId) {
   );
   await page.keyboard.press('Escape');
   await page
-    .locator('[data-test="feedback-row"] input[type="checkbox"]')
-    .check();
+    .locator('[data-test="feedback-row"]')
+    .getByRole('checkbox')
+    .click();
   await sql`
     update private.admin_step_up
     set expires_at = verified_at + interval '1 second'

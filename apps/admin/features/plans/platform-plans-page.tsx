@@ -30,6 +30,7 @@ import {
   TableRow,
 } from '@kit/ui/table';
 import { Textarea } from '@kit/ui/textarea';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
@@ -633,7 +634,7 @@ export function PlatformPlansPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="plan-editor-kind">类型</Label>
-                <select
+                <NativeSelect
                   id="plan-editor-kind"
                   value={editorPayload.kind}
                   onChange={(event) =>
@@ -647,7 +648,7 @@ export function PlatformPlansPage() {
                 >
                   <option value="paid">paid</option>
                   <option value="free">free</option>
-                </select>
+                </NativeSelect>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="plan-editor-description">描述</Label>

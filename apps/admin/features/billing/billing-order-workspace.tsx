@@ -8,6 +8,7 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import {
   adminAuthSession,
@@ -363,9 +364,8 @@ export function BillingOrderWorkspace({
           </label>
           <label className="grid gap-1 text-sm">
             <span>状态</span>
-            <select
+            <NativeSelect
               aria-label="Billing 状态"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
               onChange={(event) =>
                 setDraftFilters((current) => ({
                   ...current,
@@ -392,14 +392,13 @@ export function BillingOrderWorkspace({
                               : '未关联'}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           {!platformId ? (
             <label className="grid gap-1 text-sm">
               <span>平台</span>
-              <select
+              <NativeSelect
                 aria-label="Billing 平台"
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 onChange={(event) =>
                   setDraftFilters((current) => ({
                     ...current,
@@ -423,7 +422,7 @@ export function BillingOrderWorkspace({
                     {platform.name} ({platform.code})
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
           ) : null}
           <label className="grid gap-1 text-sm">
@@ -706,8 +705,8 @@ export function BillingOrderWorkspace({
                 >
                   结案动作
                 </label>
-                <select
-                  className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <NativeSelect
+                  className="mt-2"
                   id="billing-decision"
                   onChange={(event) =>
                     setDecision(event.target.value as ResolutionDecision)
@@ -717,7 +716,7 @@ export function BillingOrderWorkspace({
                   <option value="closed_anomaly">关闭异常</option>
                   <option value="refund_confirmed">外部退款已确认</option>
                   <option value="manual_correction">人工修正</option>
-                </select>
+                </NativeSelect>
                 <Button
                   className="mt-2 w-full"
                   disabled={

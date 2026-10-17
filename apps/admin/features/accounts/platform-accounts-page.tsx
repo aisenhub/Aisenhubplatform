@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@kit/ui/table';
 import type { MutationState } from '@kit/ui/mutation-state';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
@@ -53,9 +54,6 @@ import {
 import { type Account, type AccountIntent } from './account-types';
 
 const PAGE_SIZE = 20;
-const selectClassName =
-  'h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm';
-
 type PlanOption = {
   plan_id: string;
   code: string;
@@ -326,9 +324,8 @@ export function PlatformAccountsPage() {
         </div>
         <div className="grid gap-1">
           <Label htmlFor="account-status">账户状态</Label>
-          <select
+          <NativeSelect
             id="account-status"
-            className={selectClassName}
             value={draft.status}
             onChange={(event) => setDraftField('status', event.target.value)}
             data-test="accounts-status-filter"
@@ -337,13 +334,12 @@ export function PlatformAccountsPage() {
             <option value="active">正常</option>
             <option value="suspended">已暂停</option>
             <option value="closed">已关闭</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="grid gap-1">
           <Label htmlFor="account-plan">当前 Plan</Label>
-          <select
+          <NativeSelect
             id="account-plan"
-            className={selectClassName}
             value={draft.planId}
             onChange={(event) => setDraftField('planId', event.target.value)}
             data-test="accounts-plan-filter"
@@ -355,13 +351,12 @@ export function PlatformAccountsPage() {
                 {plan.status === 'archived' ? '（已归档）' : ''}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="grid gap-1">
           <Label htmlFor="account-subscription-status">订阅状态</Label>
-          <select
+          <NativeSelect
             id="account-subscription-status"
-            className={selectClassName}
             value={draft.subscriptionStatus}
             onChange={(event) =>
               setDraftField('subscriptionStatus', event.target.value)
@@ -372,7 +367,7 @@ export function PlatformAccountsPage() {
             <option value="active">active</option>
             <option value="suspended">suspended</option>
             <option value="none">无订阅</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="grid gap-1">
           <Label htmlFor="account-tag">管理员标签</Label>
@@ -593,8 +588,7 @@ export function PlatformAccountsPage() {
                           ) : null}
                           {!closed ? (
                             <Button
-                              variant="ghost"
-                              className="text-destructive"
+                              variant="destructive-ghost"
                               size="sm"
                               disabled={pending}
                               onClick={() => openAction(account, 'close')}

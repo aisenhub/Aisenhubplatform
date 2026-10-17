@@ -436,7 +436,7 @@ async function audit(label) {
       )
       .map((el) => el.outerHTML.slice(0, 160));
     const unlabeled = [...document.querySelectorAll('input, select, textarea')]
-      .filter(visible)
+      .filter((el) => visible(el) && el.getAttribute('aria-hidden') !== 'true')
       .filter(
         (el) =>
           !el.labels?.length &&
@@ -632,8 +632,9 @@ try {
   );
   await page.keyboard.press('Escape');
   await page
-    .locator('[data-test="feedback-row"] input[type="checkbox"]')
-    .check();
+    .locator('[data-test="feedback-row"]')
+    .getByRole('checkbox')
+    .click();
   const download = page.waitForEvent('download');
   await page.locator('[data-test="feedback-export"]').click();
   await download;

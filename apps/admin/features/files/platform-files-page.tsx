@@ -6,6 +6,7 @@ import type { FormEvent } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AsyncState } from '@kit/ui/async-state';
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { StatusBadge } from '@kit/ui/status-badge';
@@ -227,11 +228,10 @@ export function PlatformFilesPage() {
               </Alert>
             ) : null}
             <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={policy.enabled}
-                onChange={(event) =>
-                  setPolicy({ ...policy, enabled: event.target.checked })
+                onCheckedChange={(checked) =>
+                  setPolicy({ ...policy, enabled: checked })
                 }
                 disabled={saving}
                 data-test="platform-file-policy-enabled"

@@ -5,6 +5,8 @@ import type { FormEvent } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
 
 import {
   adminAuthSession,
@@ -72,8 +74,8 @@ export default function AdminLoginPage() {
         data-test="admin-login-form"
         data-hydrated={hydrated ? 'true' : 'false'}
       >
-        <label htmlFor="email">管理员邮箱</label>
-        <input
+        <Label htmlFor="email">管理员邮箱</Label>
+        <Input
           id="email"
           name="email"
           type="email"
@@ -84,8 +86,8 @@ export default function AdminLoginPage() {
           required
           disabled={submitting}
         />
-        <label htmlFor="password">密码</label>
-        <input
+        <Label htmlFor="password">密码</Label>
+        <Input
           id="password"
           name="password"
           type="password"

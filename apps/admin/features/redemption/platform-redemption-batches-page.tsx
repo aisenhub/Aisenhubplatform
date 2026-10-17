@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@kit/ui/table';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
@@ -611,7 +612,7 @@ export function PlatformRedemptionBatchesPage() {
             >
               <label className="grid gap-2" htmlFor="batch-product">
                 <span className="text-sm font-medium">兑换 Offer</span>
-                <select
+                <NativeSelect
                   id="batch-product"
                   value={offerId}
                   onChange={(event) => setOfferId(event.target.value)}
@@ -624,7 +625,7 @@ export function PlatformRedemptionBatchesPage() {
                       {offer.duration_value} {offer.duration_unit}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
               <label className="grid gap-2" htmlFor="batch-name">
                 <span className="text-sm font-medium">批次名称</span>

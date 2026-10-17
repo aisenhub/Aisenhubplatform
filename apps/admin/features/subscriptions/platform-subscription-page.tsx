@@ -13,6 +13,7 @@ import type { MutationState } from '@kit/ui/mutation-state';
 import { ResourceId } from '@kit/ui/resource-id';
 import { StatusBadge } from '@kit/ui/status-badge';
 import { SupportErrorId } from '@kit/ui/support-error-id';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
@@ -566,7 +567,7 @@ export function PlatformSubscriptionPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-2" htmlFor="subscription-command">
                 <span className="text-sm font-medium">命令</span>
-                <select
+                <NativeSelect
                   id="subscription-command"
                   value={command}
                   onChange={(event) =>
@@ -579,7 +580,7 @@ export function PlatformSubscriptionPage() {
                   <option value="grant">grant · 授予</option>
                   <option value="revoke">revoke · 撤销</option>
                   <option value="correct">correct · 修正</option>
-                </select>
+                </NativeSelect>
               </label>
               {command === 'grant' || command === 'correct' ? (
                 <label
@@ -587,7 +588,7 @@ export function PlatformSubscriptionPage() {
                   htmlFor="subscription-command-plan"
                 >
                   <span className="text-sm font-medium">Plan</span>
-                  <select
+                  <NativeSelect
                     id="subscription-command-plan"
                     value={commandPlanId}
                     onChange={(event) => setCommandPlanId(event.target.value)}
@@ -601,7 +602,7 @@ export function PlatformSubscriptionPage() {
                           {plan.code} · {plan.name}
                         </option>
                       ))}
-                  </select>
+                  </NativeSelect>
                 </label>
               ) : null}
               {command === 'grant' || command === 'correct' ? (
@@ -626,7 +627,7 @@ export function PlatformSubscriptionPage() {
                   htmlFor="subscription-command-duration-unit"
                 >
                   <span className="text-sm font-medium">时长单位</span>
-                  <select
+                  <NativeSelect
                     id="subscription-command-duration-unit"
                     value={commandDurationUnit}
                     onChange={(event) =>
@@ -639,7 +640,7 @@ export function PlatformSubscriptionPage() {
                     <option value="day">day</option>
                     <option value="month">month</option>
                     <option value="year">year</option>
-                  </select>
+                  </NativeSelect>
                 </label>
               ) : null}
               {command === 'revoke' || command === 'correct' ? (

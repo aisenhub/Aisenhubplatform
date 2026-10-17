@@ -65,8 +65,8 @@ export function AdminCommandMenu({ compact = false }: { compact?: boolean }) {
         aria-label="快速跳转（Ctrl 或 Command + K）"
         className={
           compact
-            ? 'size-9 justify-center px-0 text-muted-foreground lg:w-56 lg:justify-between lg:px-2.5'
-            : 'w-full justify-between gap-3 text-muted-foreground sm:w-56'
+            ? 'size-9 justify-center px-0 lg:w-56 lg:justify-between lg:px-2.5'
+            : 'w-full justify-between gap-3 sm:w-56'
         }
         onClick={() => setOpen(true)}
       >

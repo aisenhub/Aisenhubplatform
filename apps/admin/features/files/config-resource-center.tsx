@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@kit/ui/table';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { SessionRetryRequiredError } from '../../app/_lib/auth/browser';
 import {
@@ -483,9 +484,8 @@ export function ConfigResourceCenter() {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="config-resource-gallery-status">Gallery 状态</Label>
-            <select
+            <NativeSelect
               id="config-resource-gallery-status"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
               value={galleryStatus}
               onChange={(event) => {
                 setCursor(null);
@@ -499,7 +499,7 @@ export function ConfigResourceCenter() {
               <option value="removed">已下架</option>
               <option value="blocked">已封禁</option>
               <option value="none">未上架</option>
-            </select>
+            </NativeSelect>
           </div>
           <Button
             type="submit"

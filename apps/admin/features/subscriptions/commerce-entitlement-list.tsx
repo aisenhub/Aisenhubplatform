@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { StatusBadge } from '@kit/ui/status-badge';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import {
   adminAuthSession,
@@ -152,8 +153,7 @@ export function CommerceEntitlementList({
           placeholder="账户 / 用户 / Profile / Plan"
           aria-label="权益账户搜索"
         />
-        <select
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+        <NativeSelect
           value={status}
           onChange={(event) => setStatus(event.target.value)}
           aria-label="订阅状态"
@@ -161,9 +161,8 @@ export function CommerceEntitlementList({
           <option value="">全部状态</option>
           <option value="active">active</option>
           <option value="suspended">suspended</option>
-        </select>
-        <select
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+        </NativeSelect>
+        <NativeSelect
           value={source}
           onChange={(event) => setSource(event.target.value)}
           aria-label="权益来源"
@@ -172,9 +171,8 @@ export function CommerceEntitlementList({
           <option value="billing_order">Billing 购买</option>
           <option value="redemption_code">兑换码</option>
           <option value="admin">手工/补偿权益</option>
-        </select>
-        <select
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+        </NativeSelect>
+        <NativeSelect
           value={planId}
           onChange={(event) => setPlanId(event.target.value)}
           aria-label="权益 Plan"
@@ -185,7 +183,7 @@ export function CommerceEntitlementList({
               {plan.code} · {plan.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <Button
           variant="outline"
           onClick={() => void load()}

@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import {
   adminAuthSession,
@@ -184,7 +185,7 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
         {factors.length > 1 ? (
           <div className="grid gap-2">
             <Label htmlFor="recent-mfa-factor">认证器</Label>
-            <select
+            <NativeSelect
               id="recent-mfa-factor"
               value={factorId}
               onChange={(event) => setFactorId(event.target.value)}
@@ -196,7 +197,7 @@ export function AdminRecentMfaPanel({ onVerified }: AdminRecentMfaPanelProps) {
                   {factor.friendly_name || factor.factor_type || '已验证认证器'}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         ) : null}
         <div className="grid gap-2">

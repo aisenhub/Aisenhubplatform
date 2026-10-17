@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { Button } from '@kit/ui/button';
 import { StatusBadge } from '@kit/ui/status-badge';
+import { NativeSelect } from '@kit/ui/native-select';
 
 import { adminAuthSession } from '../../app/_lib/auth-session';
 import {
@@ -84,8 +85,8 @@ export function CampaignCodesPanel({
         </p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <select
-          className="h-10 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+        <NativeSelect
+          wrapperClassName="flex-1"
           value={batchId}
           onChange={(event) => {
             setBatchId(event.target.value);
@@ -100,7 +101,7 @@ export function CampaignCodesPanel({
               {campaign.name} · {campaign.batch_id}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <Button
           variant="outline"
           disabled={!batchId || loading}

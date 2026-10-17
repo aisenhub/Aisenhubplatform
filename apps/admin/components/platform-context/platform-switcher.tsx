@@ -348,22 +348,21 @@ export function PlatformSwitcher({
             切换工作区
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             aria-pressed={!current}
+            data-selected={!current ? 'true' : 'false'}
             onClick={() => changePlatform(ALL_PLATFORMS_VALUE)}
-            className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
-              !current
-                ? 'bg-primary/10 font-medium text-primary'
-                : 'text-foreground'
-            }`}
+            className="w-full justify-between px-2 text-left text-xs"
           >
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-primary" />
               <span className="font-medium">所有平台（全局透镜）</span>
             </div>
             {!current && <Check className="h-3.5 w-3.5 text-primary" />}
-          </button>
+          </Button>
 
           <div className="my-1 h-px bg-border" />
 
@@ -413,17 +412,19 @@ export function PlatformSwitcher({
             {options.map((platform) => {
               const isSelected = current?.platform_id === platform.platform_id;
               return (
-                <button
+                <Button
                   key={platform.platform_id}
                   id={platformOptionDomId(platform.platform_id)}
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   role="option"
                   aria-selected={isSelected}
                   tabIndex={-1}
                   data-active={activeOptionId === platform.platform_id}
                   onMouseMove={() => setActiveOptionId(platform.platform_id)}
                   onClick={() => changePlatform(platform.platform_id)}
-                  className="platform-switcher-option flex w-full items-center justify-between px-2 py-1.5 text-left text-xs"
+                  className="w-full justify-between px-2 text-left text-xs"
                   data-selected={isSelected ? 'true' : 'false'}
                 >
                   <span className="min-w-0 flex-1 truncate font-medium">
@@ -432,7 +433,7 @@ export function PlatformSwitcher({
                   {isSelected && (
                     <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
                   )}
-                </button>
+                </Button>
               );
             })}
             {nextCursor ? (
@@ -440,7 +441,7 @@ export function PlatformSwitcher({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="mt-1 w-full text-xs text-muted-foreground"
+                className="mt-1 w-full text-xs"
                 data-test="platform-switcher-load-more"
                 disabled={loadingMore || searching}
                 onClick={() => void loadPlatforms(debouncedQuery, nextCursor)}
