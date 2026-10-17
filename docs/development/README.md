@@ -7,6 +7,7 @@
 - [Agent 开发、分支合并、本地验证与生产发布流程](development-release-workflow.md)
 - [本地开发](development.md)
 - [测试](testing.md)
+- [Design System](design/README.md)：通用设计原则、Foundations、标准组件契约、页面模式与 UI/UX 规则
 - [运维、备份、恢复与发布](operations.md)
 - [运维与发布 Runbook](runbooks/README.md)：Hosted Maintenance、Provider、备份恢复、Retention、Production 执行清单
 - [新平台接入兼容入口](platform-onboarding.md)

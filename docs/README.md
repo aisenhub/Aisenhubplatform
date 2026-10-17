@@ -16,6 +16,7 @@
 - [本地开发](development/development.md)
 - [新平台接入手册（兼容入口；当前权威入口为 platform-integration）](development/platform-onboarding.md)
 - [测试](development/testing.md)
+- [Design System](development/design/README.md)
 - [运维操作](development/operations.md)
 - [文档维护规则](development/documentation-governance.md)
 - [API](architecture/reference/api.md)

@@ -1,6 +1,6 @@
 # 阶段 01：迁移通用 Design System
 
-状态：未开始
+状态：验收通过待推送
 
 关联：[总计划](../plan.md) · [优化设计](../design.md) · [验证记录](../verification-record.md)
 
@@ -32,25 +32,25 @@
 
 ## 任务清单
 
-- [ ] 建立参考 Design System 全量 inventory，标记每份文件为通用治理、产品适配或历史实施资料。
-- [ ] 迁移 foundations contract：语义 token、theme、density、shape、surface、motion、layer、设计值单一来源等规则。
-- [ ] 迁移 component contract：标准组件定义、结构/行为与 skin 分层、有限 variant、真实 state、复用/扩展/自写决策顺序。
-- [ ] 迁移 controls/patterns：标准控件、页面组合、表单/表格/浮层/状态/导航等可复用模式；参考项目特有产品行为必须剔除或改写。
-- [ ] 建立 Aisenhub ownership contract：Theme → Skin → Standard Component → Semantic UI → Feature/Page。
-- [ ] 定义 `className`、Tailwind、raw native control、局部视觉例外和 product adaptation 的使用边界。
-- [ ] 定义设计审查与验证规则，包括 keyboard/focus、reduced motion、非颜色状态、responsive、loading/empty/error/unknown outcome。
-- [ ] 明确 `apps/admin/DESIGN.md` 在新体系中只承担 Product Adaptation，不能成为基础 Design System 的第二来源。
-- [ ] 对照参考项目 inventory 检查是否遗漏通用设计方法；不能只迁移三四个已知文件就宣称完整迁移。
+- [x] 建立参考 Design System 全量 inventory，标记每份文件为通用治理、产品适配或历史实施资料。
+- [x] 迁移 foundations contract：语义 token、theme、density、shape、surface、motion、layer、设计值单一来源等规则。
+- [x] 迁移 component contract：标准组件定义、结构/行为与 skin 分层、有限 variant、真实 state、复用/扩展/自写决策顺序。
+- [x] 迁移 controls/patterns：标准控件、页面组合、表单/表格/浮层/状态/导航等可复用模式；参考项目特有产品行为必须剔除或改写。
+- [x] 建立 Aisenhub ownership contract：Theme → Skin → Standard Component → Semantic UI → Feature/Page。
+- [x] 定义 `className`、Tailwind、raw native control、局部视觉例外和 product adaptation 的使用边界。
+- [x] 定义设计审查与验证规则，包括 keyboard/focus、reduced motion、非颜色状态、responsive、loading/empty/error/unknown outcome。
+- [x] 明确 `apps/admin/DESIGN.md` 在新体系中只承担 Product Adaptation，不能成为基础 Design System 的第二来源。
+- [x] 对照参考项目 inventory 检查是否遗漏通用设计方法；不能只迁移三四个已知文件就宣称完整迁移。
 
 ## 验证方案
 
 | 检查 | 命令或方法 | 环境 | 预期结果 | 实际结果 |
 | --- | --- | --- | --- | --- |
-| 文档导航与链接 | `pnpm docs:check` | Local | PASS | 未运行 |
-| 合同静态一致性 | `pnpm contracts:check` | Local | PASS；本阶段不改变 wire contract | 未运行 |
-| Diff 格式 | `git diff --check` | Local | PASS | 未运行 |
-| 迁移完整性审查 | 参考项目 `development/design/**` inventory 对照 | Local | 每项均有“迁移/产品专属不迁移/历史参考”结论 | 未运行 |
-| 产品污染审查 | 人工对照参考项目产品适配 | Local | Aisenhub Design System 中无 AisenLens 专属色板、品牌或 workspace 皮肤 | 未运行 |
+| 文档导航与链接 | `pnpm docs:check` | Local | PASS | 首次 FAIL：遗漏规则说明素材导航；补链后复测 PASS，115 documents |
+| 合同静态一致性 | `pnpm contracts:check` | Local | PASS；本阶段不改变 wire contract | PASS |
+| Diff 格式 | `git diff --check` | Local | PASS | PASS |
+| 迁移完整性审查 | 参考项目 `development/design/**` inventory 对照 | Local | 每项均有“迁移/产品专属不迁移/历史参考”结论 | PASS：56 个 tracked 文件，11 foundations / 6 components / 8 patterns / 16 rules / 14 products / 1 root 均有处理结论 |
+| 产品污染审查 | 规则计数 + 产品特定值扫描 | Local | 62 条通用规则完整；通用正文无 AisenLens 专属字体、色板、形状或 motion 值 | PASS：62/62；产品特定值扫描 0 命中（迁移清单中的历史说明除外） |
 
 ## 退出与恢复条件
 
@@ -58,7 +58,7 @@
 
 ## 文档与交付
 
-- [ ] `docs/development/design/**` 已建立并成为长期通用设计治理源。
-- [ ] 文档导航已同步。
-- [ ] `verification-record.md` 已记录真实检查。
+- [x] `docs/development/design/**` 已建立并成为长期通用设计治理源。
+- [x] 文档导航已同步。
+- [x] `verification-record.md` 已记录真实检查。
 - [ ] 阶段 commit 已 push 且远端核对后，状态才可标记已交付。
