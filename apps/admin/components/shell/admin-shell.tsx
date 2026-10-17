@@ -137,7 +137,7 @@ export function AdminShell({ children }: AdminShellProps) {
   if (securityView.kind === 'admin_required') {
     return (
       <div className="admin-auth-layout" data-test="admin-security-not-admin">
-        <main className="panel stack-form admin-auth-card">
+        <main className="stack-form admin-auth-card">
           <h1>没有管理员访问权限</h1>
           <p className="muted">
             当前账号不是系统管理员。请退出后切换到管理员账号。
@@ -171,7 +171,7 @@ export function AdminShell({ children }: AdminShellProps) {
         data-test="admin-security-unavailable"
         role="alert"
       >
-        <main className="panel stack-form admin-auth-card">
+        <main className="stack-form admin-auth-card">
           <h1>无法确认管理员安全状态</h1>
           <p className="muted">授权服务暂时不可用，请重试后再进入管理页面。</p>
           <SupportErrorId
@@ -198,7 +198,7 @@ export function AdminShell({ children }: AdminShellProps) {
         data-test="admin-security-loading"
       >
         <main
-          className="panel stack-form admin-auth-card flex flex-col items-center justify-center p-8 text-center gap-3"
+          className="stack-form admin-auth-card flex flex-col items-center justify-center gap-3 p-8 text-center"
           role="status"
         >
           <Loader2
