@@ -27,6 +27,10 @@ import type { MutationState } from '@kit/ui/mutation-state';
 import { NativeSelect } from '@kit/ui/native-select';
 
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
@@ -304,121 +308,125 @@ export function PlatformAccountsPage() {
         }
       />
 
-      <form
-        className="panel grid gap-3 md:grid-cols-2 xl:grid-cols-4"
-        onSubmit={applyFilters}
-        role="search"
-        data-test="accounts-filters"
-      >
-        <div className="grid gap-1 xl:col-span-2">
-          <Label htmlFor="account-query">搜索</Label>
-          <Input
-            id="account-query"
-            type="search"
-            maxLength={128}
-            value={draft.q}
-            onChange={(event) => setDraftField('q', event.target.value)}
-            placeholder="Account / User ID、显示名称、Plan 名称或代码"
-            data-test="accounts-query"
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="account-status">账户状态</Label>
-          <NativeSelect
-            id="account-status"
-            value={draft.status}
-            onChange={(event) => setDraftField('status', event.target.value)}
-            data-test="accounts-status-filter"
-          >
-            <option value="">全部</option>
-            <option value="active">正常</option>
-            <option value="suspended">已暂停</option>
-            <option value="closed">已关闭</option>
-          </NativeSelect>
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="account-plan">当前 Plan</Label>
-          <NativeSelect
-            id="account-plan"
-            value={draft.planId}
-            onChange={(event) => setDraftField('planId', event.target.value)}
-            data-test="accounts-plan-filter"
-          >
-            <option value="">全部方案</option>
-            {plans.map((plan) => (
-              <option key={plan.plan_id} value={plan.plan_id}>
-                {plan.name} · {plan.code}
-                {plan.status === 'archived' ? '（已归档）' : ''}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="account-subscription-status">订阅状态</Label>
-          <NativeSelect
-            id="account-subscription-status"
-            value={draft.subscriptionStatus}
-            onChange={(event) =>
-              setDraftField('subscriptionStatus', event.target.value)
-            }
-            data-test="accounts-subscription-filter"
-          >
-            <option value="">全部</option>
-            <option value="active">active</option>
-            <option value="suspended">suspended</option>
-            <option value="none">无订阅</option>
-          </NativeSelect>
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="account-tag">管理员标签</Label>
-          <Input
-            id="account-tag"
-            maxLength={32}
-            value={draft.tag}
-            onChange={(event) => setDraftField('tag', event.target.value)}
-            placeholder="例如 vip"
-            data-test="accounts-tag-filter"
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="account-joined-from">加入日期起</Label>
-          <Input
-            id="account-joined-from"
-            type="date"
-            value={draft.joinedFrom}
-            onChange={(event) =>
-              setDraftField('joinedFrom', event.target.value)
-            }
-            data-test="accounts-joined-from"
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="account-joined-to">加入日期止</Label>
-          <Input
-            id="account-joined-to"
-            type="date"
-            value={draft.joinedTo}
-            onChange={(event) => setDraftField('joinedTo', event.target.value)}
-            data-test="accounts-joined-to"
-          />
-        </div>
-        <div className="flex flex-wrap items-end gap-2 md:col-span-2 xl:col-span-4">
-          <Button type="submit" data-test="accounts-query-submit">
-            应用筛选
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.replace(pathname)}
-            data-test="accounts-query-reset"
-          >
-            清除
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            每页 {PAGE_SIZE} 条；筛选在服务端 cursor 分页前执行。
-          </span>
-        </div>
-      </form>
+      <AdminTaskToolbar aria-label="账户筛选">
+        <form
+          className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+          onSubmit={applyFilters}
+          role="search"
+          data-test="accounts-filters"
+        >
+          <div className="grid gap-1 xl:col-span-2">
+            <Label htmlFor="account-query">搜索</Label>
+            <Input
+              id="account-query"
+              type="search"
+              maxLength={128}
+              value={draft.q}
+              onChange={(event) => setDraftField('q', event.target.value)}
+              placeholder="Account / User ID、显示名称、Plan 名称或代码"
+              data-test="accounts-query"
+            />
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="account-status">账户状态</Label>
+            <NativeSelect
+              id="account-status"
+              value={draft.status}
+              onChange={(event) => setDraftField('status', event.target.value)}
+              data-test="accounts-status-filter"
+            >
+              <option value="">全部</option>
+              <option value="active">正常</option>
+              <option value="suspended">已暂停</option>
+              <option value="closed">已关闭</option>
+            </NativeSelect>
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="account-plan">当前 Plan</Label>
+            <NativeSelect
+              id="account-plan"
+              value={draft.planId}
+              onChange={(event) => setDraftField('planId', event.target.value)}
+              data-test="accounts-plan-filter"
+            >
+              <option value="">全部方案</option>
+              {plans.map((plan) => (
+                <option key={plan.plan_id} value={plan.plan_id}>
+                  {plan.name} · {plan.code}
+                  {plan.status === 'archived' ? '（已归档）' : ''}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="account-subscription-status">订阅状态</Label>
+            <NativeSelect
+              id="account-subscription-status"
+              value={draft.subscriptionStatus}
+              onChange={(event) =>
+                setDraftField('subscriptionStatus', event.target.value)
+              }
+              data-test="accounts-subscription-filter"
+            >
+              <option value="">全部</option>
+              <option value="active">active</option>
+              <option value="suspended">suspended</option>
+              <option value="none">无订阅</option>
+            </NativeSelect>
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="account-tag">管理员标签</Label>
+            <Input
+              id="account-tag"
+              maxLength={32}
+              value={draft.tag}
+              onChange={(event) => setDraftField('tag', event.target.value)}
+              placeholder="例如 vip"
+              data-test="accounts-tag-filter"
+            />
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="account-joined-from">加入日期起</Label>
+            <Input
+              id="account-joined-from"
+              type="date"
+              value={draft.joinedFrom}
+              onChange={(event) =>
+                setDraftField('joinedFrom', event.target.value)
+              }
+              data-test="accounts-joined-from"
+            />
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="account-joined-to">加入日期止</Label>
+            <Input
+              id="account-joined-to"
+              type="date"
+              value={draft.joinedTo}
+              onChange={(event) =>
+                setDraftField('joinedTo', event.target.value)
+              }
+              data-test="accounts-joined-to"
+            />
+          </div>
+          <div className="flex flex-wrap items-end gap-2 md:col-span-2 xl:col-span-4">
+            <Button type="submit" data-test="accounts-query-submit">
+              应用筛选
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.replace(pathname)}
+              data-test="accounts-query-reset"
+            >
+              清除
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              每页 {PAGE_SIZE} 条；筛选在服务端 cursor 分页前执行。
+            </span>
+          </div>
+        </form>
+      </AdminTaskToolbar>
 
       {refreshError ? (
         <Alert variant="destructive" data-test="accounts-refresh-error">
@@ -445,30 +453,29 @@ export function PlatformAccountsPage() {
         />
       ) : null}
       {state === 'success' && accounts.length === 0 ? (
-        <section className="panel gap-2" data-test="accounts-empty">
-          <h2>没有匹配的账户</h2>
+        <AdminWorkspaceSection
+          title="账户目录"
+          titleId="accounts-empty-title"
+          description="当前平台和筛选条件下没有返回 Platform Account。"
+          data-test="accounts-empty"
+        >
           <p className="text-sm text-muted-foreground">
-            当前平台和筛选条件下没有返回 Platform Account。
+            调整搜索或筛选条件后重新应用；页面不会把筛选为空解释为平台没有账户。
           </p>
-        </section>
+        </AdminWorkspaceSection>
       ) : null}
       {state === 'success' && accounts.length > 0 ? (
-        <section
-          className="admin-resource-surface grid gap-3"
+        <AdminWorkspaceSection
+          title="账户目录"
+          titleId="accounts-table-title"
+          description="先在集合中定位账户，再进入 Account 360 处理详情或治理动作。"
+          meta={
+            <span role="status" aria-live="polite">
+              当前页 {accounts.length} 条
+            </span>
+          }
           data-test="accounts-table-section"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2>账户目录</h2>
-              <p
-                className="mt-1 text-sm text-muted-foreground"
-                role="status"
-                aria-live="polite"
-              >
-                当前页 {accounts.length} 条
-              </p>
-            </div>
-          </div>
           <div
             className="data-table"
             tabIndex={0}
@@ -632,7 +639,7 @@ export function PlatformAccountsPage() {
               </Button>
             ) : null}
           </div>
-        </section>
+        </AdminWorkspaceSection>
       ) : null}
 
       {intent ? (

@@ -23,6 +23,7 @@ import {
 } from '../../app/_lib/auth-session';
 import { usePlatformContext } from '../../components/platform-context/platform-workspace';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
+import { AdminWorkspaceSection } from '../../components/workspace/admin-workspace';
 import { AdminRecentMfaPanel } from '../security/admin-recent-mfa-panel';
 import {
   formatUtc,
@@ -409,19 +410,21 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
         </Alert>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <article
-          className="panel gap-3 lg:col-span-2"
-          data-test="account-workbench-overview"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <h2>账户概览</h2>
-            <StatusBadge
-              label={statusLabel(detail.status)}
-              tone={statusTone(detail.status)}
-              rawValue={detail.status}
-            />
-          </div>
+      <AdminWorkspaceSection
+        title="账户事实"
+        titleId="account-workbench-facts"
+        description="先确认当前 Platform Account 与 Global Identity 的事实，再执行任何状态治理。"
+        actions={
+          <StatusBadge
+            label={statusLabel(detail.status)}
+            tone={statusTone(detail.status)}
+            rawValue={detail.status}
+          />
+        }
+        bodyClassName="admin-workspace-split xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.55fr)]"
+        data-test="account-workbench-overview"
+      >
+        <div className="admin-detail-column">
           <dl className="detail-list text-sm">
             <div>
               <dt>Platform Account ID</dt>
@@ -479,41 +482,59 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
               打开统一用户
             </Button>
           ) : null}
-        </article>
+        </div>
 
-        <article className="panel gap-3" data-test="account-workbench-actions">
-          <h2>账户治理</h2>
-          <p className="text-sm text-muted-foreground">
-            高风险状态变更要求 reason + recent-MFA，未知结果不会自动重放。
-          </p>
+        <aside
+          className="admin-governance-pane"
+          data-test="account-workbench-actions"
+        >
+          <div>
+            <h3 className="font-semibold">账户治理</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              高风险状态变更要求 reason + recent-MFA；未知结果不会自动重放。
+            </p>
+          </div>
           {!closed ? (
-            <Button
-              variant="outline"
-              onClick={() => openAction(suspended ? 'restore' : 'suspend')}
-              data-test="account-workbench-toggle"
-            >
-              {suspended ? '恢复账户' : '暂停账户'}
-            </Button>
-          ) : null}
-          {!closed ? (
-            <Button
-              variant="destructive"
-              onClick={() => openAction('close')}
-              data-test="account-workbench-close"
-            >
-              关闭账户
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => openAction(suspended ? 'restore' : 'suspend')}
+                data-test="account-workbench-toggle"
+              >
+                {suspended ? '恢复账户' : '暂停账户'}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => openAction('close')}
+                data-test="account-workbench-close"
+              >
+                关闭账户
+              </Button>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               账户已关闭，不再提供状态写入。
             </p>
           )}
-        </article>
-      </section>
+        </aside>
+      </AdminWorkspaceSection>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="panel gap-3" data-test="account-workbench-profile">
-          <h2>平台资料</h2>
+      <AdminWorkspaceSection
+        title="资料与权益"
+        titleId="account-workbench-context"
+        description="平台资料与当前商业权益属于同一账户上下文，但由不同权威事实维护。"
+        bodyClassName="admin-workspace-split xl:grid-cols-2"
+      >
+        <div
+          className="admin-detail-column"
+          data-test="account-workbench-profile"
+        >
+          <div>
+            <h3 className="font-semibold">平台资料</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              仅展示当前平台 Profile，不替代 Global Identity。
+            </p>
+          </div>
           <dl className="detail-list text-sm">
             <div>
               <dt>显示名称</dt>
@@ -538,13 +559,18 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
               {detail.bio ?? '—'}
             </p>
           </div>
-        </article>
+        </div>
 
-        <article
-          className="panel gap-3"
+        <div
+          className="admin-detail-column admin-detail-column-divided"
           data-test="account-workbench-entitlement"
         >
-          <h2>订阅与权益</h2>
+          <div>
+            <h3 className="font-semibold">订阅与权益</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              当前 Plan、订阅状态和下一次转换均以服务端投影为准。
+            </p>
+          </div>
           <dl className="detail-list text-sm">
             <div>
               <dt>Plan</dt>
@@ -587,104 +613,132 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
           >
             打开订阅工作台
           </Button>
-        </article>
-      </section>
+        </div>
+      </AdminWorkspaceSection>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <article className="panel gap-3" data-test="account-workbench-billing">
-          <h2>Billing 摘要</h2>
-          <p className="text-2xl font-semibold">
-            {metric(detail.billing_order_count)}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            需关注 {metric(detail.billing_attention_count)} 单
-          </p>
-          <dl className="detail-list text-xs">
-            <div>
-              <dt>最近订单</dt>
-              <dd>{textFact(billingLatest.order_id)}</dd>
-            </div>
-            <div>
-              <dt>验证</dt>
-              <dd>{textFact(billingLatest.verification_status)}</dd>
-            </div>
-            <div>
-              <dt>权益</dt>
-              <dd>{textFact(billingLatest.entitlement_status)}</dd>
-            </div>
-            <div>
-              <dt>结算</dt>
-              <dd>{textFact(billingLatest.settlement_state)}</dd>
-            </div>
-          </dl>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link
-                href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/billing?platform_account_id=${encodeURIComponent(detail.platform_account_id)}`}
-              />
-            }
+      <AdminWorkspaceSection
+        title="关联业务"
+        titleId="account-workbench-related"
+        description="跨工作区只展示能帮助判断下一步的摘要，复杂操作继续进入对应业务工作台。"
+      >
+        <div className="admin-related-workspace-list">
+          <div
+            className="admin-related-workspace-row"
+            data-test="account-workbench-billing"
           >
-            打开 Billing
-          </Button>
-        </article>
+            <div>
+              <h3 className="font-semibold">Billing</h3>
+              <p className="mt-1 text-xs text-muted-foreground">订单与结算</p>
+            </div>
+            <div className="min-w-0">
+              <p className="admin-related-workspace-value">
+                {metric(detail.billing_order_count)} 个订单
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                需关注 {metric(detail.billing_attention_count)} 单 · 最近订单{' '}
+                {textFact(billingLatest.order_id)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                验证 {textFact(billingLatest.verification_status)} · 权益{' '}
+                {textFact(billingLatest.entitlement_status)} · 结算{' '}
+                {textFact(billingLatest.settlement_state)}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link
+                  href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/billing?platform_account_id=${encodeURIComponent(detail.platform_account_id)}`}
+                />
+              }
+            >
+              打开 Billing
+            </Button>
+          </div>
 
-        <article className="panel gap-3" data-test="account-workbench-config">
-          <h2>配置资源摘要</h2>
-          <p className="text-sm">
-            Active {metric(detail.config_active_count)} · Gallery{' '}
-            {metric(detail.config_published_count)}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            待审核 {metric(detail.config_pending_review_count)}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            最近更新 {formatUtc(detail.config_latest_updated_at)}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link
-                href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/files`}
-              />
-            }
+          <div
+            className="admin-related-workspace-row"
+            data-test="account-workbench-config"
           >
-            打开配置资源
-          </Button>
-        </article>
+            <div>
+              <h3 className="font-semibold">配置资源</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Config / Gallery
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="admin-related-workspace-value">
+                Active {metric(detail.config_active_count)} · Gallery{' '}
+                {metric(detail.config_published_count)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                待审核 {metric(detail.config_pending_review_count)} · 最近更新{' '}
+                {formatUtc(detail.config_latest_updated_at)}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link
+                  href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/files`}
+                />
+              }
+            >
+              打开配置资源
+            </Button>
+          </div>
 
-        <article className="panel gap-3" data-test="account-workbench-feedback">
-          <h2>用户反馈摘要</h2>
-          <p className="text-sm">有效反馈 {metric(detail.feedback_count)}</p>
-          <p className="text-sm text-muted-foreground">
-            待处理 {metric(detail.feedback_open_count)}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            最近提交 {formatUtc(detail.feedback_latest_submitted_at)}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link
-                href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/feedback${identityUserId ? `?user=${encodeURIComponent(identityUserId)}` : ''}`}
-              />
-            }
+          <div
+            className="admin-related-workspace-row"
+            data-test="account-workbench-feedback"
           >
-            打开用户反馈
-          </Button>
-        </article>
-      </section>
+            <div>
+              <h3 className="font-semibold">用户反馈</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Feedback Center
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="admin-related-workspace-value">
+                有效反馈 {metric(detail.feedback_count)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                待处理 {metric(detail.feedback_open_count)} · 最近提交{' '}
+                {formatUtc(detail.feedback_latest_submitted_at)}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link
+                  href={`/admin/platforms/${encodeURIComponent(platform.platform_id)}/feedback${identityUserId ? `?user=${encodeURIComponent(identityUserId)}` : ''}`}
+                />
+              }
+            >
+              打开用户反馈
+            </Button>
+          </div>
+        </div>
+      </AdminWorkspaceSection>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="panel gap-4" data-test="account-workbench-support">
+      <AdminWorkspaceSection
+        title="支持与治理记录"
+        titleId="account-workbench-records"
+        description="支持备注与治理事件服务于不同目的：前者帮助持续运营，后者记录受保护的管理决策。"
+        bodyClassName="admin-workspace-split xl:grid-cols-2"
+      >
+        <div
+          className="admin-support-surface"
+          data-test="account-workbench-support"
+        >
           <div>
-            <h2>管理员标签与备注</h2>
+            <h3 className="font-semibold">管理员标签与备注</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               与用户 Profile 分离；备注正文不会复制到通用 Audit metadata。
             </p>
@@ -752,12 +806,12 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
             </Button>
           </form>
           {detail.notes.length ? (
-            <div className="grid gap-2" data-test="account-notes-timeline">
+            <div
+              className="admin-timeline-list"
+              data-test="account-notes-timeline"
+            >
               {detail.notes.map((note) => (
-                <article
-                  key={note.id}
-                  className="rounded-lg border border-border/70 p-3"
-                >
+                <article key={note.id} className="admin-timeline-item">
                   <p className="whitespace-pre-wrap text-sm">{note.body}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {formatUtc(note.created_at)} · Admin{' '}
@@ -772,25 +826,22 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
           ) : (
             <p className="text-sm text-muted-foreground">暂无内部备注。</p>
           )}
-        </article>
+        </div>
 
-        <article
-          className="panel gap-4"
+        <div
+          className="admin-detail-column admin-detail-column-divided"
           data-test="account-governance-timeline"
         >
           <div>
-            <h2>账户治理时间线</h2>
+            <h3 className="font-semibold">账户治理时间线</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               原因保存在受保护治理事件中；通用 Audit 仅关联事件 ID。
             </p>
           </div>
           {detail.governance_events.length ? (
-            <div className="grid gap-2">
+            <div className="admin-timeline-list">
               {detail.governance_events.map((event) => (
-                <article
-                  key={event.id}
-                  className="rounded-lg border border-border/70 p-3"
-                >
+                <article key={event.id} className="admin-timeline-item">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <StatusBadge
                       label={event.action}
@@ -819,8 +870,8 @@ export function AccountWorkbenchPage({ accountId }: { accountId: string }) {
           ) : (
             <p className="text-sm text-muted-foreground">暂无治理事件。</p>
           )}
-        </article>
-      </section>
+        </div>
+      </AdminWorkspaceSection>
 
       {intent ? (
         <ConfirmActionDialog

@@ -52,6 +52,10 @@ import {
 } from '../../app/_lib/auth-session';
 import { AdminPageHeader } from '../../components/shell/admin-page-header';
 import {
+  AdminTaskToolbar,
+  AdminWorkspaceSection,
+} from '../../components/workspace/admin-workspace';
+import {
   platformStatus,
   type Platform,
   type PlatformListResponse,
@@ -431,10 +435,7 @@ function PlatformDirectoryContent() {
         }
       />
 
-      <section
-        className="admin-resource-toolbar"
-        aria-labelledby="platform-directory-query"
-      >
+      <AdminTaskToolbar aria-labelledby="platform-directory-query">
         <h2 id="platform-directory-query" className="sr-only">
           查找平台
         </h2>
@@ -473,7 +474,7 @@ function PlatformDirectoryContent() {
             ) : null}
           </div>
         </form>
-      </section>
+      </AdminTaskToolbar>
 
       {refreshError ? (
         <Alert
@@ -501,26 +502,19 @@ function PlatformDirectoryContent() {
         </Alert>
       ) : null}
 
-      <section
-        className="admin-resource-surface grid gap-4"
-        aria-labelledby="platform-directory-list"
-      >
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 id="platform-directory-list">平台列表</h2>
-            <p
-              className="text-sm text-muted-foreground"
-              role="status"
-              aria-live="polite"
-            >
+      <AdminWorkspaceSection
+        title="平台列表"
+        titleId="platform-directory-list"
+        description="按当前查询浏览平台事实；打开工作区不会改变目录筛选语义。"
+        meta={
+          <>
+            <span role="status" aria-live="polite">
               {visibleSummary}
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            最多读取 100 个平台
-          </span>
-        </div>
-
+            </span>
+            <span>最多读取 100 个平台</span>
+          </>
+        }
+      >
         {remoteState === 'loading' ? <AsyncState state="loading" /> : null}
         {remoteState === 'access' && loadError ? (
           <AsyncState
@@ -666,7 +660,7 @@ function PlatformDirectoryContent() {
             </div>
           </>
         ) : null}
-      </section>
+      </AdminWorkspaceSection>
     </main>
   );
 }
