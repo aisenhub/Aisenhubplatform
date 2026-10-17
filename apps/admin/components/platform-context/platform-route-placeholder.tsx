@@ -9,6 +9,7 @@ import {
 } from '@kit/ui/empty';
 
 import { AdminPageHeader } from '../shell/admin-page-header';
+import { AdminWorkspaceSection } from '../workspace/admin-workspace';
 
 type PlatformRoutePlaceholderProps = {
   title: string;
@@ -26,7 +27,10 @@ export function PlatformRoutePlaceholder({
   return (
     <section className="grid gap-5" data-test="platform-route-placeholder">
       <AdminPageHeader title={title} description={description} />
-      <section className="panel gap-5">
+      <AdminWorkspaceSection
+        title="真实资源工作区"
+        titleId="platform-route-placeholder-title"
+      >
         <Empty className="min-h-64 border-border/70 bg-card">
           <EmptyHeader>
             <EmptyTitle>真实资源面板即将接入</EmptyTitle>
@@ -44,7 +48,7 @@ export function PlatformRoutePlaceholder({
             返回平台概览
           </Button>
         </Empty>
-      </section>
+      </AdminWorkspaceSection>
     </section>
   );
 }
