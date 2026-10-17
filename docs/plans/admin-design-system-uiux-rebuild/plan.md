@@ -41,13 +41,14 @@
 10. 当前页面只提供业务事实和任务信息，不拥有视觉继承权。阶段 02/03 可重新设计页面结构、信息层级、组件排布、颜色、surface、spacing 和交互反馈，禁止把“旧页面换颜色/圆角”当作完成重构。
 11. Admin 建立统一 Appearance / Theme System，由设置集中控制 Light/Dark/System、Accent 和 Surface/Background 预设，并通过 Semantic Theme → Skin → Component → Page 全链路生效。
 12. 实际性能与 perceived performance 同时优化：稳定 Shell/布局、保留可信数据、避免短 loading 闪烁、长等待给予真实反馈，并处理请求取消、stale response 和关键资源加载。
+13. Aisenhub 材质采用 Solid Glass / 实体感玻璃：边缘体现材质、实体优先、深度来自厚度、材质状态统一；有限 blur 不能牺牲数据可读性、主题一致性或加载/滚动性能。
 
 ## 阶段与依赖
 
 | 阶段 | 目标 | 前置依赖 | 预期风险级别 | 状态 | 详细计划 |
 | --- | --- | --- | --- | --- | --- |
 | 01 | 迁移参考项目通用 Design System，冻结设计治理与 ownership | 当前 Plan | R0 | 已交付 | [阶段 01](phases/01-design-system-migration.md) |
-| 02 | 从零建立新的 Aisenhub Admin `DESIGN.md` / Product Adaptation | 01 | R0 | 未开始 | [阶段 02](phases/02-new-aisenhub-design-direction.md) |
+| 02 | 从零建立新的 Aisenhub Admin `DESIGN.md` / Product Adaptation | 01 | R0 | 验收通过待推送 | [阶段 02](phases/02-new-aisenhub-design-direction.md) |
 | 03 | 按真实页面批次并行执行 Foundation/Component 与 UI/UX 全面优化 | 01、02 | 至少 R2 | 未开始 | [阶段 03](phases/03-component-and-uiux-rebuild.md) |
 | 04 | 全站收敛、清旧实现、建立静态治理并完成全量回归 | 03 | 至少 R2 | 未开始 | [阶段 04](phases/04-convergence-and-governance.md) |
 

@@ -7,11 +7,11 @@
 - 优化目标：迁移通用 Design System，从零建立 Aisenhub Design Direction，并完成 Admin 组件、视觉、交互与治理的全面重构。
 - 实施范围：`docs/development/design/**`、`apps/admin/**`、`packages/ui/**` 及适用 Admin tests/docs。
 - GitHub 仓库：`https://github.com/aisenhub/Aisenhubplatform.git`
-- 实施分支：`codex/admin-design-system-phase1`
-- 起始 commit：`50bfa96e23a33643611ab8fc9e22d8b538c6d663`
-- 初始工作区状态：clean；从已推送的总计划 commit 建立阶段分支。
-- 运行环境：Local；阶段 01 为 R0 文档迁移，不修改运行产物。
-- 已知基线失败：无已知；阶段检查尚待本轮收尾实际运行。
+- 当前实施分支：`codex/admin-design-direction-phase2`
+- 阶段 02 起始 commit：`0ee71cf8d319f1c86e56216f45055c31e4791775`
+- 阶段 02 初始工作区状态：clean；从已推送的新增 Admin 设计 Requirement 基线建立短期分支。
+- 运行环境：Local；阶段 02 为 R0 设计/文档冻结，不修改 Admin 运行 UI。
+- 已知基线失败：无已知；阶段 02 检查待本轮收尾实际运行。
 - 关联 Requirement：`REQ-ADM-002/003/004/005/007/008/009/011/012`
 
 ## 阶段状态总表
@@ -19,7 +19,7 @@
 | 阶段 | 名称 | 状态 | 已完成 | 剩余/依赖 | commit | push/GitHub |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | Design System Migration | 已交付 | 通用 Design System、56-file 参考 inventory、62 条规则与产品污染审查已完成；本地文档/合同/diff 检查已通过 | 阶段 02 可在明确派发后开始 | `647bc365e3647e2d61b0aa2e345b29eb9fc7797d` | PASS：已 push，远端 SHA 核对一致 |
-| 02 | New Aisenhub Design Direction | 未开始 | 未验证 | 依赖 01 | 未验证 | 未验证 |
+| 02 | New Aisenhub Design Direction | 验收通过待推送 | 新 `DESIGN.md`、Appearance、Solid Glass、布局/密度/icon/perceived-performance 方向已冻结；旧生成视觉元数据已删除；本地验证已通过 | commit/push/远端核对 | 未验证 | 未验证 |
 | 03 | Component + UI/UX Rebuild | 未开始 | 未验证 | 依赖 01、02 | 未验证 | 未验证 |
 | 04 | Convergence + Governance | 未开始 | 未验证 | 依赖 03 | 未验证 | 未验证 |
 
@@ -37,12 +37,12 @@
 
 ### 阶段 02：New Aisenhub Design Direction
 
-- 实际修改文件及职责：未验证
-- 新 Product Design Direction：未验证
-- 旧设计非继承检查：未验证
-- 已确认设计输入：普通 UI 图标统一标准库；旧页面布局/颜色/组件排布无视觉继承权；Settings 统一 Theme/Appearance（Light/Dark/System + Accent + Surface/Background）；实际与感知加载性能同时优化。以上已经写入 Spec、Design System 原则和阶段计划，但尚未创建新 `apps/admin/DESIGN.md`。
-- 与计划偏差：未验证
-- 未完成或未验证内容：未验证
+- 实际修改文件及职责：新增 `apps/admin/DESIGN.md` 作为唯一 Admin Product Adaptation / Design Direction；细化 Phase 02 工作包；同步 Product、Design System、Architecture、Spec、Plan 与 Handoff 的设计来源。
+- 新 Product Design Direction：专业/现代/精密、中高但可呼吸的 Balanced density；Light/Dark/System；Blue(default)/Indigo/Violet/Azure Accent；Neutral(default)/Cool/Warm Surface；List/Table + Inspector；标准 `lucide-react` icon；perceived performance；Solid Glass / 实体感玻璃材质。
+- 旧设计非继承检查：当前权威 Architecture/Plan 中旧 North Star/旧色板描述已删除；`apps/admin/.impeccable/design.json` 已删除；当前 `globals.css` 中旧视觉值仅作为阶段 03 待替换实现债务，不具有设计权威。
+- 开源材质参考：研究 `deeplethe/solid-glass` 的 edge finish、heavy-not-airy、depth-as-thickness、one-material-state 与 shadcn `data-slot` skin 方法；只迁移方法，不直接安装其 stylesheet 或复制产品 skin。
+- 与计划偏差：用户在阶段执行中新增“实体感玻璃”材质要求并明确允许删除旧前端风格描述；已纳入 Phase 02，未改变后端或阶段 03 代码边界。
+- 未完成或未验证内容：本地 docs/contracts/diff 与人工设计审查已通过；仅剩 commit/push/远端核对。
 
 ### 阶段 03：Component + UI/UX Rebuild
 
@@ -75,6 +75,13 @@
 | 2026-10-17 | pre-02 requirements | worktree based on `e48ec15` | `pnpm docs:check` | Local | 0 | PASS：新增主题/感知性能 Requirement 与设计原则/计划链接一致 |
 | 2026-10-17 | pre-02 requirements | worktree based on `e48ec15` | `pnpm contracts:check` | Local | 0 | PASS：文档需求调整未改变 Account/Admin wire contracts |
 | 2026-10-17 | pre-02 requirements | worktree based on `e48ec15` | `git diff --check` | Local | 0 | PASS |
+| 2026-10-17 | 02 | worktree based on `0ee71cf` | `pnpm docs:check` final candidate | Local | 0 | PASS：115 documents，required entries / local links / navigation consistent |
+| 2026-10-17 | 02 | worktree based on `0ee71cf` | `pnpm contracts:check` final candidate | Local | 0 | PASS：Account/Admin OpenAPI、Platform integration、consumer compatibility 均通过 |
+| 2026-10-17 | 02 | worktree based on `0ee71cf` | `git diff --check` final candidate | Local | 0 | PASS |
+| 2026-10-17 | 02 | worktree based on `0ee71cf` | POSIX `if git grep ...` wrapper for legacy-style no-match assertion | Local / PowerShell runner | 1 | FAIL：验证包装器误用 POSIX `if`，PowerShell 解析失败；无文件修改，随后改用 Node 复测 |
+| 2026-10-17 | 02 | worktree based on `0ee71cf` | Node current normative-doc legacy visual term scan | Local | 0 | PASS：旧 North Star/旧色板词在当前权威 docs / PRODUCT / DESIGN 中 0 命中 |
+| 2026-10-17 | 02 | worktree based on `0ee71cf` | Node `.impeccable` + `DESIGN.md` coverage check | Local | 0 | PASS：旧生成设计元数据已删除；基础设计 coverage 15/15 |
+| 2026-10-17 | 02 | worktree based on `0ee71cf` | Node Requirement/material design review | Local | 0 | PASS：10 个 Requirement/material groups 完整，包含 recent MFA/step-up/security classification |
 
 失败必须保留原结果和修复后的复测记录，不得覆盖成从未失败。
 

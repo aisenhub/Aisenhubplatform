@@ -186,19 +186,11 @@ Table/List -> right-side Sheet，用于 Audit、Feedback、Config 等详情流�
 
 ## 14. Design System
 
-North Star：**Operations Ledger / 操作账簿**。
+通用 Design System 权威入口为 [`docs/development/design`](../../development/design/README.md)，Admin Product Adaptation / Design Direction 为 [`apps/admin/DESIGN.md`](../../../apps/admin/DESIGN.md)。旧 Admin 视觉 North Star、旧色板和旧 `.impeccable` 生成元数据已退出设计来源。
 
-视觉原则：高密度、低装饰、强状态、强错误语义、强操作保护。
+当前运行代码仍保留一部分阶段 03 待替换的 legacy visual token、`globals.css` 组件覆盖和 Light-first 行为；这些是**当前实现债务**，不是新设计输入。新 `DESIGN.md` 已冻结 Light/Dark/System、Accent/Surface、Solid Glass material、Balanced density、List/Table + Inspector、标准 Lucide icon 与 perceived performance 方向，但在阶段 03 代码落地前不能把这些目标描述成已实现能力。
 
-核心 token：
-
-- primary `#087b76`；primary-dark `#05635f`；primary-soft `#e7f3f1`；
-- background `#f4f6f8`；foreground `#18232f`；card `#ffffff`；border `#dce3e9`；
-- success `#157047`；warning `#93601a`；danger `#b53342`；info `#2866a3`。
-
-字体使用 system-ui / PingFang SC / Microsoft YaHei；技术 ID 使用 monospace，不加载远程 Webfont。
-
-Admin 当前实际产品形态基本 Light-only；虽然 CSS/shared UI 存在 dark token 和 next-themes 能力，但没有 ThemeProvider/Mode Toggle，因此不能宣称已支持完整 Dark Mode。
+当前字体实现仍以 system UI / 中文系统字体为主，技术 ID 使用 monospace；新方向继续保留这一性能优先策略。
 
 ## 15. Layout 与 Responsive
 
@@ -243,6 +235,6 @@ Lint/Format：Oxlint + Oxfmt，不是 ESLint + Prettier。
 
 ## 19. 文档边界
 
-旧 `apps/admin/DESIGN.md` 已退出当前视觉/交互设计来源；`PRODUCT.md` 继续提供产品背景，新的 Admin Design Direction 由 [`admin-design-system-uiux-rebuild`](../../plans/admin-design-system-uiux-rebuild/plan.md) 规划但尚未实现。本文只描述当前架构实现。Admin 前端架构审查中的技术债、评分和改进顺序保留在 `review`，不能反过来写成已经实施的架构事实。
+`PRODUCT.md` 继续提供产品背景；新的 [`apps/admin/DESIGN.md`](../../../apps/admin/DESIGN.md) 已冻结 Admin Product Adaptation / Design Direction，Theme/Solid Glass/layout 等运行实现由 [`admin-design-system-uiux-rebuild`](../../plans/admin-design-system-uiux-rebuild/plan.md) 的阶段 03 落地。本文只描述当前架构实现；设计目标不能提前写成已实现事实。Admin 前端架构审查中的技术债、评分和改进顺序保留在 `review`。
 
 历史 2026-10-13 UI/UX 审查自身已经标注为静态快照，其中不少问题后来被修复或未复现；它只作为历史 Review 输入。当前实现事实以源码、当前测试、2026-10-15 架构审查和本文 parity 为准。

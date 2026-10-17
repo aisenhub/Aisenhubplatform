@@ -217,7 +217,7 @@ Admin 的页面切换、查询、刷新和 mutation 必须让用户尽快获得�
 
 ## Domain Verification
 
-当前 Implemented 基线来自 `apps/admin` App Router/BFF/Auth/feature source、`packages/ui` primitives/semantic components、Admin Vitest、Local browser/E2E 与 `apps/admin/PRODUCT.md`。旧 `apps/admin/DESIGN.md` 已退出当前设计来源；新的 Admin Design Direction 尚未建立，按 [`admin-design-system-uiux-rebuild`](../plans/admin-design-system-uiux-rebuild/plan.md) 计划从零重建，在落地前不得把计划目标写成当前实现。2026-10-15 Admin 架构审查保留技术债和评分；历史 2026-10-13 UI/UX 报告只作为静态 Review，不作为当前事实权威。
+当前 Implemented 基线来自 `apps/admin` App Router/BFF/Auth/feature source、`packages/ui` primitives/semantic components、Admin Vitest、Local browser/E2E 与 `apps/admin/PRODUCT.md`。新的 [`apps/admin/DESIGN.md`](../../apps/admin/DESIGN.md) 已冻结 Admin Product Adaptation / Design Direction，但其 Theme/Solid Glass/layout 等仍属于后续阶段 03 实施目标，不能提前写成当前运行事实。历史前端视觉描述和已删除的 `.impeccable` 生成视觉元数据不再是设计来源；历史 Review 只作为审查证据。
 
 ## 非目标 / 未接受项
 

@@ -24,7 +24,7 @@
 
 当前 Admin 的底层技术栈不需要替换。现有架构已经形成 `Tailwind CSS → Base UI → shadcn-style source components → @kit/ui → Aisenhub Admin Components → Feature UI` 的链路，`packages/ui/src/shadcn/` 与项目语义组件分层也已有正确基础。2026-10-15 前端架构审查同时指出，当前主要 UI 技术债集中在 Tailwind utility、Admin 全局 CSS、共享 UI 样式和组件 variant 多处拥有视觉定义，容易出现 token、CSS class 和 component variant 漂移。
 
-旧 `apps/admin/DESIGN.md` 已被有意删除。它所记录的 “Operations Ledger”、原色板、形状、密度和组件外观不得作为新设计的继承来源；Git 历史只允许用于追溯旧实现，不得作为新视觉方向的默认参考。`apps/admin/PRODUCT.md` 继续作为产品背景和业务约束来源，其中已明确视觉方向无须保留旧风格。
+历史 Admin 视觉规范已退出设计来源。旧色板、形状、密度、组件外观和生成视觉元数据不得作为新设计的继承来源；Git 历史只允许追溯旧实现。`apps/admin/PRODUCT.md` 继续作为产品背景和业务约束来源。
 
 参考项目 `docs` 中已经存在一套更成熟的 Design System 方法：把设计基础、语义主题、组件皮肤、组件结构/交互、页面组合和产品适配分开，并明确“先复用、再扩展、最后自写”的组件治理原则。本项目需要迁移这套通用方法，而不是复制参考产品的具体颜色、字体、密度、工作区视觉或 AisenLens 专属 UI。
 
@@ -101,10 +101,11 @@ Tailwind 继续保留。问题不是“是否使用 Tailwind”，而是“谁�
 
 ## 新 Aisenhub DESIGN.md 的职责
 
-阶段 02 将从零创建新的 `apps/admin/DESIGN.md`。它不是 Design System 本身，而是 **Aisenhub Admin Product Adaptation / Design Direction**，至少定义：
+阶段 02 从零建立新的 `apps/admin/DESIGN.md`。它不是 Design System 本身，而是 **Aisenhub Admin Product Adaptation / Design Direction**，至少定义：
 
 - Product Character：Aisenhub Admin 应呈现的专业性、密度、克制程度、可扫描性和操作安全感。
 - Visual Direction：新的色彩关系、明暗层级、表面、边界、圆角、阴影、字体、密度、留白和强调方式。
+- Material Direction：采用 Solid Glass / 实体感玻璃，通过 edge/rim、厚度、细边和克制阴影表达材质，有限使用 blur；参考 `deeplethe/solid-glass` 的方法但不引入第二 Theme owner。
 - Icon Language：普通 UI 图标统一来自标准图标库，建立稳定“语义 → 图标”映射；品牌 Logo、真实业务图片和确有专业缺口的图形才允许例外。
 - Appearance System：定义 Light/Dark/System，以及多套 Accent / Surface / Background 预设的组合边界、默认值、设置入口、持久化和状态色隔离规则。
 - Information Hierarchy：Page / Section / Surface / Table / Form / Inspector / Action 的优先级。
@@ -115,7 +116,7 @@ Tailwind 继续保留。问题不是“是否使用 Tailwind”，而是“谁�
 - Responsive / Density：桌面密集工作区与窄屏降级规则。
 - Anti-patterns：明确禁止页面自行造皮肤、无意义卡片嵌套、过度圆角/阴影、颜色滥用、每个 Feature 独立设计状态等行为。
 
-新 `DESIGN.md` 可以观察当前产品功能和信息架构，但不得以旧 `DESIGN.md` 的色值、Operations Ledger 概念或旧组件尺寸作为起点。
+新 `DESIGN.md` 可以观察当前产品功能和信息架构，但不得以任何历史 Admin 视觉色值、概念、旧组件尺寸或当前遗留 CSS 作为起点。
 
 ## 第三阶段的并行工作模型
 

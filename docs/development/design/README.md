@@ -10,11 +10,11 @@
 
 1. [`docs/spec`](../../spec/README.md) 定义产品必须满足什么及 Acceptance。
 2. 本目录定义通用设计、组件和 UI/UX 规则。
-3. `apps/admin/DESIGN.md` 在阶段 02 创建后，只定义 **Aisenhub Admin Product Adaptation / Design Direction**；它不能重建第二套通用规则或第二份运行 Token。
+3. [`apps/admin/DESIGN.md`](../../../apps/admin/DESIGN.md) 定义 **Aisenhub Admin Product Adaptation / Design Direction**；它不能重建第二套通用规则或第二份运行 Token。
 4. [`docs/architecture`](../../architecture/README.md) 和源码描述当前真实实现。
 5. [`docs/plans`](../../plans/README.md) 描述尚未完成的改变；验证记录证明实现是否满足规则。
 
-旧 `apps/admin/DESIGN.md` 已退出当前设计来源。新的 Product Adaptation 尚未建立前，不从旧 CSS、历史 Review 或参考产品风格反推新的视觉方向。
+历史 Admin 视觉描述已退出当前设计来源。当前 Product Adaptation 以新的 [`apps/admin/DESIGN.md`](../../../apps/admin/DESIGN.md) 为准；旧 CSS、历史 Review、已删除的生成视觉元数据和参考产品风格都不能反推新的视觉方向。
 
 ## 2. 设计系统分层
 
@@ -78,7 +78,7 @@ Tailwind 本身不是问题；**视觉所有权漂移**才是问题。
 
 ## 6. Product Adaptation 边界
 
-通用 Design System 不决定 Aisenhub 最终长什么样。阶段 02 的新 `apps/admin/DESIGN.md` 才能选择：
+通用 Design System 不决定 Aisenhub 最终长什么样。当前 [`apps/admin/DESIGN.md`](../../../apps/admin/DESIGN.md) 选择：
 
 - 产品气质与品牌表达；
 - 实际色板、支持的主题模式和具体视觉层级；
@@ -87,7 +87,7 @@ Tailwind 本身不是问题；**视觉所有权漂移**才是问题。
 - Aisenhub Admin 的默认组件 adaptation 与业务 pattern；
 - 明确的 anti-patterns。
 
-Product Adaptation 不能削弱 [`REQ-ADM-002/003/004/005/007/008/009`](../../spec/admin-console.md) 的作用域、安全、错误、导航和可达性约束，也不能改变服务端权限、MFA、幂等、unknown outcome 或领域真值。
+Product Adaptation 不能削弱 [`REQ-ADM-002/003/004/005/007/008/009/011/012`](../../spec/admin-console.md) 的作用域、安全、错误、导航、主题、加载体验和可达性约束，也不能改变服务端权限、MFA、幂等、unknown outcome 或领域真值。
 
 ## 7. 开发与评审顺序
 

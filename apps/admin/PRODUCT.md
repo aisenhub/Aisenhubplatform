@@ -24,7 +24,7 @@ Global 管理入口与由 URL 确定的平台工作区；桌面密集操作为�
 
 ## Brand Commitments
 
-名称 Aisenhub。用户明确将视觉方向交由 Agent 决定，无须保留旧风格。
+名称 Aisenhub。当前 Admin Product Adaptation / Design Direction 由 [`DESIGN.md`](DESIGN.md) 定义；历史前端风格描述不构成产品约束，也不要求保留旧视觉。
 
 ## Product Principles
 
